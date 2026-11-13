@@ -915,19 +915,19 @@
     const surface="#061626dc";
     // Player + mana panel.
     hudRoundRect(16,13,252,103,12,surface,edge,1.7);
-    hudText("YOUR WIZARD",31,32,15,"#a3c7cb");
-    hudText("Tidecaller",31,61,26,"#f7e7bd");
+    hudText("YOUR WIZARD",31,32,18,"#a3c7cb");
+    hudText("Tidecaller",31,61,30,"#f7e7bd");
     for(let i=0;i<8;i++){
       const x=39+i*27,y=93,full=i<mana;
-      g.beginPath();g.moveTo(x,y-9);g.lineTo(x+8,y);
-      g.lineTo(x,y+9);g.lineTo(x-8,y);g.closePath();
+      g.beginPath();g.moveTo(x,y-10);g.lineTo(x+9,y);
+      g.lineTo(x,y+10);g.lineTo(x-9,y);g.closePath();
       g.fillStyle=full?"#5bdbed":"#273d4b";g.fill();
       g.strokeStyle=full?"#ceffff":"#61727c";g.lineWidth=1.3;g.stroke();
     }
     // Enemy health is not part of the DOM layout.
     hudRoundRect(727,13,257,113,12,surface,"#836960",1.7);
-    hudText("ENEMY · TARGET SELECTED",744,31,13,"#d2c99f", "left",230);
-    hudText("Stone Sentinel",744,59,25,"#fff0d7","left",224);
+    hudText("ENEMY · TARGET SELECTED",744,31,16,"#d2c99f", "left",230);
+    hudText("Stone Sentinel",744,59,29,"#fff0d7","left",224);
     hudRoundRect(742,80,224,14,6,"#272331","#8d7261",1.1);
     if(hudHealth>0){
       const hp=Math.max(0,Math.min(1,hudHealth/MAX_HP));
@@ -939,18 +939,18 @@
       }
     }
     hudText(health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP",
-      964,110,17,"#f5c9af","right",230,650);
+      964,110,22,"#f5c9af","right",230,650);
     // Fixed top-center banner replaces the former resizing HTML state label.
     hudRoundRect(284,13,428,58,12,"#071c2bbd",edge,1.3);
-    hudText("ROUND "+round,500,32,16,"#bdd6d8","center",380,700);
-    hudText(UI.state.textContent||"READY TO CAST",500,54,20,accent,
+    hudText("ROUND "+round,500,32,21,"#bdd6d8","center",380,700);
+    hudText(UI.state.textContent||"READY TO CAST",500,54,27,accent,
       "center",400,800);
-    hudText(UI.caption.textContent||"CHOOSE YOUR SPELL",500,98,15,
+    hudText(UI.caption.textContent||"CHOOSE YOUR SPELL",500,98,21,
       "#dbf0ee","center",420,650);
     // Status is always on the same fixed baseline; long messages compress
     // within the bar, never creating new layout lines.
     hudRoundRect(183,493,634,46,23,"#061525d7",edge,1.4);
-    hudText(UI.status.textContent||"Select a spell, then Cast.",500,515,21,
+    hudText(UI.status.textContent||"Select a spell, then Cast.",500,515,25,
       "#e1f1f0","center",594,600);
     g.restore();
   }

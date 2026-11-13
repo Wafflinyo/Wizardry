@@ -673,70 +673,220 @@
   // Sandstone-and-moss creature, separate from the blue-grey enemy Sentinel.
   // Real illustrated sprite frames, replacing all procedural golem polygons.
   // The 480x640 WebP stores a 3-column x 4-row grid of 160px squares.
-  const GOLEM_FRAME=90,GOLEM_COLUMNS=3,GOLEM_COUNT=12;
-  const golemSprite=document.createElement("img");
-  let golemSpriteReady=false;
-  let golemSpriteError=false;
-  golemSprite.onload=()=>{
-    golemSpriteReady=golemSprite.naturalWidth===GOLEM_COLUMNS*GOLEM_FRAME&&
-      golemSprite.naturalHeight===4*GOLEM_FRAME;
-    if(selectedSpell==="stone"&&!cast)refreshUI();
-  };
-  golemSprite.onerror=()=>{
-    golemSpriteError=true;
-    if(selectedSpell==="stone"&&!cast){
-      UI.status.textContent="Could not load Stone Golem artwork.";
-      refreshUI();
-    }
-  };
-  golemSprite.src="./assets/stone-golem-geom-v08.avif";
-
+  // V0.9: twelve traced, ENGINE-NATIVE low-poly poses.
+  // Coordinates were reconstructed from the approved 12-cell animation:
+  // rise, finish rising, clasp, lift, overhead, hold, slam, moving fault,
+  // advancing spikes, strike, recovery and retreat.
+  // These are vector coordinates, NOT a scaled bitmap/sprite sheet.
+  const GOLEM_POSES = Object.freeze([
+    {at:.10,hx:-7,hy:-137,lean:0},
+    {at:.55,hx:-7,hy:-137,lean:0},
+    {at:1.06,hx:0,hy:-135,lean:0},
+    {at:1.40,hx:0,hy:-145,lean:-.01},
+    {at:1.78,hx:-6,hy:-214,lean:-.035},
+    {at:2.33,hx:-7,hy:-300,lean:-.075},
+    {at:2.54,hx:-7,hy:-309,lean:-.09},
+    {at:2.92,hx:55,hy:-31,lean:.16},
+    {at:3.12,hx:55,hy:-31,lean:.16},
+    {at:3.37,hx:55,hy:-31,lean:.13},
+    {at:3.86,hx:50,hy:-39,lean:.08},
+    {at:4.27,hx:0,hy:-138,lean:0}
+  ]);
   function golemAnimationFrame(elapsed) {
-    // The approved 3x4 atlas already contains the complete rise, hand clasp, overhead
-    // pose, slam, spike sequence and sinking. No separate polygon spikes.
-    if(elapsed<EARTH.emergeStart)return -1;
-    if(elapsed<EARTH.emergeEnd){
-      const t=phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd);
-      return t<.30?0:t<.66?1:2;
-    }
-    if(elapsed<EARTH.claspStart)return 2;
-    if(elapsed<EARTH.claspEnd)return 3;
-    if(elapsed<EARTH.liftEnd) {
-      const t=phase(elapsed,EARTH.liftStart,EARTH.liftEnd);
-      return t<.32?4:t<.68?5:6;
-    }
-    if(elapsed<EARTH.slamStart)return 6;
-    if(elapsed<EARTH.slamEnd)return phase(elapsed,EARTH.slamStart,EARTH.slamEnd)<.18?6:7;
-    if(elapsed<EARTH.spikesEnd){
-      const t=phase(elapsed,EARTH.spikesStart,EARTH.spikesEnd);
-      return t<.32?8:t<.68?9:10;
-    }
-    if(elapsed<EARTH.crumbleStart)return 10;
-    return 11;
+    if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
+    let i=0;
+    while(i<GOLEM_POSES.length-1&&GOLEM_POSES[i+1].at<=elapsed)i++;
+    return i; // Exact approved-pose index; interpolated in-between for motion.
   }
-
-  function drawStoneGolem(elapsed,t) {
-    if(!golemSpriteReady)return;
-    const frame=golemAnimationFrame(elapsed);
-    if(frame<0||elapsed>=EARTH.crumbleEnd)return;
-    const col=frame%GOLEM_COLUMNS,row=Math.floor(frame/GOLEM_COLUMNS);
-    // One stationary, game-space anchored sprite. The approved illustrations already
-    // show emergence and disappearance. Do not double-animate vertical position.
-    const size=392,dx=350,dy=411-size*.927;
+  function golemPose(elapsed) {
+    let i=Math.max(0,golemAnimationFrame(elapsed));
+    const a=GOLEM_POSES[i],b=GOLEM_POSES[Math.min(i+1,GOLEM_POSES.length-1)];
+    const blend=a===b?0:ease(phase(elapsed,a.at,b.at));
+    const rise=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
+    const sink=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
+    return {
+      x:505,ground:410,
+      offset:288*(1-rise)+288*sink,
+      hx:mix(a.hx,b.hx,blend),
+      hy:mix(a.hy,b.hy,blend),
+      lean:mix(a.lean,b.lean,blend)
+    };
+  }
+  function golemRotate(v,pivot,angle) {
+    const dx=v[0]-pivot[0],dy=v[1]-pivot[1],c=Math.cos(angle),sn=Math.sin(angle);
+    return [pivot[0]+dx*c-dy*sn,pivot[1]+dx*sn+dy*c];
+  }
+  function golemElbow(start,hand,upper,fore,bend) {
+    const dx=hand[0]-start[0],dy=hand[1]-start[1];
+    const length=Math.max(.001,Math.hypot(dx,dy));
+    const d=Math.max(Math.abs(upper-fore)+.001,Math.min(upper+fore-.001,length));
+    const forward=(upper*upper-fore*fore+d*d)/(2*d);
+    const outer=Math.sqrt(Math.max(0,upper*upper-forward*forward));
+    return [start[0]+dx/length*forward-dy/length*outer*bend,
+            start[1]+dy/length*forward+dx/length*outer*bend];
+  }
+  function golemBlockLimb(a,b,widthA,widthB,base,light,shadow) {
+    const length=Math.max(.001,Math.hypot(b[0]-a[0],b[1]-a[1]));
+    const nx=-(b[1]-a[1])/length,ny=(b[0]-a[0])/length;
+    const q0=[a[0]+nx*widthA,a[1]+ny*widthA];
+    const q1=[b[0]+nx*widthB,b[1]+ny*widthB];
+    const q2=[b[0]-nx*widthB,b[1]-ny*widthB];
+    const q3=[a[0]-nx*widthA,a[1]-ny*widthA];
+    polygon([q0,q1,q2,q3],base,"#303c36",2.1);
+    polygon([q0,q1,[b[0],b[1]],[a[0]+nx*4,a[1]+ny*4]],light);
+    triangleFacet(q2[0],q2[1],q3[0],q3[1],b[0],b[1],shadow);
+    line(a[0]+nx*widthA*.83,a[1]+ny*widthA*.83,
+         b[0]+nx*widthB*.78,b[1]+ny*widthB*.78,"#e0d4b14d",1.2);
+  }
+  function drawGolemBody(lean) {
+    // Every geometric plane is a sharp vector fill, sized in game space.
+    // The rock silhouette matches the approved compact chunky design.
     g.save();
-    g.beginPath();g.rect(286,-75,550,488);g.clip();
-    const fadeIn=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.14));
-    const fadeOut=1-ease(phase(elapsed,EARTH.crumbleEnd-.17,EARTH.crumbleEnd));
-    g.globalAlpha*=fadeIn*fadeOut;
-    g.imageSmoothingEnabled=true;
-    g.imageSmoothingQuality="high";
-    g.drawImage(golemSprite,col*GOLEM_FRAME,row*GOLEM_FRAME,
-      GOLEM_FRAME,GOLEM_FRAME,dx,dy,size,size);
+    g.translate(0,-79);g.rotate(lean);g.translate(0,79);
+    // Wide pelvis and massive trapezoid chest.
+    polygon([[-50,-95],[48,-95],[52,-56],[30,-43],[-31,-43],[-54,-61]],
+      "#5d6159","#313c35",2.7);
+    triangleFacet(-50,-95,15,-88,-30,-46,"#929083");
+    triangleFacet(15,-88,50,-93,29,-46,"#4a5449");
+    polygon([[-79,-176],[-42,-205],[42,-205],[79,-176],
+      [71,-110],[41,-79],[-43,-79],[-71,-112]],"#797b70","#343e39",3);
+    triangleFacet(-79,-176,-42,-204,-17,-132,"#a8a69b");
+    triangleFacet(-42,-204,42,-204,1,-129,"#8b8c7d");
+    triangleFacet(42,-204,79,-176,35,-120,"#535e51");
+    triangleFacet(-72,-112,-17,-132,-43,-80,"#777e6c");
+    triangleFacet(2,-129,71,-111,42,-80,"#47584e");
+    polygon([[-25,-155],[-5,-142],[3,-152],[22,-136],[12,-118],
+      [28,-109],[13,-117],[18,-133],[3,-139],[-3,-134]],
+      "#a7f76c");
+    // Broad pauldrons trace the recognizable polygon silhouette.
+    polygon([[-96,-182],[-70,-216],[-32,-198],[-39,-150],[-84,-148]],
+      "#9d9987","#343f37",2.6);
+    triangleFacet(-96,-182,-70,-216,-58,-160,"#c5bba7");
+    triangleFacet(-70,-216,-33,-198,-58,-160,"#6b7464");
+    polygon([[66,-215],[97,-184],[85,-148],[39,-150],[33,-198]],
+      "#686e61","#343f37",2.6);
+    triangleFacet(66,-215,97,-184,60,-156,"#a1a18a");
+    triangleFacet(97,-184,85,-148,60,-156,"#4f5f54");
+    // Low-poly back moss and green faceted crystal spikes.
+    polygon([[-92,-211],[-74,-245],[-52,-230],[-33,-244],
+      [-24,-218],[-55,-201]],"#657d36");
+    polygon([[-84,-232],[-72,-266],[-60,-240]],"#85ca4c","#384f2e",1.4);
+    triangleFacet(-72,-266,-60,-240,-68,-238,"#d0ff95");
+    polygon([[-57,-236],[-48,-260],[-36,-241]],"#78b948","#3b5e31",1.4);
+    triangleFacet(-48,-260,-36,-241,-47,-239,"#d5fc9c");
+    // Wedge head, broad brow, angled chin, glowing slanted eyes.
+    polygon([[-38,-223],[-35,-272],[-12,-291],[27,-282],[42,-256],
+      [41,-221],[26,-200],[-19,-200]],"#83877b","#303c36",2.4);
+    triangleFacet(-38,-269,-12,-290,-10,-240,"#b5b2a2");
+    triangleFacet(-12,-290,27,-281,10,-246,"#979b8b");
+    triangleFacet(27,-280,42,-257,9,-232,"#505d50");
+    polygon([[-40,-257],[-18,-266],[30,-265],[44,-248],
+      [39,-237],[-39,-239]],"#505b4e");
+    polygon([[-30,-251],[-9,-252],[-10,-243],[-30,-241]],"#c5fb7b");
+    polygon([[10,-252],[33,-251],[31,-242],[10,-244]],"#c5fb7b");
+    line(-15,-218,23,-216,"#3d5040",3.2);
+    g.restore();
+  }
+  function drawGolemNativeSpikes(elapsed) {
+    // Only spike renderer, called INSIDE the vector summon renderer.
+    // The first spike starts at the fist impact; the last reaches the enemy.
+    if(elapsed<EARTH.spikesStart||elapsed>=EARTH.crumbleEnd)return;
+    const grow=EARTH.spikesEnd-EARTH.spikesStart;
+    const retreat=1-ease(phase(elapsed,EARTH.settleStart,EARTH.crumbleEnd));
+    const n=10,start=560,end=785,ground=405;
+    const advanced=phase(elapsed,EARTH.spikesStart,EARTH.spikesEnd);
+    g.save();
+    if(advanced>.005) {
+      const edge=mix(start,end,advanced);
+      g.beginPath();g.moveTo(start,ground-2);
+      g.lineTo(edge,ground-12);
+      g.strokeStyle="#5f805b";g.lineWidth=7.5;g.stroke();
+      g.strokeStyle="#b5f37b";g.lineWidth=2;g.stroke();
+    }
+    for(let i=0;i<n;i++){
+      const local=EARTH.spikesStart+i*(grow-.16)/(n-1);
+      const growth=ease(phase(elapsed,local,local+.16))*retreat;
+      if(growth<=.001)continue;
+      const x=mix(start,end,i/(n-1)),y=ground-i*.5;
+      const height=(46+i*7+(i%3)*12)*growth;
+      const w=9+(i%3)*3;
+      const tip=x+(i%2?8:-6)*growth;
+      polygon([[x-w,y+4],[x-w*.65,y-height*.43],[tip,y-height],
+               [x+w*.69,y-height*.30],[x+w,y+4]],"#737d6b","#38483d",2);
+      triangleFacet(x-w,y+4,x-w*.65,y-height*.43,tip,y-height,"#a3a99a");
+      triangleFacet(tip,y-height,x+w*.69,y-height*.3,x+w,y+4,"#4b5d51");
+      polygon([[x-2,y-height*.1],[tip,y-height*.84],
+               [x+4,y-height*.25]],"#a9f56b");
+      if(elapsed<local+.23)for(let k=0;k<2;k++){
+        const d=phase(elapsed,local,local+.23);
+        const chipX=x+(k?1:-1)*18*d,chipY=y-5-17*Math.sin(d*Math.PI);
+        polygon([[chipX-3,chipY],[chipX,chipY-7],[chipX+5,chipY+2]],
+                k?"#bfbea8":"#697d66");
+      }
+    }
+    g.restore();
+  }
+  function drawStoneGolem(elapsed,t) {
+    const index=golemAnimationFrame(elapsed);
+    if(index<0)return;
+    const pose=golemPose(elapsed);
+    // Eruption and spikes are geometry in the SAME scene draw, not an
+    // overlaid legacy animation. They grow across the arena toward the target.
+    drawGolemNativeSpikes(elapsed);
+    g.save();
+    g.beginPath();g.rect(346,-60,345,471);g.clip();
+    g.translate(pose.x,pose.ground+pose.offset);
+    // Stable grounded feet, faceted knees and hard ankle blocks.
+    const hips=[[-35,-84],[35,-84]],feet=[[-57,-5],[58,-5]];
+    const shoulders=[
+      golemRotate([-65,-174],[0,-79],pose.lean),
+      golemRotate([65,-174],[0,-79],pose.lean)
+    ];
+    for(let side=0;side<2;side++){
+      const hip=hips[side],foot=feet[side];
+      const knee=golemElbow(hip,foot,58,53,side===0?-1:1);
+      golemBlockLimb(hip,knee,22,19,"#73796c","#9d9d88","#4a594c");
+      polygon([[knee[0]-20,knee[1]-12],[knee[0]+14,knee[1]-16],
+        [knee[0]+20,knee[1]+11],[knee[0]-13,knee[1]+15]],
+        side?"#6b7468":"#999b87","#3e4b3f",2);
+      golemBlockLimb(knee,foot,19,16,"#7b8172","#a8a697","#505f52");
+      polygon([[foot[0]-28,foot[1]-8],[foot[0]+13,foot[1]-13],
+        [foot[0]+29,foot[1]+2],[foot[0]+16,foot[1]+11],
+        [foot[0]-28,foot[1]+8]],side?"#626c5e":"#858d7e","#3d4b3f",1.8);
+    }
+    drawGolemBody(pose.lean);
+    // Fixed-length block arms pivot at proper elbow joints. Their hand
+    // targets are traced from the 12 key poses, then interpolated smoothly.
+    const fistL=[pose.hx-9,pose.hy],fistR=[pose.hx+9,pose.hy];
+    for(let side=0;side<2;side++){
+      const start=shoulders[side],wrist=side===0?fistL:fistR;
+      const elbow=golemElbow(start,wrist,103,95,side===0?-1:1);
+      golemBlockLimb(start,elbow,25,21,side===0?"#929284":"#74786c",
+                     side===0?"#beb6a3":"#9b9b8b","#566154");
+      polygon([[elbow[0]-18,elbow[1]-14],[elbow[0]+14,elbow[1]-17],
+        [elbow[0]+22,elbow[1]+12],[elbow[0]-15,elbow[1]+18]],
+        side===0?"#aaa697":"#898f7e","#455044",2);
+      golemBlockLimb(elbow,wrist,22,15,
+         side===0?"#9b9c89":"#7c8172",side===0?"#c4bba8":"#aaab95",
+         "#536453");
+    }
+    // Clasped geometric stone fists, rendered ONCE, not two separate moving
+    // images. The crease between the knuckles is lit with Earth magic.
+    g.save();g.translate(pose.hx,pose.hy);
+    polygon([[-31,-13],[-19,-22],[0,-18],[10,-7],[7,20],[-19,20],
+      [-32,8]],"#a6a697","#414b40",2.5);
+    polygon([[0,-17],[21,-23],[31,-11],[32,10],[16,22],[3,10]],
+      "#7a8573","#404e43",2.5);
+    triangleFacet(-31,-13,-19,-22,-15,12,"#d0c7b5");
+    triangleFacet(2,-17,21,-23,18,13,"#a6a893");
+    line(-8,-10,1,0,"#536d4c",2.3);
+    line(1,0,10,9,"#b7f66a",2);
+    g.restore();
     g.restore();
   }
 
-  // No additional Earth portal, procedural stone spikes, or duplicate
-  // projectile renderer. These are baked into the low-poly atlas frames.
+  // All original compressed atlas sprites, image smoothing and duplicated
+  // Earth-spike overlays have been retired from the battle renderer.
 
   function drawEarthImpact(elapsed) {
     // Small target-only hit confirmation. NO extra rising stones; the
@@ -913,8 +1063,8 @@
     UI.spellCost.textContent=spell.cost+" Mana";
     UI.spellDamage.textContent=spell.damage.toLocaleString()+" HP";
     UI.spellTarget.textContent="Single enemy";
-    UI.cast.disabled=!!cast||defeated||mana<spell.cost||(selectedSpell==="stone"&&!golemSpriteReady);
-    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":selectedSpell==="stone"&&!golemSpriteReady?(golemSpriteError?"ARTWORK UNAVAILABLE":"LOADING GOLEM..."):"CAST "+spell.name.toUpperCase();
+    UI.cast.disabled=!!cast||defeated||mana<spell.cost||(false);
+    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":false?(golemSpriteError?"ARTWORK UNAVAILABLE":"LOADING GOLEM..."):"CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {
     if(cast||defeated||!SPELLS[type])return;
@@ -940,7 +1090,7 @@
 
   function startCast() {
     const spell=SPELLS[selectedSpell];
-    if(cast||defeated||mana<spell.cost||(selectedSpell==="stone"&&!golemSpriteReady))return;
+    if(cast||defeated||mana<spell.cost)return;
     if(sound)tone(440,.04,"sine",.001);
     mana-=spell.cost;
     cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};

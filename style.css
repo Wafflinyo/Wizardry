@@ -886,3 +886,10 @@ html { scroll-behavior:auto!important; }
   .poseidon-card-portrait {bottom:-7%;height:122%;}
   .poseidon-vector-portrait {filter:none;}
 }
+
+/* v0.19 — five original approved Poseidon image poses, not traced rerenders. */
+.poseidon-portrait-canvas {
+  width:100%;height:100%;object-fit:contain;display:block;
+  filter:drop-shadow(0 0 6px #39d6eb55);
+}
+@media(max-width:700px){.poseidon-portrait-canvas{filter:none;}}

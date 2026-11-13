@@ -28,7 +28,16 @@
     winReplay: document.getElementById("winReplay")
   };
   const W = 1000, H = 560, MAX_HP = 3000, DAMAGE = 1200, COST = 8;
-  const duration = 7.55;
+  // All keyframes share one clock: the projectile and damage cannot drift apart.
+  const SPELL = Object.freeze({
+    riseStart: .66, riseEnd: 2.40,
+    aimStart: 2.24, aimEnd: 2.94,
+    windStart: 2.86, windEnd: 3.61,
+    releaseStart: 3.61, releaseEnd: 3.75,
+    launch: 3.74, hit: 4.08,
+    sinkStart: 4.85, sinkEnd: 6.30, end: 6.50
+  });
+  const duration = SPELL.end;
   let health = MAX_HP, mana = 8, round = 1;
   let selected = true, targeted = true, defeated = false;
   let cast = null, particles = [], speed = 1, sound = true;
@@ -312,42 +321,79 @@
     g.restore();
   }
 
-  function drawPoseidon(t,rise,wind,afterThrow,alpha=1){
-    if(rise<=.01)return;
-    const x=505,waist=406-112*rise,bob=Math.sin(t*2.4)*2;
-    const bodyY=waist+bob;
-    g.save();g.globalAlpha=alpha;
-    // Hair behind shoulders
+  function drawPoseidon(t, rise, aim, wind, release, hasThrown, alpha = 1) {
+    if (rise <= .01) return;
+    const x = 505;
+    const bodyY = 406 - 112 * rise + Math.sin(t * 2.4) * 1.5;
+    // In the aiming pose his left hand crosses his body and points at the enemy.
+    // In the throwing pose his right fist genuinely travels BACK behind his head,
+    // then snaps forward over the shoulder while his torso follows through.
+    const leftShoulder = [x - 51, bodyY - 101];
+    const leftElbow = [mix(x - 91, x + 12, aim), mix(bodyY - 61, bodyY - 84, aim)];
+    const leftWrist = [mix(x - 118, x + 112, aim), mix(bodyY - 25, bodyY - 74, aim)];
+    const rightShoulder = [x + 57, bodyY - 103];
+    const rightElbow = [
+      mix(mix(x + 102, x + 8, wind), x + 91, release),
+      mix(mix(bodyY - 73, bodyY - 147, wind), bodyY - 95, release)
+    ];
+    const rightHand = [
+      mix(mix(x + 125, x - 67, wind), x + 157, release),
+      mix(mix(bodyY - 55, bodyY - 168, wind), bodyY - 101, release)
+    ];
+    // Elbows and forearms are separate tapered segments (never rigid 'stick' arms).
+    function limb(a, b, thickA, thickB, light, dark) {
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / len, ny = dx / len;
+      polygon([
+        [a[0]+nx*thickA, a[1]+ny*thickA],
+        [b[0]+nx*thickB, b[1]+ny*thickB],
+        [b[0]-nx*thickB, b[1]-ny*thickB],
+        [a[0]-nx*thickA, a[1]-ny*thickA]
+      ], light, "#f1c7a0", 1.3);
+      line(a[0]-nx*thickA*.5,a[1]-ny*thickA*.5,b[0]-nx*thickB*.5,b[1]-ny*thickB*.5,dark,2);
+    }
+    g.save();
+    g.globalAlpha = alpha;
+    // Rotate subtly through the spine, not about the centre of the battlefield.
+    g.translate(x, bodyY - 78);
+    g.rotate(-wind * .14 + release * .23);
+    g.translate(-x, -(bodyY - 78));
+    // Silvery hair flowing over the back of the ocean-born torso.
     polygon([[x-36,bodyY-132],[x-65,bodyY-92],[x-73,bodyY-38],[x-33,bodyY-59],[x+35,bodyY-57],[x+83,bodyY-34],[x+69,bodyY-109],[x+34,bodyY-135]],"#a0d8df","#d4faff",2);
     triangleFacet(x-55,bodyY-96,x-67,bodyY-40,x-17,bodyY-81,"#62a9bf");
     triangleFacet(x+38,bodyY-102,x+73,bodyY-40,x+18,bodyY-69,"#4c899f");
-    // Chest is a faceted torso; below the waist there are NO legs.
+    // Arm holding the trident stays behind the chest until the release.
+    limb(rightShoulder,rightElbow,22,17,"#bc9079","#876b65");
+    limb(rightElbow,rightHand,16,11,"#d9a789","#9b766e");
+    // Faceted torso: no legs, because the lower half IS the wave.
     polygon([[x-57,bodyY-102],[x-32,bodyY-117],[x+37,bodyY-118],[x+61,bodyY-97],[x+45,bodyY-27],[x+12,bodyY+1],[x-27,bodyY+2],[x-53,bodyY-37]],"#bc8870","#f6c4a6",2);
     triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-55,"#e3b090");
     triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-74,"#f3c5a7");
     triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-59,"#9e7667");
     triangleFacet(x-44,bodyY-46,x-7,bodyY-67,x+1,bodyY-4,"#9e7667");
     triangleFacet(x+4,bodyY-70,x+49,bodyY-42,x+10,bodyY-5,"#d09b81");
-    // Gold shoulder plates
     polygon([[x-71,bodyY-100],[x-58,bodyY-126],[x-30,bodyY-125],[x-25,bodyY-94]],"#ac8a56","#ffec9f",2);
     triangleFacet(x-70,bodyY-101,x-51,bodyY-119,x-34,bodyY-102,"#f6d999");
     polygon([[x+26,bodyY-97],[x+37,bodyY-126],[x+69,bodyY-124],[x+76,bodyY-102]],"#a68150","#f3d88c",2);
     triangleFacet(x+37,bodyY-126,x+70,bodyY-123,x+62,bodyY-107,"#f5db98");
-    // Blue ceremonial collar
     polygon([[x-44,bodyY-114],[x-9,bodyY-96],[x+17,bodyY-100],[x+45,bodyY-115],[x+32,bodyY-102],[x-2,bodyY-89]],"#2d94b1","#c1ffff",1);
-    // Left arm extends forward (towards viewer)
-    polygon([[x-55,bodyY-90],[x-88,bodyY-66],[x-121,bodyY-26],[x-104,bodyY-8],[x-62,bodyY-49]],"#c29379","#f2c3a3",2);
-    triangleFacet(x-87,bodyY-67,x-121,bodyY-26,x-94,bodyY-34,"#e1b297");
-    polygon([[x-113,bodyY-34],[x-126,bodyY-13],[x-119,bodyY+1],[x-105,bodyY-5]],"#b88970","#dfb79b",1.5);
-    // Right arm changes pose in preparation for the THROW
-    const armX=x+73, armY=bodyY-99;
-    const elbowX=mix(x+98,x+104,wind),elbowY=mix(bodyY-72,bodyY-142,wind);
-    const handX=mix(x+117,x+161,wind),handY=mix(bodyY-58,bodyY-137,wind);
-    polygon([[armX-14,armY-18],[elbowX+10,elbowY-18],[elbowX+19,elbowY+6],[armX+3,armY+18]],"#bf9175","#f6c4a0",2);
-    polygon([[elbowX-4,elbowY-10],[handX+2,handY-11],[handX+12,handY+10],[elbowX+13,elbowY+12]],"#d3a081","#f3c5a4",1.5);
-    polygon([[elbowX-1,elbowY-16],[elbowX+14,elbowY-16],[elbowX+19,elbowY],[elbowX+3,elbowY+1]],"#e0c16b","#fce6aa",1.2);
-    oval(handX+7,handY,12,12,"#e3ae88","#ffe0b0",1);
-    // Head, blue-white windswept beard and crown
+    // The OTHER arm now reaches across the chest to POINT at the target.
+    limb(leftShoulder,leftElbow,20,15,"#ca967b","#8c706b");
+    limb(leftElbow,leftWrist,15,10,"#d9a88c","#a77a6c");
+    oval(leftWrist[0],leftWrist[1],12,10,"#e7b998","#ffdfbb",1.5);
+    if (aim > .05) {
+      const pointX = leftWrist[0] + 30 * aim, pointY = leftWrist[1] + 10 * aim;
+      limb([leftWrist[0]+5,leftWrist[1]-1],[pointX,pointY],6,3.5,"#f1bd9e","#ba8e77");
+      glow(pointX,pointY,13*aim,"#7df9f52d");
+    }
+    // Right fist and gold bracer follow the wind-up and release curve.
+    oval(rightHand[0],rightHand[1],12,12,"#e3ae88","#ffe0b0",1.5);
+    polygon([
+      [rightElbow[0]-10,rightElbow[1]-16],[rightElbow[0]+13,rightElbow[1]-16],
+      [rightElbow[0]+18,rightElbow[1]+2],[rightElbow[0]-7,rightElbow[1]+4]
+    ],"#d7b56a","#f9e5a5",1.2);
+    // Head, pale hair, beard and crown stay readable throughout the toss.
     oval(x+2,bodyY-148,39,43,"#d5a48a","#f5ccae",2);
     triangleFacet(x-33,bodyY-153,x+1,bodyY-189,x+29,bodyY-152,"#ecc0a3");
     oval(x-14,bodyY-157,6,3,"#12253d");oval(x+18,bodyY-157,6,3,"#12253d");
@@ -359,56 +405,67 @@
     polygon([[x-38,bodyY-165],[x-32,bodyY-205],[x-10,bodyY-190],[x+2,bodyY-216],[x+14,bodyY-190],[x+33,bodyY-204],[x+40,bodyY-161]],"#d5b26c","#ffea9f",2);
     triangleFacet(x-37,bodyY-167,x-12,bodyY-186,x+3,bodyY-171,"#f5dc8a");
     polygon([[x-7,bodyY-185],[x+2,bodyY-195],[x+11,bodyY-185],[x+2,bodyY-176]],"#5af2ff","#dcffff",1);
-    // Decorative runes and marine glow
     line(x-12,bodyY-51,x+16,bodyY-34,"#55d6e6",2.5);
     glow(x+5,bodyY-51,30,"#4db5d51d");
-    if(!afterThrow){
-      const tx=mix(x+143,handX+12,wind),ty=mix(bodyY-154,handY-45,wind);
-      drawTrident(tx,ty,mix(-.12,.65,wind),124,alpha);
+    if (!hasThrown) {
+      // Twist the weapon up and back, then whip it into a forward-facing release.
+      const holdAngle = mix(mix(-.2,-.95,wind),2.30,release);
+      drawTrident(rightHand[0],rightHand[1]-3,holdAngle,106,alpha);
     }
     g.restore();
   }
 
-  function drawSummon(t,elapsed){
-    const opening=phase(elapsed,.05,.7),rising=out(phase(elapsed,.72,2.6));
-    const sinking=ease(phase(elapsed,5.42,7.22));
-    const rise=rising*(1-sinking);
-    const begin=1-phase(elapsed,1.1,2.15);
-    drawWhirlpool(t,opening*(1-sinking)+.5*sinking);
+  function drawSummon(t,elapsed) {
+    const opening = ease(phase(elapsed,.04,SPELL.riseStart));
+    const rising = out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+    const aiming = ease(phase(elapsed,SPELL.aimStart,SPELL.aimEnd));
+    const winding = ease(phase(elapsed,SPELL.windStart,SPELL.windEnd));
+    const releasing = ease(phase(elapsed,SPELL.releaseStart,SPELL.releaseEnd));
+    const sinking = ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
+    const rise = rising*(1-sinking);
+    drawWhirlpool(t,opening*(1-sinking)+sinking*.45);
     if(rise>.01){
       drawWave(t,rise);
-      drawPoseidon(t,rise,ease(phase(elapsed,3.34,4.15)),elapsed>=4.20,clamp((1-sinking)*3));
-      if(Math.random()<.65*(1-sinking))addParticle(505+rand(-135,135),409-rand(10,90)*rise,"spray",.48);
+      // Hold the point after releasing so the follow-through is visible.
+      drawPoseidon(t,rise,aiming,winding,releasing,elapsed>=SPELL.launch,clamp((1-sinking)*3));
+      if(Math.random()<.7*(1-sinking))
+        addParticle(505+rand(-135,135),409-rand(10,90)*rise,"spray",.47);
     }
-    if(begin>0 && opening>.3) glow(505,405,90*opening,"#6df5fa2d");
-    if(elapsed>5.4 && elapsed<7.23 && Math.random()<.6)addParticle(505+rand(-120,120),401-rand(2,100)*rise,"spray",.6);
+    if(opening>.3 && elapsed<1.4)glow(505,405,90*opening,"#6df5fa2d");
+    if(elapsed>SPELL.sinkStart && elapsed<SPELL.sinkEnd && Math.random()<.7)
+      addParticle(505+rand(-120,120),401-rand(2,100)*rise,"spray",.6);
   }
 
   function drawProjectile(elapsed,t) {
-    if(elapsed<4.17||elapsed>4.92)return;
-    const p=ease(phase(elapsed,4.17,4.92));
-    const px=mix(639,781,p),py=mix(164,285,p)-Math.sin(p*Math.PI)*70;
-    const trail=[];
-    for(let k=0;k<8;k++){
-      let q=clamp(p-k*.032);
-      trail.push([mix(639,781,q),mix(164,285,q)-Math.sin(q*Math.PI)*70]);
-    }
+    if(elapsed<SPELL.launch||elapsed>=SPELL.hit)return;
+    // The TIP (not the trident's centre) moves from the casting hand to the foe.
+    // This avoids the old visual error where the trident seemed to pass the target.
+    const u=phase(elapsed,SPELL.launch,SPELL.hit);
+    const p=1-Math.pow(1-u,1.65); // explosive acceleration, not slow floating
+    const tipAt=q=>[mix(643,785,q),mix(167,290,q)-Math.sin(q*Math.PI)*20];
+    const tip=tipAt(p);
+    const angle=2.30; // local -Y points down/right towards the Sentinel
+    const length=102;
+    const offset=length*1.04;
+    const cx=tip[0]-Math.sin(angle)*offset;
+    const cy=tip[1]+Math.cos(angle)*offset;
     g.save();g.globalCompositeOperation="lighter";
-    g.beginPath();g.moveTo(trail[0][0],trail[0][1]);
-    for(const pos of trail.slice(1))g.lineTo(pos[0],pos[1]);
-    g.strokeStyle="#48e9ff";g.lineWidth=25;g.shadowColor="#32ecff";g.shadowBlur=30;g.stroke();
-    g.strokeStyle="#e4ffff";g.lineWidth=5;g.stroke();g.restore();
-    glow(px,py,44,"#d5ffff6b");
-    drawTrident(px,py,1.1+Math.sin(p*2)*.2,125,1);
-    if(Math.random()<.9)addParticle(px+rand(-16,16),py+rand(-13,13),"gold",.5);
+    const prev=tipAt(Math.max(0,p-.30));
+    line(prev[0],prev[1],tip[0],tip[1],"#1ae5ff",24);
+    line(prev[0],prev[1],tip[0],tip[1],"#d7ffff",6);
+    glow(tip[0],tip[1],38,"#b2ffff91");
+    g.restore();
+    drawTrident(cx,cy,angle,length);
+    if(Math.random()<.95)
+      addParticle(tip[0]+rand(-10,10),tip[1]+rand(-11,11),"gold",.46);
   }
 
   function drawImpact(elapsed) {
-    if(elapsed<4.88||elapsed>6.15)return;
-    const p=phase(elapsed,4.88,6.15);
+    if(elapsed<SPELL.hit||elapsed>5.05)return;
+    const p=phase(elapsed,SPELL.hit,5.05);
     g.save();g.globalCompositeOperation="lighter";
     const flare=1-ease(p);
-    glow(783,291,175*flare+30,"rgba(155,255,255,"+(.5*flare)+")");
+    glow(783,291,175*flare+30,"rgba(155,255,255,"+(.6*flare)+")");
     glow(782,309,96*flare+10,"rgba(68,210,250,"+(.7*flare)+")");
     for(let i=0;i<4;i++){
       g.save();g.globalAlpha=flare;
@@ -416,15 +473,20 @@
       g.restore();
     }
     for(let i=0;i<9;i++){
-      const a=i*(Math.PI*2/9)+.23;
+      const a=i*Math.PI*2/9+.23;
       const inner=18+p*32,outer=55+p*162;
-      line(783+Math.cos(a)*inner,301+Math.sin(a)*inner,783+Math.cos(a)*outer,301+Math.sin(a)*outer,i%2?"#48e7ef":"#c4fcff",8*flare);
+      line(783+Math.cos(a)*inner,301+Math.sin(a)*inner,
+           783+Math.cos(a)*outer,301+Math.sin(a)*outer,
+           i%2?"#48e7ef":"#c4fcff",8*flare);
     }
     g.restore();
-    if(elapsed<5.91) {
-      const y=233-40*phase(elapsed,4.9,5.9);
-      g.save();g.globalAlpha=1-phase(elapsed,5.56,6.1);
-      g.textAlign="center";g.font="bold 56px Georgia,serif";g.lineWidth=6;g.strokeStyle="#061823";g.shadowBlur=18;g.shadowColor="#8afaff";g.strokeText("-1,200",782,y);g.fillStyle="#fef8df";g.fillText("-1,200",782,y);g.restore();
+    if(p<.94){
+      const y=232-48*ease(p);
+      g.save();g.globalAlpha=1-ease(phase(elapsed,4.70,5.04));
+      g.textAlign="center";g.font="bold 56px Georgia,serif";
+      g.lineWidth=6;g.strokeStyle="#061823";g.shadowBlur=18;g.shadowColor="#8afaff";
+      g.strokeText("-1,200",782,y);g.fillStyle="#fef8df";g.fillText("-1,200",782,y);
+      g.restore();
     }
   }
 
@@ -444,8 +506,8 @@
   }
 
   function applyShake(elapsed) {
-    if(elapsed<4.89||elapsed>5.45)return;
-    const strength=12*(1-phase(elapsed,4.89,5.45));
+    if(elapsed<SPELL.hit||elapsed>SPELL.hit+.5)return;
+    const strength=12*(1-phase(elapsed,SPELL.hit,SPELL.hit+.5));
     g.translate(rand(-strength,strength),rand(-strength,strength));
   }
 
@@ -533,27 +595,30 @@
     UI.state.textContent="SUMMONING";
     UI.status.textContent="The ocean answers your call...";
     UI.caption.textContent="POSEIDON'S WRATH";
-    UI.hint.textContent="Whirlpool → rising wave → thrown trident → strike → unsummon.";
+    UI.hint.textContent="Whirlpool → wave → point and wind up → rapid throw → impact → unsummon.";
+    UI.caption.textContent="POSEIDON’S WRATH";
     UI.card.classList.remove("selected");
     playEffect("cast");refreshUI();
   }
   function stageAt(e){
-    if(e<1.12)return"opening";
-    if(e<3.36)return"rise";
-    if(e<4.17)return"wind";
-    if(e<4.90)return"throw";
-    if(e<5.42)return"impact";
-    if(e<7.24)return"sink";
-    return"complete";
+    if(e<.95)return "opening";
+    if(e<SPELL.aimStart)return "rise";
+    if(e<SPELL.windStart)return "aim";
+    if(e<SPELL.launch)return "wind";
+    if(e<SPELL.hit)return "throw";
+    if(e<SPELL.sinkStart)return "impact";
+    if(e<SPELL.sinkEnd)return "sink";
+    return "complete";
   }
   function setStage(stage){
     const stages={
-      opening:["THE SEA STIRS","The water begins to spiral..."],
-      rise:["POSEIDON RISES","The god of the ocean ascends with the wave!"],
-      wind:["THE TRIDENT IS DRAWN","Poseidon prepares his throw."],
-      throw:["TRIDENT RELEASED","The trident flies toward the enemy!"],
+      opening:["THE SEA STIRS","A whirlpool opens beneath the arena..."],
+      rise:["POSEIDON RISES","The sea god ascends on a towering wave!"],
+      aim:["TARGET LOCKED","Poseidon points his free hand at the Sentinel."],
+      wind:["TRIDENT DRAWN BACK","His throwing arm coils behind his head."],
+      throw:["TRIDENT RELEASED","The trident launches toward the enemy!"],
       impact:["DEVASTATING IMPACT","The Stone Sentinel takes 1,200 water damage!"],
-      sink:["UNSUMMONING","Poseidon dissolves into sea spray and sinks below."],
+      sink:["UNSUMMONING","Poseidon dissolves into the collapsing wave."],
       complete:["SPELL COMPLETE","The waters grow still."]
     };
     UI.state.textContent=stages[stage][0];UI.status.textContent=stages[stage][1];
@@ -563,6 +628,7 @@
     if(stage==="impact")playEffect("hit");
     if(stage==="sink")playEffect("sink");
   }
+
   function completeCast(){
     cast=null;mana=8;round++;
     if(health<=0){
@@ -584,7 +650,7 @@
     cast.elapsed+=dt*speed;
     const stage=stageAt(cast.elapsed);
     if(stage!==cast.stage){cast.stage=stage;setStage(stage);}
-    if(!cast.hit&&cast.elapsed>=4.9){
+    if(!cast.hit&&cast.elapsed>=SPELL.hit){
       cast.hit=true;health=Math.max(0,health-DAMAGE);
       targetPulse=1.3;refreshUI();
       for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));

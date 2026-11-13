@@ -69,7 +69,10 @@
   // Faster cast playback; Poseidon's post-hit hold remains ~0.61s real,
   // and Stone Golem still plays a little more slowly with its new idle.
   const DEFAULT_SPELL_RATE = 1.7;
-  const EARTH_RATE_MULTIPLIER=1.04; // Poseidon ~2.63s; Golem ~2.78s.
+  // Speed only Poseidon up by 25%, without changing any approved sprite frames
+  // or the game-time release/impact/unsummon timestamps.
+  const POSEIDON_RATE_MULTIPLIER=1.25; // Poseidon ~2.10s at displayed 1×.
+  const EARTH_RATE_MULTIPLIER=1.04; // Golem stays ~2.83s at displayed 1×.
   let health = MAX_HP, mana = 8, round = 1;
   let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
@@ -1355,7 +1358,7 @@
     if(!cast){updateParticles(dt);return;}
     const type=cast.type,earth=type==="stone",timing=earth?EARTH:SPELL;
     const spellDt=dt*speed*DEFAULT_SPELL_RATE*
-      (earth?EARTH_RATE_MULTIPLIER:1);
+      (earth?EARTH_RATE_MULTIPLIER:POSEIDON_RATE_MULTIPLIER);
     cast.elapsed+=spellDt;
     const stage=stageAt(cast.elapsed,type);
     if(stage!==cast.stage){cast.stage=stage;setStage(stage,type);}

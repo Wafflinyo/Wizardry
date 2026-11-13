@@ -236,3 +236,120 @@ body{height:100dvh;overflow:hidden}
  .hand-assist{min-height:28px}
  .confirm-target{min-height:27px;padding:3px 7px;font-size:9px}
 }
+
+
+/* v0.29 — Two ornate, ORIGINAL-SUMMON-ART spell cards.
+   Both remain fully visible; never make the card row scroll horizontally. */
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;overflow:visible;scroll-snap-type:none;align-items:stretch}
+.spell.card-ornate{isolation:isolate;position:relative;min-width:0;width:100%;
+  height:clamp(158px,20.5dvh,202px);min-height:145px;
+  flex:0 1 auto;padding:5px 6px 6px;display:flex;flex-direction:column;
+  align-items:stretch;justify-content:flex-start;gap:2px;
+  border-radius:12px;border:2px solid #c9ac70;
+  background:linear-gradient(156deg,#12394c 0%,#0c2739 54%,#081a2c 100%);
+  box-shadow:inset 0 0 0 2px #0b222d,inset 0 0 0 4px #d4b57946,
+    0 3px 12px #010b17a8;color:#f6e9cb;text-align:center}
+.spell.card-ornate.school-earth{border-color:#c8ae78;
+  background:linear-gradient(156deg,#3c3538 0%,#24212d 57%,#151b26 100%);
+  box-shadow:inset 0 0 0 2px #251b2b,inset 0 0 0 4px #b88bc156,
+    0 3px 12px #010b17a8}
+.spell.card-ornate.chosen{border-color:#8df5eb;
+  box-shadow:0 0 0 2px #60dff2,0 0 18px #62ddf368,inset 0 0 0 2px #d1b57b}
+.spell.card-ornate.school-earth.chosen{border-color:#dfd0a4;
+  box-shadow:0 0 0 2px #bcadf2,0 0 15px #b994db70,inset 0 0 0 2px #e1ccab}
+.spell.card-ornate:after{content:"";position:absolute;pointer-events:none;inset:4px;
+  border:1px solid #c4b07a5b;border-radius:8px;z-index:0}
+.spell.card-ornate>*{z-index:1}
+.spell-tier{font:800 9px/1.15 Inter,system-ui,sans-serif;letter-spacing:.12em;
+  color:#d9c796;min-height:12px;text-shadow:0 1px #071923;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.school-water .spell-tier{color:#a6f4f8}
+.school-earth .spell-tier{color:#e6d2a6}
+.spell-mana-cost{position:absolute!important;z-index:3!important;
+  top:23px;left:9px;display:grid;place-items:center;width:30px;height:30px;
+  border:2px solid #e9c578;color:#fff6d9;
+  font:800 17px Cinzel,Georgia,serif;
+  background:linear-gradient(145deg,#0b6882,#07283d);
+  clip-path:polygon(50% 0%,89% 17%,100% 58%,64% 100%,20% 100%,0% 49%,20% 17%);
+  filter:drop-shadow(0 1px 3px #010b14)}
+.school-earth .spell-mana-cost{background:linear-gradient(145deg,#75613f,#332b35)}
+.spell-art-shell{display:block;min-width:0;width:100%;flex:1 1 62px;min-height:42px;
+  border-radius:6px;overflow:hidden;border:1px solid #b7b08164;
+  box-shadow:inset 0 -8px 12px #0618248e}
+.spell-art-canvas{display:block;width:100%;height:100%;object-fit:cover}
+.spell.card-ornate .spell-name{display:block;flex:0 0 auto;
+  font:700 clamp(11px,1.8vw,15px)/1.1 Cinzel,Georgia,serif;
+  color:#fff0d0;letter-spacing:.01em;margin:1px 0 0;
+  min-height:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spell-combat{display:flex;align-items:center;justify-content:space-around;gap:4px;
+  min-width:0;padding:3px 2px;border-top:1px solid #c0a46c8e;
+  border-bottom:1px solid #b5a27655;font-size:9px;font-weight:700;
+  color:#cde8ed;white-space:nowrap}
+.spell-combat b{font-size:12px;color:#ecfaff}
+.school-earth .spell-combat b{color:#ebddae}
+.spell-effect{flex:0 0 auto;min-height:29px;display:flex;
+  flex-direction:column;gap:2px;align-items:center;
+  justify-content:center;font-size:9px;line-height:1.14;
+  color:#b8e9ed;letter-spacing:.02em;white-space:nowrap}
+.spell-effect b{font-size:9px;letter-spacing:.04em;color:#ecd59f}
+.school-earth .spell-effect{color:#ddc6ad}
+.school-earth .spell-effect b{color:#e3b18a}
+.spell.card-ornate:disabled{filter:saturate(.58) brightness(.7);opacity:.72}
+.spell.card-ornate:hover{transform:none}
+@media(max-width:700px){
+ .cards{gap:7px;padding:4px 0}
+ .spell.card-ornate{height:clamp(153px,20dvh,183px);min-height:138px;
+   padding:5px 4px 5px;gap:1px;border-radius:10px}
+ .spell-tier{font-size:8px;letter-spacing:.07em}
+ .spell-mana-cost{top:19px;left:8px;width:27px;height:27px;font-size:15px}
+ .spell.card-ornate .spell-name{font-size:12px;margin:2px 0 0}
+ .spell-combat{font-size:8px;padding:3px 0}
+ .spell-combat b{font-size:11px}
+ .spell-effect{min-height:26px;font-size:8px;gap:1px}
+ .spell-effect b{font-size:8px}
+}
+@media(max-height:650px) and (orientation:portrait){
+ .spell.card-ornate{height:139px;min-height:132px}
+ .spell-art-shell{min-height:34px}
+ .spell-tier{font-size:7px}
+ .spell.card-ornate .spell-name{font-size:11px}
+ .spell-combat{font-size:7px}
+ .spell-combat b{font-size:10px}
+ .spell-effect{min-height:24px;font-size:7.5px}
+ .spell-effect b{font-size:7.5px}
+}
+@media(orientation:landscape) and (max-height:620px) and (min-width:690px){
+ .spell.card-ornate{height:clamp(138px,43dvh,180px);min-height:132px}
+ .spell-art-shell{min-height:32px}
+ .spell-tier{font-size:7px}
+ .spell.card-ornate .spell-name{font-size:11px}
+ .spell-combat{font-size:8px}
+ .spell-combat b{font-size:10px}
+ .spell-effect,.spell-effect b{font-size:8px}
+}
+@media(max-height:390px) and (orientation:landscape){
+ .spell.card-ornate{height:128px;min-height:118px}
+ .spell-art-shell{min-height:25px}
+ .spell-tier{font-size:7px}
+ .spell.card-ornate .spell-name{font-size:10px}
+ .spell-combat{padding:2px 0}
+ .spell-effect{min-height:22px}
+}
+
+/* Tapping a magical rune beneath HP opens this non-scrolling overlay,
+   leaving the arena's 1000×620 buffer and responsive sizing untouched. */
+.status-popup[hidden]{display:none!important}
+.status-popup{position:absolute;z-index:16;left:50%;bottom:12px;
+  transform:translateX(-50%);width:min(350px,calc(100% - 24px));
+  max-height:75%;overflow-y:auto;padding:13px 40px 13px 13px;
+  border:1.6px solid #d6be81;border-radius:10px;
+  background:linear-gradient(145deg,#173749f8,#0a1a2af7);
+  box-shadow:0 10px 28px #020d1ccc;color:#e7ece3;pointer-events:auto}
+.status-popup strong{display:block;font:700 15px Cinzel,Georgia,serif;
+  color:#edda9d;margin-bottom:7px}
+.status-popup p{font-size:12px;line-height:1.45;color:#c0e7e9;margin:0}
+.status-close{position:absolute;top:6px;right:7px;
+  display:grid;place-items:center;width:28px;height:28px;
+  border:1px solid #78a5b5;border-radius:7px;background:#102d40;
+  color:#fff0d1;font-size:20px;font-weight:700}

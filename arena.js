@@ -385,14 +385,15 @@
       target=correctTarget(),toPlan=alive(state.planningSide).length,
       count=alive(state.planningSide).filter(u=>state.plans[u.id]).length;
     ui.round.textContent="ROUND "+state.round;
-    ui.phase.textContent=planning?(state.planningSide?"TEAM B PLANNING":"TURN PLANNING"):
+    ui.phase.textContent=planning?(state.planningSide?"TEAM B · PICK AGAIN":"CHOOSE SPELLS"):
       state.phase==="finished"?"BATTLE COMPLETE":"RESOLVING SPELLS";
     ui.badge.textContent=state.size+" vs "+state.size+" · "+
       (state.mode==="story"?"STORY / CPU":"PvP LOCAL TEST");
     ui.queueCount.textContent=planning?count+" / "+toPlan+" READY":
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
-    if(planning)ui.hint.textContent=(state.planningSide?"Team B":"Allies")+
-      ": choose caster, spell and target; queue all actions.";
+    if(planning)ui.hint.textContent="ROUND "+state.round+" · "+
+      (state.planningSide?"Team B":"Your team")+
+      ": select a NEW spell and target for each wizard.";
     ui.handTitle.textContent=(c?c.name:(planning?"No caster":"Battle"))+" · "+
       (planning?"Choose a spell":state.phase==="finished"?"Victory test":"Resolving");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
@@ -400,9 +401,9 @@
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
     ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=!canDress;
     if(c){ui.hat.value=c.hat;ui.robe.value=c.robe;ui.robeColor.value=c.robeColor;}
-    ui.chosenSpell.textContent=card.name.toUpperCase();
-    ui.chosenTarget.textContent=card.target==="team"?"Target: entire allied team":
-      "Target: "+(target?.name||"none");
+    ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
+    ui.chosenTarget.textContent=target?"Target: "+target.name:
+      "Target: tap an enemy in the arena or roster";
     // Actual initiative preview, ordered by speed. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -425,7 +426,7 @@
       const b=document.createElement("button");b.type="button";
       b.className="unit"+(team?" enemy":"")+
         (c?.id===u.id?" is-caster":"")+
-        (target?.id===u.id&&card.target!=="team"?" is-target":"")+
+        (target?.id===u.id?" is-target":"")+
         (u.hp<=0?" dead":"");
       const tags=u.statuses.map(s=>s.icon).join(" ")+(state.auras[u.team]?" ◎":"")+
         (state.plans[u.id]?" ✓":"");
@@ -441,13 +442,24 @@
     paintRoster(0,ui.allies);paintRoster(1,ui.enemies);
     if(ui.targetPicker){
       ui.targetPicker.innerHTML="";
-      if(card.target!=="team"&&c)for(const u of targetsFor(card,c)){
-        const o=document.createElement("option");o.value=u.id;o.textContent=u.name;
-        ui.targetPicker.appendChild(o);
+      const placeholder=document.createElement("option");
+      placeholder.value="";
+      placeholder.textContent="Choose target";
+      ui.targetPicker.appendChild(placeholder);
+      if(c){
+        // Both approved summons target enemies. Permit explicit enemy
+        // selection before choosing a card if the player prefers.
+        const choices=card?targetsFor(card,c):alive(1-c.team);
+        for(const u of choices){
+          const option=document.createElement("option");
+          option.value=u.id;
+          option.textContent=u.name;
+          ui.targetPicker.appendChild(option);
+        }
       }
-      ui.targetPicker.value=target?.id||"";
-      ui.targetPicker.disabled=!planning||card.target==="team";
-      ui.targetPicker.hidden=card.target==="team";
+      ui.targetPicker.value=state.selectedTarget||"";
+      ui.targetPicker.disabled=!planning||!c;
+      ui.targetPicker.hidden=!planning;
     }
     if(!ui.hand.childElementCount){
       for(const k of CARDS){
@@ -462,16 +474,18 @@
       }
     }
     for(const b of ui.hand.children){
-      b.classList.toggle("chosen",b.dataset.card===card.id);
+      b.classList.toggle("chosen",b.dataset.card===card?.id);
       b.disabled=!planning||!c||BY_ID[b.dataset.card].cost>c.mana;
-      b.setAttribute("aria-pressed",String(b.dataset.card===card.id));
+      b.setAttribute("aria-pressed",String(b.dataset.card===card?.id));
     }
-    ui.queue.disabled=!planning||!c||!!state.plans[c.id]||c.mana<card.cost||
-      (card.target!=="team"&&!target);
+    ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
+      c.mana<card.cost||(card.target!=="team"&&!target);
     ui.auto.disabled=!planning||toPlan===count;
     ui.resolve.disabled=!planning||count<toPlan;
     ui.resolve.textContent=state.mode==="pvp"&&state.planningSide===0?
       "Pass to Team B":state.phase==="finished"?"Fight again":"Resolve round";
+    ui.queue.textContent=card&&target?"Queue spell":"Choose spell + target";
+    ui.auto.textContent="Auto-fill this round";
     ui.plans.innerHTML="";
     for(const u of state.units){
       const p=state.plans[u.id];if(!p)continue;
@@ -516,7 +530,7 @@
       if(!candidates[0]||candidates[0].d>83)return;
       const u=candidates[0].u;
       if(u.team===state.planningSide){
-        if(currentCard().target==="ally"&&u.id!==state.selectedCaster)selectTarget(u.id);
+        if(currentCard()?.target==="ally"&&u.id!==state.selectedCaster)selectTarget(u.id);
         else selectCaster(u.id);
       }else selectTarget(u.id);
     });

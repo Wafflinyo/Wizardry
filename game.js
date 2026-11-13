@@ -660,6 +660,7 @@
     if(typeof ctx.getImageData!=="function"||typeof ctx.putImageData!=="function")return;
     let pixels;
     try {pixels=ctx.getImageData(0,0,width,width);}catch(error){return;}
+    if(!pixels||!pixels.data)return;
     const data=pixels.data,length=width*width;
     const outside=new Uint8Array(length),queue=new Int32Array(length);
     let head=0,tail=0;

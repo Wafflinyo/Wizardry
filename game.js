@@ -681,6 +681,10 @@
     let i=0;
     while(i<POSEIDON_FRAME_TIMES.length-1 &&
           elapsed>=POSEIDON_FRAME_TIMES[i+1])i++;
+    // The trident remains held in the RIGHT hand until the exact
+    // release timestamp. Frame 6 is already the projected-trident image;
+    // using it early would make the weapon teleport out of his hand.
+    if(i===6 && elapsed<SPELL.launch)return 5;
     return i;
   }
   function drawTracedPoseidon(elapsed){
@@ -704,6 +708,19 @@
       }
     }
     g.restore();
+    // Rebuild Poseidon's free left fist after removing the original,
+    // incorrectly left-handed trident from the approved wind-up poses.
+    // The right-hand trident is part of the newly corrected traced artwork.
+    if(i===4||i===5){
+      const fx=i===4?381:398,fy=i===4?211:201;
+      g.save();g.globalAlpha*=opacity;
+      polygon([[fx-18,fy-10],[fx-6,fy-18],[fx+13,fy-14],
+        [fx+20,fy],[fx+11,fy+17],[fx-13,fy+16],[fx-22,fy+4]],
+        "#b4876b","#7a5949",1.3);
+      triangleFacet(fx-18,fy-10,fx-6,fy-18,fx+2,fy+4,"#dab18e");
+      triangleFacet(fx+13,fy-14,fx+20,fy,fx+11,fy+17,"#8f6754");
+      g.restore();
+    }
   }
   function drawSummon(t,elapsed) {
     if(poseidonAssetReady){
@@ -725,27 +742,24 @@
 
   function drawProjectile(elapsed,t) {
     if(elapsed<SPELL.launch||elapsed>=SPELL.hit)return;
-    const progress=phase(elapsed,SPELL.launch,SPELL.hit);
-    // Tip leaves Poseidon's raised trident in the approved release pose.
-    const tipStart=[629,205],tipEnd=[784,290];
-    const tipX=mix(tipStart[0],tipEnd[0],progress);
-    const tipY=mix(tipStart[1],tipEnd[1],progress)-
-      16*Math.sin(Math.PI*progress);
-    const earlier=Math.max(0,progress-.19);
-    const behindX=mix(tipStart[0],tipEnd[0],earlier);
-    const behindY=mix(tipStart[1],tipEnd[1],earlier)-
-      16*Math.sin(Math.PI*earlier);
-    const angle=Math.atan2(tipEnd[0]-tipStart[0],
-      tipStart[1]-tipEnd[1]);
-    // drawTrident() extends 1.05× length from its origin to its tip.
-    const length=105,reach=length*1.05;
-    const cx=tipX-Math.sin(angle)*reach;
-    const cy=tipY+Math.cos(angle)*reach;
+    const p=phase(elapsed,SPELL.launch,SPELL.hit);
+    // Release FROM THE SAME RIGHT HAND holding the trident in the traced
+    // windup pose. The staff is initially vertical, pivots forward, and
+    // accelerates toward the Sentinel. No hand swap or pre-release flight.
+    const start=[644,211],target=[785,290];
+    const flight=ease(phase(elapsed,SPELL.launch+.025,SPELL.hit));
+    const x=mix(start[0],target[0],flight);
+    const y=mix(start[1],target[1],flight)-21*Math.sin(Math.PI*flight);
+    const aim=Math.atan2(target[0]-start[0],start[1]-target[1]);
+    const angle=aim*ease(phase(elapsed,SPELL.launch,SPELL.launch+.085));
+    const trail=Math.max(0,flight-.14);
+    const bx=mix(start[0],target[0],trail),by=mix(start[1],target[1],trail)-
+      21*Math.sin(Math.PI*trail);
     g.save();g.globalCompositeOperation="lighter";
-    line(behindX,behindY,tipX,tipY,"#0cbee8",20);
-    line(behindX,behindY,tipX,tipY,"#dcffff",5);
-    glow(tipX,tipY,34,"#b3fdff70");g.restore();
-    drawTrident(cx,cy,angle,length);
+    line(bx,by,x,y,"#0cbee8",14);
+    line(bx,by,x,y,"#e1ffff",3.5);
+    glow(x,y,23,"#b3fdff55");g.restore();
+    drawTrident(x,y,angle,103);
   }
 
   function drawImpact(elapsed) {

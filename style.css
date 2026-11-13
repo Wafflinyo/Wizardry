@@ -644,3 +644,114 @@ body {
 /* Single root scroller: prevent nested body scrolling on iOS Safari. */
 html { overflow-y:auto!important; }
 body { overflow-y:visible!important; }
+
+
+/* v0.12 — stop vertical scene jumps on state changes.
+   Golem stage labels change more frequently and have longer words than
+   Poseidon's. Never let those labels change the height of the battle header. */
+html,body,.app,.battle,.battle-header { overflow-anchor:none!important; }
+html { scroll-behavior:auto!important; }
+.battle-header {
+  box-sizing:border-box;
+  display:flex!important;
+  align-items:center!important;
+  height:46px!important;
+  min-height:46px!important;
+  max-height:46px!important;
+  flex:0 0 46px!important;
+  overflow:hidden!important;
+  gap:8px!important;
+}
+.battle-title {
+  min-width:0;
+  flex:1 1 auto;
+  overflow:hidden;
+}
+.battle-title .eyebrow {white-space:nowrap;}
+.battle-title h1 {
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+}
+.round-meta {
+  display:grid!important;
+  flex:0 1 min(50%,200px);
+  width:min(50%,200px);
+  min-width:0;
+  max-height:25px;
+  height:25px;
+  padding:0!important;
+  grid-template-columns:8px max-content 1px minmax(0,1fr);
+  align-items:center!important;
+  gap:5px!important;
+  overflow:hidden;
+  line-height:1.1;
+}
+.round-meta .indicator {flex-shrink:0;}
+.round-meta .meta-divider {margin:0;width:1px;height:12px;}
+#roundLabel {
+  display:block;
+  white-space:nowrap;
+}
+#stateLabel {
+  display:block;
+  min-width:0;
+  white-space:nowrap!important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.2;
+}
+#castButton {
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  overflow:hidden;
+  white-space:nowrap;
+}
+#castButtonText {
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#castButton[aria-disabled="true"] {
+  opacity:.55;
+  cursor:default;
+}
+/* Touch events shouldn't leave a hover transform in place after tapping. */
+@media(hover:none) {
+  .primary-button:hover:not(:disabled),
+  .spell-card:hover {
+    transform:none!important;
+  }
+}
+@media(max-width:700px){
+  .battle-header {
+    height:35px!important;
+    min-height:35px!important;
+    max-height:35px!important;
+    flex:0 0 35px!important;
+  }
+  .round-meta {
+    flex-basis:min(48%,175px);
+    width:min(48%,175px);
+    font-size:7.5px;
+    letter-spacing:.05em;
+    gap:3px!important;
+    grid-template-columns:7px max-content 1px minmax(0,1fr);
+  }
+  .round-meta .indicator{width:7px;height:7px;}
+  .battle-title h1{font-size:clamp(14px,4.2vw,18px);}
+}
+@media (orientation:landscape) and (max-height:600px) and (min-width:650px) {
+  .battle-header {
+    height:27px!important;
+    min-height:27px!important;
+    max-height:27px!important;
+    flex:0 0 27px!important;
+    margin-bottom:3px;
+  }
+  .battle-title .eyebrow {display:none!important;}
+  .round-meta {width:min(47%,190px);flex-basis:min(47%,190px);}
+}

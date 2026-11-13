@@ -1,14 +1,15 @@
-## NEW — Side HP plates, Confirm Target and summon layering (v0.28)
+## NEW — Exact approved splash-art cards + Poseidon recharge & Tidal Echo (v0.29)
 
-**[Play the updated 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.28.0)**
+**[Play the updated Wizardry 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.29.0)**
 
-Story mode remains **one human-controlled wizard and CPU teammates/enemies**. Both approved cards remain visible beneath the battlefield, with no roster or scrolling required.
+The two ornate, non-scrolling cards now show actual **approved game animation frames** instead of unrelated concept art: Poseidon's trident-raised frame and Stone Golem's seismic fissure frame. Each card displays its mana cost, spell name, damage, accuracy, and the currently implemented effect. **The live 16-frame summon sprites have not been edited.**
 
-The selection sequence is now: **Tap Poseidon's Wrath or Stone Golem → tap an enemy → see a downward gold arrow above its head → press Confirm Target**. You can switch the selected enemy before confirming. No mana is spent or combat started until confirmation, after which teammates and enemies select their own actions and the round resolves. New rounds require a fresh player choice.
+- **Poseidon's Wrath:** 8 mana, **1,200 Water damage**, **70% accuracy**. After casting (hit or miss), the wizard **must skip the next round to recharge** and gains **Tidal Echo**: **+30% to their next successful damaging Water spell**. The buff persists through Earth spells and missed Water spells, and does not stack.
+- **Stone Golem:** 6 mana, **900 Earth damage**, **85% accuracy**, original seismic fissure. No new ability.
 
-To reduce overlapping characters, small name/HP plates now sit **left of each allied wizard and right of each enemy**. The animated Poseidon, Stone Golem, projectiles, seismic fissures and spell effects are **rendered behind all standing fighter models**, while nameplates, the target arrow and damage feedback remain readable in front.
+The status effects appear as small, tappable magical runes **beneath the affected fighter's HP bar**: amber ⧖ for Recharge and cyan ≈ for Tidal Echo. Tapping an icon opens its detailed description. Both player and CPU casters use the same mechanics.
 
-No approved art, damage, or accuracy values were changed: **Poseidon 70% accuracy / 1,200 damage; Stone Golem 85% accuracy / 900 damage**. Online friends and ranked matches remain future work. Details: [ARENA_TEST.md](ARENA_TEST.md).
+Story mode still lets you control one wizard, with CPU teammates; choose a card, tap an enemy and **Confirm Target**. Spell art still renders behind the standing fighters. No online accounts, friend lobbies or ranked matching are enabled yet. See [ARENA_TEST.md](ARENA_TEST.md) for rules and test instructions.
 
 ---
 

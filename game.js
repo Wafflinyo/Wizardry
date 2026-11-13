@@ -14,6 +14,13 @@
     sound: document.getElementById("soundButton"),
     soundLabel: document.getElementById("soundLabel"),
     card: document.getElementById("poseidonCard"),
+    golemCard: document.getElementById("stoneGolemCard"),
+    spellSchool: document.getElementById("spellSchool"),
+    spellName: document.getElementById("spellName"),
+    spellSummary: document.getElementById("spellSummary"),
+    spellCost: document.getElementById("spellCost"),
+    spellDamage: document.getElementById("spellDamage"),
+    spellTarget: document.getElementById("spellTarget"),
     manaPips: document.getElementById("manaPips"),
     manaText: document.getElementById("manaText"),
     round: document.getElementById("roundLabel"),
@@ -53,7 +60,25 @@
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
   const DEFAULT_SPELL_RATE = 1.5;
   let health = MAX_HP, mana = 8, round = 1;
-  let selected = true, targeted = true, defeated = false;
+  const SPELLS = Object.freeze({
+    poseidon: {
+      name: "Poseidon's Wrath", school: "Water", cost: 8, damage: 1200,
+      summary: "Poseidon rises with the sea, aims and throws his trident at the Sentinel, and becomes the wave as he disappears.",
+      start: "The ocean answers your call...",
+      caption: "POSEIDON'S WRATH",
+      hint: "Whirlpool → surge → aim → trident throw → splash → unsummon.",
+      finish: "Poseidon has been fully unsummoned."
+    },
+    stone: {
+      name: "Stone Golem", school: "Earth", cost: 6, damage: 900,
+      summary: "An ancient Earth golem rises from the arena, hoists a massive boulder overhead with both hands, and throws it at the enemy.",
+      start: "Stone rumbles beneath the arena...",
+      caption: "STONE GOLEM",
+      hint: "Earth cracks → golem rises → both hands lift boulder → throw → impact → crumble.",
+      finish: "Stone Golem has crumbled back into the earth."
+    }
+  });
+  let selectedSpell = "poseidon", targeted = true, defeated = false;
   let cast = null, particles = [], speed = 1, sound = true;
   let previousTime = performance.now(), totalTime = 0, targetPulse = 0;
   let audio = null;
@@ -217,13 +242,14 @@
       }
     }
     // Spinning summoning glyph only while active
-    if(cast && cast.elapsed < 7.3){
-      const alpha=cast.elapsed<.7?phase(cast.elapsed,0,.7):1-phase(cast.elapsed,6.6,7.3);
+    if(cast && cast.elapsed < (cast.type==="stone"?EARTH.end:SPELL.end)){
+      const duration=cast.type==="stone"?EARTH.end:SPELL.end;
+      const alpha=cast.elapsed<.50?phase(cast.elapsed,0,.50):1-phase(cast.elapsed,duration-.55,duration);
       g.save();g.globalAlpha=alpha;
       for(let k=0;k<3;k++){
         g.save();g.translate(505,402);g.rotate(t*(k%2?-.14:.19)+k);g.scale(1,.34);
         g.beginPath();g.arc(0,0,96-k*22,0,Math.PI*2);
-        g.strokeStyle=k===0?"#72f9ee":"#3ccbf2";g.lineWidth=3-k*.5;g.shadowBlur=12;g.shadowColor="#4ffcf1";g.stroke();
+        g.strokeStyle=cast.type==="stone"?(k===0?"#c5d18a":"#a69763"):(k===0?"#72f9ee":"#3ccbf2");g.lineWidth=3-k*.5;g.shadowBlur=12;g.shadowColor=cast.type==="stone"?"#acbe6f":"#4ffcf1";g.stroke();
         for(let q=0;q<9;q++){let a=q*Math.PI*2/9;line(70*Math.cos(a),70*Math.sin(a),78*Math.cos(a),78*Math.sin(a),"#a1ffff",4);}
         g.restore();
       }
@@ -255,7 +281,9 @@
   function drawSentinel(t) {
     const alive = health>0;
     const bob = alive?Math.sin(t*1.4)*3:0;
-    const jolt = cast && cast.elapsed>4.9 && cast.elapsed<5.45 ? Math.sin(cast.elapsed*90)*7*(1-phase(cast.elapsed,4.9,5.45)) : 0;
+    const strikeTime=cast?(cast.type==="stone"?EARTH.hit:SPELL.hit):0;
+    const jolt=cast && cast.elapsed>strikeTime && cast.elapsed<strikeTime+.43
+      ? Math.sin(cast.elapsed*90)*7*(1-phase(cast.elapsed,strikeTime,strikeTime+.43)):0;
     g.save();g.translate(785+jolt,371+bob);
     if (!alive) g.globalAlpha=.36;
     oval(0,36,70,17,"#040b13a0");
@@ -794,8 +822,9 @@
   }
 
   function applyShake(elapsed) {
-    if(elapsed<SPELL.hit||elapsed>SPELL.hit+.4)return;
-    const strength=12*(1-phase(elapsed,SPELL.hit,SPELL.hit+.4));
+    const strikeTime=cast&&cast.type==="stone"?EARTH.hit:SPELL.hit;
+    if(elapsed<strikeTime||elapsed>strikeTime+.4)return;
+    const strength=12*(1-phase(elapsed,strikeTime,strikeTime+.4));
     g.translate(rand(-strength,strength),rand(-strength,strength));
   }
 
@@ -807,9 +836,20 @@
     drawSky(t);
     drawArena(t);
     drawWizard(t);
-    if(cast)drawSummon(t,cast.elapsed);
+    if(cast) {
+      if(cast.type==="stone")drawEarthSummon(cast.elapsed,t);
+      else drawSummon(t,cast.elapsed);
+    }
     drawSentinel(t);
-    if(cast){drawProjectile(cast.elapsed,t);drawImpact(cast.elapsed);}
+    if(cast) {
+      if(cast.type==="stone") {
+        drawEarthProjectile(cast.elapsed,t);
+        drawEarthImpact(cast.elapsed);
+      } else {
+        drawProjectile(cast.elapsed,t);
+        drawImpact(cast.elapsed);
+      }
+    }
     drawParticles();
     drawForeground(t);
     g.restore();
@@ -850,6 +890,12 @@
     else if(name==="throw"){tone(800,.5,"sawtooth",.08,125);noise(.3,.065);}
     else if(name==="hit"){tone(105,.9,"sawtooth",.17,45);tone(620,.35,"square",.05,100);noise(.8,.18);}
     else if(name==="sink"){tone(300,1.3,"sine",.085,55);noise(.7,.04);}
+    else if(name==="earthCast"){tone(97,.38,"triangle",.095,60);noise(.5,.07);}
+    else if(name==="stoneRise"){tone(80,.48,"sawtooth",.08,125);noise(.60,.10);}
+    else if(name==="stoneLift"){tone(125,.6,"triangle",.065,185);noise(.4,.035);}
+    else if(name==="stoneThrow"){tone(270,.33,"sawtooth",.06,75);noise(.28,.08);}
+    else if(name==="stoneHit"){tone(62,.75,"sawtooth",.15,35);noise(.68,.20);}
+    else if(name==="stoneSink"){tone(138,.6,"triangle",.08,50);noise(.7,.10);}
   }
 
   function refreshUI(){

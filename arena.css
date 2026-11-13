@@ -25,3 +25,53 @@
 .initiative-slot.dimmed{opacity:.4}
 @media(max-width:700px){.initiative{min-height:24px;padding:3px 0 0}
  .initiative-slot{font-size:9px;padding:4px 6px}}
+
+
+/* v0.25 — Low-poly wizard personalization + full-screen casting rune test.
+   The fixed rune overlay NEVER takes up layout space or changes canvas size. */
+.wizard-style{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px;
+  padding:11px 0 3px;border-bottom:1px solid #2b4e5b}
+.wizard-style-title{font-size:10px;letter-spacing:.13em;font-weight:800;
+  color:#aad3cf;align-self:center;margin-right:5px;white-space:nowrap}
+.wizard-style label{display:flex;flex-direction:column;gap:4px;
+  font-size:9px;font-weight:800;color:#95bbc4;letter-spacing:.11em}
+.wizard-style select{min-width:115px;min-height:34px;padding:5px 9px;
+  border:1px solid #466a7a;border-radius:8px;background:#0d2939;
+  color:#e8f4ee;font-size:11px;font-weight:700}
+.wizard-style select:disabled{opacity:.4}
+.rune-panel[hidden]{display:none!important}
+.rune-panel{position:fixed;inset:0;z-index:90;display:grid;place-items:center;
+  padding:12px;background:#020b16e5;backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);touch-action:none;overflow-y:auto}
+.rune-card{width:min(350px,calc(100vw - 24px));max-height:calc(100svh - 24px);
+  padding:15px 18px 16px;display:flex;flex-direction:column;align-items:center;
+  gap:9px;border-radius:15px;border:2px solid #66b9c7;
+  background:linear-gradient(165deg,#123348,#061825);
+  box-shadow:0 0 0 5px #0a2029,0 24px 95px #000a;overflow-y:auto}
+.rune-kicker{color:#9df4e7;font-size:11px;font-weight:800;letter-spacing:.22em}
+.rune-card h2{margin:0;color:#f6e5ad;font:700 24px Cinzel,Georgia,serif;text-align:center}
+.rune-card p{margin:0;color:#c3dce0;font-size:12px;line-height:1.5;text-align:center}
+#runeCanvas{display:block;flex:0 0 auto;width:min(210px,55svh);height:min(210px,55svh);
+  max-width:100%;aspect-ratio:1/1;border:1px solid #52888d;
+  border-radius:14px;background:#071c2a;touch-action:none;overscroll-behavior:contain;
+  user-select:none;-webkit-user-select:none}
+.rune-hint{min-height:15px;color:#92d0d8;font-size:11px;text-align:center}
+.rune-skip{min-height:35px;padding:7px 15px;background:#193847;color:#b8d5d7;
+  border:1px solid #59838f;border-radius:8px;font-size:12px;font-weight:700}
+.rune-skip:hover{background:#245267}
+@media(max-width:700px){
+ .wizard-style{gap:7px}
+ .wizard-style-title{flex:1 1 100%;font-size:9px}
+ .wizard-style label{flex:1 1 90px;min-width:0;font-size:8px}
+ .wizard-style select{min-width:0;width:100%;font-size:10px}
+ .rune-card{padding:12px;gap:7px}
+ .rune-card h2{font-size:22px}
+ #runeCanvas{width:min(200px,50svh);height:min(200px,50svh)}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .rune-card{max-height:98svh;padding:8px;gap:4px;width:min(450px,90vw)}
+ .rune-card h2{font-size:18px}
+ .rune-card p{font-size:10px}
+ #runeCanvas{width:min(160px,41svh);height:min(160px,41svh)}
+ .rune-skip{min-height:27px}
+}

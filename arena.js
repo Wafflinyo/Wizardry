@@ -528,15 +528,27 @@
     }
     if(!ui.hand.childElementCount){
       for(const k of CARDS){
-        const b=document.createElement("button");b.type="button";b.className="spell school-"+
-          ((k.school==="status")?"status":k.school);
+        const b=document.createElement("button");b.type="button";
+        b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;
-        b.innerHTML='<span class="orb">'+k.cost+'</span><span class="spell-art">'+k.icon+
-          '</span><span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-descr">'+escapeHtml(k.description)+'</span>'+
-          '<span class="spell-detail">'+escapeHtml(k.short)+'</span>';
-        b.onclick=()=>chooseCard(k.id);ui.hand.appendChild(b);
+        const water=k.id==="poseidon";
+        const effect=water?
+          '<span class="spell-effect"><b>⧖ RECHARGE · 1 ROUND</b><span>≈ NEXT WATER HIT +30%</span></span>':
+          '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>';
+        b.innerHTML='<span class="spell-tier">'+(water?'LEGENDARY · WATER':'EPIC · EARTH')+'</span>'+
+          '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
+          '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="145" aria-hidden="true"></canvas></span>'+
+          '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
+          '<span class="spell-combat"><span><b>'+k.damage.toLocaleString()+'</b> '+k.school.toUpperCase()+
+          '</span><span><b>'+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
+          effect;
+        b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
+          k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+
+          "% accuracy. "+(water?"Recharge one round; next successful Water hit +30%.":"Seismic fissure attack."));
+        b.onclick=()=>chooseCard(k.id);
+        ui.hand.appendChild(b);
       }
+      drawCardArts();
     }
     for(const b of ui.hand.children){
       b.classList.toggle("chosen",b.dataset.card===card?.id);
@@ -1084,12 +1096,70 @@
       -size/2,base-size,size,size);
     g.restore();return true;
   }
+  // Draw the SAME approved 16-frame source poses used by live summons.
+  // These are pixel-exact crops from the existing atlas, not generative
+  // replacement art; decorative water/earth background stays behind them.
+  function drawCardArts(){
+    for(const b of ui.hand.children){
+      const card=BY_ID[b.dataset.card];
+      const canvas=b.querySelector?.(".spell-art-canvas");
+      if(!card||!canvas)continue;
+      const c=canvas.getContext("2d");
+      if(!c)continue;
+      const width=240,height=145,water=card.school==="water";
+      c.clearRect(0,0,width,height);
+      const sky=c.createLinearGradient(0,0,0,height);
+      sky.addColorStop(0,water?"#164c69":"#4d4c52");
+      sky.addColorStop(.52,water?"#0a3352":"#2a3543");
+      sky.addColorStop(1,water?"#062b42":"#272016");
+      c.fillStyle=sky;c.fillRect(0,0,width,height);
+      c.save();
+      // Quiet environmental energy, drawn only BEHIND original creature.
+      c.globalAlpha=.40;
+      for(let i=0;i<5;i++){
+        const y=85+i*13;
+        c.beginPath();
+        c.moveTo(-10,y);
+        if(water)c.bezierCurveTo(45,y-16,87,y+9,126,y-3),
+          c.bezierCurveTo(171,y-14,205,y+7,250,y-7);
+        else c.lineTo(42,y+5),c.lineTo(74,y-11),c.lineTo(115,y+4),
+          c.lineTo(161,y-8),c.lineTo(240,y+3);
+        c.strokeStyle=water?"#37aaca":"#cbaa67";
+        c.lineWidth=2.3;c.stroke();
+      }
+      c.restore();
+      const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
+      const image=spriteCache[card.id]?.[row];
+      if(image?.complete&&image.naturalWidth>0){
+        const edges=[0,314,627,940,1254];
+        c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
+        // Art source stays untouched: select one dramatic approved cell,
+        // preserving pose, colours, trident, crystals and silhouette.
+        const size=water?174:169;
+        c.drawImage(image,edges[col],0,edges[col+1]-edges[col],
+          row===0||row===3?314:313,120-size/2,water?-21:-18,size,size);
+        c.restore();
+      }else{
+        c.font="bold 65px Georgia,serif";c.textAlign="center";
+        c.fillStyle=water?"#96eefa":"#dbcc92";
+        c.fillText(water?"♆":"◆",120,90);
+      }
+      const vignette=c.createLinearGradient(0,103,0,145);
+      vignette.addColorStop(0,"#06121a00");
+      vignette.addColorStop(1,water?"#06263de8":"#221b20ec");
+      c.fillStyle=vignette;c.fillRect(0,103,width,42);
+    }
+  }
   function setupSprites(){
     for(const [kind,prop] of [["poseidon","WIZARDRY_POSEIDON_V22_ROWS"],
                                ["golem","WIZARDRY_GOLEM_V23_ROWS"]]){
       const sources=window[prop];
       if(!Array.isArray(sources)||sources.length!==4)continue;
-      spriteCache[kind]=sources.map(src=>{const image=new Image();image.src=src;return image;});
+      spriteCache[kind]=sources.map(src=>{
+        const image=new Image();
+        image.onload=()=>drawCardArts();
+        image.src=src;return image;
+      });
     }
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.

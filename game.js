@@ -66,7 +66,7 @@
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
   const DEFAULT_SPELL_RATE = 1.5;
   // Earth is intentionally a little slower: 3.16s versus Poseidon's 2.98s.
-  const EARTH_RATE_MULTIPLIER=1.11;
+  const EARTH_RATE_MULTIPLIER=1.11; // Earth 3.16s, Poseidon 2.98s.
   let health = MAX_HP, mana = 8, round = 1;
   let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
@@ -613,7 +613,7 @@
   ];
   const poseidonVectorFrames=[],poseidonCachedFrames=[];
   let poseidonTrace=null,poseidonAssetReady=false,poseidonAssetError=null;
-  const POSEIDON_CACHE_PX=480;
+  const POSEIDON_CACHE_PX=480; // High-detail 224px vector source cached once.
   const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false};
   async function prepareTracedPoseidon() {
     try {
@@ -628,7 +628,7 @@
         new DecompressionStream("deflate"));
       const textData=await new Response(stream).text();
       const asset=JSON.parse(textData);
-      if(asset.cell!==96||!Array.isArray(asset.frames)||
+      if(asset.cell!==224||!Array.isArray(asset.frames)||
          asset.frames.length!==12)
          throw new Error("Poseidon vector frames are invalid");
       poseidonTrace=asset;
@@ -636,8 +636,8 @@
         poseidonVectorFrames.push(layers.map(([color,path])=>
           [color,new Path2D(path)]));
       }
-      // Each frame is cached from the VECTOR source at 480px, never enlarged
-      // from a 96px bitmap. Direct paths remain as a no-cache fallback.
+      // Each frame is cached from the approved 224px vector trace at 480px.
+      // Direct Path2D geometry remains a fallback if caching is unavailable.
       for(const layers of poseidonVectorFrames){
         const frame=document.createElement("canvas");
         frame.width=POSEIDON_CACHE_PX;
@@ -662,7 +662,7 @@
         const artwork=asset.frames[2].map(([color,path])=>
           '<path d="'+path+'" fill="'+color+'" fill-rule="evenodd"/>').join("");
         portrait.innerHTML='<svg class="poseidon-vector-portrait" '+
-          'viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">'+
+          'viewBox="0 0 224 224" xmlns="http://www.w3.org/2000/svg">'+
           artwork+'</svg>';
         portrait.parentElement.classList.add("has-poseidon-vector");
       }
@@ -685,7 +685,7 @@
     const i=poseidonFrameIndex(elapsed);
     const paths=poseidonVectorFrames[i];
     if(!paths)return;
-    const size=376,dx=505-size/2,dy=411-size*.91;
+    const size=376,dx=505-size/2,dy=411-size*.96;
     g.save();
     g.beginPath();g.rect(296,-8,420,420);g.clip();
     const opacity=ease(phase(elapsed,0,.18))*
@@ -1185,7 +1185,9 @@
     UI.cast.disabled=!cast&&(defeated||mana<spell.cost||
       (selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError));
     UI.cast.setAttribute("aria-disabled",String(castBlocked));
-    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST "+spell.name.toUpperCase();
+    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":
+      selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError?
+      "PREPARING POSEIDON...":"CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {
     if(cast||defeated||!SPELLS[type])return;
@@ -1212,6 +1214,7 @@
   function startCast() {
     const spell=SPELLS[selectedSpell];
     if(cast||defeated||mana<spell.cost)return;
+    if(selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError)return;
     if(sound)tone(440,.04,"sine",.001);
     mana-=spell.cost;
     cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};

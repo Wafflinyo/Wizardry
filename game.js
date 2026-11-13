@@ -683,7 +683,11 @@
     1.72,2.12,EARTH.holdStart,2.77,
     3.00,3.22,3.49,EARTH.crumbleStart
   ];
-  const golemVectorCanvases=[];
+  // These are true vector contours extracted from every approved sprite pose.
+  // Compile the paths ONCE, then paint the selected vector frame directly in
+  // the arena Canvas. No offscreen character bitmaps, spritesheets, or scaling
+  // cached image frames during the spell.
+  const golemVectorPaths=[];
   let golemTraceError=null;
   function golemAnimationFrame(elapsed) {
     if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
@@ -697,29 +701,15 @@
       golemTraceError="The source-traced Stone Golem paths could not be loaded.";
       return;
     }
-    // Rasterize the true color-layer contour paths just ONCE, at a greater
-    // pixel density than they are drawn. Battle-time drawing is one image
-    // operation per frame, with no recurring path-building or sprite blur.
-    const cell=golemTrace.cell,quality=1.35;
-    try{
+    try {
       for(const layers of golemTrace.frames){
-        const offscreen=document.createElement("canvas");
-        offscreen.width=Math.round(cell*quality);
-        offscreen.height=Math.round(cell*quality);
-        const ctx=offscreen.getContext("2d",{alpha:true});
-        if(!ctx)throw new Error("Canvas 2D context unavailable");
-        ctx.setTransform(quality,0,0,quality,0,0);
-        for(const [color,pathData] of layers){
-          ctx.fillStyle=color;
-          ctx.fill(new Path2D(pathData),"evenodd");
-        }
-        golemVectorCanvases.push(offscreen);
+        golemVectorPaths.push(layers.map(([color,pathData])=>
+          [color,new Path2D(pathData)]));
       }
-      // Earth spell card uses the SAME traced third pose, as a scalable SVG.
+      // The spell card receives the same vector-traced third pose as SVG.
       const portrait=document.getElementById("golemCardPortrait");
       if(portrait){
-        const layers=golemTrace.frames[2];
-        const markup=layers.map(([color,d])=>
+        const markup=golemTrace.frames[2].map(([color,d])=>
           '<path fill="'+color+'" fill-rule="evenodd" d="'+d+'"/>'
         ).join("");
         portrait.innerHTML=
@@ -727,24 +717,30 @@
           'xmlns="http://www.w3.org/2000/svg">'+markup+'</svg>';
       }
     }catch(error){
-      golemVectorCanvases.length=0;
-      golemTraceError="Could not prepare the traced Stone Golem animation.";
+      golemVectorPaths.length=0;
+      golemTraceError="Could not compile the traced Stone Golem vectors.";
     }
   }
   function drawStoneGolem(elapsed,t){
     const index=golemAnimationFrame(elapsed);
     if(index<0)return;
-    const frame=golemVectorCanvases[index];
-    if(!frame)return;
-    // The source has all twelve real poses, including baked-in stone spikes.
-    // Never add the earlier procedural body rig or a second spike effect.
+    const contours=golemVectorPaths[index];
+    if(!contours)return;
+    // All geometry is traced from the approved 12 frames, including
+    // its own stone spikes; no second procedural effect is drawn.
     const size=416,dx=306,dy=411-size*.975;
     g.save();
     g.beginPath();g.rect(280,-8,560,420);g.clip();
     const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
       (1-ease(phase(elapsed,EARTH.crumbleEnd-.19,EARTH.crumbleEnd)));
     g.globalAlpha*=fade;
-    g.drawImage(frame,dx,dy,size,size);
+    g.translate(dx,dy);
+    const scale=size/golemTrace.cell;
+    g.scale(scale,scale);
+    for(const [color,path] of contours){
+      g.fillStyle=color;
+      g.fill(path,"evenodd");
+    }
     g.restore();
   }
 

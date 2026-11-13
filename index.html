@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071422">
+  <meta name="description" content="Wizardry — a playable low-poly spellcasting prototype. Summon Poseidon and hurl his trident at the Stone Sentinel.">
+  <title>Wizardry | Poseidon's Wrath</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="masthead">
+      <div class="brand">
+        <span class="brand-rune" aria-hidden="true">✦</span>
+        <div><div class="brand-name">WIZARDRY</div><div class="brand-subtitle">THE SPELLCASTING PROTOTYPE</div></div>
+      </div>
+      <div class="header-right">
+        <span class="trial-label">SPELL TRIAL 001</span>
+        <button class="icon-button" id="soundButton" type="button" aria-label="Toggle sound" aria-pressed="true" title="Toggle sound">♫ <span id="soundLabel">ON</span></button>
+      </div>
+    </header>
+
+    <section class="battle">
+      <div class="battle-header">
+        <div class="battle-title">
+          <span class="eyebrow">THE SUNKEN COLOSSEUM</span>
+          <h1>Trial of the Tides</h1>
+        </div>
+        <div class="round-meta"><span class="indicator"></span><span id="roundLabel">ROUND 1</span><span class="meta-divider"></span><span id="stateLabel">READY TO CAST</span></div>
+      </div>
+
+      <div class="arena" id="arena">
+        <canvas id="battlefield" aria-label="Battlefield with your wizard and the Stone Sentinel enemy. Tap the enemy to target them."></canvas>
+        <div class="canvas-vignette" aria-hidden="true"></div>
+
+        <div class="arena-player">
+          <span class="small-caps">YOUR WIZARD</span>
+          <strong>Tidecaller</strong>
+          <div class="mana-pips" id="manaPips" aria-label="8 of 8 mana"></div>
+        </div>
+        <div class="arena-enemy" id="enemyHud">
+          <span class="small-caps">ENEMY · TARGET SELECTED</span>
+          <strong>Stone Sentinel</strong>
+          <div class="health-line"><div id="enemyHealthFill"></div></div>
+          <span class="health-number" id="enemyHealthText">3,000 / 3,000 HP</span>
+        </div>
+
+        <div class="spell-caption" id="spellCaption">A primordial force stirs beneath the arena.</div>
+        <div class="cast-status" id="castStatus" aria-live="polite">Select Poseidon's Wrath to begin.</div>
+        <div class="win-overlay" id="winOverlay" hidden>
+          <div class="win-rays" aria-hidden="true">✦</div>
+          <span class="eyebrow">BATTLE COMPLETE</span>
+          <h2>Sentinel Vanquished</h2>
+          <p>The sea reclaims its champion.</p>
+          <button type="button" class="primary-button" id="winReplay">Fight Again</button>
+        </div>
+      </div>
+
+      <div class="battle-controls">
+        <div class="battle-advice"><span class="diamond">◈</span><span id="battleHint">Tap the card, then cast to summon Poseidon.</span></div>
+        <div class="button-group"><button type="button" class="secondary-button" id="speedButton">Speed: 1×</button><button type="button" class="secondary-button" id="resetButton">↺ Reset Duel</button></div>
+      </div>
+    </section>
+
+    <section class="spell-tray" aria-label="Spell cards">
+      <div class="tray-heading">
+        <div><span class="eyebrow">YOUR HAND</span><h2>Choose your spell</h2></div>
+        <div class="tray-stats"><span class="water-drop">◆</span><strong id="manaText">8 / 8</strong><span>mana</span></div>
+      </div>
+
+      <div class="card-row">
+        <button type="button" class="spell-card selected" id="poseidonCard" aria-pressed="true" aria-label="Select Poseidon's Wrath. Eight mana. Deals 1200 water damage.">
+          <span class="card-cost">8</span>
+          <span class="card-topline">LEGENDARY · WATER</span>
+          <span class="card-art">
+            <span class="art-moon"></span>
+            <span class="art-halo"></span>
+            <svg class="art-trident" viewBox="0 0 90 140" role="presentation" aria-hidden="true">
+              <path d="M45 124V29M45 52C28 52 17 43 17 25V12M45 52C62 52 73 43 73 25V12M45 32L45 6" fill="none" stroke="#e6c879" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M11 19L17 5L23 19M39 14L45 2L51 14M67 19L73 5L79 19" fill="#f9e9a5" stroke="#e6c879" stroke-width="2"/>
+              <path d="M45 65L51 72L45 79L39 72Z" fill="#69f5ff" stroke="#eefaff" stroke-width="1.5"/>
+            </svg>
+            <span class="art-wave art-wave-a"></span><span class="art-wave art-wave-b"></span><span class="art-wave art-wave-c"></span>
+          </span>
+          <span class="card-name">POSEIDON'S<br>WRATH</span>
+          <span class="card-type">SUMMON · MYTHIC</span>
+          <span class="card-description">The sea god rises with the wave, <em>throws his trident</em>, and sinks beneath the tide.</span>
+          <span class="card-damage">⚔ <strong>1,200</strong> WATER DAMAGE</span>
+        </button>
+
+        <div class="spell-details">
+          <span class="eyebrow">SUMMONING SPELL · WATER SCHOOL</span>
+          <h3>Poseidon's Wrath</h3>
+          <p>Watch the ocean split as Poseidon rises from a towering wave, draws back his trident, and <strong>throws it directly at the enemy</strong>. An explosive water strike follows. He then dissolves into sea spray and is unsummoned.</p>
+          <div class="mechanic-grid">
+            <div><span>COST</span><strong>8 Mana</strong></div>
+            <div><span>DIRECT HIT</span><strong>1,200 HP</strong></div>
+            <div><span>TARGET</span><strong>Single enemy</strong></div>
+          </div>
+          <button class="primary-button" id="castButton" type="button"><span class="button-rune">✦</span><span id="castButtonText">CAST POSEIDON'S WRATH</span></button>
+          <p class="replay-note">Your mana refills each round for this animation test. Tap the enemy in the arena to aim.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.1</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
+  </main>
+  <script src="./game.js" defer></script>
+</body>
+</html>

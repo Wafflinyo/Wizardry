@@ -1,58 +1,56 @@
-# Wizardry 2.5D Battle Test — v0.24
+# Wizardry — 2.5D Battle Test v0.25.0
 
-**Playable test:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.24.0
+**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.25.0
 
-The original 1v1 spell-animation duel is preserved at https://wafflinyo.github.io/Wizardry/.
+The original, unchanged 1v1 approved sprite demo remains at https://wafflinyo.github.io/Wizardry/.
 
-## What is playable
+## Camera and combatants
 
-- 1v1, 2v2, 3v3 and 4v4 on the same perspective-styled, depth-sorted Canvas 2D arena.
-- **Story · CPU:** the local user plans actions for up to four allied wizards, and computer opponents automatically plan their responses. "Auto-fill" can queue actions for unassigned allies (simulated teammates).
-- **PvP · local test:** hot-seat planning for Team A, then Team B, followed by a shared resolution. This is **NOT online multiplayer**: no friends, lobbies, matchmaking, accounts, invitations or ranked games are connected yet.
-- Tap a combatant in the arena or a roster button to choose a caster/target. A target dropdown is provided for shields, heals, boosts and traps.
-- One queued action per living combatant per round; **actions resolve by descending speed**, not simultaneously. A visible initiative strip previews the order and highlights the current caster. Missing friendly actions can be auto-filled; CPU actions are generated for story encounters.
-- Each fighter has independent HP, mana (10 maximum), speed and up to **three personal status slots**.
-- Mana is spent when the action actually begins; surviving combatants recover 4 mana at the end of each round.
+The arena is a **three-quarter SIDE view**, not an overhead or over-the-shoulder view. Allied fighters occupy the **left arc** and opponents occupy the **right arc**. They are staggered by depth in 1v1, 2v2, 3v3 and 4v4. The drawn arena is a shallow, angled oval with visible stone thickness and layered perspective geometry.
 
-## Available test spells
+**Standing characters do not rotate when targeting.** All wizards retain fixed three-quarter facing, and Story CPU monster enemies remain similarly planted. The active caster raises a single staff arm and points its rigid wand toward the arena's center. The arm returns to the character's side before the next actor begins.
 
-| Card | Mana | Type | Result |
-| --- | ---: | --- | --- |
-| Tidal Lance | 3 | Instant attack | 320 water damage to one selected enemy |
-| Poseidon's Wrath | 8 | Temporary summon attack | Original approved 16-frame Poseidon animation, 1,200 damage, then disappears |
-| Stone Golem | 6 | Temporary summon attack | Original approved 16-frame Stone Golem animation, 900 damage, then disappears |
-| Mending Current | 3 | Instant heal | Restore up to 420 HP to a selected ally |
-| Surge Ward | 2 | Attached shield | Reduce next incoming hit by 55%, then consume |
-| Current Blade | 2 | Attached boost | +50% to next damage spell, then consume |
-| Fault Trap | 2 | Attached trap | +35% damage from next hit on marked enemy, then consume |
-| Aether Field | 4 | Team aura | +20% allied damage for the casting round and next round |
+Only the **temporary summon creature** can turn toward the chosen target using Canvas mirroring with a slight 2.5D perspective adjustment. It plays the originally approved 16-frame Poseidon/Stone Golem animation unchanged, hits one selected target, then disappears; the creatures do not become permanent units.
 
-Damage modifiers apply before a shield's reduction. Duplicate attached status types refresh rather than stack. Personal status slots are capped at three; placing a fourth different status replaces the oldest. Team auras occupy their own field-effect slot and expire at round end.
+## Exactly two spell cards in the current test
 
-**Temporary spell animations never become permanent field combatants.** Spells play, apply their healing/damage/effect once at the impact point, then disappear. The original approved artwork is used unmodified when the respective art assets are available. Small Canvas effects indicate the targeted projectile/impact, without an additional duplicate procedural Stone Golem.
+| Card | Element | Mana | Damage |
+| --- | --- | ---: | ---: |
+| Poseidon's Wrath | Water | 8 | 1,200 |
+| Stone Golem | Earth | 6 | 900 |
 
-## How to test
+There are **no additional playable spells** in this test. Older status-effect experiments are not available through the current two-card hand.
 
-1. Open the dedicated test link.
-2. Keep Story · CPU selected and try **4v4**.
-3. Tap an allied wizard, choose a card and select a target (either by tapping enemies or with the target dropdown). Select **Queue spell**.
-4. Queue spells for the other allies, or select **Auto-fill** for the remaining friendly slots.
-5. Select **Resolve round** to watch the eight actions resolve in speed order, with persistent shields/traps/blades visible beside their combatants.
-6. Switch to **PvP · local test** to choose the Team A spells, then **Pass to Team B** to choose opposing actions and resolve.
+## Trace-to-cast minigame
 
-You can reset or change the team size at any point. The original duel remains unchanged.
+1. Select a friendly wizard, choose one of the two approved cards, target an opponent and queue the spell.
+2. Once both teams' actions are chosen, resolution proceeds in **descending speed order**.
+3. The active wizard/monster **raises their arm and points a staff toward the arena center**.
+4. For a human-controlled action, a stable fullscreen overlay shows the Water wave rune or angular Earth rune. Use one continuous finger or mouse gesture from its **green starting point** to its **gold ending point**. Accuracy, starting/ending positions and trace length determine success.
+5. **Successful rune:** the approved summon animation plays toward the chosen target; damage is applied once at its impact moment; the creature disappears.
+6. **Failed rune or Skip cast:** the spell fizzles, with **no damage**, and the wizard's arm lowers.
+7. The arm lowers fully, then the game advances to the next combatant.
 
-## Implementation notes
+Failure still consumes the card's mana. **Story CPU opponents and auto-filled friendly slots** automatically attempt the rune with a deterministic simulated 88% success rate. In local hot-seat PvP, manually queued actions from both teams require actual tracing. The original arena drawing buffer stays fixed at **1000×620**, and the trace overlay is fixed-position, so it cannot push the battlefield up or down.
 
-- arena.html: battle test markup and accessible controls
-- arena.css: responsive portrait/landscape layout
-- arena.js: eight-combatant game state, simple computer decisions, target selection, status rules, turn queue, 2.5D Canvas 2D renderer, spell resolution
-- Approved Poseidon and Stone Golem resources are loaded from the existing versioned sprite assets. **No artwork was edited.**
-- Canvas logical resolution: **1000 × 620**. Rendering is capped near 60fps on high-refresh mobile devices.
-- The battle is self-contained and deliberately does not modify the established original-duel engine.
+## Low-poly wizard appearance options
 
-## Next production steps (not part of this test)
+Each wizard is assembled in Canvas from faceted robe, hat, face, arm and staff polygons; it is **not** a generic still sprite that tilts to face its target. The selected wizard can choose:
 
-Add authoritative multiplayer service, identity and friends, party invitations and reconnecting, campaign quests and progression, a persistent player deck/inventory, secure server-side combat validation, and ultimately rating-based ranked 4v4. The local PvP mode illustrates the turn flow only; do not assume it offers public matchmaking or synchronized online play.
+- Hats: Pointed, Wide brim, Hood, Scholar.
+- Robe silhouettes: Classic, Split-tail, Armored.
+- Robe colors: Ocean blue, Amethyst, Ember red, Emerald, Steel grey, Royal gold.
 
-Automated logic simulations validate four team sizes, eight cards, shield/blade/trap/aura triggers, sequential resolution and local PvP handoff. Actual mobile visual and touch testing is still recommended.
+Options affect only visual appearance, not stats or combat balance. In **PvP local test** both opposing teams use customizable wizard models; in **Story · CPU** the opponents remain distinct fantasy monster/stone models with the same simple point-and-cast arm motion.
+
+## Modes and scope
+
+**Story · CPU**: a local party of up to four allied wizards against CPU opponents, with auto-fill for allies. This is an encounter test, not a full quest or save system.
+
+**PvP · local test**: Team A selects actions, passes the device to Team B, then actions resolve by speed. It is not networked.
+
+Online friends, persistent characters, co-op campaign quests, lobbies, reconnect handling, servers, public matchmaking, ranked 4v4 and progression remain future work.
+
+### QA
+
+Simulated tests verified two-card restriction, side-facing positions, character customization, arm raise/hold/lower, real pointer rune gestures, accurate vs inaccurate traces, successful spell damage, failed attacks consuming a turn without damage, automatic CPU actions, local PvP planning from 1v1 through 4v4, and a fixed Canvas drawing buffer. Physical iPhone visual review is still needed.

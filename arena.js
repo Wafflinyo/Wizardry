@@ -901,25 +901,55 @@
     if(u.team&&state.mode==="story")drawEnemy(g,u,time*.001);
     else drawWizard(g,u,time*.001);
     g.restore();
-    // Individual target HP bars and attached status slots.
-    const labelY=u.y-(u.team?(u.y<270?159:165):160);
-    const labelW=135;
-    rounded(g,u.x-labelW/2,labelY,labelW,22,7,"#061621dd",u.team?"#865563":"#3f96a7",1.5);
-    g.fillStyle="#e8f5ed";g.textAlign="center";g.textBaseline="middle";
-    g.font="700 13px system-ui,sans-serif";
-    g.fillText(u.name,u.x,labelY+11,labelW-10);
-    rounded(g,u.x-62,labelY+26,124,10,4,"#121d2b");
-    rounded(g,u.x-61,labelY+27,122*Math.max(0,u.hp/u.maxHp),8,3,
-      u.team?"#cc7364":"#66d8a0");
+  }
+  // Small plates sit OUTSIDE each character silhouette: allies on the
+  // left, enemies on the right. Shared placements also inform tap hitboxes.
+  function unitPlateRect(u){
+    const w=122;
+    const x=clamp(u.team?u.x+57:u.x-w-57,8,W-w-8);
+    const y=u.y-123;
+    return {x,y,w,h:43};
+  }
+  function drawUnitPlate(u){
+    const {x,y,w}=unitPlateRect(u);
+    g.save();
+    const disabled=u.hp<=0;
+    g.globalAlpha=disabled?.66:1;
+    const tint=u.team?"#865563":"#3f96a7";
+    rounded(g,x,y,w,20,6,"#061621eb",tint,1.3);
+    g.fillStyle=disabled?"#ab9e9e":"#e9f6f2";
+    g.font="700 11px system-ui,sans-serif";
+    g.textAlign="center";g.textBaseline="middle";
+    g.fillText(u.name,x+w/2,y+10,w-8);
+    rounded(g,x+2,y+23,w-4,9,4,"#101b27eb");
+    if(u.hp>0)rounded(g,x+3,y+24,(w-6)*clamp(u.hp/u.maxHp,0,1),
+      7,3,u.team?"#cc7364":"#66d8a0");
+    g.font="700 9px system-ui,sans-serif";
+    g.fillStyle=disabled?"#f2b4aa":"#d4e3d8";
+    g.fillText(disabled?"K.O.":u.hp+" / "+u.maxHp+" HP",x+w/2,y+38,w-4);
     if(u.statuses.length||state.auras[u.team]){
-      const slots=u.statuses.map(s=>s.icon);
-      if(state.auras[u.team])slots.push("◎");
-      const total=slots.length,base=u.x-(total-1)*15;
-      g.fillStyle="#f4e6aa";g.font="bold 23px system-ui,sans-serif";
-      slots.forEach((icon,i)=>g.fillText(icon,base+i*30,labelY-12));
+      const symbols=u.statuses.map(s=>s.icon);
+      if(state.auras[u.team])symbols.push("◎");
+      g.font="bold 17px system-ui,sans-serif";g.fillStyle="#f2db99";
+      symbols.slice(0,4).forEach((symbol,i)=>{
+        g.fillText(symbol,x+12+i*22,y-11);
+      });
     }
-    if(u.hp<=0){g.fillStyle="#f7c6b2";g.font="800 16px system-ui";
-      g.fillText("K.O.",u.x,labelY+45);}
+    g.restore();
+  }
+  function drawTargetArrow(u,time){
+    if(!u||u.hp<=0)return;
+    const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
+    const modelHeight=(u.team===1&&state.mode==="story")?204:218;
+    const tipY=clamp(u.y-modelHeight*scale-12,45,H-55)+
+      Math.sin(time*.006)*3;
+    g.save();g.translate(u.x,tipY);
+    g.shadowColor="#f4c768";g.shadowBlur=15;
+    // Single unmistakable DOWN arrow, floating just above the target head.
+    pathPoly(g,[[-5,-33],[5,-33],[5,-13],[15,-13],
+      [0,9],[-15,-13],[-5,-13]],"#f5d075","#fff3bb",1.9);
+    g.shadowBlur=0;
+    g.restore();
   }
   function renderSprite(kind,index,x,base,size,target,progress=0){
     const arr=spriteCache[kind];
@@ -1066,7 +1096,8 @@
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
-    for(const u of [...state.units].sort((a,b)=>a.y-b.y))drawUnit(u,time);
+    // Spell passes are BELOW ALL fighter models, regardless of action
+    // caster, depth or target. Approved sprites are left completely intact.
     if(state.animation){
       if(state.animation.stage==="summon")drawAction(state.animation,time);
       else {
@@ -1074,6 +1105,12 @@
         drawFizzle(state.animation);
       }
     }
+    const sorted=[...state.units].sort((a,b)=>a.y-b.y);
+    for(const u of sorted)drawUnit(u,time);
+    // Keep side plates readable on top without blocking the models.
+    for(const u of sorted)drawUnitPlate(u);
+    if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
+      drawTargetArrow(getUnit(state.selectedTarget),time);
     for(const f of state.flashes){
       const alpha=clamp(1-f.age/.95,0,1);
       g.save();g.globalAlpha=alpha;g.textAlign="center";g.textBaseline="middle";

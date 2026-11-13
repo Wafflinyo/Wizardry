@@ -1,43 +1,42 @@
-# Wizardry — 2.5D Battle Test v0.26.1
+# Wizardry · 2.5D Battle Test v0.27.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.26.0
+**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.27.0
 
-The original 1v1 duel and both existing approved 16-frame summon sprite assets are preserved.
+The original 1v1 duel, the approved Poseidon / Stone Golem 16-frame art assets, and their summon damage/accuracy are unchanged.
 
-## Per-round selection (v0.26.1)
+## The new one-wizard battle flow
 
-Player-controlled wizards **must choose a new spell and target in every round**. No card or enemy is automatically selected for a new round or the next caster. After the action queue resolves, all queued player orders and the previous initiative sequence are cleared. Choose fresh cards and targets, or optionally use **Auto-fill this round** for any remaining allies. Auto-fill never carries over to the next round. The CPU team still plans its actions separately. Local PvP restarts at Team A's fresh planning phase after each completed round.
+**You control only Tidecaller** in Story mode. Up to three other allied wizards, and all enemy fighters, are independently CPU-controlled. A 4v4 scene therefore involves 1 human and 7 computer-controlled characters. The CPU teammates are placeholders for future online co-op friends; current Story mode is local only.
 
-## Camera
+On your turn:
 
-The arena remains a shallow, elevated **three-quarter side view** with allies on the left and opponents on the right. The entire oval **has no diagonal rotation**: its front and rear rims run level across the screen, instead of rising from left to right as they did in v0.25.
+1. Both approved spell cards are always shown immediately under the battlefield; no hand scrolling is necessary.
+2. **Tap Poseidon's Wrath or Stone Golem.**
+3. **Tap a living enemy directly on the arena.** The enemy gets a larger touch hitbox and glowing targeting marker when a card is selected.
+4. Your spell is locked in and the battle round automatically resolves. No separate Queue / Auto-fill / Resolve confirmation, roster selection, or target dropdown.
+5. All other living wizards choose their own spells and targets using their own CPU decisions. Action resolution still uses speed order, auto-drawn element runes, probabilistic hit checks, temporary summons, and arm lowering.
+6. When the round finishes, the game returns to **your** blank two-card hand awaiting a **new** card and target. Nothing from the previous round is auto-queued.
+7. If your wizard has been knocked out, your surviving CPU allies keep fighting autonomously; you cannot take control of another wizard.
 
-Standing fighters do not swivel to face enemies. Wizards and CPU monsters raise a wand/staff toward the arena center while a spell is prepared, then lower it when the spell finishes or fails. Only the temporary summon art turns toward its selected target using Canvas transformations, with the original sprite content preserved.
+**Local hot-seat PvP:** Each team has one locally controlled wizard (Team A's Tidecaller, Team B's Dusk Magus); everyone else is CPU-controlled. The device passes from one player to the other after each player's card-and-target choice. This is **not yet real online multiplayer** or ranked PvP.
 
-## Current two spells
+## Current spells
 
-| Card | Mana | Accuracy per cast | Damage on hit |
+| Spell | Mana | Accuracy per cast | Damage on hit |
 | --- | ---: | ---: | ---: |
-| Poseidon's Wrath | 8 | **70%** | 1,200 |
-| Stone Golem | 6 | **85%** | 900 |
+| Poseidon's Wrath | 8 | 70% | 1,200 Water |
+| Stone Golem | 6 | 85% | 900 Earth |
 
-Those are the **only two selectable spell cards** in this test; no extra cards have been added.
+No other spell cards have been added. Each caster's rune is drawn automatically within the arena, followed by one independent hit/miss roll. A miss fizzles without damage. A hit summons the approved creature, damages the chosen target once and disappears.
 
-### Automatic elemental rune casting
+## Screen layout and customization
 
-1. Player queues one of the two spells and chooses an enemy.
-2. During speed-based action resolution, the wizard or monster **raises a staff**.
-3. The game **automatically traces** the Water or Earth symbol as an animated glowing rune in the arena. **No touch-input tracing prompt** is shown, regardless of whether the caster is controlled by a player, an auto-filled teammate or a CPU opponent.
-4. At rune completion, one independent uniform random roll determines success using that card's accuracy value: Poseidon succeeds when the roll is below 0.70; Stone Golem when it is below 0.85. These are *probabilities*, not fixed hit/miss patterns.
-5. **Hit:** approved 16-frame summon appears, turns toward the target, deals listed damage at impact, and leaves the arena. **Miss:** the rune fizzles with no damage and no summon.
-6. After either result, the caster's staff arm lowers fully and the next action begins. Mana is spent even when a spell misses.
+The level 2.5D side-view arena and the two spell cards share a single mobile viewport with compact turn feedback. The old roster and action buttons have been removed from the **visible** combat UI. Both cards are displayed side by side in a non-scrolling row; targets are tapped on the actual battle canvas. A collapsed **Customize your wizard** section retains all four hats, three robe silhouettes and six robe colors.
 
-A real CPU Story encounter and a local (hot-seat) PvP test support 1v1 through 4v4. Both sides use exactly the same hit-chance rules. The prototype is not networked online multiplayer.
+Portrait and landscape have separate responsive sizing rules; the existing 1000×620 arena drawing buffer and original summon artwork are unchanged.
 
-## Wizard appearance
+## Test scope and limitations
 
-Customize the selected wizard with four hat styles (Pointed, Wide brim, Hood, Scholar), three robe shapes (Classic, Split-tail, Armored) and six robe colors. These options are purely cosmetic.
+The battle is a playable local prototype. It has no connected accounts, friend invites, co-op synchronization, authoritative online combat, matchmaking or ranked 4v4. Those need multiplayer infrastructure.
 
-## QA
-
-Automated tests checked the two cards' probability thresholds, deterministic forced hit/miss outcomes for each spell, one-time damage only on hits, automatic tracer for both teams, unchanged logical Canvas dimensions, and 1v1/2v2/3v3/4v4 round resolution. All passed. Review on the intended phone is still necessary to confirm real-world visual layout.
+Automated simulated tests checked one-human-per-side ownership, two-card accessibility, two-tap targeting, CPU teammate/enemy plans, hit/miss behavior, 1v1–4v4 resolution, fresh player input each round, and fixed Canvas dimensions. Actual iPhone browser visual review is still recommended.

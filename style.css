@@ -479,7 +479,8 @@ body {
   display:block;
   width:100%!important;
   height:100%!important;
-  object-fit:fill;
+  /* Preserve the logical 1000×560 canvas even if mobile CSS is overridden. */
+  object-fit:contain!important;
   transition:none!important;
 }
 .battle-controls { flex:0 0 auto; }
@@ -639,3 +640,7 @@ body {
   .hand-cards .spell-card {height:130px;}
   .spell-details {height:130px;}
 }
+
+/* Single root scroller: prevent nested body scrolling on iOS Safari. */
+html { overflow-y:auto!important; }
+body { overflow-y:visible!important; }

@@ -1,43 +1,30 @@
-# Wizardry — Elemental Battle Prototype v0.22.1
+# Wizardry — Spellcasting Prototype v0.23.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/?v=0.22.0
+**Play:** https://wafflinyo.github.io/Wizardry/?v=0.23.0
 
-A phone-friendly Canvas 2D elemental spell-card battle prototype.
+A mobile-friendly elemental spell-card game, featuring Poseidon's Wrath (Water) and Stone Golem (Earth), each animated using exactly **16 original approved frames**.
 
-## Approved Poseidon animation — exact 16-cell artwork
+## Stone Golem — approved 16-frame artwork (v0.23)
 
-Version 0.22 now uses the user's **exactly approved 4×4 low-poly sprite sheet**, unchanged. The original transparent 1254×1254 PNG is split into four **lossless** WebP rows. Each row was decoded and pixel-compared against the original crop with **zero changed pixels**. No invented poses, image warps, transparency patches, redrawing, or crossfaded duplicate tridents are used in this release.
+The Golem's artwork is **the exact user-approved 4×4 sprite sheet, without any image edits**. It is split into four losslessly compressed WebP rows, each validated pixel-for-pixel against the supplied source image. No vector rebuilding, generative in-betweens, retouching, recoloring, crossfades or duplicate seismic spike effects are involved.
 
-The four game assets are:
+The four sprite resources are:
 
-- `assets/poseidon-v22-row0.js` — rising from water (frames 0–3)
-- `assets/poseidon-v22-row1.js` — idle and early windup (frames 4–7)
-- `assets/poseidon-v22-row2.js` — windup, throw and follow-through (frames 8–11)
-- `assets/poseidon-v22-row3.js` — recovery and sinking (frames 12–15)
+- `assets/stone-golem-approved-v23-row0.js` — rise (frames 0–3)
+- `assets/stone-golem-approved-v23-row1.js` — clasp and overhead windup (frames 4–7)
+- `assets/stone-golem-approved-v23-row2.js` — ground slam and fissure propagation (frames 8–11)
+- `assets/stone-golem-approved-v23-row3.js` — final fissure, idle, rubble collapse (frames 12–15)
 
-The game loads all four rows before enabling the Poseidon cast. Each frame is rendered inside the same fixed-position Canvas stage. At displayed 1×, the full animation lasts approximately **2.63 seconds**.
+The fissure reaches its last frame immediately before the registered **900 Earth damage** at game-time 2.87s. The spikes then clear, Golem returns to idle, and the last two original frames show him breaking back into rubble underground. No extra geometric spike system plays on top of the sprite.
 
-### Exactly synchronized weapon handoff
+At displayed Speed 1×, Golem's **5.01 game-seconds** run at a 2.125× effective animation rate, completing in about **2.36 real seconds**—slightly slower than Poseidon's approximately **2.10 seconds**. All 16 cells render in order. The Earth card portrait uses the same approved standing frame #3.
 
-The approved animation **still visibly holds one trident in frame 9**, the last full windup pose.
+## Poseidon's Wrath
 
-- Until game-clock **2.26s**, the held weapon is shown within the original artwork (frame 9).
-- Exactly at **2.26s**, the first empty-handed throw pose (frame 10) appears and Canvas simultaneously starts the independent trident projectile at the last held tip location.
-- The projectile reaches the Stone Sentinel at **2.68s** of spell clock; **1,200 Water damage** is applied at that instant.
-- He holds after impact, then sinks and disappears using the original frames 14 and 15. The water and body are not modified.
+Poseidon's existing **16 approved low-poly frames** and release-to-projectile handoff remain unchanged. The trident flies to the Stone Sentinel and deals **1,200 Water damage** at impact.
 
-This synchronizes the disappearing hand-held weapon with the separately drawn projectile instead of letting the trident vanish early between pose swaps.
+The game uses Canvas 2D for the entire battle and maintains a fixed 1000×560 internal resolution. CSS handles only the surrounding card/control layout.
 
-## Other spell
+## Verification
 
-**Stone Golem** remains unchanged: costs 6 mana, deals 900 Earth damage when its traveling stone spike attack reaches the enemy, then recovers and sinks.
-
-## Battle engine and validation
-
-Canvas owns all battlefield graphics, characters, health and mana indicators, effects, and impact messages. The fixed 1000×560 backing buffer maintains its aspect ratio; responsive HTML/CSS is used only for the cards and controls. There's no recurring Canvas resize observer.
-
-Simulated 60 Hz and 120 Hz tests passed for all sixteen Poseidon sprite indices, the trident transition from frame 9 to 10, 1,200 Water damage, 900 Earth damage, turn progression, and stable Canvas size. Physical iPhone rendering still needs verification.
-
-## Poseidon animation speed (v0.22.1)
-
-At displayed Speed 1×, Poseidon now runs at **125% of its previous animation playback rate**, completing in about **2.10 seconds** instead of **2.63 seconds**. The original 16 sprite cells, cast timeline, right-hand trident release, projectile hit and 1,200 damage are unchanged. **Stone Golem playback speed and visuals are unchanged.** Automated 60 Hz and 120 Hz combat simulations passed.
+Automated Canvas tests at 60 Hz and 120 Hz verified all 16 Stone Golem frame indices, the 900 damage on fissure impact, a subsequent 1,200-damage Poseidon spell, round completion, reset, frame loading and only one Canvas size initialization. These simulations do not substitute for testing the appearance on a physical iPhone.

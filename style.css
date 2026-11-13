@@ -11,8 +11,9 @@
  */
 .app {
   height: 100vh;
-  height: 100dvh;
-  max-height: 100dvh;
+  /* Small viewport height stays fixed when Safari's toolbar expands/collapses. */
+  height: 100svh;
+  max-height: 100svh;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -377,10 +378,11 @@
   left: 50%;
   bottom: -8px;
   transform: translateX(-50%);
-  background-image: url("./assets/stone-golem-groundslam.webp?v=0.6.0");
+  background-image: url("./assets/stone-golem-lowpoly-v070.webp");
   background-repeat: no-repeat;
-  background-position: 0 0;
-  background-size: 300% 400%;
+  /* Show the fully emerged, ready-to-attack frame (#2) in the card. */
+  background-position: 66.6667% 0;
+  background-size: 400% 300%;
   filter: drop-shadow(0 3px 5px #071913);
   pointer-events: none;
 }
@@ -394,5 +396,28 @@
     width: 80px;
     height: 80px;
     bottom: -9px;
+  }
+}
+
+/* v0.7 — fixed battle layout: no viewport-height resize during combat. */
+html,body { overscroll-behavior: none; }
+.app { height: 100svh; max-height: 100svh; overflow: hidden; }
+.arena {
+  contain: layout paint;
+  overflow: hidden;
+  transition: none !important;
+}
+.arena canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: none !important;
+}
+@media (max-width:700px) {
+  .cast-status { min-height: 32px; }
+  .spell-tray,.battle-controls { flex-shrink:0; }
+  .golem-card-portrait {
+    background-size:400% 300%;
+    background-position:66.6667% 0;
   }
 }

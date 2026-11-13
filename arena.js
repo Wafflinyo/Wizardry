@@ -162,6 +162,206 @@
     paintUI();
     startNextAction();
   }
+  // Each element has a deliberately distinct SINGLE-STROKE rune.
+  // The player traces the displayed symbol, not an arbitrary circle.
+  const RUNE_PATHS={
+    poseidon:[[23,116],[34,93],[47,72],[59,65],[72,75],[85,99],
+      [96,119],[107,125],[117,111],[128,85],[138,66],[150,69],
+      [161,88],[175,116]],
+    golem:[[25,149],[60,64],[95,122],[129,58],[174,149]]
+  };
+  function runePath(id){return RUNE_PATHS[id]||RUNE_PATHS.poseidon;}
+  function pathLength(points){
+    let l=0;
+    for(let i=1;i<points.length;i++)l+=Math.hypot(
+      points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);
+    return l;
+  }
+  function resampleStroke(points,count=32){
+    if(points.length<2)return Array.from({length:count},()=>points[0]||[0,0]);
+    const distances=[0];
+    for(let i=1;i<points.length;i++)distances.push(distances[i-1]+
+      Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]));
+    const length=distances[distances.length-1];
+    if(length<.001)return Array.from({length:count},()=>points[0]);
+    const result=[];let at=1;
+    for(let k=0;k<count;k++){
+      const d=length*k/(count-1);
+      while(at<distances.length-1&&distances[at]<d)at++;
+      const prev=at-1,denom=distances[at]-distances[prev];
+      const t=denom>.0001?(d-distances[prev])/denom:0;
+      result.push([lerp(points[prev][0],points[at][0],t),
+                   lerp(points[prev][1],points[at][1],t)]);
+    }
+    return result;
+  }
+  function validateRune(cardId,points){
+    if(!Array.isArray(points)||points.length<5)
+      return {passed:false,score:0,reason:"Too short"};
+    const reference=runePath(cardId);
+    const samples=resampleStroke(points);
+    const expected=resampleStroke(reference);
+    let total=0,max=0;
+    for(let i=0;i<samples.length;i++){
+      const d=Math.hypot(samples[i][0]-expected[i][0],samples[i][1]-expected[i][1]);
+      total+=d;max=Math.max(max,d);
+    }
+    const mean=total/samples.length;
+    const first=Math.hypot(points[0][0]-reference[0][0],points[0][1]-reference[0][1]);
+    const last=Math.hypot(points.at(-1)[0]-reference.at(-1)[0],
+                          points.at(-1)[1]-reference.at(-1)[1]);
+    const ratio=pathLength(points)/pathLength(reference);
+    const score=clamp(Math.round(100-mean*2.05-max*.12-Math.abs(ratio-1)*12),0,100);
+    const passed=first<=34&&last<=36&&mean<=23&&max<=57&&ratio>=.63&&ratio<=1.65;
+    return {passed,score,mean:Math.round(mean),ratio:Math.round(ratio*100)/100,
+      reason:passed?"Rune completed":"Rune did not match the guide"};
+  }
+  function drawRuneGuide(){
+    const c=ui.runeCanvas,ctx=c?.getContext("2d");
+    if(!ctx||!state?.animation)return;
+    const a=state.animation,points=runePath(a.card.id);
+    ctx.clearRect(0,0,200,200);
+    const rad=ctx.createRadialGradient(100,100,3,100,100,130);
+    rad.addColorStop(0,a.card.id==="poseidon"?"#12455c":"#2d472b");
+    rad.addColorStop(1,"#061926");
+    ctx.fillStyle=rad;ctx.fillRect(0,0,200,200);
+    ctx.lineJoin="round";ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(...points[0]);
+    for(let i=1;i<points.length;i++)ctx.lineTo(...points[i]);
+    ctx.strokeStyle=a.card.id==="poseidon"?"#64e7f57a":"#bbeb8d80";
+    ctx.lineWidth=18;ctx.stroke();
+    ctx.lineWidth=3;ctx.strokeStyle=a.card.id==="poseidon"?"#a6f5f5":"#d7e8a0";
+    ctx.stroke();
+    if(activeStroke.length){
+      ctx.beginPath();ctx.moveTo(...activeStroke[0]);
+      for(let i=1;i<activeStroke.length;i++)ctx.lineTo(...activeStroke[i]);
+      ctx.strokeStyle="#fff6c2";ctx.lineWidth=7;ctx.shadowColor="#e4ffff";
+      ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+    }
+    for(const [i,color] of [[0,"#7ce0a8"],[points.length-1,"#f2d18c"]]){
+      const p=points[i];ctx.beginPath();ctx.arc(p[0],p[1],8,0,Math.PI*2);
+      ctx.fillStyle=color;ctx.fill();ctx.strokeStyle="#f5f7de";
+      ctx.lineWidth=2;ctx.stroke();
+    }
+  }
+  function openRunePanel(a){
+    activeStroke=[];strokeInProgress=false;runePointerId=null;
+    ui.runeElement.textContent=a.card.id==="poseidon"?"WATER SIGIL":"EARTH SIGIL";
+    ui.runeTitle.textContent=a.card.id==="poseidon"?
+      "Trace the Water rune":"Trace the Earth rune";
+    ui.runeInstruction.textContent="Start at the green dot, trace the glowing shape, and end on gold.";
+    ui.runeFeedback.textContent="One continuous finger or mouse stroke. An incorrect trace fizzles.";
+    ui.runePanel.hidden=false;
+    drawRuneGuide();
+  }
+  function closeRunePanel(){
+    ui.runePanel.hidden=true;
+    strokeInProgress=false;runePointerId=null;activeStroke=[];
+  }
+  function startStage(a,stage,duration){
+    a.stage=stage;a.elapsed=0;a.duration=duration;
+  }
+  function resolveRune(success,score=0){
+    const a=state?.animation;
+    if(!a||!["tracing-manual","tracing-auto"].includes(a.stage))return false;
+    closeRunePanel();
+    a.runeResult=success?"success":"failed";
+    a.runeScore=score;
+    const c=getUnit(a.source);
+    if(success){
+      startStage(a,"summon",a.card.duration);
+      ui.hint.textContent=c.name+" traced the "+a.card.school+" rune — "+
+        a.card.name+" is summoned!";
+    }else{
+      startStage(a,"fizzle",FIZZLE_MS);
+      flash(c,"FIZZLE","#f6a7a2");
+      state.log=[c.name+"'s rune failed. The summon fizzled.",...state.log].slice(0,5);
+      ui.hint.textContent=c.name+"'s rune failed; no damage dealt.";
+    }
+    paintUI();
+    return true;
+  }
+  function submitRune(points){
+    const a=state?.animation;
+    if(!a||a.stage!=="tracing-manual")return {passed:false,score:0,reason:"No rune expected"};
+    const result=validateRune(a.card.id,points);
+    resolveRune(result.passed,result.score);
+    return result;
+  }
+  function coordinateOnRune(event){
+    const rect=ui.runeCanvas.getBoundingClientRect();
+    return [clamp((event.clientX-rect.left)*200/rect.width,0,200),
+            clamp((event.clientY-rect.top)*200/rect.height,0,200)];
+  }
+  function setupRuneEvents(){
+    const c=ui.runeCanvas;
+    c.addEventListener("pointerdown",event=>{
+      if(state?.animation?.stage!=="tracing-manual")return;
+      event.preventDefault?.();
+      runePointerId=event.pointerId;strokeInProgress=true;
+      activeStroke=[coordinateOnRune(event)];
+      try{c.setPointerCapture(event.pointerId)}catch(_){}
+      drawRuneGuide();
+    });
+    c.addEventListener("pointermove",event=>{
+      if(!strokeInProgress||event.pointerId!==runePointerId)return;
+      event.preventDefault?.();
+      const p=coordinateOnRune(event);
+      const prev=activeStroke[activeStroke.length-1];
+      if(!prev||Math.hypot(prev[0]-p[0],prev[1]-p[1])>1.1){
+        activeStroke.push(p);drawRuneGuide();
+      }
+    });
+    c.addEventListener("pointerup",event=>{
+      if(!strokeInProgress||event.pointerId!==runePointerId)return;
+      event.preventDefault?.();
+      activeStroke.push(coordinateOnRune(event));
+      strokeInProgress=false;
+      const result=submitRune(activeStroke);
+      ui.runeFeedback.textContent=result.passed?
+        "Rune traced — spell summoned!":"Rune failed ("+result.score+"%). Spell fizzled.";
+    });
+    c.addEventListener("pointercancel",()=>{
+      strokeInProgress=false;runePointerId=null;activeStroke=[];drawRuneGuide();
+    });
+    ui.runeSkip.onclick=()=>resolveRune(false,0);
+  }
+  function updateCastSequence(deltaMs){
+    const a=state?.animation;
+    if(!a||state.phase!=="resolving")return;
+    const caster=getUnit(a.source);
+    if(a.stage==="tracing-manual"){caster.armRaise=1;return;}
+    a.elapsed=Math.min(a.duration,a.elapsed+Math.max(0,deltaMs));
+    const p=clamp(a.elapsed/a.duration,0,1);
+    if(a.stage==="raising")caster.armRaise=ease(p);
+    else if(a.stage==="lowering")caster.armRaise=1-ease(p);
+    else caster.armRaise=1;
+    if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+      applySpell(a);
+    if(a.elapsed<a.duration)return;
+    if(a.stage==="raising"){
+      caster.armRaise=1;
+      if(a.automatic){
+        startStage(a,"tracing-auto",AUTO_TRACE_MS);
+        ui.hint.textContent=caster.name+" traces the "+a.card.school+" rune...";
+      }else{
+        startStage(a,"tracing-manual",Infinity);
+        openRunePanel(a);
+        ui.hint.textContent="Trace the rune for "+caster.name+".";
+      }
+      paintUI();
+    }else if(a.stage==="tracing-auto"){
+      const seed=state.round*199+caster.index*63+caster.team*137+state.queueAt*23;
+      resolveRune(rand(seed)<.88,Math.round(72+rand(seed+9)*27));
+    }else if(a.stage==="summon"||a.stage==="fizzle"){
+      startStage(a,"lowering",ARM_LOWER_MS);
+      paintUI();
+    }else if(a.stage==="lowering"){
+      caster.armRaise=0;
+      state.animation=null;
+      startNextAction();
+    }
+  }
   function startNextAction(){
     if(!state||state.phase!=="resolving")return;
     while(state.queueAt<state.sequence.length){

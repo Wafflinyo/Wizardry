@@ -366,3 +366,33 @@
   .arena {box-shadow:0 8px 25px #0009,0 0 0 1px #345360;}
   .hand-cards .earth-card .card-art {background:#335449;}
 }
+
+
+/* v0.6 — the Earth card uses the SAME illustrated sprite as gameplay. */
+.golem-card-portrait {
+  position: absolute;
+  z-index: 1;
+  width: 92px;
+  height: 92px;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  background-image: url("./assets/stone-golem-groundslam.webp?v=0.6.0");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 300% 400%;
+  filter: drop-shadow(0 3px 5px #071913);
+  pointer-events: none;
+}
+.earth-art {
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(ellipse at center,#708b69 0%,#294e41 56%,#101f22 100%);
+}
+@media (max-width:700px) {
+  .golem-card-portrait {
+    width: 80px;
+    height: 80px;
+    bottom: -9px;
+  }
+}

@@ -611,298 +611,93 @@
   // Poseidon sprite frames are vector-traced from the approved 4×3 sheet,
   // exactly as Stone Golem's approved frames were. The compressed text is
   // decompressed once on startup and compiled into 12 Canvas Path2D frames.
-  const POSEIDON_FRAME_TIMES=[
-    .04,.34,.63,.89,1.20,1.54,1.93,2.14,2.44,2.70,3.48,4.07
-  ];
-  const poseidonVectorFrames=[],poseidonCachedFrames=[];
-  let poseidonTrace=null,poseidonAssetReady=false,poseidonAssetError=null;
-  const POSEIDON_CACHE_PX=480; // High-detail 224px vector source cached once.
-  const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false,windupFrames:3,hand:'right'};
-  // The source artwork contains accidental transparent holes through the
-  // torso and flowing-water body. Paint a continuous silhouette BEHIND the
-  // traced color layers; destination-over fills transparent gaps only and
-  // never covers the approved face, arms, clothing, or wave details.
-  function fillPoseidonOpaqueCore(ctx,index,behindExisting=true) {
-    if(index===0||index===11)return;
-    ctx.save();
-    if(behindExisting)ctx.globalCompositeOperation="destination-over";
-    // One uninterrupted lower ocean body joins the chest to the sea.
-    const sea=ctx.createLinearGradient(100,119,114,221);
-    sea.addColorStop(0,"#276c80");
-    sea.addColorStop(.37,"#1f8395");
-    sea.addColorStop(.74,"#09607b");
-    sea.addColorStop(1,"#075273");
-    ctx.beginPath();
-    ctx.moveTo(76,112);
-    ctx.bezierCurveTo(93,121,128,120,148,118);
-    ctx.bezierCurveTo(154,137,151,153,162,167);
-    ctx.bezierCurveTo(175,182,190,188,208,206);
-    ctx.bezierCurveTo(151,217,58,218,15,206);
-    ctx.bezierCurveTo(39,189,53,176,65,162);
-    ctx.bezierCurveTo(72,151,68,130,76,112);
-    ctx.closePath();ctx.fillStyle=sea;ctx.fill();
-    // Warm solid chest sits beneath the detailed illustrated skin planes.
-    const skin=ctx.createLinearGradient(110,71,111,151);
-    skin.addColorStop(0,"#bb957b");
-    skin.addColorStop(.55,"#aa8269");
-    skin.addColorStop(1,"#3e858c");
-    ctx.beginPath();ctx.moveTo(79,81);
-    ctx.bezierCurveTo(90,76,127,76,147,89);
-    ctx.lineTo(146,112);
-    ctx.bezierCurveTo(137,139,130,152,119,161);
-    ctx.bezierCurveTo(94,150,80,124,73,104);
-    ctx.closePath();ctx.fillStyle=skin;ctx.fill();
-    ctx.restore();
-  }
-  // Repair transparent holes enclosed BY the character silhouette, not
-  // just a generic translucent backing. This runs once on each cached frame.
-  function sealPoseidonInteriorHoles(ctx,width) {
-    if(typeof ctx.getImageData!=="function"||typeof ctx.putImageData!=="function")return;
-    let pixels;
-    try {pixels=ctx.getImageData(0,0,width,width);}catch(error){return;}
-    if(!pixels||!pixels.data)return;
-    const data=pixels.data,length=width*width;
-    const outside=new Uint8Array(length),queue=new Int32Array(length);
-    let head=0,tail=0;
-    const mark=index=>{
-      if(!outside[index] && data[index*4+3]<85){
-        outside[index]=1;queue[tail++]=index;
+  // v0.19: the FIVE EXACT user-approved bottom-row poses.
+  // Never infer new geometry from the previous traced, transparent artwork.
+  // Source order: IDLE, WINDUP A, WINDUP B, THROW, HOLD.
+  const POSEIDON_APPROVED_FRAME_W=360;
+  const POSEIDON_APPROVED_FRAME_H=330;
+  const POSEIDON_APPROVED_DRAW_W=416;
+  const POSEIDON_APPROVED_DRAW_H=381.33;
+  const POSEIDON_APPROVED_DRAW_X=297;
+  const POSEIDON_APPROVED_DRAW_Y=47;
+  const poseidonDiagnostics={source:"approved original five bottom-row poses",
+    frames:5,ready:false,frameWidth:360,frameHeight:330};
+  let poseidonApprovedImage=null,poseidonAssetReady=false,poseidonAssetError=null;
+  function prepareApprovedPoseidon() {
+    const manifest=window.WIZARDRY_POSEIDON_APPROVED;
+    if(!manifest||!manifest.src){
+      poseidonAssetError="Approved Poseidon art is unavailable.";
+      refreshUI();return;
+    }
+    const image=new Image();
+    poseidonApprovedImage=image;
+    image.onload=()=>{
+      if(image.naturalWidth!==POSEIDON_APPROVED_FRAME_W*5||
+         image.naturalHeight!==POSEIDON_APPROVED_FRAME_H){
+        poseidonAssetError="Incorrect Poseidon sprite atlas dimensions.";
+        poseidonAssetReady=false;
+      }else{
+        poseidonAssetReady=true;
+        poseidonDiagnostics.ready=true;
+        poseidonDiagnostics.size=[image.naturalWidth,image.naturalHeight];
+        window.WIZARDRY_POSEIDON_RENDER_DIAGNOSTICS=poseidonDiagnostics;
+        const portrait=document.getElementById("poseidonCardPortrait");
+        if(portrait){
+          const portraitCanvas=document.createElement("canvas");
+          portraitCanvas.width=360;portraitCanvas.height=330;
+          portraitCanvas.className="poseidon-portrait-canvas";
+          const pc=portraitCanvas.getContext("2d");
+          if(pc)pc.drawImage(image,0,0,360,330,0,0,360,330);
+          portrait.replaceChildren(portraitCanvas);
+          portrait.parentElement.classList.add("has-poseidon-vector");
+        }
       }
+      refreshUI();
     };
-    for(let x=0;x<width;x++){mark(x);mark((width-1)*width+x);}
-    for(let y=0;y<width;y++){mark(y*width);mark(y*width+width-1);}
-    while(head<tail){
-      const idx=queue[head++],x=idx%width,y=(idx-x)/width;
-      if(x>0)mark(idx-1);
-      if(x<width-1)mark(idx+1);
-      if(y>0)mark(idx-width);
-      if(y<width-1)mark(idx+width);
-    }
-    // Some generated cutouts connect to the outside through a very narrow
-    // slit. Seal those too, but ONLY within the face/torso/water core and
-    // only across short gaps between two real opaque pixels. Never fill the
-    // intentional open air between Poseidon's extended arms and the wave.
-    for(const [x0,x1,y0,y1] of [
-      [.45,.65,.20,.48], // face/beard central interior
-      [.34,.69,.38,.76], // skin and ocean torso
-      [.28,.73,.70,.88]  // lower connected ocean body
-    ]){
-      const xMin=Math.floor(x0*width),xMax=Math.ceil(x1*width);
-      const yMin=Math.floor(y0*width),yMax=Math.ceil(y1*width);
-      for(let y=yMin;y<yMax;y++){
-        let previous=-1;
-        for(let x=xMin;x<xMax;x++){
-          const i=y*width+x;
-          if(data[i*4+3]>=175){
-            if(previous>=0&&x-previous>1&&x-previous<=30){
-              for(let xx=previous+1;xx<x;xx++){
-                const p=y*width+xx;
-                // The fill is completed in the inpainting pass below.
-                outside[p]=0;
-              }
-            }
-            previous=x;
-          }
-        }
-      }
-    }
-    // Interior transparent pixels are actual missing body artwork. Copy
-    // their nearest already-painted color, then make them fully opaque.
-    let repaired=0;
-    for(let idx=0;idx<length;idx++){
-      if(outside[idx]||data[idx*4+3]>=85)continue;
-      const x=idx%width,y=(idx-x)/width;
-      let color=null;
-      outer:for(let radius=1;radius<=16;radius++){
-        for(const [xx,yy] of [
-          [x-radius,y],[x+radius,y],[x,y-radius],[x,y+radius],
-          [x-radius,y-radius],[x+radius,y-radius],
-          [x-radius,y+radius],[x+radius,y+radius]
-        ]){
-          if(xx<0||yy<0||xx>=width||yy>=width)continue;
-          const q=(yy*width+xx)*4;
-          if(data[q+3]>175){color=q;break outer;}
-        }
-      }
-      const p=idx*4;
-      if(color===null){data[p]=21;data[p+1]=104;data[p+2]=131;}
-      else {data[p]=data[color];data[p+1]=data[color+1];data[p+2]=data[color+2];}
-      data[p+3]=255;repaired++;
-    }
-    if(repaired)ctx.putImageData(pixels,0,0);
-    return repaired;
-  }
-
-  // True two-stage right-handed windup: derive three intermediate poses
-  // from the approved RIGHT-HAND idle artwork, not the defective source
-  // frames that contain a SECOND, opposite-hand trident. Torso, hand and
-  // weapon rotate together. The lower sea remains anchored to the floor.
-  function maskedPoseidonLayer(image,low,high,upper){
-    const result=document.createElement("canvas");
-    result.width=image.width;result.height=image.height;
-    const c=result.getContext("2d",{alpha:true});
-    if(!c)return null;
-    c.drawImage(image,0,0);
-    c.globalCompositeOperation="destination-in";
-    const mask=c.createLinearGradient(0,image.height*low,0,image.height*high);
-    if(upper){mask.addColorStop(0,"#fff");mask.addColorStop(1,"#0000");}
-    else {mask.addColorStop(0,"#0000");mask.addColorStop(1,"#fff");}
-    c.fillStyle=mask;c.fillRect(0,0,image.width,image.height);
-    c.globalCompositeOperation="source-over";
-    return result;
-  }
-  function buildPoseidonWindupFrame(idle,index){
-    const img=document.createElement("canvas");
-    img.width=idle.width;img.height=idle.height;
-    const ctx=img.getContext("2d",{alpha:true});
-    if(!ctx)return null;
-    const upper=maskedPoseidonLayer(idle,.60,.84,true);
-    const lower=maskedPoseidonLayer(idle,.65,.82,false);
-    const crest=maskedPoseidonLayer(idle,.77,.93,false);
-    if(!upper||!lower||!crest)return null;
-    const angle=[10,18,24][index-4]*Math.PI/180;
-    const shift=[-3,-7,-9][index-4]*img.width/362;
-    const px=181*img.width/362,py=258*img.height/362;
-    ctx.drawImage(lower,0,0);
-    ctx.save();
-    ctx.translate(px,py);ctx.rotate(-angle);ctx.translate(-px,-py);
-    ctx.drawImage(upper,shift,0);
-    ctx.restore();
-    ctx.drawImage(crest,0,0);
-    sealPoseidonInteriorHoles(ctx,img.width);
-    return img;
-  }
-
-  async function prepareTracedPoseidon() {
-    try {
-      if(!window.WIZARDRY_POSEIDON_TRACE_COMPRESSED)
-        throw new Error("Poseidon trace data missing");
-      if(typeof DecompressionStream!=="function")
-        throw new Error("Browser has no deflate decoder");
-      const compressed=window.WIZARDRY_POSEIDON_TRACE_COMPRESSED;
-      const compressedBytes=Uint8Array.from(atob(compressed),
-        char=>char.charCodeAt(0));
-      const stream=new Blob([compressedBytes]).stream().pipeThrough(
-        new DecompressionStream("deflate"));
-      const textData=await new Response(stream).text();
-      const asset=JSON.parse(textData);
-      if(asset.cell!==224||!Array.isArray(asset.frames)||
-         asset.frames.length!==12)
-         throw new Error("Poseidon vector frames are invalid");
-      poseidonTrace=asset;
-      for(const layers of asset.frames){
-        poseidonVectorFrames.push(layers.map(([color,path])=>
-          [color,new Path2D(path)]));
-      }
-      // Each frame is cached from the approved 224px vector trace at 480px.
-      // Direct Path2D geometry remains a fallback if caching is unavailable.
-      for(let index=0;index<poseidonVectorFrames.length;index++){
-        // Rebuild 4, 5 and 6 from the one-trident right-hand idle pose.
-        // Never cache the original defective double-trident windup artwork.
-        if(index>=4 && index<=6 && poseidonCachedFrames[3]){
-          const corrected=buildPoseidonWindupFrame(
-            poseidonCachedFrames[3],index);
-          if(corrected){poseidonCachedFrames.push(corrected);continue;}
-        }
-        const frame=document.createElement("canvas");
-        frame.width=POSEIDON_CACHE_PX;
-        frame.height=POSEIDON_CACHE_PX;
-        const context=frame.getContext("2d",{alpha:true});
-        if(!context)break;
-        context.setTransform(POSEIDON_CACHE_PX/asset.cell,0,0,
-          POSEIDON_CACHE_PX/asset.cell,0,0);
-        for(const [color,path] of poseidonVectorFrames[index]){
-          context.fillStyle=color;context.fill(path,"evenodd");
-        }
-        fillPoseidonOpaqueCore(context,index,true);
-        // getImageData/putImageData use device-pixel space, not the prior
-        // tracing transform, and run ONCE during asset preparation.
-        context.setTransform(1,0,0,1,0,0);
-        sealPoseidonInteriorHoles(context,POSEIDON_CACHE_PX);
-        poseidonCachedFrames.push(frame);
-      }
-      poseidonDiagnostics.frames=poseidonVectorFrames.length;
-      poseidonDiagnostics.contours=poseidonVectorFrames.reduce(
-        (sum,x)=>sum+x.length,0);
-      poseidonDiagnostics.cachedFrames=poseidonCachedFrames.length;
-      poseidonAssetReady=true;poseidonDiagnostics.ready=true;
-      window.WIZARDRY_POSEIDON_RENDER_DIAGNOSTICS=poseidonDiagnostics;
-      const portrait=document.getElementById("poseidonCardPortrait");
-      if(portrait){
-        const artwork=asset.frames[2].map(([color,path])=>
-          '<path d="'+path+'" fill="'+color+'" fill-rule="evenodd"/>').join("");
-        portrait.innerHTML='<svg class="poseidon-vector-portrait" '+
-          'viewBox="0 0 224 224" xmlns="http://www.w3.org/2000/svg">'+
-          artwork+'</svg>';
-        portrait.parentElement.classList.add("has-poseidon-vector");
-      }
-      refreshUI();
-    } catch(error) {
-      poseidonAssetError=String(error);
-      console.warn("Poseidon traced art not loaded:",error);
-      // Keep the older Canvas figure as fallback rather than lose gameplay.
+    image.onerror=()=>{
       poseidonAssetReady=false;
+      poseidonAssetError="The approved Poseidon sprites could not be loaded.";
       refreshUI();
-    }
+    };
+    image.src=manifest.src;
   }
-  function poseidonFrameIndex(elapsed) {
-    let i=0;
-    while(i<POSEIDON_FRAME_TIMES.length-1 &&
-          elapsed>=POSEIDON_FRAME_TIMES[i+1])i++;
-    // Three visibly different one-trident RIGHT-HANDED windup frames play
-    // in sequence: 4 (draw back), 5 (deeper), 6 (maximum windup).
-    // Immediately after release, only the moving projectile owns a trident.
-    if(elapsed>=SPELL.launch && elapsed<SPELL.hit)return 7;
-    return i;
+  function poseidonApprovedPose(elapsed){
+    if(elapsed<SPELL.windStart)return 0; // real idle, not another generated pose
+    if(elapsed<SPELL.windStart+.43)return 1; // Windup A
+    if(elapsed<SPELL.launch)return 2; // Windup B: last trident-in-hand pose
+    if(elapsed<SPELL.hit)return 3; // Throw: right hand releases weapon
+    return 4; // Empty-hand hold, then sink
   }
-  function drawTracedPoseidon(elapsed){
-    const i=poseidonFrameIndex(elapsed);
-    const paths=poseidonVectorFrames[i];
-    if(!paths)return;
-    const size=376,dx=505-size/2,dy=411-size*.96;
+  function drawApprovedPose(index,opacity=1,shiftY=0) {
+    if(!poseidonAssetReady||!poseidonApprovedImage)return;
     g.save();
-    g.beginPath();g.rect(296,-8,420,420);g.clip();
-    const opacity=ease(phase(elapsed,0,.18))*
-      (1-ease(phase(elapsed,SPELL.end-.22,SPELL.end)));
-    g.globalAlpha*=opacity;
-    if(poseidonCachedFrames[i]) {
-      g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
-      g.drawImage(poseidonCachedFrames[i],dx,dy,size,size);
-    }else{
-      // Asset-cache fallback: even without the offscreen poses, windup
-      // must NEVER render the defective opposite-hand trident.
-      g.translate(dx,dy);g.scale(size/poseidonTrace.cell,
-                                size/poseidonTrace.cell);
-      const singleHand=(i>=4&&i<=6);
-      if(singleHand){
-        const angle=[10,18,24][i-4]*Math.PI/180;
-        g.translate(112,160);g.rotate(-angle);g.translate(-112,-160);
-      }
-      const fallbackIndex=singleHand?3:i;
-      fillPoseidonOpaqueCore(g,fallbackIndex,false);
-      for(const [color,path] of poseidonVectorFrames[fallbackIndex]){
-        g.fillStyle=color;g.fill(path,"evenodd");
-      }
-    }
+    g.globalAlpha*=Math.max(0,Math.min(1,opacity));
+    g.drawImage(poseidonApprovedImage,
+      index*POSEIDON_APPROVED_FRAME_W,0,
+      POSEIDON_APPROVED_FRAME_W,POSEIDON_APPROVED_FRAME_H,
+      POSEIDON_APPROVED_DRAW_X,POSEIDON_APPROVED_DRAW_Y+shiftY,
+      POSEIDON_APPROVED_DRAW_W,POSEIDON_APPROVED_DRAW_H);
     g.restore();
-    // No extra fist or staff overlays — the repaired held pose owns one
-    // right-hand trident; at release only drawProjectile() owns the weapon.
   }
   function drawSummon(t,elapsed) {
-    if(poseidonAssetReady){
-      drawTracedPoseidon(elapsed);
-      return;
-    }
-    // Only for browsers unable to decode the compressed vector asset.
-    const opening=ease(phase(elapsed,.04,SPELL.riseStart));
-    const rising=out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
-    const sinking=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
-    const rise=rising*(1-sinking);
-    drawWhirlpool(t,opening*(1-sinking));
-    if(rise>.01) {
-      const torso=throwPose(elapsed,t);
-      drawWave(t,rise,torso.bodyY);
-      drawPoseidon(t,rise,elapsed,elapsed>=SPELL.launch,clamp((1-sinking)*3));
+    if(!poseidonAssetReady)return;
+    const rise=ease(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+    const sink=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
+    // The ground line is fixed, but the opaque character moves through it.
+    // This reveal/retreat animation uses the real approved IDLE/HOLD poses.
+    const shift=elapsed<SPELL.riseEnd?(1-rise)*245:sink*245;
+    const splashPower=elapsed<SPELL.riseEnd?(1-rise*.30):
+      elapsed>=SPELL.sinkStart?(1-sink*.50):.13;
+    g.save();
+    g.beginPath();g.rect(280,-6,460,417);g.clip();
+    drawApprovedPose(poseidonApprovedPose(elapsed),1,shift);
+    g.restore();
+    // One restrained water-ring effect unifies his entrance and exit.
+    if((elapsed<SPELL.riseEnd||elapsed>=SPELL.sinkStart)&&splashPower>.02){
+      g.save();g.globalAlpha=Math.max(.08,splashPower*.65);
+      oval(505,407,130+Math.sin(t*8)*4,18,null,"#76e4f0",2.1);
+      oval(505,409,91+Math.sin(t*7)*3,10,null,"#b4ffff",1.5);
+      g.restore();
     }
   }
 
@@ -914,12 +709,14 @@
     // accelerates toward the Sentinel. No hand swap or pre-release flight.
     // Source: right-hand grip of the final 24° wound-up pose at (x≈568,y≈217).
     // The trident departs the SAME hand, not the old (644,211) teleport.
-    const start=[568,217],target=[785,290];
+    const start=[468,100],target=[785,290];
     const flight=ease(phase(elapsed,SPELL.launch+.025,SPELL.hit));
     const x=mix(start[0],target[0],flight);
     const y=mix(start[1],target[1],flight)-21*Math.sin(Math.PI*flight);
     const aim=Math.atan2(target[0]-start[0],start[1]-target[1]);
-    const angle=aim*ease(phase(elapsed,SPELL.launch,SPELL.launch+.085));
+    // The spear tip begins at the last held-trident position; rotate into
+    // flight as the RIGHT-hand windup changes to the empty-handed THROW pose.
+    const angle=1.36+(aim-1.36)*ease(phase(elapsed,SPELL.launch,SPELL.launch+.12));
     const trail=Math.max(0,flight-.14);
     const bx=mix(start[0],target[0],trail),by=mix(start[1],target[1],trail)-
       21*Math.sin(Math.PI*trail);
@@ -927,7 +724,12 @@
     line(bx,by,x,y,"#0cbee8",14);
     line(bx,by,x,y,"#e1ffff",3.5);
     glow(x,y,23,"#b3fdff55");g.restore();
-    drawTrident(x,y,angle,103);
+    // drawTrident() defines its tip at -1.05 lengths on local Y.
+    // Its world-space TIP must follow the trajectory from the held weapon.
+    const projectileLength=103,reach=1.05*projectileLength;
+    const baseX=x-Math.sin(angle)*reach;
+    const baseY=y+Math.cos(angle)*reach;
+    drawTrident(baseX,baseY,angle,projectileLength);
   }
 
   function drawImpact(elapsed) {
@@ -1609,7 +1411,7 @@
   canvas.addEventListener("pointerdown",selectEnemy);
   // CSS handles both orientations; no resize observer mutates the Canvas.
   resize();reset();initSceneCache();prepareTracedGolem();
-  prepareTracedPoseidon();
+  prepareApprovedPoseidon();
   let lastPaintAt=-1000;
   function frame(now) {
     // High-refresh mobiles can overheat drawing at 120 Hz; 60fps keeps

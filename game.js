@@ -72,7 +72,7 @@
   // Speed only Poseidon up by 25%, without changing any approved sprite frames
   // or the game-time release/impact/unsummon timestamps.
   const POSEIDON_RATE_MULTIPLIER=1.25; // Poseidon ~2.10s at displayed 1×.
-  const EARTH_RATE_MULTIPLIER=1.04; // Golem stays ~2.83s at displayed 1×.
+  const EARTH_RATE_MULTIPLIER=1.25; // Golem ~2.36s, just slower than Poseidon's ~2.10s.
   let health = MAX_HP, mana = 8, round = 1;
   let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
@@ -780,175 +780,84 @@
   // Every Path2D contour and color is extracted from the source artwork.
   // This is not an approximated rig: the actual frame silhouettes and arm
   // positions are preserved, including fist overlap, perspective and rubble.
-  const golemTrace=window.WIZARDRY_GOLEM_TRACED;
+  // These four losslessly preserved rows contain the full sixteen ORIGINAL
+  // user-approved Stone Golem frames. No old vector tracings, morphs,
+  // overlays, generated in-betweens, fades or color changes are applied.
   const GOLEM_FRAME_TIMES=[
-    EARTH.emergeStart,.34,.69,EARTH.claspStart,
-    1.18,1.52,EARTH.holdStart,2.26,
-    2.42,2.60,2.79,EARTH.sinkStart
+    EARTH.emergeStart,.28,.53,.76,
+    1.02,1.25,1.66,1.90,
+    2.16,2.30,2.48,2.67,
+    2.82,3.18,4.35,4.65
   ];
-  // All 12 Golem poses are individually traced vector contours.
-  // High-resolution color-layer frames are rasterized ONCE, then drawn with
-  // one GPU blit per game frame instead of painting 269 paths each refresh.
-  // A small startup benchmark compares cached vs live-vector rendering, with
-  // the direct Path2D version available as a fallback on unusual devices.
-  const golemVectorPaths=[],golemCachedFrames=[];
-  const GOLEM_CACHE_SCALE=1.7;
-  let golemRenderMode="vector",golemTraceError=null;
-  const renderDiagnostics={
-    golemRenderMode:"vector",cachePixelSize:0,cachedFrames:0,
-    vectorMsPerFrame:null,cachedMsPerFrame:null
+  const GOLEM_SHEET_W=1254;
+  const GOLEM_EDGES=[0,314,627,940,1254];
+  const GOLEM_ROW_HEIGHTS=[314,313,313,314];
+  const GOLEM_DRAW_SIZE=455,GOLEM_DRAW_X=315,GOLEM_DRAW_Y=-4;
+  const golemRows=[];
+  let golemAssetReady=false,golemAssetError=null;
+  const golemDiagnostics={
+    source:"Original approved 16-cell Stone Golem low-poly sprite sheet",
+    frames:16,cellOrder:"4x4",lossless:true,warps:0,ready:false
   };
-  function golemAnimationFrame(elapsed) {
+  function golemAnimationFrame(elapsed){
     if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
-    // The 12 traced frames drive the original summon and stone attack.
-    // The recovery is blended separately below — no jump to an old frame.
-    let i=0;
-    while(i<10&&elapsed>=GOLEM_FRAME_TIMES[i+1])i++;
-    return i;
+    let index=0;
+    while(index<15&&elapsed>=GOLEM_FRAME_TIMES[index+1])index++;
+    return index;
   }
-  function golemRecoveryPose(elapsed) {
-    if(elapsed<EARTH.recoveryStart)return null;
-    if(elapsed<EARTH.handsDownStart) {
-      return {from:9,to:2,mix:ease(phase(elapsed,EARTH.recoveryStart,EARTH.handsDownStart))};
+  function prepareApprovedGolem(){
+    const rows=window.WIZARDRY_GOLEM_V23_ROWS;
+    if(!Array.isArray(rows)||rows.length!==4||rows.some(row=>
+       typeof row!=="string"||!row.startsWith("data:image/webp;base64,"))){
+      golemAssetError="The approved Stone Golem art is unavailable.";
+      refreshUI();return;
     }
-    if(elapsed<EARTH.idleStart) {
-      return {from:2,to:1,mix:ease(phase(elapsed,EARTH.handsDownStart,EARTH.idleStart))};
-    }
-    // Frame 1 has both rock hands down beside the body, unlike frame 2,
-    // which retains the clenched forward attack stance.
-    return {from:1,to:1,mix:1};
-  }
-  function buildGolemCache() {
-    const pixelSize=Math.round(golemTrace.cell*GOLEM_CACHE_SCALE);
-    try {
-      for(const layers of golemVectorPaths) {
-        const sheet=document.createElement("canvas");
-        sheet.width=pixelSize;sheet.height=pixelSize;
-        const ctx=sheet.getContext("2d",{alpha:true});
-        if(!ctx)throw new Error("Offscreen 2D context missing");
-        ctx.setTransform(GOLEM_CACHE_SCALE,0,0,GOLEM_CACHE_SCALE,0,0);
-        for(const [color,path] of layers) {
-          ctx.fillStyle=color;
-          ctx.fill(path,"evenodd");
+    let loaded=0,failed=false;
+    for(let row=0;row<4;row++){
+      const image=new Image();golemRows[row]=image;
+      image.onload=()=>{
+        if(image.naturalWidth!==GOLEM_SHEET_W||
+           image.naturalHeight!==GOLEM_ROW_HEIGHTS[row]){
+          failed=true;golemAssetError="Stone Golem sprite dimensions are incorrect.";
+        }else loaded++;
+        if(failed){golemAssetReady=false;refreshUI();return;}
+        if(loaded!==4)return;
+        golemAssetReady=true;golemDiagnostics.ready=true;
+        golemDiagnostics.rowSizes=golemRows.map(im=>[im.naturalWidth,im.naturalHeight]);
+        window.WIZARDRY_GOLEM_RENDER_DIAGNOSTICS=golemDiagnostics;
+        const portrait=document.getElementById("golemCardPortrait");
+        if(portrait){
+          // Exact approved standing frame #3 is also used on the card.
+          const icon=document.createElement("canvas");
+          icon.width=314;icon.height=314;icon.className="golem-portrait-canvas";
+          const context=icon.getContext("2d");
+          if(context)context.drawImage(golemRows[0],
+             GOLEM_EDGES[3],0,314,GOLEM_ROW_HEIGHTS[0],0,0,314,314);
+          if(typeof portrait.replaceChildren==="function")portrait.replaceChildren(icon);
+          else{portrait.innerHTML="";portrait.appendChild(icon);}
         }
-        golemCachedFrames.push(sheet);
-      }
-    }catch(error) {
-      golemCachedFrames.length=0;
+        refreshUI();
+      };
+      image.onerror=()=>{
+        failed=true;golemAssetReady=false;
+        golemAssetError="The approved Stone Golem sprite failed to load.";
+        refreshUI();
+      };
+      image.src=rows[row];
     }
-    renderDiagnostics.cachedFrames=golemCachedFrames.length;
-    renderDiagnostics.cachePixelSize=golemCachedFrames.length?pixelSize:0;
-  }
-  function benchmarkGolemModes() {
-    if(golemCachedFrames.length!==12||typeof performance.now!=="function")
-      return;
-    try {
-      const test=document.createElement("canvas");
-      test.width=416;test.height=416;
-      const ctx=test.getContext("2d",{alpha:true});
-      if(!ctx)return;
-      const ids=[2,7,10],directReps=2,cachedReps=7;
-      // Warm up Canvas shader/path caches, then compare time per frame.
-      let t=performance.now();
-      for(let repeat=0;repeat<directReps;repeat++)
-        for(const id of ids){
-          ctx.save();ctx.setTransform(416/golemTrace.cell,0,0,
-            416/golemTrace.cell,0,0);
-          for(const [color,path] of golemVectorPaths[id]){
-            ctx.fillStyle=color;ctx.fill(path,"evenodd");
-          }
-          ctx.restore();
-        }
-      renderDiagnostics.vectorMsPerFrame=
-        (performance.now()-t)/(directReps*ids.length);
-      t=performance.now();
-      for(let repeat=0;repeat<cachedReps;repeat++)
-        for(const id of ids){
-          ctx.setTransform(1,0,0,1,0,0);
-          ctx.drawImage(golemCachedFrames[id],0,0,416,416);
-        }
-      renderDiagnostics.cachedMsPerFrame=
-        (performance.now()-t)/(cachedReps*ids.length);
-      // Prefer cached playback for CPU headroom unless measurably worse.
-      const v=renderDiagnostics.vectorMsPerFrame;
-      const c=renderDiagnostics.cachedMsPerFrame;
-      if(v>0&&c>v*1.35)golemRenderMode="vector";
-      else golemRenderMode="cached";
-    } catch(error) {
-      golemRenderMode="cached";
-    }
-  }
-  function prepareTracedGolem() {
-    if(!golemTrace||golemTrace.cell!==362||!Array.isArray(golemTrace.frames)||
-       golemTrace.frames.length!==12||typeof Path2D!=="function"){
-      golemTraceError="The approved Stone Golem trace data is unavailable.";
-      return;
-    }
-    try {
-      for(const layers of golemTrace.frames)
-        golemVectorPaths.push(layers.map(([color,data])=>
-          [color,new Path2D(data)]));
-      const portrait=document.getElementById("golemCardPortrait");
-      if(portrait){
-        const artwork=golemTrace.frames[2].map(([color,d])=>
-          '<path fill="'+color+'" fill-rule="evenodd" d="'+d+'"/>'
-        ).join("");
-        portrait.innerHTML='<svg class="golem-vector-portrait" '+
-          'viewBox="0 0 362 362" xmlns="http://www.w3.org/2000/svg">'+
-          artwork+'</svg>';
-      }
-      buildGolemCache();
-      benchmarkGolemModes();
-      renderDiagnostics.golemRenderMode=golemRenderMode;
-      // Diagnostic details are readable in the browser console if needed.
-      window.WIZARDRY_RENDER_DIAGNOSTICS=renderDiagnostics;
-    } catch(error) {
-      golemVectorPaths.length=0;golemCachedFrames.length=0;
-      golemTraceError="Could not prepare the Stone Golem artwork.";
-    }
-  }
-  function drawGolemPoseFrame(index,dx,dy,size,opacity) {
-    if(opacity<=.001||!golemVectorPaths[index])return;
-    g.save();
-    g.globalAlpha*=opacity;
-    if(golemRenderMode==="cached"&&golemCachedFrames[index]){
-      g.imageSmoothingEnabled=true;
-      g.imageSmoothingQuality="high";
-      g.drawImage(golemCachedFrames[index],dx,dy,size,size);
-    }else{
-      g.translate(dx,dy);
-      const scale=size/golemTrace.cell;
-      g.scale(scale,scale);
-      for(const [color,path] of golemVectorPaths[index]){
-        g.fillStyle=color;g.fill(path,"evenodd");
-      }
-    }
-    g.restore();
   }
   function drawStoneGolem(elapsed,t){
+    if(!golemAssetReady)return;
     const index=golemAnimationFrame(elapsed);
     if(index<0)return;
-    const recovery=golemRecoveryPose(elapsed);
-    const size=416,dx=306,dy=411-size*.975;
-    const retreat=ease(phase(elapsed,EARTH.sinkStart,EARTH.crumbleEnd));
-    const offset=retreat*390;
-    const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
-      (1-ease(phase(elapsed,EARTH.crumbleEnd-.16,EARTH.crumbleEnd)));
+    const row=index>>2,col=index%4,img=golemRows[row];
+    if(!img||!img.complete||img.naturalWidth!==GOLEM_SHEET_W)return;
+    const left=GOLEM_EDGES[col],cellWidth=GOLEM_EDGES[col+1]-left;
     g.save();
-    g.beginPath();g.rect(280,-8,560,420);g.clip();
-    g.globalAlpha*=fade;
-    if(recovery){
-      // Real artwork-to-artwork recovery: spikes disappear while he rises
-      // from the slam; then the fists lower to his sides. Crossfade BOTH
-      // silhouettes continuously instead of teleporting to the idle frame.
-      const t0=recovery.mix;
-      const a=recovery.from,b=recovery.to;
-      const lift=a===9? -6*t0 : -3*t0;
-      drawGolemPoseFrame(a,dx,dy+offset+lift,size,1-t0);
-      drawGolemPoseFrame(b,dx,dy+offset+lift,size,t0);
-    }else{
-      drawGolemPoseFrame(index,dx,dy+offset,size,1);
-    }
+    g.beginPath();g.rect(284,-10,510,423);g.clip();
+    g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+    g.drawImage(img,left,0,cellWidth,GOLEM_ROW_HEIGHTS[row],
+      GOLEM_DRAW_X,GOLEM_DRAW_Y,GOLEM_DRAW_SIZE,GOLEM_DRAW_SIZE);
     g.restore();
   }
 
@@ -1211,13 +1120,15 @@
     // Do not disable the currently focused Cast button mid-animation.
     // Mobile Safari can move the document when a tapped control loses focus.
     // startCast() already refuses re-entry while cast is active.
-    const castBlocked=!!cast||defeated||mana<spell.cost;
-    UI.cast.disabled=!cast&&(defeated||mana<spell.cost||
-      (selectedSpell==="poseidon"&&!poseidonAssetReady));
+    const artPending=selectedSpell==="poseidon"?!poseidonAssetReady:!golemAssetReady;
+    const castBlocked=!!cast||defeated||mana<spell.cost||artPending;
+    UI.cast.disabled=!cast&&(defeated||mana<spell.cost||artPending);
     UI.cast.setAttribute("aria-disabled",String(castBlocked));
     UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":
-      selectedSpell==="poseidon"&&!poseidonAssetReady?
-      (poseidonAssetError?"POSEIDON ART UNAVAILABLE":"PREPARING POSEIDON..."):"CAST "+spell.name.toUpperCase();
+      artPending?(selectedSpell==="poseidon"?
+        (poseidonAssetError?"POSEIDON ART UNAVAILABLE":"PREPARING POSEIDON..."):
+        (golemAssetError?"GOLEM ART UNAVAILABLE":"PREPARING STONE GOLEM...")):
+      "CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {
     if(cast||defeated||!SPELLS[type])return;
@@ -1245,6 +1156,7 @@
     const spell=SPELLS[selectedSpell];
     if(cast||defeated||mana<spell.cost)return;
     if(selectedSpell==="poseidon"&&!poseidonAssetReady)return;
+    if(selectedSpell==="stone"&&!golemAssetReady)return;
     if(sound)tone(440,.04,"sine",.001);
     mana-=spell.cost;
     cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};
@@ -1421,7 +1333,7 @@
   });
   canvas.addEventListener("pointerdown",selectEnemy);
   // CSS handles both orientations; no resize observer mutates the Canvas.
-  resize();reset();initSceneCache();prepareTracedGolem();
+  resize();reset();initSceneCache();prepareApprovedGolem();
   prepareApprovedPoseidon();
   let lastPaintAt=-1000;
   function frame(now) {

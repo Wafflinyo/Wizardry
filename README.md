@@ -1,3 +1,13 @@
+## NEW — Play the 2.5D 4v4 battle test
+
+**[Open the new 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.24.0)**
+
+Choose 1v1, 2v2, 3v3 or 4v4 in an angled, depth-sorted Canvas 2D arena. Plan targets and spells for up to four wizards, fight CPU enemies in Story Test, or test the same team turn flow in a **local hot-seat PvP simulation**. Shields, boosts, traps and auras persist; Poseidon and Stone Golem summon only to attack, then disappear. The approved original character sprite art is unchanged.
+
+**This is a local combat prototype, not online multiplayer yet.** Friends, lobbies, campaign saving, accounts and ranked matchmaking are future work. Read [ARENA_TEST.md](ARENA_TEST.md) for the playable rules and controls.
+
+---
+
 # Wizardry — Spellcasting Prototype v0.23.0
 
 **Play:** https://wafflinyo.github.io/Wizardry/?v=0.23.0

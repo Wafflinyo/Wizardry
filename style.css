@@ -378,11 +378,11 @@
   left: 50%;
   bottom: -8px;
   transform: translateX(-50%);
-  background-image: url("./assets/stone-golem-lowpoly-v070.webp");
+  background-image: url("./assets/stone-golem-geom-v08.avif");
   background-repeat: no-repeat;
-  /* Show the fully emerged, ready-to-attack frame (#2) in the card. */
-  background-position: 66.6667% 0;
-  background-size: 400% 300%;
+  /* Frame #2 (third cell of first row) shows the approved clasped-fist pose. */
+  background-position: 100% 0;
+  background-size: 300% 400%;
   filter: drop-shadow(0 3px 5px #071913);
   pointer-events: none;
 }
@@ -417,7 +417,7 @@ html,body { overscroll-behavior: none; }
   .cast-status { min-height: 32px; }
   .spell-tray,.battle-controls { flex-shrink:0; }
   .golem-card-portrait {
-    background-size:400% 300%;
-    background-position:66.6667% 0;
+    background-size:300% 400%;
+    background-position:100% 0;
   }
 }

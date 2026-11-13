@@ -214,6 +214,41 @@
     }
   }
 
+  // Ancient elemental colosseum: cached background stonework and crystals.
+  function drawRuinsAccents() {
+    // Layered basalt cliffs frame the arena without hiding the combatants.
+    polygon([[0,365],[0,190],[30,166],[56,249],[77,189],[106,308],
+      [137,360]],"#102e35");
+    polygon([[1000,361],[1000,180],[977,151],[955,243],[928,181],
+      [892,305],[865,352]],"#122f35");
+    triangleFacet(0,191,31,167,57,249,"#244d50");
+    triangleFacet(1000,179,976,153,956,243,"#285455");
+    // Staggered obelisks and ornate vertical rune fragments.
+    for(const p of [
+      [79,267,29,119,"#5ca99c"],
+      [182,292,18,82,"#7dbfa7"],
+      [820,291,18,83,"#86bba5"],
+      [922,273,30,122,"#5ab5a8"]
+    ]){
+      const [x,y,w,h,c]=p;
+      polygon([[x-w,y],[x-w*.8,y-h*.85],[x,y-h],[x+w*.72,y-h*.78],
+        [x+w,y]],"#263f42","#52736c",2);
+      triangleFacet(x-w*.8,y-h*.85,x,y-h,x,y,"#46655d");
+      triangleFacet(x,y-h,x+w*.72,y-h*.78,x+w,y,"#1a353a");
+      line(x,y-h*.73,x,y-h*.42,c,2.6);
+      polygon([[x-5,y-h*.59],[x,y-h*.70],[x+5,y-h*.59],[x,y-h*.48]],
+        "#8cc9b5");
+    }
+    // Embedded glowing geodes give Earth magic a consistent visual language.
+    const crystals=[[120,326,24],[883,323,26],[338,331,12],[657,329,13]];
+    for(const [x,y,h] of crystals){
+      polygon([[x-12,y],[x-6,y-h*.65],[x,y-h],[x+9,y-h*.54],
+        [x+11,y]],"#547c70","#94b3a3",1.6);
+      triangleFacet(x-6,y-h*.65,x,y-h,x+1,y,"#8bbfa8");
+      triangleFacet(x,y-h,x+9,y-h*.54,x+11,y,"#2b5d54");
+    }
+  }
+
   function drawArena(t) {
     oval(500,426,492,143,"#050d15");
     const rim = g.createLinearGradient(0,335,0,515);
@@ -956,7 +991,7 @@
   }
   function initSceneCache() {
     try {
-      sceneCache=cachedLayer(()=>{drawSky(0);drawArena(0);});
+      sceneCache=cachedLayer(()=>{drawSky(0);drawRuinsAccents();drawArena(0);});
       foregroundCache=cachedLayer(()=>drawForeground(0));
     } catch(error) {
       // Older browser fallback still renders a complete interactive arena.
@@ -969,7 +1004,7 @@
     g.save();
     if(cast)applyShake(cast.elapsed);
     if(sceneCache)g.drawImage(sceneCache,0,0,W,H);
-    else {drawSky(0);drawArena(0);}
+    else {drawSky(0);drawRuinsAccents();drawArena(0);}
     drawSummonGlyph(t);
     drawWizard(t);
     if(cast){
@@ -1048,6 +1083,11 @@
     UI.round.textContent="ROUND "+round;
     UI.hpText.textContent=health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP";
     UI.hpFill.style.width=(health/MAX_HP*100)+"%";
+    if(selectedSpell==="stone"){
+      UI.cast.classList.add("earth-cast");
+    }else{
+      UI.cast.classList.remove("earth-cast");
+    }
     UI.card.setAttribute("aria-pressed",String(selectedSpell==="poseidon"));
     UI.golemCard.setAttribute("aria-pressed",String(selectedSpell==="stone"));
     if(selectedSpell==="poseidon"){

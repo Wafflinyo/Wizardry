@@ -1,6 +1,6 @@
 # Wizardry
 
-## Spell Trial 001 — Poseidon's Wrath (v0.2)
+## Spell Trial 001 — Poseidon's Wrath (v0.3)
 
 A playable, mobile-friendly spellcasting battle prototype. This is a real interactive game test, **not a GIF or static illustration**.
 
@@ -20,24 +20,27 @@ The URL above is the expected Pages address, not confirmation that Pages has alr
 - Tap the Stone Sentinel to target it.
 - Select the **Poseidon's Wrath** card and press **Cast**.
 - Poseidon rises out of a massive wave, his lower half formed entirely from the water.
-- He **points his free arm at the target**, winds his throwing arm back behind his head, and **launches the trident at high speed** as a separate projectile. The shoulder and elbow animate continuously through the throw.
+- He **points his free arm at the target** while lifting his throwing arm, and the trident **stays pointed at the enemy throughout the wind-up**. A denser set of interpolated poses creates smoother movement; the separate projectile launches at high speed with no discontinuity. The shoulder and elbow animate continuously through the throw.
 - The trident hits the target, producing a powerful splash, camera shake, and **1,200 water damage**.
 - After the strike, Poseidon **unsummons**, sinking back into the collapsing wave and fading away.
 - Mana regenerates between rounds for this spell test; defeat the 3,000-HP Sentinel in three casts.
 - Use the sound toggle, 1×/2× playback speed, or Reset Duel.
 
-### Spell timeline
+### Spell timeline (v0.3)
+
+The full cast is approximately **4.9 seconds** at 1× (previously 6.5 seconds). Procedural arm poses use additional intermediate joint keys with cubic interpolation at every display refresh (typically 60 Hz, or 120 Hz on supported screens).
 
 | Approximate time | Animation |
 |---|---|
-| 0–0.7s | Summoning circle and whirlpool |
-| 0.7–2.4s | Towering wave rises and Poseidon emerges |
-| 2.2–2.9s | Free hand points at the target |
-| 2.9–3.7s | Throwing arm winds back behind his head, then snaps forward |
-| 3.74–4.08s | Trident launches and streaks to the target |
-| 4.08s | Impact, 1,200 damage, water shockwave |
-| 4.85–6.3s | Poseidon descends and dissolves into sea spray |
-| 6.5s | Return to playable battle state |
+| 0–0.45 s | Whirlpool forms |
+| 0.45–1.65 s | Poseidon rises as part of the wave |
+| 1.13–1.60 s | His free hand points at the Sentinel; trident tips turn toward the target |
+| 1.54–2.37 s | Throwing arm raises and winds backward through intermediate poses, with the trident aimed at the target |
+| 2.37–2.70 s | Fluid shoulder, elbow, and wrist release and follow-through |
+| 2.55–2.86 s | Fast independent flying trident (0.31 seconds), launched from the hand-held weapon tip |
+| 2.86 s | Impact, 1,200 damage, water shockwave |
+| 3.52–4.74 s | Poseidon sinks *with* the wave and dissolves into sea spray |
+| 4.88 s | Arena returns to playable state |
 
 ### Technical notes
 

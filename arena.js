@@ -723,33 +723,130 @@
     if(fill){ctx.fillStyle=fill;ctx.fill();}
     if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=sw;ctx.stroke();}
   }
+  function shadeColor(hex,offset){
+    let value=String(hex||"#267eab").replace("#","");
+    if(!/^[0-9a-f]{6}$/i.test(value))value="267eab";
+    const channel=i=>clamp(parseInt(value.slice(i,i+2),16)+offset,0,255);
+    return "#"+[0,2,4].map(i=>Math.round(channel(i)).toString(16).padStart(2,"0")).join("");
+  }
   function drawWizard(ctx,u,time){
-    const sway=Math.sin(time*1.1+u.index*1.6)*2;
-    // Floating robes and capes, angular faceted low-poly silhouette.
-    pathPoly(ctx,[[-30,0],[-27,-93],[-10,-112],[25,-108],[35,0]],
-      u.style==="ember"?"#7b3439":u.style==="leaf"?"#254f37":u.style==="storm"?"#342b68":"#176076",
-      "#a5dbd6",1.5);
-    pathPoly(ctx,[[-29,-94],[-43,-40],[-54,1],[-7,-10]],u.style==="ember"?"#b15e32":"#22647f");
-    pathPoly(ctx,[[16,-105],[38,-58],[57,2],[9,-8]],u.style==="leaf"?"#497345":"#163e6b");
-    pathPoly(ctx,[[-30,0],[-9,-81],[10,-50],[-9,0]],"#a0d7e944");
-    pathPoly(ctx,[[-23,-104],[0,-132+sway],[26,-105],[10,-81],[-11,-80]],"#d0ae85","#344858",2);
-    ellipse(ctx,0,-115,18,21,"#c39976","#284453",1.5);
-    pathPoly(ctx,[[-31,-118],[-24,-149],[0,-156],[25,-142],[32,-114]],u.style==="ember"?"#6c2c36":"#1e445b","#4f859b",2);
-    pathPoly(ctx,[[-32,-143],[0,-166],[23,-144]],u.style==="storm"?"#8b78c8":"#3b8da0");
-    // Off-axis face details emphasize that the wizard is looking across
-    // the ring, not straight into the camera.
+    // Individually assembled low-poly wizard — not a rotated, fixed sprite.
+    // Three real hat silhouettes and a hood, three robe cuts, six colors.
     const side=u.team?-1:1;
-    ellipse(ctx,-side*5,-116,1.6,2,"#d5eadc95");
-    ellipse(ctx,side*9,-116,2.8,2.5,"#e4f6ea");
-    pathPoly(ctx,[[side*14,-120],[side*23,-116],[side*15,-111]],"#d5ad87");
-    line(ctx,side*7,-107,side*15,-105,"#795a53",1.7);
-    // Arms + magical staff.
-    pathPoly(ctx,[[-26,-99],[-42,-84],[-45,-58],[-34,-52],[-24,-77]],"#d7b08b","#4b5760",1.5);
-    pathPoly(ctx,[[22,-104],[41,-88],[49,-70],[39,-58],[18,-80]],"#ba957f","#3b5362",1.5);
-    line(ctx,-46,-10,-49,-165,u.style==="leaf"?"#afdc77":"#bba374",5);
-    pathPoly(ctx,[[-59,-157],[-50,-181],[-37,-158],[-50,-144]],
-      u.color,"#d9f6ef",2);
-    ellipse(ctx,-49,-163,7,12,"#eaffff82");
+    const primary=u.robeColor||"#267eab";
+    const dark=shadeColor(primary,-61),deeper=shadeColor(primary,-93);
+    const light=shadeColor(primary,39),shine=shadeColor(primary,65);
+    const trim="#d8bd88",skin="#cca084";
+    const sway=Math.sin(time*1.18+u.index*1.61)*1.3;
+    const raised=clamp(u.armRaise||0,0,1);
+    // Rear cape: faceted panels overlap the robe at the shoulders.
+    pathPoly(ctx,[[-26,-114],[-50,-78],[-53,1],[-17,-13],[21,-7],[44,3],
+      [38,-77],[21,-116]],deeper,dark,2);
+    pathPoly(ctx,[[-30,-103],[-53,-72],[-48,-4],[-14,-10]],dark);
+    pathPoly(ctx,[[23,-100],[44,-73],[44,-3],[18,-12]],shadeColor(primary,-39));
+    // Three distinct robe silhouettes, all with consistent feet/scale.
+    if(u.robe==="armored"){
+      pathPoly(ctx,[[-30,-110],[-31,-8],[-40,4],[39,4],[29,-110]],
+        dark,trim,2.4);
+      pathPoly(ctx,[[-30,-111],[-6,-128],[29,-110],[24,-75],[-27,-75]],
+        primary,light,2);
+      pathPoly(ctx,[[-29,-83],[-8,-94],[0,-45],[-27,-8]],light);
+      pathPoly(ctx,[[5,-90],[30,-80],[36,-4],[0,-22]],deeper);
+      for(const y of [-74,-51,-28]){
+        pathPoly(ctx,[[-24,y],[-14,y-6],[17,y-5],[28,y]],
+          y===-51?trim:shadeColor(primary,-24),dark,1.3);
+      }
+    }else if(u.robe==="split"){
+      pathPoly(ctx,[[-27,-112],[-23,-65],[-46,2],[-7,-6],[0,-42],[9,-6],
+        [45,3],[25,-66],[27,-111]],primary,dark,2);
+      pathPoly(ctx,[[-26,-109],[-9,-122],[7,-119],[-5,-43],[-25,0]],light);
+      pathPoly(ctx,[[8,-117],[28,-111],[43,3],[10,-6],[-1,-42]],dark);
+      pathPoly(ctx,[[-13,-42],[0,-49],[8,-9],[-4,0]],shine);
+    }else{
+      pathPoly(ctx,[[-27,-112],[-33,-70],[-43,2],[39,2],[31,-70],
+        [28,-114]],primary,dark,2.1);
+      pathPoly(ctx,[[-28,-110],[-7,-126],[-5,-22],[-39,3]],light);
+      pathPoly(ctx,[[16,-117],[31,-110],[40,2],[7,-2]],dark);
+      pathPoly(ctx,[[-14,-108],[0,-98],[10,-8],[-6,0]],shadeColor(primary,16));
+    }
+    // Trim and buckle are always visible and vary in the attached garment.
+    pathPoly(ctx,[[-28,-111],[-8,-122],[6,-119],[29,-111],[22,-94],
+      [-21,-94]],shadeColor(primary,-16),trim,2);
+    pathPoly(ctx,[[-24,-38],[-14,-42],[15,-41],[25,-36],
+      [22,-29],[-21,-30]],deeper,trim,1.6);
+    pathPoly(ctx,[[-7,-43],[7,-43],[8,-30],[-7,-30]],trim);
+    pathPoly(ctx,[[-3,-40],[4,-40],[4,-34],[-3,-34]],u.color||"#98eeef");
+    // Sleeves and hands are genuine articulated faceted polygons, no
+    // stretch; shoulder -> elbow -> hand changes via fixed segment joins.
+    pathPoly(ctx,[[-side*24,-108],[-side*43,-93],[-side*40,-58],
+      [-side*26,-57],[-side*18,-86]],dark,light,1.7);
+    pathPoly(ctx,[[-side*41,-62],[-side*30,-66],[-side*31,-50],[-side*42,-48]],
+      skin,dark,1.2);
+    // Low-poly neck and 3/4 human face. Side orientation remains FIXED.
+    pathPoly(ctx,[[-15,-130],[16,-130],[18,-109],[-15,-107]],skin,shadeColor(skin,-42),1.3);
+    ellipse(ctx,0,-136+sway,19,23,skin,shadeColor(skin,-55),1.6);
+    pathPoly(ctx,[[side*9,-143],[side*22,-134],[side*8,-126]],
+      shadeColor(skin,22));
+    pathPoly(ctx,[[side*13,-139],[side*24,-135],[side*14,-129]],
+      shadeColor(skin,4),shadeColor(skin,-46),1);
+    ellipse(ctx,side*12,-140+sway,2.4,2.1,"#ecf5ec");
+    line(ctx,side*7,-126,side*15,-124,shadeColor(skin,-72),1.3);
+    // Hat style can change independently of robe silhouette/colors.
+    const hat=u.hat||"pointed";
+    if(hat==="wide"){
+      pathPoly(ctx,[[-44,-159+sway],[46,-159+sway],
+        [37,-150+sway],[-42,-149+sway]],deeper,trim,1.8);
+      pathPoly(ctx,[[-24,-159+sway],[-13,-193+sway],[12,-195+sway],
+        [27,-159+sway]],primary,light,1.6);
+      pathPoly(ctx,[[-13,-193+sway],[13,-195+sway],[25,-159+sway],
+        [3,-166+sway]],dark);
+    }else if(hat==="hood"){
+      pathPoly(ctx,[[-25,-117],[-31,-156+sway],[-14,-179+sway],
+        [14,-179+sway],[33,-151+sway],[25,-111]],
+        dark,light,2);
+      pathPoly(ctx,[[-29,-156+sway],[-14,-179+sway],[0,-170+sway],
+        [-9,-132]],light);
+      pathPoly(ctx,[[-21,-154+sway],[-12,-165+sway],[18,-164+sway],
+        [25,-151+sway],[20,-131],[-20,-133]],deeper,trim,1.6);
+    }else if(hat==="scholar"){
+      pathPoly(ctx,[[-32,-158+sway],[-20,-184+sway],[22,-184+sway],
+        [33,-158+sway],[24,-150+sway],[-26,-149+sway]],
+        primary,trim,2);
+      pathPoly(ctx,[[-20,-184+sway],[22,-184+sway],[27,-160+sway],
+        [3,-166+sway]],dark);
+      pathPoly(ctx,[[-43,-152+sway],[40,-152+sway],[33,-143+sway],
+        [-38,-143+sway]],deeper,trim,1.6);
+    }else{
+      pathPoly(ctx,[[-30,-156+sway],[-9,-206+sway],
+        [8,-218+sway],[27,-157+sway]],primary,trim,2.2);
+      pathPoly(ctx,[[-9,-206+sway],[8,-218+sway],[20,-159+sway],
+        [0,-177+sway]],dark);
+      pathPoly(ctx,[[-37,-161+sway],[36,-161+sway],[30,-150+sway],
+        [-34,-150+sway]],deeper,trim,1.7);
+    }
+    // Adjustable staff arm: all poses point toward arena CENTER, never
+    // rotate the standing wizard or enemy. Wrist moves from hip to extended.
+    const sh=[side*24,-102];
+    const el=[side*(34+20*raised),-83-18*raised];
+    const hand=[side*(41+57*raised),-52-58*raised];
+    const top=[hand[0]+side*(7+101*raised),
+               hand[1]-lerp(107,12,raised)];
+    pathPoly(ctx,[[sh[0]-8,sh[1]-7],[el[0]-8,el[1]-9],
+      [el[0]+8,el[1]+9],[sh[0]+9,sh[1]+10]],primary,dark,1.6);
+    pathPoly(ctx,[[el[0]-7,el[1]-9],[hand[0]-7,hand[1]-6],
+      [hand[0]+7,hand[1]+7],[el[0]+9,el[1]+8]],light,dark,1.6);
+    ellipse(ctx,hand[0],hand[1],9,8,skin,shadeColor(skin,-35),1);
+    // One single solid wand, rigid and aimed with the entire arm.
+    line(ctx,hand[0],hand[1]+15,top[0],top[1],
+      u.robe==="armored"?"#d6c597":"#c4a675",6);
+    line(ctx,hand[0]+side*2,hand[1]+12,top[0],top[1],
+      "#f7e0a5a0",1.4);
+    const element=state.animation?.source===u.id?state.animation.card.id:"";
+    const gem=element==="golem"?"#b5ec79":
+      element==="poseidon"?"#7eebfa":u.color;
+    pathPoly(ctx,[[top[0]-10,top[1]],[top[0],top[1]-16],
+      [top[0]+10,top[1]],[top[0],top[1]+9]],gem,trim,1.6);
+    ellipse(ctx,top[0],top[1]-2,4,6,"#ecffff8c");
   }
   function drawEnemy(ctx,u,time){
     const rock=u.style==="moss"?"#6d795a":u.style==="crystal"?"#6b5c85":

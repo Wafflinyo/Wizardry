@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071422">
   <title>Wizardry · 2.5D Battle Test</title>
-  <link rel="stylesheet" href="./arena.css?v=0.28.0">
+  <link rel="stylesheet" href="./arena.css?v=0.29.0">
 </head>
 <body>
 <main class="game" id="game">
@@ -40,6 +40,11 @@
     <div class="arena" id="arena">
       <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Select a spell below, tap an enemy to mark it with an arrow, then confirm the target."></canvas>
       <div class="arena-bug" id="battleBadge">4 vs 4 · STORY / CPU</div>
+      <aside id="statusPopup" class="status-popup" role="dialog" aria-modal="false" aria-labelledby="statusName" hidden>
+        <button type="button" id="statusClose" class="status-close" aria-label="Close status details">×</button>
+        <strong id="statusName">Status effect</strong>
+        <p id="statusText"></p>
+      </aside>
     </div>
     <div class="turnbar" aria-live="polite">
       <span class="turn-orb">✦</span><span id="turnHint">Tap a spell, then an enemy. Confirm to cast.</span>
@@ -97,6 +102,6 @@
 <script src="./assets/stone-golem-approved-v23-row1.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row2.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row3.js?v=0.23.0" defer></script>
-<script src="./arena.js?v=0.28.0" defer></script>
+<script src="./arena.js?v=0.29.0" defer></script>
 </body>
 </html>

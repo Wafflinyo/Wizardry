@@ -1045,18 +1045,10 @@
     }
     hudText(health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP",
       964,110,22,"#f5c9af","right",230,650);
-    // Fixed top-center banner replaces the former resizing HTML state label.
-    hudRoundRect(284,13,428,58,12,"#071c2bbd",edge,1.3);
-    hudText("ROUND "+round,500,32,21,"#bdd6d8","center",380,700);
-    hudText(UI.state.textContent||"READY TO CAST",500,54,27,accent,
-      "center",400,800);
-    hudText(UI.caption.textContent||"CHOOSE YOUR SPELL",500,98,21,
-      "#dbf0ee","center",420,650);
-    // Status is always on the same fixed baseline; long messages compress
-    // within the bar, never creating new layout lines.
-    hudRoundRect(183,493,634,46,23,"#061525d7",edge,1.4);
-    hudText(UI.status.textContent||"Select a spell, then Cast.",500,515,25,
-      "#e1f1f0","center",594,600);
+    // Quiet battle HUD: round counter only. Never narrate each attack frame
+    // over the animation. Stage and casting text remain screen-reader-only.
+    hudRoundRect(439,14,122,34,12,"#071c2bac",edge,1.25);
+    hudText("ROUND "+round,500,31,20,accent,"center",114,750);
     g.restore();
   }
   function drawCanvasVictory() {
@@ -1190,7 +1182,8 @@
     // Mobile Safari can move the document when a tapped control loses focus.
     // startCast() already refuses re-entry while cast is active.
     const castBlocked=!!cast||defeated||mana<spell.cost;
-    UI.cast.disabled=!cast&&(defeated||mana<spell.cost);
+    UI.cast.disabled=!cast&&(defeated||mana<spell.cost||
+      (selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError));
     UI.cast.setAttribute("aria-disabled",String(castBlocked));
     UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST "+spell.name.toUpperCase();
   }

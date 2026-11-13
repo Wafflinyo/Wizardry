@@ -1,6 +1,6 @@
-# Wizardry · 2.5D Battle Test v0.27.0
+# Wizardry · 2.5D Battle Test v0.28.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.27.0
+**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.28.0
 
 The original 1v1 duel, the approved Poseidon / Stone Golem 16-frame art assets, and their summon damage/accuracy are unchanged.
 
@@ -12,8 +12,8 @@ On your turn:
 
 1. Both approved spell cards are always shown immediately under the battlefield; no hand scrolling is necessary.
 2. **Tap Poseidon's Wrath or Stone Golem.**
-3. **Tap a living enemy directly on the arena.** The enemy gets a larger touch hitbox and glowing targeting marker when a card is selected.
-4. Your spell is locked in and the battle round automatically resolves. No separate Queue / Auto-fill / Resolve confirmation, roster selection, or target dropdown.
+3. **Tap a living enemy directly on the arena.** A gold **downward arrow appears above the selected target's head**. You may tap a different enemy to change the target before casting; their side HP plate is also tappable.
+4. Press **Confirm Target** below the cards to lock in your action. No mana is spent and no spell begins before you confirm. The other fighters auto-plan and the round resolves; no extra Queue/Auto-fill/Resolve controls are required.
 5. All other living wizards choose their own spells and targets using their own CPU decisions. Action resolution still uses speed order, auto-drawn element runes, probabilistic hit checks, temporary summons, and arm lowering.
 6. When the round finishes, the game returns to **your** blank two-card hand awaiting a **new** card and target. Nothing from the previous round is auto-queued.
 7. If your wizard has been knocked out, your surviving CPU allies keep fighting autonomously; you cannot take control of another wizard.
@@ -31,7 +31,7 @@ No other spell cards have been added. Each caster's rune is drawn automatically 
 
 ## Screen layout and customization
 
-The level 2.5D side-view arena and the two spell cards share a single mobile viewport with compact turn feedback. The old roster and action buttons have been removed from the **visible** combat UI. Both cards are displayed side by side in a non-scrolling row; targets are tapped on the actual battle canvas. A collapsed **Customize your wizard** section retains all four hats, three robe silhouettes and six robe colors.
+The level 2.5D side-view arena and the two spell cards share a single mobile viewport with compact turn feedback. **Ally HP/name plates sit to the left of their character models; enemy HP/name plates sit to the right.** They no longer cover the character faces or bodies. **Summon sprites, projectiles, fissures and runes always render behind all standing fighter models**, with floating damage and the target arrow rendered after the models. The old roster and action buttons have been removed from the **visible** combat UI. Confirm Target appears inline only when a valid enemy is selected. Both cards are displayed side by side in a non-scrolling row; targets are tapped on the actual battle canvas. A collapsed **Customize your wizard** section retains all four hats, three robe silhouettes and six robe colors.
 
 Portrait and landscape have separate responsive sizing rules; the existing 1000×620 arena drawing buffer and original summon artwork are unchanged.
 
@@ -39,4 +39,4 @@ Portrait and landscape have separate responsive sizing rules; the existing 1000�
 
 The battle is a playable local prototype. It has no connected accounts, friend invites, co-op synchronization, authoritative online combat, matchmaking or ranked 4v4. Those need multiplayer infrastructure.
 
-Automated simulated tests checked one-human-per-side ownership, two-card accessibility, two-tap targeting, CPU teammate/enemy plans, hit/miss behavior, 1v1–4v4 resolution, fresh player input each round, and fixed Canvas dimensions. Actual iPhone browser visual review is still recommended.
+Automated simulated tests checked one-human-per-side ownership, two-card accessibility, **selecting and changing targets without casting, confirming to commit**, CPU teammate/enemy plans, hit/miss behavior, 1v1–4v4 resolution, fresh player input each round, side-bar positions, arrow rendering, **both approved summons drawn behind fighters**, and fixed Canvas dimensions. Actual iPhone browser visual review is still recommended.

@@ -667,62 +667,57 @@
       pivot[1]+dx*Math.sin(angle)+dy*Math.cos(angle)];
   }
   function earthPose(elapsed,t=0) {
-    // Smoothstep starts and ends with ZERO velocity to prevent the "snap"
-    // during emergence and retreat. No random camera movement in these phases.
+    // Front-facing 3/4 golem with its target to screen RIGHT.
+    // Choreographed from real two-hand overhead medicine ball throws:
+    // load behind head -> weight back -> lead foot plants -> hips/chest lead
+    // -> both elbows extend over head -> fast release -> follow-through.
     const emerging=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
     const descent=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
-    const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd));
-    const charge=ease(phase(elapsed,EARTH.liftEnd-.19,EARTH.releaseStart));
-    const release=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
-    const follow=ease(phase(elapsed,EARTH.launch,EARTH.launch+.45));
-    // The left leg comes OFF the floor as he leans back, then plants on release.
-    const legRaise=ease(phase(elapsed,EARTH.liftEnd-.18,EARTH.releaseStart))*
-      (1-ease(phase(elapsed,EARTH.releaseStart,EARTH.launch+.12)));
-    const lean=-.23*charge*(1-release)+.16*release*(1-follow*.40);
-    // Begin with the entire creature hidden below y=411. Previously its
-    // head appeared above ground before the rise began, creating a pop.
-    // The same 300px travel is mirrored on retreat for a smooth burial.
-    const base=411+(1-emerging)*300+descent*300;
-    const x=502;
-    const pivot=[x,base-71];
-    const shoulders=[
-      stoneRotate([x-69,base-154],pivot,lean),
-      stoneRotate([x+69,base-154],pivot,lean)
-    ];
-    // One stone boulder is lifted close to the body, then loaded over and
-    // slightly behind his head. During the throw the whole torso snaps forward.
-    const rockX=x-30*charge*(1-release)+58*release;
-    const rockY=base-116-221*lift+36*release;
-    const hands=[
-      [rockX-40,rockY+31],
-      [rockX+40,rockY+31]
-    ];
-    // Post-release both hands continue their follow-through, never telegraphing
-    // an invisible boulder. The final wrist targets remain in reach.
-    if(elapsed>=EARTH.launch) {
-      hands[0][0]=mix(hands[0][0],x+56,follow);
-      hands[0][1]=mix(hands[0][1],base-182,follow);
-      hands[1][0]=mix(hands[1][0],x+112,follow);
-      hands[1][1]=mix(hands[1][1],base-181,follow);
+    const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd-.14));
+    const load=ease(phase(elapsed,EARTH.liftEnd-.23,EARTH.releaseStart));
+    const drive=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
+    const follow=ease(phase(elapsed,EARTH.launch,EARTH.launch+.34));
+    const footLift=load*(1-drive);
+    // Fully underground at both endpoints with zero vertical velocity.
+    const base=411+300*(1-emerging)+300*descent;
+    const x=502+24*drive*(1-follow*.20);
+    const pivot=[x,base-77];
+    // Backward arch pivots the rigid chest/head around the hips.
+    const lean=-.34*load*(1-drive)+.23*drive*(1-follow*.45);
+    const hips=[stoneRotate([x-34,base-74],pivot,lean),
+                stoneRotate([x+34,base-74],pivot,lean)];
+    const shoulders=[stoneRotate([x-58,base-164],pivot,lean),
+                     stoneRotate([x+58,base-164],pivot,lean)];
+    // The ball follows an arc BACK BEHIND the skull before it goes forward.
+    // It is NOT moved by extending the hands independently.
+    const rockX=502+2-42*lift-50*load+186*drive;
+    const rockY=base-113-211*lift-16*load+76*drive;
+    const hands=[[rockX-34,rockY+29],[rockX+34,rockY+29]];
+    // Fixed stone-bone lengths are verified at all 60/120 Hz in-between poses.
+    if(elapsed>=EARTH.launch){
+      hands[0][0]=mix(hands[0][0],x+54,follow);
+      hands[0][1]=mix(hands[0][1],base-199,follow);
+      hands[1][0]=mix(hands[1][0],x+97,follow);
+      hands[1][1]=mix(hands[1][1],base-197,follow);
     }
+    const armUpper=100,armLower=95;
     const elbows=[
-      stoneIK(shoulders[0],hands[0],97,92,-1),
-      stoneIK(shoulders[1],hands[1],97,92,1)
+      stoneIK(shoulders[0],hands[0],armUpper,armLower,-1),
+      stoneIK(shoulders[1],hands[1],armUpper,armLower,1)
     ];
-    const hips=[
-      stoneRotate([x-35,base-69],pivot,lean),
-      stoneRotate([x+35,base-69],pivot,lean)
-    ];
-    const feet=[
-      [x-68-39*legRaise,base-3-69*legRaise],
-      [x+52,base-3]
-    ];
+    // Right/back foot stays on the ground. Left/lead foot lifts during
+    // loading, steps across, and plants toward the target BEFORE release.
+    const leftFoot=[mix(mix(445,424,load),565,drive),base-3-54*footLift];
+    const rightFoot=[524,base-3];
+    const feet=[leftFoot,rightFoot];
+    const legUpper=54,legLower=52;
     const knees=[
-      stoneIK(hips[0],feet[0],54,52,1),
-      stoneIK(hips[1],feet[1],54,52,-1)
+      stoneIK(hips[0],feet[0],legUpper,legLower,1),
+      stoneIK(hips[1],feet[1],legUpper,legLower,-1)
     ];
-    return {x,base,pivot,emerging,descent,lift,charge,release,follow,
-      lean,legRaise,rockX,rockY,hands,shoulders,elbows,hips,feet,knees};
+    return {x,base,pivot,emerging,descent,lift,load,drive,follow,footLift,
+      lean,rockX,rockY,hands,shoulders,elbows,hips,feet,knees,
+      armUpper,armLower,legUpper,legLower};
   }
 
   function stoneLimb(a,b,thickA,thickB,light,shadow) {
@@ -742,76 +737,92 @@
     if(p.emerging<.001||p.descent>.999)return;
     const x=p.x,y=p.base;
     g.save();
-    // Keep ground at y=411 even during smooth upward/downward motion.
-    // The top is NOT clipped, so an overhead boulder remains entirely visible.
-    g.beginPath();g.rect(270,-110,470,521);g.clip();
-    g.globalAlpha*=1-ease(phase(p.descent,.55,1));
-    glow(x,y-95,105,"#a5ca7130");
-    oval(x,y+1,91,21,"#252e29a8");
-    // Articulated stone LEGS — one planted, the LEFT one lifted in the charge.
-    for(let side=0;side<2;side++) {
+    g.beginPath();g.rect(270,-120,480,531);g.clip();
+    g.globalAlpha*=1-ease(phase(p.descent,.68,1));
+    // Low, broad shadow reinforces his mass; NO random vertical bobbing.
+    oval(502,407,92,18,"#151f1695");
+    // A clear three-quarter silhouette: planted rear leg, raised leading
+    // stone leg, faceted knees and broad feet.
+    for(let side=1;side>=0;side--){
       const hip=p.hips[side],knee=p.knees[side],foot=p.feet[side];
-      stoneLimb(hip,knee,24,20,side===0?"#78866a":"#6f7b63","#485e4e");
-      stoneLimb(knee,foot,20,17,side===0?"#a0a587":"#7f8f72","#4c5d49");
-      g.save();g.translate(foot[0],foot[1]);g.rotate(side===0?-.24*p.legRaise:0);
-      polygon([[-28,-7],[8,-12],[27,1],[12,8],[-28,7]],
-        side===0?"#8c9b7e":"#6d806c","#c5c09c",2);
-      triangleFacet(-28,-7,8,-12,5,3,"#b2b597");
+      stoneLimb(hip,knee,24,20,side===0?"#829078":"#697961","#495a46");
+      oval(knee[0],knee[1],18,17,side===0?"#8c9576":"#74826d","#c7bf9e",1.2);
+      stoneLimb(knee,foot,21,17,side===0?"#9aa58b":"#727d68","#55624d");
+      g.save();g.translate(foot[0],foot[1]);g.rotate(side===0?-.21*p.footLift:0);
+      polygon([[-27,-8],[7,-12],[30,-1],[19,9],[-27,8]],
+        side===0?"#84957c":"#6d806a","#c7bea1",2);
+      triangleFacet(-27,-8,7,-12,6,3,"#b8b89b");
       g.restore();
     }
-    // Arms are two rigid stone blocks joined at genuine elbow pivots.
-    // IK guarantees identical upper/forearm lengths during EVERY in-between.
-    for(let side=0;side<2;side++) {
+    // Far arms and massive faceted elbow hinges.
+    for(let side=1;side>=0;side--){
       const shoulder=p.shoulders[side],elbow=p.elbows[side],hand=p.hands[side];
-      stoneLimb(shoulder,elbow,22,19,side===0?"#7f866f":"#72836d","#4d624e");
-      stoneLimb(elbow,hand,18,13,side===0?"#a2a68b":"#98a188","#566a54");
-      polygon([[elbow[0]-11,elbow[1]-7],[elbow[0]+9,elbow[1]-12],
-        [elbow[0]+16,elbow[1]+7],[elbow[0]-4,elbow[1]+13]],
-        "#86947b","#c8c6a1",1.5);
+      stoneLimb(shoulder,elbow,21,17,side===0?"#798b73":"#63765e","#425742");
+      oval(elbow[0],elbow[1],18,17,"#8d977d","#cfc8a7",1.4);
+      stoneLimb(elbow,hand,17,12,side===0?"#a3ab90":"#7b8e76","#526a52");
     }
-    // Head, shoulders and torso ROTATE TOGETHER ABOUT THE HIPS.
-    // This is a real backwards lean, not a stretch of the hands.
+    // One connected pelvis / chest / head: all rotate together through the
+    // same hip pivot, so charging with the spine does not stretch the stone.
     g.save();
     g.translate(p.pivot[0],p.pivot[1]);g.rotate(p.lean);
     g.translate(-p.pivot[0],-p.pivot[1]);
-    // Golem's chest: broad squat sandstone slabs with green mineral seams
-    polygon([[x-74,y-154],[x-33,y-176],[x+36,y-174],[x+79,y-153],[x+69,y-78],[x+28,y-52],[x-36,y-49],[x-74,y-88]],
-      "#687360","#b9b38f",3);
-    triangleFacet(x-73,y-151,x-32,y-175,x-21,y-111,"#b6ae8b");
-    triangleFacet(x-32,y-176,x+34,y-174,x+1,y-112,"#939b7b");
-    triangleFacet(x+35,y-173,x+79,y-153,x+27,y-110,"#526450");
-    triangleFacet(x-21,y-110,x+24,y-114,x+28,y-51,"#566d55");
-    triangleFacet(x-71,y-87,x-21,y-109,x-37,y-51,"#818b70");
-    triangleFacet(x+25,y-110,x+69,y-81,x+28,y-52,"#3f5346");
-    polygon([[x-25,y-132],[x,y-151],[x+25,y-134],[x+14,y-104],[x-10,y-102]],"#405744");
-    polygon([[x-16,y-132],[x,y-142],[x+16,y-132],[x+12,y-120],[x-9,y-119]],"#b9d57b","#d7e79b",1.2);
-    // Huge earth pauldrons, clearly not Poseidon's gold armor.
-    polygon([[x-87,y-178],[x-58,y-193],[x-29,y-166],[x-44,y-134],[x-80,y-140]],"#8f9777","#c3b596",2);
-    triangleFacet(x-83,y-179,x-60,y-191,x-56,y-151,"#b6b293");
-    polygon([[x+56,y-194],[x+88,y-175],[x+78,y-138],[x+45,y-133],[x+28,y-165]],"#75816a","#b8b493",2);
-    triangleFacet(x+59,y-188,x+85,y-175,x+63,y-150,"#aaad88");
-    // Chunky golem head with a rocky brow and amber-green eyes
-    polygon([[x-38,y-208],[x-30,y-255],[x-6,y-271],[x+31,y-257],[x+45,y-212],[x+24,y-176],[x-23,y-178]],
-      "#788470","#c2bd98",2);
-    triangleFacet(x-38,y-208,x-31,y-255,x+1,y-214,"#acb195");
-    triangleFacet(x-30,y-253,x-6,y-269,x+29,y-257,"#c4c09b");
-    triangleFacet(x+30,y-256,x+45,y-213,x+5,y-211,"#576f5c");
-    polygon([[x-31,y-225],[x-8,y-231],[x-3,y-216],[x-30,y-211]],"#2f4239");
-    polygon([[x+8,y-230],[x+32,y-225],[x+31,y-211],[x+9,y-216]],"#2f4239");
-    polygon([[x-26,y-223],[x-11,y-225],[x-10,y-218],[x-25,y-215]],"#c3f49b");
-    polygon([[x+12,y-224],[x+28,y-223],[x+27,y-216],[x+11,y-217]],"#c3f49b");
-    line(x-10,y-202,x+8,y-202,"#435447",4);
+    // Pelvis
+    polygon([[x-44,y-90],[x+43,y-91],[x+48,y-58],[x+23,y-43],[x-26,y-45],[x-48,y-63]],
+      "#5d735a","#b6b697",2);
+    triangleFacet(x-43,y-88,x+10,y-81,x-25,y-48,"#849076");
+    triangleFacet(x+10,y-81,x+45,y-86,x+25,y-48,"#405946");
+    // Large trapezoidal chest with crystalline moss seams
+    polygon([[x-74,y-161],[x-35,y-193],[x+33,y-194],[x+74,y-162],
+      [x+67,y-109],[x+48,y-77],[x-51,y-77],[x-69,y-110]],
+      "#647862","#beb899",3);
+    triangleFacet(x-74,y-159,x-35,y-191,x-12,y-123,"#a5b093");
+    triangleFacet(x-35,y-192,x+34,y-193,x+6,y-128,"#8e9f86");
+    triangleFacet(x+34,y-193,x+73,y-162,x+37,y-118,"#4e6651");
+    triangleFacet(x-70,y-110,x-12,y-126,x-51,y-79,"#758d70");
+    triangleFacet(x+6,y-127,x+67,y-109,x+46,y-80,"#435e4b");
+    polygon([[x-22,y-141],[x+2,y-156],[x+28,y-140],[x+16,y-116],
+      [x-12,y-115]],"#3c5942","#9baf7c",1.1);
+    polygon([[x-11,y-139],[x+3,y-146],[x+19,y-138],[x+14,y-126],[x-9,y-127]],
+      "#afd58a","#e6f5b9",1.5);
+    // Shoulder blocks are angular, not organic muscle shapes.
+    polygon([[x-91,y-179],[x-64,y-207],[x-28,y-189],[x-30,y-153],[x-76,y-145]],
+      "#869578","#d1c6a2",2.6);
+    triangleFacet(x-87,y-181,x-63,y-204,x-57,y-153,"#c0c5a3");
+    polygon([[x+58,y-207],[x+92,y-179],[x+81,y-145],[x+31,y-152],[x+29,y-187]],
+      "#728b72","#c6c4a3",2.6);
+    triangleFacet(x+60,y-205,x+90,y-179,x+59,y-160,"#9daf8e");
+    // Distinctive overhanging stone brow, prominent forward/right nose,
+    // and angular jaw so he faces the TARGET instead of staring front.
+    polygon([[x-34,y-215],[x-30,y-269],[x-1,y-290],[x+28,y-278],
+      [x+44,y-246],[x+55,y-235],[x+42,y-225],[x+28,y-197],[x-24,y-194]],
+      "#82937d","#d5caa4",2.8);
+    triangleFacet(x-32,y-268,x-1,y-288,x-6,y-247,"#bac3a4");
+    triangleFacet(x-1,y-287,x+28,y-278,x+16,y-251,"#d0caad");
+    triangleFacet(x+29,y-277,x+44,y-246,x+22,y-228,"#5e7968");
+    triangleFacet(x+27,y-210,x+55,y-235,x+37,y-221,"#a7ae94");
+    polygon([[x-34,y-248],[x-20,y-260],[x+14,y-259],[x+33,y-247],
+      [x+35,y-237],[x-31,y-236]],"#485f4d");
+    polygon([[x-23,y-246],[x-7,y-248],[x-7,y-241],[x-22,y-239]],"#c4f9a1");
+    polygon([[x+12,y-246],[x+29,y-243],[x+29,y-237],[x+12,y-240]],"#c4f9a1");
+    polygon([[x-19,y-211],[x+25,y-209],[x+31,y-220],[x+4,y-217]],
+      "#5b735c","#aab99a",1.7);
+    // Back crystal shards give an ancient, magical Earth silhouette.
+    polygon([[x-47,y-194],[x-57,y-224],[x-31,y-206]],"#9dc48a");
+    polygon([[x+41,y-186],[x+58,y-219],[x+63,y-183]],"#7ca67a");
     g.restore();
-    if(elapsed<EARTH.launch)drawBoulder(p.rockX,p.rockY,52,0);
-    // Each stone fist grips opposite sides of the SAME rock, stays attached
-    // through the lift, and drives forward during the throw.
+    // The boulder is OVER/BEHIND the head at the loaded pose, held by BOTH
+    // hands. Its centre is never a detached, independently floating object.
+    if(elapsed<EARTH.launch)
+      drawBoulder(p.rockX,p.rockY,51,
+        -p.load*.18 + p.drive*.33);
+    // Visible wrist/knuckle blocks firmly cup the sides of the same rock.
     for(let side=0;side<2;side++){
       const hand=p.hands[side];
-      polygon([[hand[0]-14,hand[1]-12],[hand[0]+13,hand[1]-10],
-        [hand[0]+15,hand[1]+13],[hand[0]-10,hand[1]+15]],
-        side===0?"#b2b39a":"#909a83","#d6c9a2",1.7);
-      triangleFacet(hand[0]-12,hand[1]-10,hand[0]+10,hand[1]-9,
-        hand[0]+1,hand[1]+5,side===0?"#d2c6a2":"#b3b89a");
+      polygon([[hand[0]-13,hand[1]-12],[hand[0]+13,hand[1]-11],
+        [hand[0]+15,hand[1]+12],[hand[0]-9,hand[1]+14]],
+        side===0?"#b5b99d":"#969f87","#dfd5b4",1.9);
+      triangleFacet(hand[0]-11,hand[1]-10,hand[0]+10,hand[1]-10,
+        hand[0]+1,hand[1]+5,side===0?"#d8ceae":"#adb99c");
     }
     g.restore();
   }
@@ -836,20 +847,18 @@
   }
   function drawEarthProjectile(elapsed,t) {
     if(elapsed<EARTH.launch||elapsed>=EARTH.hit)return;
-    const p=phase(elapsed,EARTH.launch,EARTH.hit); // constant high-speed throw
-    // Sample the exact release point so the boulder does not teleport out
-    // of either hand when the game switches to projectile animation.
-    const start=earthPose(EARTH.launch,t);
-    const x=mix(start.rockX,783,p);
-    const y=mix(start.rockY,285,p)-Math.sin(Math.PI*p)*31;
+    const p=phase(elapsed,EARTH.launch,EARTH.hit); // decisive release
+    const source=earthPose(EARTH.launch,t-(elapsed-EARTH.launch));
+    const x=mix(source.rockX,783,p);
+    const y=mix(source.rockY,286,p)-Math.sin(Math.PI*p)*22;
+    const q=Math.max(0,p-.21);
+    const trailX=mix(source.rockX,783,q);
+    const trailY=mix(source.rockY,286,q)-Math.sin(Math.PI*q)*22;
     g.save();g.globalCompositeOperation="lighter";
-    const prev=Math.max(0,p-.18);
-    const dustX=mix(start.rockX,783,prev);
-    const dustY=mix(start.rockY,285,prev)-Math.sin(Math.PI*prev)*31;
-    line(dustX,dustY,x,y,"#d1bf7d5c",19);
-    glow(x,y,43,"#cfe0a125");
+    line(trailX,trailY,x,y,"#ddc59c6b",21);
+    glow(x,y,44,"#dfe9b337");
     g.restore();
-    drawBoulder(x,y,52,p*7);
+    drawBoulder(x,y,51,-.18+p*5.4);
   }
 
   function drawEarthImpact(elapsed) {

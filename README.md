@@ -1,4 +1,27 @@
-# Wizardry — Elemental Battle Prototype v0.16.0
+# Wizardry — Elemental Battle Prototype v0.17.0
+
+## v0.17 animation continuity repairs
+
+**Poseidon:** The old windup frame that still depicted the opposite-hand
+trident is excluded from playback. His raised-trident pose keeps the weapon
+in the same (right) hand until release, at which instant the illustrated pose
+switches to an empty-hand follow-through and the projectile becomes the
+**only** trident drawn. An opaque sea-and-torso backing is painted behind
+the traced detail with `destination-over`, filling accidental transparent
+body/wave gaps without covering the original character artwork. This underlay
+is built once into cached traced frames and used by the vector fallback.
+
+**Stone Golem:** The advancing spikes finish, then the original frame
+transitions through two eased, overlapping recovery phases into the
+hands-down pose (frame 1 of the approved animation). It pauses visibly
+before the hands-down character sinks below the arena. No instantaneous
+snap back to the original first pose.
+
+Both spells retain their approximately 2.6–2.8-second normal casts,
+with Stone Golem slightly slower than Poseidon. Damage remains 1,200 Water
+and 900 Earth, respectively. Neither cast displays narration for individual
+animation phases. The battle canvas backing buffer remains fixed.
+
 
 Play: https://wafflinyo.github.io/Wizardry/
 

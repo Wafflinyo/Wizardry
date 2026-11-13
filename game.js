@@ -40,9 +40,9 @@
     sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
   });
   const duration = SPELL.end;
-  // v0.3.1: the former 2× animation pace is now the natural 1× speed.
-  // UI speed remains relative (1×/2×), so 2× remains optional.
-  const DEFAULT_SPELL_RATE = 2;
+  // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
+  // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
+  const DEFAULT_SPELL_RATE = 1.5;
   let health = MAX_HP, mana = 8, round = 1;
   let selected = true, targeted = true, defeated = false;
   let cast = null, particles = [], speed = 1, sound = true;
@@ -340,33 +340,54 @@
     }
     g.restore();
   }
-  function drawWave(t,rise){
+  function drawWave(t,rise) {
     if(rise<=.01)return;
-    const x=505,y=411;
-    const h=148*rise;
+    const x=505,y=411,h=148*rise,drift=Math.sin(t*3.7)*3*rise;
     g.save();
-    glow(x,y-h*.44,90,"#03edff25");
-    const grad=g.createLinearGradient(x-140,y-h,x+140,y);
-    grad.addColorStop(0,"#72dbe7");grad.addColorStop(.25,"#168fae");grad.addColorStop(.58,"#084e78");grad.addColorStop(1,"#042c57");
-    g.beginPath();g.moveTo(x-153,y+2);
-    g.bezierCurveTo(x-117,y-h*.28,x-104,y-h*.9,x-32,y-h*.84);
-    g.bezierCurveTo(x+25,y-h*1.25,x+91,y-h*.84,x+75,y-h*.62);
-    g.bezierCurveTo(x+120,y-h*.68,x+129,y-h*.26,x+153,y+4);
-    g.closePath();g.fillStyle=grad;g.fill();
-    triangleFacet(x-125,y-5,x-31,y-h*.83,x-48,y-28,"#137ea28c");
-    triangleFacet(x-31,y-h*.83,x+27,y-h*.98,x+46,y-12,"#78dde651");
-    triangleFacet(x+27,y-h*.98,x+118,y-h*.44,x+65,y-18,"#138ab25b");
-    triangleFacet(x-39,y-h*.7,x+7,y-h*.9,x-5,y-20,"#0b446b99");
-    const lift=Math.sin(t*3)*4;
-    g.beginPath();g.moveTo(x-143,y-5);
-    g.bezierCurveTo(x-93,y-h*.65+lift,x-76,y-h*.92,x-12,y-h*.89);
-    g.bezierCurveTo(x+68,y-h*1.18,x+96,y-h*.59,x+87,y-h*.53);
-    g.strokeStyle="#bdfbfb";g.lineWidth=8;g.shadowColor="#57eaf6";g.shadowBlur=15;g.stroke();g.shadowBlur=0;
-    g.beginPath();g.moveTo(x-129,y+2);g.bezierCurveTo(x-53,y-35,x+58,y-32,x+143,y-4);g.strokeStyle="#59e2f3";g.lineWidth=7;g.stroke();
-    for(let i=0;i<10;i++){
-      const a=(i/9)*Math.PI;
-      oval(x-100+202*i/9,y-8-Math.sin(a)*rise*17+Math.sin(t*3+i)*4,rand(2,3),rand(1,2),"#c8ffff");
+    glow(x,y-h*.43,135,"#0cdff123");
+    // ONE connected sea mass. Its highest crest runs beneath the torso
+    // rather than a second narrow, outlined column extending from the waist.
+    const sea=g.createLinearGradient(x-64,y-h*1.24,x+105,y+14);
+    sea.addColorStop(0,"#63d7df");
+    sea.addColorStop(.24,"#2097af");
+    sea.addColorStop(.54,"#116386");
+    sea.addColorStop(.82,"#08486d");
+    sea.addColorStop(1,"#053157");
+    g.beginPath();
+    g.moveTo(x-160,y+4);
+    g.bezierCurveTo(x-134,y-25*rise,x-116,y-99*rise,x-79,y-133*rise);
+    g.bezierCurveTo(x-60,y-154*rise,x-54,y-166*rise,x-23,y-161*rise+drift);
+    g.bezierCurveTo(x+3,y-175*rise,x+41,y-160*rise,x+60,y-144*rise+drift);
+    g.bezierCurveTo(x+102,y-125*rise,x+135,y-48*rise,x+164,y+4);
+    g.closePath();
+    g.fillStyle=sea;g.fill();
+    // The faceted low-poly water shapes share the same body of water.
+    // Do not outline a vertical torso/tail silhouette.
+    triangleFacet(x-155,y-2,x-84,y-h*.84,x-83,y-14,"#2089a35d");
+    triangleFacet(x-82,y-16,x-29,y-h*1.08,x+5,y-12,"#50cada39");
+    triangleFacet(x+28,y-h*1.04,x+137,y-25,x+52,y-10,"#1785aa63");
+    triangleFacet(x-26,y-h*.98,x+45,y-h*.92,x+7,y-13,"#0646714b");
+    // Whitewater only on the outer curling crests. A bright outline
+    // running down the centre would visually detach Poseidon from the wave.
+    g.lineCap="round";
+    g.beginPath();g.moveTo(x-153,y-5);
+    g.bezierCurveTo(x-124,y-43*rise,x-109,y-113*rise,x-76,y-140*rise);
+    g.strokeStyle="#a0edf5";g.lineWidth=4.2;
+    g.shadowColor="#54e8ed";g.shadowBlur=6;g.stroke();
+    g.beginPath();g.moveTo(x+76,y-133*rise);
+    g.bezierCurveTo(x+115,y-109*rise,x+144,y-34*rise,x+159,y-3);
+    g.strokeStyle="#8fe7f0";g.lineWidth=4;g.stroke();g.shadowBlur=0;
+    // Foam radiates sideways into the wave instead of outlining a stalk.
+    for(let i=0;i<5;i++){
+      const side=i%2===0?-1:1;
+      const offset=(i+1)*19;
+      const fx=x+side*(77+offset*.8),fy=y-18-Math.sin(t*2.4+i)*3;
+      oval(fx,fy,3.5+rise,1.8+rise,"#acfcfa9b");
     }
+    // A subdued waterline is part of the full wave, not a body boundary.
+    g.beginPath();g.moveTo(x-149,y-2);
+    g.bezierCurveTo(x-76,y-23,x+74,y-21,x+155,y+1);
+    g.strokeStyle="#54d6e69c";g.lineWidth=3;g.stroke();
     g.restore();
   }
 
@@ -428,72 +449,40 @@
     // Arm holding the trident stays behind the chest until the release.
     limb(rightShoulder,rightElbow,22,17,"#bc9079","#876b65");
     limb(rightElbow,rightHand,16,11,"#d9a789","#9b766e");
-    // His lower body is NOT a separate stump sitting on the wave.
-    // A curved, translucent water column rises out of the very same swell.
-    // Both the body pigment and the fluid column fade through continuous
-    // skin -> sea-glass turquoise -> deep ocean blue gradients.
-    const seaLevel=411;
-    const blendTop=bodyY-67;
-    const span=Math.max(1,seaLevel-blendTop);
-    const mid=blendTop+span*.58;
-    const tail=g.createLinearGradient(x,blendTop,x,seaLevel);
-    tail.addColorStop(0,"rgba(196,178,155,0.22)");
-    tail.addColorStop(.18,"rgba(91,196,204,0.68)");
-    tail.addColorStop(.48,"rgba(33,154,185,0.94)");
-    tail.addColorStop(.82,"rgba(11,91,134,0.84)");
-    tail.addColorStop(1,"rgba(9,73,111,0)");
-    g.beginPath();
-    g.moveTo(x-51,blendTop);
-    g.bezierCurveTo(x-50,blendTop+span*.25,x-36,mid-12,x-40,mid);
-    g.bezierCurveTo(x-49,mid+span*.20,x-88,seaLevel-27,x-133,seaLevel+3);
-    g.quadraticCurveTo(x,seaLevel-11,x+134,seaLevel+3);
-    g.bezierCurveTo(x+79,seaLevel-28,x+48,mid+span*.14,x+42,mid);
-    g.bezierCurveTo(x+35,blendTop+span*.28,x+56,blendTop+8,x+55,blendTop);
-    g.closePath();
-    g.fillStyle=tail;
-    g.fill();
-    // Narrow water ribs echo the big wave's motion instead of forming legs.
-    g.save();
-    g.globalAlpha*=.46;
-    const sway=Math.sin(t*4.8)*4;
-    g.beginPath();g.moveTo(x-34,bodyY-30);
-    g.bezierCurveTo(x-50,bodyY+18,x+sway-7,mid,x-76,seaLevel-7);
-    g.strokeStyle="#a0faff";g.lineWidth=4;g.stroke();
-    g.beginPath();g.moveTo(x+25,bodyY-35);
-    g.bezierCurveTo(x+50,bodyY+10,x-sway+7,mid,x+77,seaLevel-8);
-    g.strokeStyle="#2ebbd3";g.lineWidth=5;g.stroke();
-    g.restore();
-    // The upper chest stays solid, but the bottom of the torso literally
-    // changes colour and becomes transparent over the water column.
-    const skinToSea=g.createLinearGradient(x,bodyY-118,x,bodyY+13);
-    skinToSea.addColorStop(0,"#d7ac8e");
-    skinToSea.addColorStop(.32,"#c99a81");
-    skinToSea.addColorStop(.50,"#b5ae91");
-    skinToSea.addColorStop(.65,"rgba(79,188,194,0.94)");
-    skinToSea.addColorStop(.82,"rgba(34,141,171,0.8)");
-    skinToSea.addColorStop(1,"rgba(18,124,159,0)");
+    // Skin becomes ocean from the sternum down. There is no separately
+    // filled water stalk and no waist/torso edge: the lower half is literally
+    // transparent over the wave behind it.
+    const skinToSea=g.createLinearGradient(x,bodyY-119,x,bodyY+26);
+    skinToSea.addColorStop(0,"#d8ad90");
+    skinToSea.addColorStop(.25,"#cd9e83");
+    skinToSea.addColorStop(.43,"#bba88c");
+    skinToSea.addColorStop(.60,"rgba(93,185,187,0.89)");
+    skinToSea.addColorStop(.78,"rgba(33,145,171,0.50)");
+    skinToSea.addColorStop(1,"rgba(12,109,152,0)");
     g.beginPath();
     g.moveTo(x-57,bodyY-102);
     g.lineTo(x-32,bodyY-117);g.lineTo(x+37,bodyY-118);
     g.lineTo(x+61,bodyY-97);
-    g.bezierCurveTo(x+50,bodyY-55,x+39,bodyY-16,x+30,bodyY+12);
-    g.quadraticCurveTo(x,bodyY+26,x-29,bodyY+12);
-    g.bezierCurveTo(x-44,bodyY-16,x-58,bodyY-62,x-57,bodyY-102);
-    g.closePath();g.fillStyle=skinToSea;g.fill();
-    // The few visible facets soften into the turquoise gradient.
-    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-56,"#e3b090");
-    triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-74,"#f3c5a7");
-    triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-59,"#9e7667");
-    triangleFacet(x-43,bodyY-56,x-9,bodyY-67,x+1,bodyY-17,"#8aa9a2a3");
-    triangleFacet(x+4,bodyY-70,x+47,bodyY-48,x+12,bodyY-12,"#6bb9bd9c");
-    // Foamy contours keep moving gently along his dissolving body.
-    g.save();g.globalAlpha*=.55;
-    g.beginPath();g.moveTo(x-39,bodyY-33);
-    g.bezierCurveTo(x-33,bodyY-11,x-52+sway,bodyY+13,x-28,bodyY+35);
-    g.strokeStyle="#bbffff";g.lineWidth=3;g.stroke();
-    g.beginPath();g.moveTo(x+33,bodyY-28);
-    g.bezierCurveTo(x+29,bodyY-5,x+48-sway,bodyY+19,x+20,bodyY+38);
-    g.strokeStyle="#78ecf2";g.lineWidth=3;g.stroke();
+    g.bezierCurveTo(x+55,bodyY-59,x+55,bodyY-4,x+73,bodyY+21);
+    g.quadraticCurveTo(x,bodyY+42,x-72,bodyY+21);
+    g.bezierCurveTo(x-55,bodyY-7,x-62,bodyY-58,x-57,bodyY-102);
+    g.closePath();
+    g.fillStyle=skinToSea;g.fill();
+    // Facets are restricted to the solid upper chest; they no longer form
+    // a contrasting triangular tip or rim running into the middle of the wave.
+    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-76,"#e3b090");
+    triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-79,"#f3c5a7");
+    triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-77,"#9e7667");
+    // A few translucent currents blend sideways with the surrounding swell.
+    // No long cyan strokes or contour lines down the centre.
+    g.save();g.globalAlpha*=.20;
+    const ripple=Math.sin(t*4)*5;
+    g.beginPath();g.moveTo(x-45,bodyY-39);
+    g.bezierCurveTo(x-71+ripple,bodyY-10,x-99,bodyY+9,x-121,bodyY+22);
+    g.strokeStyle="#70dbe5";g.lineWidth=6;g.stroke();
+    g.beginPath();g.moveTo(x+45,bodyY-37);
+    g.bezierCurveTo(x+72-ripple,bodyY-12,x+98,bodyY+8,x+124,bodyY+22);
+    g.strokeStyle="#3fbad5";g.lineWidth=6;g.stroke();
     g.restore();
     polygon([[x-71,bodyY-100],[x-58,bodyY-126],[x-30,bodyY-125],[x-25,bodyY-94]],"#ac8a56","#ffec9f",2);
     triangleFacet(x-70,bodyY-101,x-51,bodyY-119,x-34,bodyY-102,"#f6d999");

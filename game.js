@@ -85,8 +85,9 @@
   function throwPose(elapsed, t = 0) {
     const w = ease(phase(elapsed, SPELL.windStart, SPELL.windEnd));
     const r = ease(phase(elapsed, SPELL.releaseStart, SPELL.releaseEnd));
-    const rise = out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
-    const bodyY = 406 - 112*rise + Math.sin(t*2.4)*1.5;
+    const rising = out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+    const sinking = ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
+    const bodyY = 406 - 112*rising*(1-sinking) + Math.sin(t*2.4)*1.5;
     const x = 505;
     const elbowX = mix(jointCurve(ARM.elbowX,w),jointCurve(ARM.snapElbowX,r),r);
     const elbowY = mix(jointCurve(ARM.elbowY,w),jointCurve(ARM.snapElbowY,r),r);

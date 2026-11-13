@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071422">
-  <meta name="description" content="Wizardry — a playable low-poly spellcasting prototype. Summon Poseidon and hurl his trident at the Stone Sentinel.">
-  <title>Wizardry | Poseidon's Wrath</title>
-  <link rel="stylesheet" href="./style.css?v=0.3.0">
+  <meta name="description" content="Wizardry — a playable low-poly spellcasting prototype. Summon Poseidon or an Earth Stone Golem, then hurl a trident or boulder at the Stone Sentinel.">
+  <title>Wizardry | Earth & Water Spells</title>
+  <link rel="stylesheet" href="./style.css?v=0.4.0">
 </head>
 <body>
   <main class="app">
@@ -16,7 +16,7 @@
         <div><div class="brand-name">WIZARDRY</div><div class="brand-subtitle">THE SPELLCASTING PROTOTYPE</div></div>
       </div>
       <div class="header-right">
-        <span class="trial-label">SPELL TRIAL 001</span>
+        <span class="trial-label">SPELL TRIALS 001–002</span>
         <button class="icon-button" id="soundButton" type="button" aria-label="Toggle sound" aria-pressed="true" title="Toggle sound">♫ <span id="soundLabel">ON</span></button>
       </div>
     </header>
@@ -70,8 +70,9 @@
       </div>
 
       <div class="card-row">
+        <div class="hand-cards" aria-label="Choose a spell card">
         <button type="button" class="spell-card selected" id="poseidonCard" aria-pressed="true" aria-label="Select Poseidon's Wrath. Eight mana. Deals 1200 water damage.">
-          <span class="card-cost">8</span>
+          <span class="card-cost"><span class="cost-number">8</span></span>
           <span class="card-topline">LEGENDARY · WATER</span>
           <span class="card-art">
             <span class="art-moon"></span>
@@ -89,14 +90,43 @@
           <span class="card-damage">⚔ <strong>1,200</strong> WATER DAMAGE</span>
         </button>
 
-        <div class="spell-details">
-          <span class="eyebrow">SUMMONING SPELL · WATER SCHOOL</span>
-          <h3>Poseidon's Wrath</h3>
-          <p>Watch the ocean split as Poseidon rises from a towering wave, draws back his trident, and <strong>throws it directly at the enemy</strong>. An explosive water strike follows. He then dissolves into sea spray and is unsummoned.</p>
+        <button type="button" class="spell-card earth-card" id="stoneGolemCard" aria-pressed="false" aria-label="Select Stone Golem. Six mana. Deals 900 Earth damage.">
+          <span class="card-cost"><span class="cost-number">6</span></span>
+          <span class="card-topline">EPIC · EARTH</span>
+          <span class="card-art earth-art">
+            <svg class="golem-card-art" viewBox="0 0 180 145" role="presentation" aria-hidden="true">
+              <defs><linearGradient id="earthStone" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#c5b78d"/><stop offset=".5" stop-color="#7b8068"/><stop offset="1" stop-color="#414d43"/></linearGradient></defs>
+              <path d="M5 129L39 107L78 130L111 112L177 127V145H0Z" fill="#374d39"/>
+              <path d="M29 107L43 68L73 59L91 72L113 58L141 68L159 109L136 124L61 128Z" fill="#697967" stroke="#c5cfad" stroke-width="2"/>
+              <path d="M45 69L74 61L83 90L59 111L29 104Z" fill="#8d9876"/>
+              <path d="M98 79L133 67L157 105L131 120L103 98Z" fill="#454f49"/>
+              <path d="M65 81L78 45L109 42L132 80L117 114L79 116Z" fill="#79876e" stroke="#b8ba8d" stroke-width="2"/>
+              <path d="M79 84L95 99L109 76L118 90L104 105L89 106Z" fill="#aaca72"/>
+              <path d="M70 46L71 17L87 9L115 17L122 48L106 69L84 66Z" fill="#94977d" stroke="#d3c49b" stroke-width="2"/>
+              <path d="M72 19L88 10L92 44L77 45Z" fill="#c3b993"/>
+              <path d="M83 39L95 42L93 47L83 47ZM104 42L115 38L117 47L106 48Z" fill="#cbf276"/>
+              <path d="M17 28L41 8L66 13L78 36L68 57L34 61L12 44Z" fill="url(#earthStone)" stroke="#e8c993" stroke-width="2"/>
+              <path d="M19 28L40 9L44 31L33 50L12 43Z" fill="#c4b18c"/><path d="M44 11L65 15L78 36L54 36Z" fill="#6f765f"/>
+              <path d="M62 46L75 37L72 59L55 62Z" fill="#454f40"/>
+              <path d="M125 25L145 12L169 30L163 51L140 57L120 42Z" fill="url(#earthStone)" stroke="#d4c99e" stroke-width="2"/>
+              <path d="M125 28L146 13L145 34L127 42Z" fill="#b1ae88"/>
+            </svg>
+            <span class="earth-spark earth-spark-left"></span><span class="earth-spark earth-spark-right"></span>
+          </span>
+          <span class="card-name">STONE<br>GOLEM</span>
+          <span class="card-type">SUMMON · EARTH</span>
+          <span class="card-description">Summon a golem that <em>lifts a massive boulder</em> in both hands and hurls it at the enemy.</span>
+          <span class="card-damage">⚔ <strong>900</strong> EARTH DAMAGE</span>
+        </button>
+        </div>
+        <div class="spell-details" aria-live="polite">
+          <span class="eyebrow" id="spellSchool">SUMMONING SPELL · WATER SCHOOL</span>
+          <h3 id="spellName">Poseidon's Wrath</h3>
+          <p id="spellSummary">Poseidon rises from a wave, aims and throws his trident at the enemy, then sinks back into the sea.</p>
           <div class="mechanic-grid">
-            <div><span>COST</span><strong>8 Mana</strong></div>
-            <div><span>DIRECT HIT</span><strong>1,200 HP</strong></div>
-            <div><span>TARGET</span><strong>Single enemy</strong></div>
+            <div><span>COST</span><strong id="spellCost">8 Mana</strong></div>
+            <div><span>DIRECT HIT</span><strong id="spellDamage">1,200 HP</strong></div>
+            <div><span>TARGET</span><strong id="spellTarget">Single enemy</strong></div>
           </div>
           <button class="primary-button" id="castButton" type="button"><span class="button-rune">✦</span><span id="castButtonText">CAST POSEIDON'S WRATH</span></button>
           <p class="replay-note">Your mana refills each round for this animation test. Tap the enemy in the arena to aim.</p>
@@ -104,8 +134,8 @@
       </div>
     </section>
 
-    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.3.4</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
+    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.4.0</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
   </main>
-  <script src="./game.js?v=0.3.4" defer></script>
+  <script src="./game.js?v=0.4.0" defer></script>
 </body>
 </html>

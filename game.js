@@ -428,13 +428,73 @@
     // Arm holding the trident stays behind the chest until the release.
     limb(rightShoulder,rightElbow,22,17,"#bc9079","#876b65");
     limb(rightElbow,rightHand,16,11,"#d9a789","#9b766e");
-    // Faceted torso: no legs, because the lower half IS the wave.
-    polygon([[x-57,bodyY-102],[x-32,bodyY-117],[x+37,bodyY-118],[x+61,bodyY-97],[x+45,bodyY-27],[x+12,bodyY+1],[x-27,bodyY+2],[x-53,bodyY-37]],"#bc8870","#f6c4a6",2);
-    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-55,"#e3b090");
+    // His lower body is NOT a separate stump sitting on the wave.
+    // A curved, translucent water column rises out of the very same swell.
+    // Both the body pigment and the fluid column fade through continuous
+    // skin -> sea-glass turquoise -> deep ocean blue gradients.
+    const seaLevel=411;
+    const blendTop=bodyY-67;
+    const span=Math.max(1,seaLevel-blendTop);
+    const mid=blendTop+span*.58;
+    const tail=g.createLinearGradient(x,blendTop,x,seaLevel);
+    tail.addColorStop(0,"rgba(196,178,155,0.22)");
+    tail.addColorStop(.18,"rgba(91,196,204,0.68)");
+    tail.addColorStop(.48,"rgba(33,154,185,0.94)");
+    tail.addColorStop(.82,"rgba(11,91,134,0.84)");
+    tail.addColorStop(1,"rgba(9,73,111,0)");
+    g.beginPath();
+    g.moveTo(x-51,blendTop);
+    g.bezierCurveTo(x-50,blendTop+span*.25,x-36,mid-12,x-40,mid);
+    g.bezierCurveTo(x-49,mid+span*.20,x-88,seaLevel-27,x-133,seaLevel+3);
+    g.quadraticCurveTo(x,seaLevel-11,x+134,seaLevel+3);
+    g.bezierCurveTo(x+79,seaLevel-28,x+48,mid+span*.14,x+42,mid);
+    g.bezierCurveTo(x+35,blendTop+span*.28,x+56,blendTop+8,x+55,blendTop);
+    g.closePath();
+    g.fillStyle=tail;
+    g.fill();
+    // Narrow water ribs echo the big wave's motion instead of forming legs.
+    g.save();
+    g.globalAlpha*=.46;
+    const sway=Math.sin(t*4.8)*4;
+    g.beginPath();g.moveTo(x-34,bodyY-30);
+    g.bezierCurveTo(x-50,bodyY+18,x+sway-7,mid,x-76,seaLevel-7);
+    g.strokeStyle="#a0faff";g.lineWidth=4;g.stroke();
+    g.beginPath();g.moveTo(x+25,bodyY-35);
+    g.bezierCurveTo(x+50,bodyY+10,x-sway+7,mid,x+77,seaLevel-8);
+    g.strokeStyle="#2ebbd3";g.lineWidth=5;g.stroke();
+    g.restore();
+    // The upper chest stays solid, but the bottom of the torso literally
+    // changes colour and becomes transparent over the water column.
+    const skinToSea=g.createLinearGradient(x,bodyY-118,x,bodyY+13);
+    skinToSea.addColorStop(0,"#d7ac8e");
+    skinToSea.addColorStop(.32,"#c99a81");
+    skinToSea.addColorStop(.50,"#b5ae91");
+    skinToSea.addColorStop(.65,"rgba(79,188,194,0.94)");
+    skinToSea.addColorStop(.82,"rgba(34,141,171,0.8)");
+    skinToSea.addColorStop(1,"rgba(18,124,159,0)");
+    g.beginPath();
+    g.moveTo(x-57,bodyY-102);
+    g.lineTo(x-32,bodyY-117);g.lineTo(x+37,bodyY-118);
+    g.lineTo(x+61,bodyY-97);
+    g.bezierCurveTo(x+50,bodyY-55,x+39,bodyY-16,x+30,bodyY+12);
+    g.quadraticCurveTo(x,bodyY+26,x-29,bodyY+12);
+    g.bezierCurveTo(x-44,bodyY-16,x-58,bodyY-62,x-57,bodyY-102);
+    g.closePath();g.fillStyle=skinToSea;g.fill();
+    // The few visible facets soften into the turquoise gradient.
+    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-56,"#e3b090");
     triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-74,"#f3c5a7");
     triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-59,"#9e7667");
-    triangleFacet(x-44,bodyY-46,x-7,bodyY-67,x+1,bodyY-4,"#9e7667");
-    triangleFacet(x+4,bodyY-70,x+49,bodyY-42,x+10,bodyY-5,"#d09b81");
+    triangleFacet(x-43,bodyY-56,x-9,bodyY-67,x+1,bodyY-17,"#8aa9a2a3");
+    triangleFacet(x+4,bodyY-70,x+47,bodyY-48,x+12,bodyY-12,"#6bb9bd9c");
+    // Foamy contours keep moving gently along his dissolving body.
+    g.save();g.globalAlpha*=.55;
+    g.beginPath();g.moveTo(x-39,bodyY-33);
+    g.bezierCurveTo(x-33,bodyY-11,x-52+sway,bodyY+13,x-28,bodyY+35);
+    g.strokeStyle="#bbffff";g.lineWidth=3;g.stroke();
+    g.beginPath();g.moveTo(x+33,bodyY-28);
+    g.bezierCurveTo(x+29,bodyY-5,x+48-sway,bodyY+19,x+20,bodyY+38);
+    g.strokeStyle="#78ecf2";g.lineWidth=3;g.stroke();
+    g.restore();
     polygon([[x-71,bodyY-100],[x-58,bodyY-126],[x-30,bodyY-125],[x-25,bodyY-94]],"#ac8a56","#ffec9f",2);
     triangleFacet(x-70,bodyY-101,x-51,bodyY-119,x-34,bodyY-102,"#f6d999");
     polygon([[x+26,bodyY-97],[x+37,bodyY-126],[x+69,bodyY-124],[x+76,bodyY-102]],"#a68150","#f3d88c",2);

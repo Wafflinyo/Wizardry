@@ -29,13 +29,15 @@
   };
   const W = 1000, H = 560, MAX_HP = 3000, DAMAGE = 1200, COST = 8;
   // All keyframes share one clock: the projectile and damage cannot drift apart.
+  // Key pose samples are evaluated every screen refresh (60/120+ Hz), not
+  // 9 image frames. Timing is animation seconds independent of refresh rate.
   const SPELL = Object.freeze({
-    riseStart: .66, riseEnd: 2.40,
-    aimStart: 2.24, aimEnd: 2.94,
-    windStart: 2.86, windEnd: 3.61,
-    releaseStart: 3.61, releaseEnd: 3.75,
-    launch: 3.74, hit: 4.08,
-    sinkStart: 4.85, sinkEnd: 6.30, end: 6.50
+    riseStart: .45, riseEnd: 1.65,
+    aimStart: 1.13, aimEnd: 1.60,
+    windStart: 1.54, windEnd: 2.37,
+    releaseStart: 2.37, releaseEnd: 2.70,
+    launch: 2.55, hit: 2.86,
+    sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
   });
   const duration = SPELL.end;
   let health = MAX_HP, mana = 8, round = 1;
@@ -50,6 +52,70 @@
   const out = n => 1 - Math.pow(1 - clamp(n), 3);
   const rand = (a, b) => a + Math.random() * (b - a);
   const phase = (t, start, end) => clamp((t - start) / (end - start));
+
+  // Natural cubic interpolator between many intermediate limb key poses.
+  // Unlike linear tweening, joints have continuous motion at every pose key.
+  function jointCurve(frames, p) {
+    p = clamp(p);
+    let i = 0;
+    while (i < frames.length - 2 && p > frames[i + 1][0]) i++;
+    const a = frames[Math.max(0, i - 1)];
+    const b = frames[i], c = frames[i + 1];
+    const d = frames[Math.min(frames.length - 1, i + 2)];
+    const distance = c[0] - b[0], u = clamp((p - b[0]) / distance);
+    const m0 = (c[1] - a[1]) / (c[0] - a[0]);
+    const m1 = (d[1] - b[1]) / (d[0] - b[0]);
+    return (2*u*u*u - 3*u*u + 1)*b[1]
+      + (u*u*u - 2*u*u + u)*m0*distance
+      + (-2*u*u*u + 3*u*u)*c[1]
+      + (u*u*u - u*u)*m1*distance;
+  }
+  // In-between joint coordinates for an actual wind-up and shoulder follow-through.
+  // All values are relative to Poseidon's centre (x=505, y=bodyY).
+  const ARM = Object.freeze({
+    elbowX: [[0,102],[.16,109],[.32,101],[.5,68],[.7,29],[.9,8],[1,7]],
+    elbowY: [[0,-73],[.16,-91],[.32,-115],[.5,-133],[.7,-155],[.9,-161],[1,-156]],
+    handX: [[0,125],[.16,123],[.32,94],[.5,45],[.7,-13],[.9,-55],[1,-64]],
+    handY: [[0,-55],[.16,-91],[.32,-125],[.5,-151],[.7,-175],[.9,-172],[1,-164]],
+    snapElbowX: [[0,7],[.25,26],[.5,57],[.72,88],[1,102]],
+    snapElbowY: [[0,-156],[.25,-169],[.5,-158],[.72,-125],[1,-97]],
+    snapHandX: [[0,-64],[.2,-36],[.44,24],[.62,73],[.82,125],[1,154]],
+    snapHandY: [[0,-164],[.2,-175],[.44,-165],[.62,-146],[.82,-121],[1,-93]]
+  });
+  function throwPose(elapsed, t = 0) {
+    const w = ease(phase(elapsed, SPELL.windStart, SPELL.windEnd));
+    const r = ease(phase(elapsed, SPELL.releaseStart, SPELL.releaseEnd));
+    const rise = out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+    const bodyY = 406 - 112*rise + Math.sin(t*2.4)*1.5;
+    const x = 505;
+    const elbowX = mix(jointCurve(ARM.elbowX,w),jointCurve(ARM.snapElbowX,r),r);
+    const elbowY = mix(jointCurve(ARM.elbowY,w),jointCurve(ARM.snapElbowY,r),r);
+    const handX = mix(jointCurve(ARM.handX,w),jointCurve(ARM.snapHandX,r),r);
+    const handY = mix(jointCurve(ARM.handY,w),jointCurve(ARM.snapHandY,r),r);
+    const rotation = -.08*w + .18*r;
+    const pivotY = bodyY - 78;
+    // World-space hand matches the transformed renderer, including torso twist.
+    const ca=Math.cos(rotation),sa=Math.sin(rotation);
+    const dx=handX,dy=handY + 78;
+    const worldX=x+dx*ca-dy*sa;
+    const worldY=pivotY+dx*sa+dy*ca;
+    const targetX=785,targetY=290;
+    // Our trident's head points local -Y. Aim every raised frame at the enemy.
+    const worldAngle=Math.atan2(targetX-worldX,worldY-targetY);
+    return {
+      bodyY,w,r,rotation,
+      elbow:[x+elbowX,bodyY+elbowY],
+      hand:[x+handX,bodyY+handY],
+      worldHand:[worldX,worldY],
+      localAngle:worldAngle-rotation,
+      worldAngle
+    };
+  }
+  function tridentTip(hand, angle, length=106) {
+    const reach=length*(.38+.67); // to the tip of the longest tine
+    return [hand[0]+Math.sin(angle)*reach,
+            hand[1]-Math.cos(angle)*reach];
+  }
 
   function polygon(points, color, stroke = null, lineWidth = 1) {
     g.beginPath(); g.moveTo(points[0][0], points[0][1]);
@@ -246,8 +312,8 @@
     for(const p of particles){
       const alpha=clamp(p.life/p.max);
       g.globalAlpha=alpha;
-      if(p.kind==="spray"){triangleFacet(p.x,p.y-p.size,p.x-p.size*.6,p.y+p.size*.8,p.x+p.size*.6,p.y+p.size*.8,p.color);}
-      else {glow(p.x,p.y,p.size*2,"#6afaff66");oval(p.x,p.y,p.size,p.size,p.color);}
+      if(p.kind==="spray")triangleFacet(p.x,p.y-p.size,p.x-p.size*.6,p.y+p.size*.8,p.x+p.size*.6,p.y+p.size*.8,p.color);
+      else oval(p.x,p.y,p.size,p.size,p.color);
     }
     g.globalAlpha=1;
   }
@@ -321,25 +387,17 @@
     g.restore();
   }
 
-  function drawPoseidon(t, rise, aim, wind, release, hasThrown, alpha = 1) {
+  function drawPoseidon(t, rise, elapsed, hasThrown, alpha = 1) {
     if (rise <= .01) return;
     const x = 505;
-    const bodyY = 406 - 112 * rise + Math.sin(t * 2.4) * 1.5;
-    // In the aiming pose his left hand crosses his body and points at the enemy.
-    // In the throwing pose his right fist genuinely travels BACK behind his head,
-    // then snaps forward over the shoulder while his torso follows through.
-    const leftShoulder = [x - 51, bodyY - 101];
-    const leftElbow = [mix(x - 91, x + 12, aim), mix(bodyY - 61, bodyY - 84, aim)];
-    const leftWrist = [mix(x - 118, x + 112, aim), mix(bodyY - 25, bodyY - 74, aim)];
-    const rightShoulder = [x + 57, bodyY - 103];
-    const rightElbow = [
-      mix(mix(x + 102, x + 8, wind), x + 91, release),
-      mix(mix(bodyY - 73, bodyY - 147, wind), bodyY - 95, release)
-    ];
-    const rightHand = [
-      mix(mix(x + 125, x - 67, wind), x + 157, release),
-      mix(mix(bodyY - 55, bodyY - 168, wind), bodyY - 101, release)
-    ];
+    const pose = throwPose(elapsed,t);
+    const { bodyY, w, r, rotation } = pose;
+    const aim=ease(phase(elapsed,SPELL.aimStart,SPELL.aimEnd));
+    const leftShoulder=[x-51,bodyY-101];
+    const leftElbow=[mix(x-91,x+12,aim),mix(bodyY-61,bodyY-84,aim)];
+    const leftWrist=[mix(x-118,x+112,aim),mix(bodyY-25,bodyY-74,aim)];
+    const rightShoulder=[x+57,bodyY-103];
+    const rightElbow=pose.elbow,rightHand=pose.hand;
     // Elbows and forearms are separate tapered segments (never rigid 'stick' arms).
     function limb(a, b, thickA, thickB, light, dark) {
       const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -357,7 +415,7 @@
     g.globalAlpha = alpha;
     // Rotate subtly through the spine, not about the centre of the battlefield.
     g.translate(x, bodyY - 78);
-    g.rotate(-wind * .14 + release * .23);
+    g.rotate(rotation);
     g.translate(-x, -(bodyY - 78));
     // Silvery hair flowing over the back of the ocean-born torso.
     polygon([[x-36,bodyY-132],[x-65,bodyY-92],[x-73,bodyY-38],[x-33,bodyY-59],[x+35,bodyY-57],[x+83,bodyY-34],[x+69,bodyY-109],[x+34,bodyY-135]],"#a0d8df","#d4faff",2);
@@ -409,60 +467,54 @@
     glow(x+5,bodyY-51,30,"#4db5d51d");
     if (!hasThrown) {
       // Twist the weapon up and back, then whip it into a forward-facing release.
-      const holdAngle = mix(mix(-.2,-.95,wind),2.30,release);
-      drawTrident(rightHand[0],rightHand[1]-3,holdAngle,106,alpha);
+      // As soon as his arm starts to lift, the tines aim at the Sentinel.
+      // Gradual turn happens BEFORE the wind-up, not after the throw.
+      const holdAngle = mix(-.15,pose.localAngle,aim);
+      drawTrident(rightHand[0],rightHand[1],holdAngle,106,alpha);
     }
     g.restore();
   }
 
   function drawSummon(t,elapsed) {
-    const opening = ease(phase(elapsed,.04,SPELL.riseStart));
-    const rising = out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
-    const aiming = ease(phase(elapsed,SPELL.aimStart,SPELL.aimEnd));
-    const winding = ease(phase(elapsed,SPELL.windStart,SPELL.windEnd));
-    const releasing = ease(phase(elapsed,SPELL.releaseStart,SPELL.releaseEnd));
-    const sinking = ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
-    const rise = rising*(1-sinking);
+    const opening=ease(phase(elapsed,.04,SPELL.riseStart));
+    const rising=out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+    const aiming=ease(phase(elapsed,SPELL.aimStart,SPELL.aimEnd));
+    const sinking=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
+    const rise=rising*(1-sinking);
     drawWhirlpool(t,opening*(1-sinking)+sinking*.45);
-    if(rise>.01){
+    if(rise>.01) {
       drawWave(t,rise);
-      // Hold the point after releasing so the follow-through is visible.
-      drawPoseidon(t,rise,aiming,winding,releasing,elapsed>=SPELL.launch,clamp((1-sinking)*3));
-      if(Math.random()<.7*(1-sinking))
-        addParticle(505+rand(-135,135),409-rand(10,90)*rise,"spray",.47);
+      drawPoseidon(t,rise,elapsed,elapsed>=SPELL.launch,clamp((1-sinking)*3));
     }
-    if(opening>.3 && elapsed<1.4)glow(505,405,90*opening,"#6df5fa2d");
-    if(elapsed>SPELL.sinkStart && elapsed<SPELL.sinkEnd && Math.random()<.7)
-      addParticle(505+rand(-120,120),401-rand(2,100)*rise,"spray",.6);
+    if(opening>.3&&elapsed<1.1)glow(505,405,90*opening,"#6df5fa2d");
   }
 
   function drawProjectile(elapsed,t) {
     if(elapsed<SPELL.launch||elapsed>=SPELL.hit)return;
-    // The TIP (not the trident's centre) moves from the casting hand to the foe.
-    // This avoids the old visual error where the trident seemed to pass the target.
-    const u=phase(elapsed,SPELL.launch,SPELL.hit);
-    const p=1-Math.pow(1-u,1.65); // explosive acceleration, not slow floating
-    const tipAt=q=>[mix(643,785,q),mix(167,290,q)-Math.sin(q*Math.PI)*20];
-    const tip=tipAt(p);
-    const angle=2.30; // local -Y points down/right towards the Sentinel
-    const length=102;
-    const offset=length*1.04;
-    const cx=tip[0]-Math.sin(angle)*offset;
-    const cy=tip[1]+Math.cos(angle)*offset;
+    const p=phase(elapsed,SPELL.launch,SPELL.hit);
+    // Flight starts at the exact tip location of the trident Poseidon released.
+    // The hand/weapon hand-off is seamless, with no snapped position or rotation.
+    const source=throwPose(SPELL.launch,t-(elapsed-SPELL.launch));
+    const start=tridentTip(source.worldHand,source.worldAngle,106);
+    const target=[785,290];
+    const head=[mix(start[0],target[0],p),mix(start[1],target[1],p)-Math.sin(Math.PI*p)*12];
+    const previousP=Math.max(0,p-.16);
+    const previous=[mix(start[0],target[0],previousP),mix(start[1],target[1],previousP)-Math.sin(Math.PI*previousP)*12];
+    const angle=Math.atan2(target[0]-start[0],start[1]-target[1]);
+    const length=106,reach=length*1.05;
+    const cx=head[0]-Math.sin(angle)*reach,cy=head[1]+Math.cos(angle)*reach;
     g.save();g.globalCompositeOperation="lighter";
-    const prev=tipAt(Math.max(0,p-.30));
-    line(prev[0],prev[1],tip[0],tip[1],"#1ae5ff",24);
-    line(prev[0],prev[1],tip[0],tip[1],"#d7ffff",6);
-    glow(tip[0],tip[1],38,"#b2ffff91");
+    const tailX=head[0]-(head[0]-previous[0])*1.5,tailY=head[1]-(head[1]-previous[1])*1.5;
+    line(tailX,tailY,head[0],head[1],"#0ab7ec",24);
+    line(tailX,tailY,head[0],head[1],"#d4ffff",5);
+    glow(head[0],head[1],32,"#bbffff83");
     g.restore();
     drawTrident(cx,cy,angle,length);
-    if(Math.random()<.95)
-      addParticle(tip[0]+rand(-10,10),tip[1]+rand(-11,11),"gold",.46);
   }
 
   function drawImpact(elapsed) {
-    if(elapsed<SPELL.hit||elapsed>5.05)return;
-    const p=phase(elapsed,SPELL.hit,5.05);
+    if(elapsed<SPELL.hit||elapsed>SPELL.hit+1.02)return;
+    const p=phase(elapsed,SPELL.hit,SPELL.hit+1.02);
     g.save();g.globalCompositeOperation="lighter";
     const flare=1-ease(p);
     glow(783,291,175*flare+30,"rgba(155,255,255,"+(.6*flare)+")");
@@ -473,8 +525,7 @@
       g.restore();
     }
     for(let i=0;i<9;i++){
-      const a=i*Math.PI*2/9+.23;
-      const inner=18+p*32,outer=55+p*162;
+      const a=i*Math.PI*2/9+.23,inner=18+p*32,outer=55+p*162;
       line(783+Math.cos(a)*inner,301+Math.sin(a)*inner,
            783+Math.cos(a)*outer,301+Math.sin(a)*outer,
            i%2?"#48e7ef":"#c4fcff",8*flare);
@@ -482,7 +533,7 @@
     g.restore();
     if(p<.94){
       const y=232-48*ease(p);
-      g.save();g.globalAlpha=1-ease(phase(elapsed,4.70,5.04));
+      g.save();g.globalAlpha=1-ease(phase(elapsed,SPELL.hit+.64,SPELL.hit+1));
       g.textAlign="center";g.font="bold 56px Georgia,serif";
       g.lineWidth=6;g.strokeStyle="#061823";g.shadowBlur=18;g.shadowColor="#8afaff";
       g.strokeText("-1,200",782,y);g.fillStyle="#fef8df";g.fillText("-1,200",782,y);
@@ -506,8 +557,8 @@
   }
 
   function applyShake(elapsed) {
-    if(elapsed<SPELL.hit||elapsed>SPELL.hit+.5)return;
-    const strength=12*(1-phase(elapsed,SPELL.hit,SPELL.hit+.5));
+    if(elapsed<SPELL.hit||elapsed>SPELL.hit+.4)return;
+    const strength=12*(1-phase(elapsed,SPELL.hit,SPELL.hit+.4));
     g.translate(rand(-strength,strength),rand(-strength,strength));
   }
 
@@ -579,7 +630,7 @@
     UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST POSEIDON'S WRATH";
   }
   function reset(){
-    cast=null;particles.length=0;health=MAX_HP;mana=8;round=1;targeted=true;selected=true;defeated=false;targetPulse=0;
+    cast=null;particles.length=0;sprayCarry=0;goldCarry=0;health=MAX_HP;mana=8;round=1;targeted=true;selected=true;defeated=false;targetPulse=0;
     UI.win.hidden=true;UI.card.classList.add("selected");
     UI.state.textContent="READY TO CAST";
     UI.caption.textContent="A primordial force stirs beneath the arena.";
@@ -600,8 +651,8 @@
     UI.card.classList.remove("selected");
     playEffect("cast");refreshUI();
   }
-  function stageAt(e){
-    if(e<.95)return "opening";
+  function stageAt(e) {
+    if(e<.8)return "opening";
     if(e<SPELL.aimStart)return "rise";
     if(e<SPELL.windStart)return "aim";
     if(e<SPELL.launch)return "wind";
@@ -610,20 +661,20 @@
     if(e<SPELL.sinkEnd)return "sink";
     return "complete";
   }
-  function setStage(stage){
+  function setStage(stage) {
     const stages={
-      opening:["THE SEA STIRS","A whirlpool opens beneath the arena..."],
-      rise:["POSEIDON RISES","The sea god ascends on a towering wave!"],
-      aim:["TARGET LOCKED","Poseidon points his free hand at the Sentinel."],
-      wind:["TRIDENT DRAWN BACK","His throwing arm coils behind his head."],
-      throw:["TRIDENT RELEASED","The trident launches toward the enemy!"],
+      opening:["THE SEA STIRS","The ocean begins to turn..."],
+      rise:["POSEIDON RISES","The sea god surges from the towering wave!"],
+      aim:["TRIDENT AIMED","The raised trident points at the Sentinel."],
+      wind:["WINDING UP","His hand draws back; the trident stays aimed."],
+      throw:["TRIDENT RELEASED","The trident tears toward the enemy!"],
       impact:["DEVASTATING IMPACT","The Stone Sentinel takes 1,200 water damage!"],
       sink:["UNSUMMONING","Poseidon dissolves into the collapsing wave."],
       complete:["SPELL COMPLETE","The waters grow still."]
     };
     UI.state.textContent=stages[stage][0];UI.status.textContent=stages[stage][1];
     if(stage==="rise")playEffect("rise");
-    if(stage==="wind")playEffect("wind");
+    if(stage==="aim")playEffect("wind");
     if(stage==="throw")playEffect("throw");
     if(stage==="impact")playEffect("hit");
     if(stage==="sink")playEffect("sink");
@@ -644,6 +695,13 @@
     }
     refreshUI();
   }
+  let sprayCarry=0,goldCarry=0;
+  function spawnTimed(kind, rate, x, y, width, height, scale) {
+    let carry=kind==="spray"?sprayCarry:goldCarry;
+    carry+=rate;
+    for(;carry>=1;carry--)addParticle(x+rand(-width,width),y-rand(0,height),kind,scale);
+    if(kind==="spray")sprayCarry=carry;else goldCarry=carry;
+  }
   function update(dt){
     targetPulse=Math.max(0,targetPulse-dt*1.4);
     if(!cast){updateParticles(dt);return;}
@@ -656,6 +714,12 @@
       for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
       for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
     }
+    // Particle emission is rate-based rather than 'chance per rendered frame':
+    // a 120-Hz phone no longer creates twice as many particles as a 60-Hz one.
+    if(cast.elapsed> SPELL.riseStart && cast.elapsed<SPELL.sinkEnd)
+      spawnTimed("spray", 33*dt, 505, 399, 140, 80, .45);
+    if(cast.elapsed>=SPELL.launch && cast.elapsed<SPELL.hit)
+      spawnTimed("gold", 35*dt, 700, 245, 85, 36, .45);
     if(cast.elapsed>=duration)completeCast();
     updateParticles(dt);
   }
@@ -697,7 +761,10 @@
   if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
   resize();reset();
   function frame(now){
-    const dt=Math.min((now-previousTime)/1000,.05);previousTime=now;totalTime+=dt;
+    // Render a fresh interpolated pose every display refresh, including 120 Hz.
+    // Use elapsed time, so additional in-between frames do not slow the spell.
+    const dt=Math.min(Math.max(0,(now-previousTime)/1000),.04);
+    previousTime=now;totalTime+=dt;
     update(dt);render(totalTime);requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

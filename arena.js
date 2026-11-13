@@ -693,6 +693,9 @@
   }
   function tick(now){
     if(!state)return;
+    // At 120 Hz the Canvas would be repainted twice as often for no visible
+    // benefit, which is expensive on iPhones. Cap to roughly 60 fps.
+    if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
     if(state.phase==="resolving"&&state.animation){
       const a=state.animation;

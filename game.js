@@ -654,6 +654,96 @@
     ctx.closePath();ctx.fillStyle=skin;ctx.fill();
     ctx.restore();
   }
+  // Repair transparent holes enclosed BY the character silhouette, not
+  // just a generic translucent backing. This runs once on each cached frame.
+  function sealPoseidonInteriorHoles(ctx,width) {
+    if(typeof ctx.getImageData!=="function"||typeof ctx.putImageData!=="function")return;
+    let pixels;
+    try {pixels=ctx.getImageData(0,0,width,width);}catch(error){return;}
+    const data=pixels.data,length=width*width;
+    const outside=new Uint8Array(length),queue=new Int32Array(length);
+    let head=0,tail=0;
+    const mark=index=>{
+      if(!outside[index] && data[index*4+3]<85){
+        outside[index]=1;queue[tail++]=index;
+      }
+    };
+    for(let x=0;x<width;x++){mark(x);mark((width-1)*width+x);}
+    for(let y=0;y<width;y++){mark(y*width);mark(y*width+width-1);}
+    while(head<tail){
+      const idx=queue[head++],x=idx%width,y=(idx-x)/width;
+      if(x>0)mark(idx-1);
+      if(x<width-1)mark(idx+1);
+      if(y>0)mark(idx-width);
+      if(y<width-1)mark(idx+width);
+    }
+    // Interior transparent pixels are actual missing body artwork. Copy
+    // their nearest already-painted color, then make them fully opaque.
+    let repaired=0;
+    for(let idx=0;idx<length;idx++){
+      if(outside[idx]||data[idx*4+3]>=85)continue;
+      const x=idx%width,y=(idx-x)/width;
+      let color=null;
+      outer:for(let radius=1;radius<=16;radius++){
+        for(const [xx,yy] of [
+          [x-radius,y],[x+radius,y],[x,y-radius],[x,y+radius],
+          [x-radius,y-radius],[x+radius,y-radius],
+          [x-radius,y+radius],[x+radius,y+radius]
+        ]){
+          if(xx<0||yy<0||xx>=width||yy>=width)continue;
+          const q=(yy*width+xx)*4;
+          if(data[q+3]>175){color=q;break outer;}
+        }
+      }
+      const p=idx*4;
+      if(color===null){data[p]=21;data[p+1]=104;data[p+2]=131;}
+      else {data[p]=data[color];data[p+1]=data[color+1];data[p+2]=data[color+2];}
+      data[p+3]=255;repaired++;
+    }
+    if(repaired)ctx.putImageData(pixels,0,0);
+    return repaired;
+  }
+
+  // True two-stage right-handed windup: derive three intermediate poses
+  // from the approved RIGHT-HAND idle artwork, not the defective source
+  // frames that contain a SECOND, opposite-hand trident. Torso, hand and
+  // weapon rotate together. The lower sea remains anchored to the floor.
+  function maskedPoseidonLayer(image,low,high,upper){
+    const result=document.createElement("canvas");
+    result.width=image.width;result.height=image.height;
+    const c=result.getContext("2d",{alpha:true});
+    if(!c)return null;
+    c.drawImage(image,0,0);
+    c.globalCompositeOperation="destination-in";
+    const mask=c.createLinearGradient(0,image.height*low,0,image.height*high);
+    if(upper){mask.addColorStop(0,"#fff");mask.addColorStop(1,"#0000");}
+    else {mask.addColorStop(0,"#0000");mask.addColorStop(1,"#fff");}
+    c.fillStyle=mask;c.fillRect(0,0,image.width,image.height);
+    c.globalCompositeOperation="source-over";
+    return result;
+  }
+  function buildPoseidonWindupFrame(idle,index){
+    const img=document.createElement("canvas");
+    img.width=idle.width;img.height=idle.height;
+    const ctx=img.getContext("2d",{alpha:true});
+    if(!ctx)return null;
+    const upper=maskedPoseidonLayer(idle,.60,.84,true);
+    const lower=maskedPoseidonLayer(idle,.65,.82,false);
+    const crest=maskedPoseidonLayer(idle,.77,.93,false);
+    if(!upper||!lower||!crest)return null;
+    const angle=[10,18,24][index-4]*Math.PI/180;
+    const shift=[-3,-7,-9][index-4]*img.width/362;
+    const px=181*img.width/362,py=258*img.height/362;
+    ctx.drawImage(lower,0,0);
+    ctx.save();
+    ctx.translate(px,py);ctx.rotate(-angle);ctx.translate(-px,-py);
+    ctx.drawImage(upper,shift,0);
+    ctx.restore();
+    ctx.drawImage(crest,0,0);
+    sealPoseidonInteriorHoles(ctx,img.width);
+    return img;
+  }
+
   async function prepareTracedPoseidon() {
     try {
       if(!window.WIZARDRY_POSEIDON_TRACE_COMPRESSED)
@@ -677,7 +767,14 @@
       }
       // Each frame is cached from the approved 224px vector trace at 480px.
       // Direct Path2D geometry remains a fallback if caching is unavailable.
-      for(const layers of poseidonVectorFrames){
+      for(let index=0;index<poseidonVectorFrames.length;index++){
+        // Rebuild 4, 5 and 6 from the one-trident right-hand idle pose.
+        // Never cache the original defective double-trident windup artwork.
+        if(index>=4 && index<=6 && poseidonCachedFrames[3]){
+          const corrected=buildPoseidonWindupFrame(
+            poseidonCachedFrames[3],index);
+          if(corrected){poseidonCachedFrames.push(corrected);continue;}
+        }
         const frame=document.createElement("canvas");
         frame.width=POSEIDON_CACHE_PX;
         frame.height=POSEIDON_CACHE_PX;
@@ -685,10 +782,14 @@
         if(!context)break;
         context.setTransform(POSEIDON_CACHE_PX/asset.cell,0,0,
           POSEIDON_CACHE_PX/asset.cell,0,0);
-        for(const [color,path] of layers){
+        for(const [color,path] of poseidonVectorFrames[index]){
           context.fillStyle=color;context.fill(path,"evenodd");
         }
-        fillPoseidonOpaqueCore(context,poseidonCachedFrames.length,true);
+        fillPoseidonOpaqueCore(context,index,true);
+        // getImageData/putImageData use device-pixel space, not the prior
+        // tracing transform, and run ONCE during asset preparation.
+        context.setTransform(1,0,0,1,0,0);
+        sealPoseidonInteriorHoles(context,POSEIDON_CACHE_PX);
         poseidonCachedFrames.push(frame);
       }
       poseidonDiagnostics.frames=poseidonVectorFrames.length;
@@ -719,12 +820,9 @@
     let i=0;
     while(i<POSEIDON_FRAME_TIMES.length-1 &&
           elapsed>=POSEIDON_FRAME_TIMES[i+1])i++;
-    // APPROVED CONTINUITY: the old winding image #5 still contains part of
-    // the opposite-hand staff. Never display it. Image #4 is the correct
-    // single right-hand hold, used until the trident ACTUALLY launches.
-    if(elapsed<SPELL.launch && (i===5||i===6))return 4;
-    // Frame #6 still depicts a held spear: after launch ONLY the independent
-    // projectile may own that weapon, so switch to the empty-hand throw.
+    // Three visibly different one-trident RIGHT-HANDED windup frames play
+    // in sequence: 4 (draw back), 5 (deeper), 6 (maximum windup).
+    // Immediately after release, only the moving projectile owns a trident.
     if(elapsed>=SPELL.launch && elapsed<SPELL.hit)return 7;
     return i;
   }
@@ -738,14 +836,22 @@
     const opacity=ease(phase(elapsed,0,.18))*
       (1-ease(phase(elapsed,SPELL.end-.22,SPELL.end)));
     g.globalAlpha*=opacity;
-    if(poseidonCachedFrames.length===12) {
+    if(poseidonCachedFrames[i]) {
       g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
       g.drawImage(poseidonCachedFrames[i],dx,dy,size,size);
     }else{
+      // Asset-cache fallback: even without the offscreen poses, windup
+      // must NEVER render the defective opposite-hand trident.
       g.translate(dx,dy);g.scale(size/poseidonTrace.cell,
                                 size/poseidonTrace.cell);
-      fillPoseidonOpaqueCore(g,i,false);
-      for(const [color,path] of paths){
+      const singleHand=(i>=4&&i<=6);
+      if(singleHand){
+        const angle=[10,18,24][i-4]*Math.PI/180;
+        g.translate(112,160);g.rotate(-angle);g.translate(-112,-160);
+      }
+      const fallbackIndex=singleHand?3:i;
+      fillPoseidonOpaqueCore(g,fallbackIndex,false);
+      for(const [color,path] of poseidonVectorFrames[fallbackIndex]){
         g.fillStyle=color;g.fill(path,"evenodd");
       }
     }
@@ -777,7 +883,9 @@
     // Release FROM THE SAME RIGHT HAND holding the trident in the traced
     // windup pose. The staff is initially vertical, pivots forward, and
     // accelerates toward the Sentinel. No hand swap or pre-release flight.
-    const start=[644,211],target=[785,290];
+    // Source: right-hand grip of the final 24° wound-up pose at (x≈568,y≈217).
+    // The trident departs the SAME hand, not the old (644,211) teleport.
+    const start=[568,217],target=[785,290];
     const flight=ease(phase(elapsed,SPELL.launch+.025,SPELL.hit));
     const x=mix(start[0],target[0],flight);
     const y=mix(start[1],target[1],flight)-21*Math.sin(Math.PI*flight);

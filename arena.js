@@ -1,4 +1,4 @@
-/* Wizardry 0.24 — interactive 2.5D battle test.
+/* Wizardry 0.30 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -56,6 +56,13 @@
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const rand=(seed)=>{let n=(seed*9301+49297)%233280;return n/233280};
   let state=null,background=null,frameLast=0,spriteCache={};
+  // Approved top-slot wizard artwork is a transparent, low-poly PNG.
+  // The Canvas drives its idle breathing smoothly instead of relying on the
+  // browser's animated-GIF timing; this keeps it in correct scene depth.
+  const topWizardIdle=new Image();
+  topWizardIdle.decoding="async";
+  topWizardIdle.src="./assets/wizard-top-idle-v30.png";
+  const topIdleReady=()=>topWizardIdle.complete&&topWizardIdle.naturalWidth>0;
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=570,ARM_LOWER_MS=340,FIZZLE_MS=360;
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
@@ -63,7 +70,7 @@
       hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,x:0,y:0,
       hat:["pointed","wide","hood","scholar"][index],
       robe:["classic","split","armored","classic"][index],
-      robeColor:["#267eab","#6f4ab4","#bc503d","#367d59"][index],
+      robeColor:["#6f4ab4","#6f4ab4","#bc503d","#367d59"][index],
       armRaise:0,facing:team?-.74:.74};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
@@ -967,13 +974,32 @@
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
     }
     g.scale(scale,scale);
-    const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
-    g.translate(0,bob);
-    // Constant three-quarter profile, no movement when selecting a target.
-    const side=u.team?-1:1;
-    g.transform(.79,0,-side*.11,1,0,0);
-    if(u.team&&state.mode==="story")drawEnemy(g,u,time*.001);
-    else drawWizard(g,u,time*.001);
+    // Top ally slot: approved behind-three-quarter wizard art, facing down-right.
+    // Keep the feet on this unit's arena ground plane; move only a few pixels
+    // upward and settle back down for a subtle, seamless breathing idle loop.
+    // Other outfits deliberately use the existing customizable geometry.
+    const approvedTopSlot=u.team===0&&u.index===0&&
+      u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4"&&
+      topIdleReady();
+    if(approvedTopSlot){
+      const phase=(time%1450)/1450;
+      const breath=(1-Math.cos(phase*Math.PI*2))*.5;
+      const raise=u.hp>0?breath*3.5:0;
+      g.translate(0,-raise);
+      g.scale(1+breath*.006,1+breath*.008);
+      g.imageSmoothingEnabled=true;
+      g.imageSmoothingQuality="high";
+      // Transparent source is 128×192; render at the old wizard's height.
+      // No fixed-position DOM overlay: spell effects and fighters retain depth.
+      g.drawImage(topWizardIdle,-74,-220,148,220);
+    }else{
+      const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
+      g.translate(0,bob);
+      const side=u.team?-1:1;
+      g.transform(.79,0,-side*.11,1,0,0);
+      if(u.team&&state.mode==="story")drawEnemy(g,u,time*.001);
+      else drawWizard(g,u,time*.001);
+    }
     g.restore();
   }
   // Small plates sit OUTSIDE each character silhouette: allies on the
@@ -1352,7 +1378,8 @@
         remaining-=slice;
       }
     },
-    getSummonAvailable:kind=>!!spriteCache[kind]?.every(im=>im.complete&&im.naturalWidth)
+    getSummonAvailable:kind=>!!spriteCache[kind]?.every(im=>im.complete&&im.naturalWidth),
+    getTopWizardIdleAvailable:topIdleReady
   };
   setupControlHandlers();createBackground();setupSprites();setBattle("story",4);
   requestAnimationFrame(tick);

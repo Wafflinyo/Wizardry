@@ -1,3 +1,14 @@
+## NEW — Approved top-slot wizard idle in the arena (v0.30.0)
+
+**[Play the battle scene with the new wizard](https://wafflinyo.github.io/Wizardry/arena.html?v=0.30.0)**
+
+- The first allied wizard (top slot / Tidecaller) now uses the approved purple-and-gold low-poly wizard art from the idle-design preview, with a transparent background and a subtle smooth upward-and-downward breathing loop.
+- Its feet remain anchored to the correct arena lane, the image renders in the main Canvas with proper depth ordering, and spell summons remain behind fighters. The other wizards and enemy models are unchanged.
+- The default pointed-hat/classic-robe/Amethyst appearance uses the sprite. Changing hat, robe, or color in Customize switches back to the procedural model so those customizations still work. A missing image also falls back safely.
+- This update changes the **idle battle appearance only**, not combat calculations or casting-frame artwork. The attached eight-frame GIF has been converted into an optimized static model frame, with breathing driven by game time for stable looping on mobile.
+
+---
+
 ## NEW — Exact approved splash-art cards + Poseidon recharge & Tidal Echo (v0.29)
 
 **[Play the updated Wizardry 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.29.0)**

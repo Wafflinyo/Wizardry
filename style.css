@@ -893,3 +893,13 @@ html { scroll-behavior:auto!important; }
   filter:drop-shadow(0 0 6px #39d6eb55);
 }
 @media(max-width:700px){.poseidon-portrait-canvas{filter:none;}}
+
+/* v0.23 — Stone Golem card uses the exact approved standing sprite frame. */
+.golem-portrait-canvas {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  image-rendering:auto;
+  pointer-events:none;
+}

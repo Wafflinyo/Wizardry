@@ -1,6 +1,6 @@
 # Wizardry
 
-## Spell Trial 001 — Poseidon's Wrath (v0.3.1)
+## Spell Trial 001 — Poseidon's Wrath (v0.3.2)
 
 A playable, mobile-friendly spellcasting battle prototype. This is a real interactive game test, **not a GIF or static illustration**.
 
@@ -43,6 +43,12 @@ The full cast is approximately **2.44 seconds at 1×**, which is the former 2× 
 | 2.86 s | Impact, 1,200 damage, water shockwave |
 | 3.52–4.74 s | Poseidon sinks *with* the wave and dissolves into sea spray |
 | 4.88 s | Arena returns to playable state |
+
+### Poseidon's ocean-form body (v0.3.2)
+
+Poseidon's upper chest and shoulders stay solid, while his lower torso transitions through a continuous skin → turquoise → deep ocean-blue gradient. His lower silhouette becomes a translucent, curved water column that blends into the same rising wave, with gently moving foam contours. There is no separate set of legs or hard cutoff at the waist.
+
+**Animation speed:** The former 2× playback rate is now the default **1×** speed: approximately **2.44 seconds** for the full spell. The optional 2× setting completes it in approximately 1.22 seconds. The trident hit, damage, follow-through and unsummoning remain synchronized.
 
 ### Technical notes
 

@@ -431,7 +431,9 @@
     state.phase="planning";state.planningSide=0;
     nearestAvailableCaster();
     state.log=["Round "+state.round+" begins: your spell and target choice.",...state.log].slice(0,5);
-    ui.status.textContent="Round "+state.round+": select one spell, then tap an enemy on the field.";
+    ui.status.textContent="Round "+state.round+": "+
+      (isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
+      "Choose a new spell, tap an enemy, and confirm.");
     paintUI();
     // If the controlled wizard was knocked out, teammates remain autonomous.
     // Do not ask the player to control another wizard.
@@ -439,6 +441,13 @@
   }
   function paintUI(){
     if(!state)return;
+    // A tooltip must never claim an expired/consumed rune still exists.
+    if(state.inspectedStatus){
+      const {unitId,kind}=state.inspectedStatus;
+      const u=getUnit(unitId);
+      if(!u||!unitStatuses(u).some(status=>status.kind===kind))
+        closeStatusInfo();
+    }
     const planning=state.phase==="planning",c=caster(),card=currentCard(),
       target=correctTarget()||(!card?getUnit(state.selectedTarget):null),
       toPlan=alive(state.planningSide).length,
@@ -451,7 +460,8 @@
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
     if(planning)ui.hint.textContent=c?
-      (card?(target?"Confirm "+card.name+" on "+target.name+".":"Tap an enemy to target "+card.name+"."):
+      (isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
+       card?(target?"Confirm "+card.name+" on "+target.name+".":"Tap an enemy to target "+card.name+"."):
         "Tap one of your two spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
@@ -552,7 +562,7 @@
     }
     for(const b of ui.hand.children){
       b.classList.toggle("chosen",b.dataset.card===card?.id);
-      b.disabled=!planning||!c||BY_ID[b.dataset.card].cost>c.mana;
+      b.disabled=!planning||!c||requiresRest(c)||BY_ID[b.dataset.card].cost>c.mana;
       b.setAttribute("aria-pressed",String(b.dataset.card===card?.id));
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||

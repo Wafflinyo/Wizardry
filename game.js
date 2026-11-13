@@ -1071,16 +1071,23 @@
     updateParticles(spellDt);
   }
 
-  function resize(){
-    const rect=canvas.getBoundingClientRect();
-    // Avoid expensive 4x pixel redraws on high-DPI phones.
-    const dpr=Math.min(window.devicePixelRatio||1,rect.width<720?1.25:1.75);
-    const width=Math.max(1,Math.round(rect.width*dpr));
-    const height=Math.max(1,Math.round(rect.height*dpr));
-    // Reassigning canvas.width/height clears its drawing surface and can
-    // retrigger layout/ResizeObserver even when dimensions are identical.
-    if(canvas.width!==width)canvas.width=width;
-    if(canvas.height!==height)canvas.height=height;
+  // Canvas backing pixels are fixed while a cast is playing. Safari's
+  // expanding/collapsing toolbar must not repeatedly blank/reflow the battle.
+  let canvasCSSWidth=0,canvasCSSHeight=0;
+  function resize() {
+    if(cast&&canvas.width>1&&canvas.height>1)return;
+    const box=canvas.getBoundingClientRect();
+    const cssW=Math.round(box.width),cssH=Math.round(box.height);
+    if(cssW<1||cssH<1)return;
+    // Ignore sub-pixel layout jitter, especially on iPhones.
+    if(canvasCSSWidth&&Math.abs(cssW-canvasCSSWidth)<2&&
+        Math.abs(cssH-canvasCSSHeight)<6)return;
+    const dpr=Math.min(window.devicePixelRatio||1,cssW<720?1.25:1.75);
+    const pixelsW=Math.max(1,Math.round(cssW*dpr));
+    const pixelsH=Math.max(1,Math.round(cssH*dpr));
+    canvasCSSWidth=cssW;canvasCSSHeight=cssH;
+    if(canvas.width!==pixelsW)canvas.width=pixelsW;
+    if(canvas.height!==pixelsH)canvas.height=pixelsH;
   }
   function selectEnemy(event){
     if(defeated||cast)return;

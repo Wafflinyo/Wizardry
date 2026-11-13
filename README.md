@@ -1,12 +1,17 @@
-## NEW — Play the 2.5D side-angle battle + trace-to-cast test (v0.25)
+## NEW — 2.5D level arena and automatic spell accuracy test (v0.26)
 
-**[Open the new 2.5D Wizardry Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.25.0)**
+**[Play the updated 2.5D Wizardry test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.26.0)**
 
-Play 1v1–4v4 from a three-quarter **SIDE VIEW**. Allies stand on the left arc, enemies on the right. Choose only **Poseidon's Wrath** or **Stone Golem**, target a fighter, then **trace the glowing Water or Earth rune** while your wizard points a staff toward the arena center. A correct trace summons the approved creature, applies damage, and unsummons it; a wrong trace fizzles and moves to the next fighter after the arm lowers.
+The battlefield remains a three-quarter **side view** but the circular fighting surface is now **level instead of diagonally slanted**. Allies stand on the left arc and enemies on the right.
 
-Standing wizards and monsters do **not** rotate toward targets. Only temporary summoned creatures turn toward the selected target. Dress your low-poly wizard with **four hats, three robe silhouettes and six colors**.
+No finger tracing is required. Every caster automatically draws their element's rune with their wand or staff, then a **fresh independent random accuracy roll** decides success:
 
-The test includes CPU battles and local hot-seat PvP planning, **not yet networked friends, story progression or ranked matches**. The previously approved 16-frame summon sprites and the original 1v1 duel remain unchanged. See [ARENA_TEST.md](ARENA_TEST.md) for the full test instructions.
+- **Poseidon's Wrath — 70% accuracy, 1,200 damage.**
+- **Stone Golem — 85% accuracy, 900 damage.**
+
+A successful cast summons the approved creature, hits its selected enemy and disappears. A miss fizzles without damage; the caster lowers their arm and the next turn begins. **Only these two spell cards** are selectable. The approved 16-frame sprites and original 1v1 duel were not changed.
+
+The local CPU and hot-seat PvP test supports 1v1–4v4, plus wizard hats, robe styles and color choices. It is not yet real online multiplayer. See [ARENA_TEST.md](ARENA_TEST.md) for gameplay and test notes.
 
 ---
 

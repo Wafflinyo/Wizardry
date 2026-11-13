@@ -659,7 +659,9 @@
     const x=502;
     const crouch=Math.sin(t*2.3)*1.2*(1-descent);
     const rockX=x+throwPower*91;
-    const rockY=base-84-lift*205+throwPower*16+crouch;
+    // Lift high enough that the bottom of the 52px boulder CLEARLY
+    // passes above the golem's tallest head facet at base-271.
+    const rockY=base-84-lift*245+throwPower*16+crouch;
     return {x,base,emerging,descent,lift,throwPower,rockX,rockY,
       hands:[[rockX-43,rockY+17],[rockX+43,rockY+17]]};
   }

@@ -673,12 +673,12 @@
   // Sandstone-and-moss creature, separate from the blue-grey enemy Sentinel.
   // Real illustrated sprite frames, replacing all procedural golem polygons.
   // The 480x640 WebP stores a 3-column x 4-row grid of 160px squares.
-  const GOLEM_FRAME=160,GOLEM_COLUMNS=3,GOLEM_COUNT=12;
+  const GOLEM_FRAME=160,GOLEM_COLUMNS=4,GOLEM_COUNT=12;
   const golemSprite=document.createElement("img");
   let golemSpriteReady=false;
   let golemSpriteError=false;
   golemSprite.onload=()=>{
-    golemSpriteReady=golemSprite.naturalWidth>=480;
+    golemSpriteReady=golemSprite.naturalWidth>=640&&golemSprite.naturalHeight>=480;
     if(selectedSpell==="stone"&&!cast)refreshUI();
   };
   golemSprite.onerror=()=>{
@@ -688,158 +688,71 @@
       refreshUI();
     }
   };
-  golemSprite.src="./assets/stone-golem-groundslam.webp?v=0.6.0";
+  golemSprite.src="./assets/stone-golem-lowpoly-v070.webp";
 
-  function golemAnimationFrame(elapsed){
-    // Mapping to the provided 12 illustrations:
-    // 0 idle, 1-3 clasp, 4-6 overhead, 7 strike, 8 landing, 9-11 surge.
-    if(elapsed<EARTH.claspStart)return 0;
-    if(elapsed<EARTH.liftStart){
-      return Math.min(3,1+Math.floor(phase(elapsed,EARTH.claspStart,EARTH.claspEnd)*3));
+  function golemAnimationFrame(elapsed) {
+    // The 4x3 atlas already contains the complete rise, hand clasp, overhead
+    // pose, slam, spike sequence and sinking. No separate polygon spikes.
+    if(elapsed<EARTH.emergeStart)return -1;
+    if(elapsed<EARTH.emergeEnd){
+      const t=phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd);
+      return t<.30?0:t<.66?1:2;
     }
-    if(elapsed<EARTH.holdStart){
-      const f=phase(elapsed,EARTH.liftStart,EARTH.liftEnd);
-      return Math.min(6,3+Math.floor(f*4));
+    if(elapsed<EARTH.claspStart)return 2;
+    if(elapsed<EARTH.claspEnd)return 3;
+    if(elapsed<EARTH.liftEnd) {
+      const t=phase(elapsed,EARTH.liftStart,EARTH.liftEnd);
+      return t<.32?4:t<.68?5:6;
     }
     if(elapsed<EARTH.slamStart)return 6;
-    if(elapsed<EARTH.spikesStart){
-      const p=phase(elapsed,EARTH.slamStart,EARTH.spikesStart);
-      return p<.34?6:p<.75?7:8;
+    if(elapsed<EARTH.slamEnd)return phase(elapsed,EARTH.slamStart,EARTH.slamEnd)<.18?6:7;
+    if(elapsed<EARTH.spikesEnd){
+      const t=phase(elapsed,EARTH.spikesStart,EARTH.spikesEnd);
+      return t<.32?8:t<.68?9:10;
     }
-    if(elapsed<EARTH.hit){
-      const p=phase(elapsed,EARTH.spikesStart,EARTH.hit);
-      return Math.min(11,8+Math.floor(p*4));
-    }
-    if(elapsed<EARTH.settleStart)return 11;
-    if(elapsed<EARTH.crumbleStart){
-      // Short, cartoon-styled recovery from the ground slam.
-      const p=phase(elapsed,EARTH.settleStart,EARTH.crumbleStart);
-      return p<.22?10:p<.47?8:p<.70?3:0;
-    }
-    // Return to the resting frame before sinking back into the floor.
-    return 0;
+    if(elapsed<EARTH.crumbleStart)return 10;
+    return 11;
   }
 
-  function drawStoneGolem(elapsed,t){
+  function drawStoneGolem(elapsed,t) {
     if(!golemSpriteReady)return;
-    const rise=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
-    const sink=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
-    if(rise<=.0001||sink>=.9999)return;
     const frame=golemAnimationFrame(elapsed);
+    if(frame<0||elapsed>=EARTH.crumbleEnd)return;
     const col=frame%GOLEM_COLUMNS,row=Math.floor(frame/GOLEM_COLUMNS);
-    // The generated illustrations use the same frame bounds, with boots
-    // around 92% down the cell. Base feet sit on arena y=411.
-    const size=315,dx=505-size/2,dy=411-size*.916;
-    const offset=292*(1-rise)+292*sink;
+    // One stationary, game-space anchored sprite. The illustrations already
+    // show emergence and disappearance. Do not double-animate vertical position.
+    const size=392,dx=350,dy=411-size*.927;
     g.save();
-    // Only reveal the character above the physical arena floor.
-    g.beginPath();g.rect(311,-96,463,507);g.clip();
-    g.globalAlpha*=Math.min(1,rise*3)*(1-ease(phase(sink,.76,1)));
-    g.drawImage(golemSprite,
-      col*GOLEM_FRAME,row*GOLEM_FRAME,
-      GOLEM_FRAME,GOLEM_FRAME,
-      dx,dy+offset,size,size);
+    g.beginPath();g.rect(286,-75,550,488);g.clip();
+    const fadeIn=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.14));
+    const fadeOut=1-ease(phase(elapsed,EARTH.crumbleEnd-.17,EARTH.crumbleEnd));
+    g.globalAlpha*=fadeIn*fadeOut;
+    g.imageSmoothingEnabled=true;
+    g.drawImage(golemSprite,col*GOLEM_FRAME,row*GOLEM_FRAME,
+      GOLEM_FRAME,GOLEM_FRAME,dx,dy,size,size);
     g.restore();
   }
 
-  function drawEarthPortal(elapsed,t) {
-    const emerge=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
-    const fade=1-ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
-    if(emerge<=.01||fade<=.01)return;
-    g.save();g.globalAlpha=emerge*fade;
-    oval(505,409,102,22,"#233729c3","#829977",2);
-    oval(505,409,77,13,null,"#b9d8ae72",1.5);
-    for(let i=0;i<7;i++){
-      const x=505+(i-3)*24;
-      line(x,405,x+(i-3)*14,416+(i%2)*3,
-        i%2?"#94aa88":"#58775c",1.7);
-    }
-    g.restore();
-  }
-
-  function drawEarthSpikes(elapsed,t) {
-    if(elapsed<EARTH.spikesStart||elapsed>EARTH.crumbleEnd)return;
-    const n=11,travel=EARTH.spikesEnd-EARTH.spikesStart;
-    const retract=ease(phase(elapsed,EARTH.settleStart,EARTH.crumbleEnd));
-    const progress=clamp((elapsed-EARTH.spikesStart)/travel);
-    const startX=568,endX=785,groundY=404;
-    g.save();
-    // A fissure visibly propagates out from the golem's slammed fists.
-    if(progress>.002){
-      const edgeX=mix(startX,endX,progress);
-      g.beginPath();g.moveTo(startX,groundY-4);
-      const segments=Math.max(1,Math.ceil(progress*16));
-      for(let j=1;j<=segments;j++){
-        const q=j/segments,xx=mix(startX,edgeX,q);
-        g.lineTo(xx,groundY-11-5*Math.sin(xx*.083));
-      }
-      g.strokeStyle="#416b53";g.lineWidth=9;g.stroke();
-      g.strokeStyle="#b8f6b2";g.lineWidth=2.3;g.stroke();
-    }
-    for(let i=0;i<n;i++){
-      const local=EARTH.spikesStart+i*(travel-.17)/(n-1);
-      const rise=ease(phase(elapsed,local,local+.17))*(1-retract);
-      if(rise<.002)continue;
-      const x=startX+(endX-startX)*i/(n-1);
-      const y=groundY-i*.67;
-      const h=(50+13*(i%4)+i*4.9)*rise;
-      const half=(11+3*(i%3))*Math.min(1,rise*3);
-      const tipX=x+(i%2?-7:8)*rise,tipY=y-h;
-      polygon([[x-half,y+4],[x-half*.75,y-h*.37],
-        [tipX,tipY],[x+half*.7,y-h*.23],[x+half,y+4]],
-        i%2?"#637f6e":"#89a08d","#c6d3bb",1.7);
-      triangleFacet(x-half,y+4,x-half*.75,y-h*.37,tipX,tipY,
-        i%2?"#aebea5":"#c0cdb7");
-      triangleFacet(tipX,tipY,x+half*.7,y-h*.23,x+half,y+4,
-        i%2?"#344f43":"#4c6c5c");
-      triangleFacet(x-half*.4,y+1,tipX,tipY,x+half*.1,y-h*.1,
-        "#87b98c70");
-      line(x,y-5,tipX,tipY+12*rise,"#b5efae9e",1.3);
-      oval(x,y+2,half*1.25,3.5,"#aabc95a1");
-      // Deterministic stone chips (avoid dozens of random particles).
-      if(elapsed<local+.3){
-        const fly=ease(phase(elapsed,local,local+.3));
-        for(let k=0;k<3;k++){
-          const px=x+(k-1)*21*fly;
-          const py=y-5-24*Math.sin(fly*Math.PI)*(1+k*.15);
-          polygon([[px-3,py],[px,py-5],[px+5,py+2]],
-            k%2?"#bbccb4":"#8ca38d");
-        }
-      }
-    }
-    g.restore();
-  }
-  function drawEarthProjectile(elapsed,t) {
-    // The "projectile" is now a ground-traveling chain of Earth spikes.
-    drawEarthSpikes(elapsed,t);
-  }
+  // No additional Earth portal, procedural stone spikes, or duplicate
+  // projectile renderer. These are baked into the low-poly atlas frames.
 
   function drawEarthImpact(elapsed) {
-    if(elapsed<EARTH.hit||elapsed>EARTH.hit+.84)return;
-    const p=phase(elapsed,EARTH.hit,EARTH.hit+.84);
-    const f=1-ease(p),x=785,y=320;
-    g.save();g.globalAlpha=f;
-    const r=20+p*94;
-    oval(x,395,r,r*.27,null,"#d1edba",5*f+1);
-    for(let i=0;i<9;i++){
-      const a=i*Math.PI*2/9,dis=16+p*(65+i%3*15);
-      const px=x+Math.cos(a)*dis,py=y+Math.sin(a)*dis*.72;
-      polygon([[px-5,py+3],[px+1,py-9],[px+9,py+2]],
-        i%2?"#90a88e":"#c5d8b8");
-    }
+    // Small target-only hit confirmation. NO extra rising stones; the
+    // traveling spikes are already illustrated in frames 8–10.
+    if(elapsed<EARTH.hit||elapsed>EARTH.hit+.75)return;
+    const t=phase(elapsed,EARTH.hit,EARTH.hit+.75);
+    g.save();
+    g.globalAlpha*=1-ease(phase(elapsed,EARTH.hit+.32,EARTH.hit+.75));
+    g.beginPath();g.ellipse(785,295,25+t*48,37+t*30,0,0,Math.PI*2);
+    g.strokeStyle="#a4ecaa";g.lineWidth=3*(1-t)+.5;g.stroke();
+    g.font="bold 51px Georgia,serif";g.textAlign="center";
+    g.lineWidth=5;g.strokeStyle="#1a3425";
+    g.strokeText("-900",785,209-37*ease(t));
+    g.fillStyle="#e6f8cf";g.fillText("-900",785,209-37*ease(t));
     g.restore();
-    if(p<.94){
-      g.save();g.globalAlpha=1-ease(phase(elapsed,EARTH.hit+.54,EARTH.hit+.84));
-      g.font="bold 53px Georgia,serif";g.textAlign="center";
-      g.lineWidth=5;g.strokeStyle="#273729";
-      g.strokeText("-900",x,214-40*ease(p));
-      g.fillStyle="#e5f5ce";g.fillText("-900",x,214-40*ease(p));
-      g.restore();
-    }
   }
 
   function drawEarthSummon(elapsed,t) {
-    drawEarthPortal(elapsed,t);
     drawStoneGolem(elapsed,t);
   }
 
@@ -910,7 +823,6 @@
     drawSentinel(t);
     if(cast){
       if(cast.type==="stone"){
-        drawEarthProjectile(cast.elapsed,t);
         drawEarthImpact(cast.elapsed);
       }else{
         drawProjectile(cast.elapsed,t);
@@ -1141,11 +1053,7 @@
       health=Math.max(0,health-SPELLS[type].damage);
       targetPulse=1.3;
       refreshUI();
-      if(earth) {
-        // The advancing spikes carry the impact visuals. A small batch of
-        // deterministic debris keeps the frame lightweight on phones.
-        for(let i=0;i<12;i++)addParticle(785+rand(-18,18),354+rand(-8,10),"rock",.55);
-      }else{
+      if(!earth){
         for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
         for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
       }

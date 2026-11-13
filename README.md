@@ -1,3 +1,13 @@
+## NEW — Rigged top-slot wizard casting (v0.31.0)
+
+**[Play 2.5D battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.31.0)** · **[Open standalone rig test](https://wafflinyo.github.io/Wizardry/rig-preview.html?v=0.31.0)**
+
+The top allied wizard now has a code-driven **2D skeletal rig** using the same low-poly body art, an articulated shoulder/elbow/hand, and ONE rigid staff graphic. The staff cannot change physical length. Casting uses the existing raise, rune trace, summon/fizzle, and lower stage machine; during rune tracing, the staff actively waves in a looping figure-eight. The wizard's foot placement and angle do not change. The main Canvas still renders spell visuals behind fighters. Appearance customization and non-rigged characters retain the original geometry fallback.
+
+This is **not** a rigged 3D mesh: the source image is a flat render. The separate rig test allows repeat/replay without changing battle rules. No spell damages, accuracy, or effects were modified.
+
+---
+
 ## NEW — Approved top-slot wizard idle in the arena (v0.30.0)
 
 **[Play the battle scene with the new wizard](https://wafflinyo.github.io/Wizardry/arena.html?v=0.30.0)**

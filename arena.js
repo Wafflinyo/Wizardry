@@ -974,24 +974,19 @@
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
     }
     g.scale(scale,scale);
-    // Top ally slot: approved behind-three-quarter wizard art, facing down-right.
-    // Keep the feet on this unit's arena ground plane; move only a few pixels
-    // upward and settle back down for a subtle, seamless breathing idle loop.
-    // Other outfits deliberately use the existing customizable geometry.
+    // One 2D skeletal rig drives both idle and casting. No resampled
+    // staff/character frames; staff and upper/lower arm remain fixed-length.
+    // Props are keyed to the game's real raise -> trace -> resolve -> lower stages.
     const approvedTopSlot=u.team===0&&u.index===0&&
       u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4"&&
-      topIdleReady();
-    if(approvedTopSlot){
-      const phase=(time%1450)/1450;
-      const breath=(1-Math.cos(phase*Math.PI*2))*.5;
-      const raise=u.hp>0?breath*3.5:0;
-      g.translate(0,-raise);
-      g.scale(1+breath*.006,1+breath*.008);
-      g.imageSmoothingEnabled=true;
-      g.imageSmoothingQuality="high";
-      // Transparent source is 128×192; render at the old wizard's height.
-      // No fixed-position DOM overlay: spell effects and fighters retain depth.
-      g.drawImage(topWizardIdle,-74,-220,148,220);
+      window.WizardryRig?.ready();
+    if(approvedTopSlot&&window.WizardryRig.draw(g,{
+        time,
+        stage:state.animation?.source===u.id?state.animation.stage:null,
+        progress:state.animation?.source===u.id&&state.animation.duration?
+          state.animation.elapsed/state.animation.duration:0
+    })){
+      // The rig is drawn within this fighter's Canvas depth transform.
     }else{
       const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
       g.translate(0,bob);

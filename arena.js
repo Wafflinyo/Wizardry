@@ -504,7 +504,13 @@
     ellipse(ctx,0,-115,18,21,"#c39976","#284453",1.5);
     pathPoly(ctx,[[-31,-118],[-24,-149],[0,-156],[25,-142],[32,-114]],u.style==="ember"?"#6c2c36":"#1e445b","#4f859b",2);
     pathPoly(ctx,[[-32,-143],[0,-166],[23,-144]],u.style==="storm"?"#8b78c8":"#3b8da0");
-    ellipse(ctx,-7,-116,2.2,2.2,"#e4f6ea");ellipse(ctx,9,-116,2.2,2.2,"#e4f6ea");
+    // Off-axis face details emphasize that the wizard is looking across
+    // the ring, not straight into the camera.
+    const side=u.team?-1:1;
+    ellipse(ctx,-side*5,-116,1.6,2,"#d5eadc95");
+    ellipse(ctx,side*9,-116,2.8,2.5,"#e4f6ea");
+    pathPoly(ctx,[[side*14,-120],[side*23,-116],[side*15,-111]],"#d5ad87");
+    line(ctx,side*7,-107,side*15,-105,"#795a53",1.7);
     // Arms + magical staff.
     pathPoly(ctx,[[-26,-99],[-42,-84],[-45,-58],[-34,-52],[-24,-77]],"#d7b08b","#4b5760",1.5);
     pathPoly(ctx,[[22,-104],[41,-88],[49,-70],[39,-58],[18,-80]],"#ba957f","#3b5362",1.5);
@@ -525,7 +531,9 @@
       pathPoly(ctx,[[-44,0],[-38,-100],[-17,-142],[24,-142],[38,-90],[48,0]],
         "#403051","#795eac",2);
       pathPoly(ctx,[[-20,-138],[0,-172],[20,-138],[18,-102],[-19,-102]],"#201a32","#8164aa",3);
-      ellipse(ctx,-8,-125,3,3,"#dfb2ff");ellipse(ctx,8,-125,3,3,"#dfb2ff");
+      const side=u.team?-1:1;
+      ellipse(ctx,side*10,-125,4,3.4,"#dfb2ff");
+      pathPoly(ctx,[[side*22,-124],[side*34,-120],[side*21,-112]],"#635182");
       for(let i=0;i<3;i++)pathPoly(ctx,[[(-1+i)*30,-96],[(-1+i)*24,-154],[(-1+i)*35,-124]],bright+"8a");
       return;
     }
@@ -543,8 +551,12 @@
     pathPoly(ctx,[[-25,-144],[-28,-181],[0,-194],[29,-178],[26,-139],[0,-127]],rock,shade,3);
     pathPoly(ctx,[[-27,-181],[0,-194],[-1,-153]],"#b5baad64");
     pathPoly(ctx,[[0,-194],[28,-177],[25,-141],[-1,-154]],shade);
-    pathPoly(ctx,[[-18,-161],[-6,-162],[-6,-154],[-18,-152]],bright);
-    pathPoly(ctx,[[7,-162],[19,-161],[19,-152],[7,-154]],bright);
+    const front=u.team?-1:1;
+    // Stronger near-side eye and a visible faceted nose/cheek on the side
+    // facing the enemy. The far-side eye recedes into the stone face.
+    pathPoly(ctx,[[front*-16,-161],[front*-7,-162],[front*-7,-155],[front*-16,-154]],bright+"82");
+    pathPoly(ctx,[[front*5,-163],[front*21,-161],[front*21,-153],[front*5,-155]],bright);
+    pathPoly(ctx,[[front*25,-154],[front*38,-148],[front*23,-139]],rock,shade,1.7);
     pathPoly(ctx,[[-11,-112],[5,-120],[19,-102],[2,-88]],bright);
     if(u.style==="moss"){
       pathPoly(ctx,[[-55,-147],[-40,-183],[-18,-160],[5,-190],[28,-168],[55,-174],[47,-149]],"#5f8e3c");
@@ -735,6 +747,17 @@
   function render(time){
     g.setTransform(1,0,0,1,0,0);
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
+    // Ground-plane aim indicator. Subtle enough not to clutter the arena,
+    // but it makes target choice and profile turns legible on small phones.
+    if(state.phase==="planning"&&state.selectedCaster&&state.selectedTarget){
+      const from=getUnit(state.selectedCaster),to=getUnit(state.selectedTarget);
+      if(from&&to&&from.hp>0&&to.hp>0&&from.team!==to.team){
+        g.save();g.setLineDash([8,13]);g.lineWidth=2.2;
+        g.strokeStyle="#79e5e578";g.beginPath();g.moveTo(from.x,from.y+3);
+        g.quadraticCurveTo((from.x+to.x)/2,(from.y+to.y)/2+13,to.x,to.y+3);
+        g.stroke();g.restore();
+      }
+    }
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     for(const u of [...state.units].sort((a,b)=>a.y-b.y))drawUnit(u,time);

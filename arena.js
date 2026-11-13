@@ -848,6 +848,24 @@
       [top[0]+10,top[1]],[top[0],top[1]+9]],gem,trim,1.6);
     ellipse(ctx,top[0],top[1]-2,4,6,"#ecffff8c");
   }
+  function drawEnemyStaffArm(ctx,u,rock,shade,bright){
+    // Story-mode monster enemies stay planted facing the center, with one
+    // simple rigid stone arm that lifts a rune staff when casting.
+    const p=clamp(u.armRaise||0,0,1),side=-1;
+    const sh=[-44,-113],el=[-60-22*p,-86-14*p],
+      hand=[-71-50*p,-37-66*p];
+    pathPoly(ctx,[[sh[0]-13,sh[1]-6],[el[0]-10,el[1]-11],
+      [el[0]+12,el[1]+11],[sh[0]+12,sh[1]+9]],rock,shade,2.5);
+    pathPoly(ctx,[[el[0]-12,el[1]-11],[hand[0]-14,hand[1]-8],
+      [hand[0]+13,hand[1]+9],[el[0]+12,el[1]+11]],rock,shade,2.5);
+    pathPoly(ctx,[[hand[0]-14,hand[1]-7],[hand[0]+12,hand[1]-10],
+      [hand[0]+17,hand[1]+14],[hand[0]-13,hand[1]+17]],shade,rock,2);
+    const top=[hand[0]+side*(6+94*p),hand[1]-lerp(95,12,p)];
+    line(ctx,hand[0],hand[1]+12,top[0],top[1],"#826e5e",6);
+    pathPoly(ctx,[[top[0]-10,top[1]+4],[top[0],top[1]-21],
+      [top[0]+9,top[1]+5],[top[0],top[1]+10]],bright,
+      "#d4e8ba",1.6);
+  }
   function drawEnemy(ctx,u,time){
     const rock=u.style==="moss"?"#6d795a":u.style==="crystal"?"#6b5c85":
       u.style==="shadow"?"#503966":"#77828a";
@@ -864,6 +882,7 @@
       ellipse(ctx,side*10,-125,4,3.4,"#dfb2ff");
       pathPoly(ctx,[[side*22,-124],[side*34,-120],[side*21,-112]],"#635182");
       for(let i=0;i<3;i++)pathPoly(ctx,[[(-1+i)*30,-96],[(-1+i)*24,-154],[(-1+i)*35,-124]],bright+"8a");
+      drawEnemyStaffArm(ctx,u,"#52436c","#2b2041",bright);
       return;
     }
     // Massive faceted golem / sentinel / brute.
@@ -871,9 +890,7 @@
     pathPoly(ctx,[[-46,-72],[-62,-119],[-30,-154],[32,-150],[64,-118],[47,-70]],rock,shade,3);
     pathPoly(ctx,[[-62,-118],[-32,-156],[-17,-109],[-43,-73]],"#a5aaa060");
     pathPoly(ctx,[[29,-150],[64,-119],[46,-71],[12,-112]],shade);
-    pathPoly(ctx,[[-51,-116],[-81,-109],[-86,-39],[-54,-36],[-41,-92]],rock,shade,3);
     pathPoly(ctx,[[55,-118],[84,-106],[84,-43],[55,-40],[42,-91]],rock,shade,3);
-    pathPoly(ctx,[[-86,-42],[-67,-45],[-59,-19],[-79,-10],[-90,-22]],"#929a87");
     pathPoly(ctx,[[58,-44],[83,-48],[90,-19],[73,-13],[55,-23]],"#576d6b");
     pathPoly(ctx,[[-43,-10],[-7,-14],[-13,4],[-48,9]],"#758077");
     pathPoly(ctx,[[7,-15],[46,-14],[48,8],[10,6]],shade);
@@ -895,44 +912,13 @@
       for(const [x,y] of [[-51,-150],[35,-170],[-63,-105],[52,-117]])
         pathPoly(ctx,[[x-11,y+12],[x,y-32],[x+14,y+9]],"#b78af0","#e0c8ff",2);
     }
+    drawEnemyStaffArm(ctx,u,rock,shade,bright);
   }
   function unitPosition(u){return {x:u.x,y:u.y};}
-  // Simulated 3D yaw: body width shrinks and the visible side shifts.
-  // Positions remain in one fixed 2.5D world; NO camera-facing sprite
-  // switching or rotating around the screen Z-axis (which would look tilted).
-  function facingTarget(u){
-    if(u.hp<=0)return null;
-    if(state.animation){
-      if(state.animation.source===u.id)return getUnit(state.animation.target);
-      if(state.animation.target===u.id)return getUnit(state.animation.source);
-    }
-    if(state.phase==="planning"){
-      if(state.selectedCaster===u.id)return getUnit(state.selectedTarget);
-      if(state.selectedTarget===u.id)return getUnit(state.selectedCaster);
-      const p=state.plans[u.id];
-      if(p)return getUnit(p.targetId);
-    }
-    return null;
-  }
-  function desiredYaw(u){
-    const side=u.team?-1:1;
-    const base=side*.84; // 3/4 profile, normally facing the opposing arc.
-    const target=facingTarget(u);
-    if(!target||target.id===u.id)return base;
-    const dx=Math.max(150,Math.abs(target.x-u.x));
-    const dy=target.y-u.y;
-    const change=clamp(Math.atan2(dy,dx)*.78,-.36,.36);
-    return clamp(base+side*change,-1.23,1.23);
-  }
-  function updateFacing(dt){
-    for(const u of state.units){
-      const goal=desiredYaw(u);
-      u.desiredFacing=goal;
-      // Real eased turn. Per-frame delta works at 60Hz and 120Hz without
-      // snapping when the user changes targets or the caster attacks.
-      u.facing+=(goal-u.facing)*Math.min(1,dt*.009);
-    }
-  }
+  // Wizards and ordinary enemies maintain their fixed three-quarter
+  // facing. Only summoned spell creatures turn to face their targets.
+  function desiredYaw(u){return u.team?-.74:.74;}
+  function updateFacing(dt){} // No target-based combatant rotation.
   function drawUnit(u,time){
     // Physical depth scale from the same arena floor, not separate
     // front/back teams. Lower Y sits nearer the 3/4 camera.
@@ -954,14 +940,11 @@
     g.scale(scale,scale);
     const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
     g.translate(0,bob);
-    // 2.5D rotation around the VERTICAL axis: foreshortening plus lateral
-    // shear. Team A shows its right-facing 3/4 profile; Team B mirrors it.
-    // The angle interpolates towards whichever target is selected.
-    const yaw=u.facing;
-    const horizontal=Math.max(.48,Math.cos(Math.abs(yaw)));
-    const skew=-Math.sin(yaw)*.26;
-    g.transform(horizontal,0,skew,1,0,0);
-    if(u.team)drawEnemy(g,u,time*.001);else drawWizard(g,u,time*.001);
+    // Constant three-quarter profile, no movement when selecting a target.
+    const side=u.team?-1:1;
+    g.transform(.79,0,-side*.11,1,0,0);
+    if(u.team&&state.mode==="story")drawEnemy(g,u,time*.001);
+    else drawWizard(g,u,time*.001);
     g.restore();
     // Individual target HP bars and attached status slots.
     const labelY=u.y-(u.team?(u.y<270?159:165):160);

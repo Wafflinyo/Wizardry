@@ -1,4 +1,4 @@
-# Wizardry — Spellcasting Battle Prototype (v0.4.0)
+# Wizardry — Spellcasting Battle Prototype (v0.4.1)
 
 A playable, mobile-friendly low-poly/2.5D spellcasting trial in your browser. Pick a card, target the Stone Sentinel and cast a summoning spell. Both cards and the Cast button remain visible on the same screen on phones.
 
@@ -17,13 +17,19 @@ The game is deployed from the `main` branch via GitHub Pages. To run locally, op
 
 **Choose a card by tapping it**, then tap **Cast**. After each round, the mana meter replenishes to 8 so you can repeatedly test the spell animations. Spell damage is applied only when its projectile strikes.
 
+### Stone Golem animation refinements — v0.4.1
+
+The stone golem is now rigged with **fixed-length upper arms, forearms, thighs and calves** using two-bone inverse kinematics, so the boulder can no longer stretch its rock joints. The torso tilts backward by about **13°** while the **left leg lifts approximately 69 pixels from its usual position**, with the right foot planted. Both stone fists grip opposite sides of the boulder as it charges the throw. The whole body drives forward into a fast, constant-speed boulder flight (about **0.23 seconds** at normal speed).
+
+The golem begins and ends **fully beneath the arena floor**, with zero-velocity easing for rising and sinking. The canvas avoids unnecessary size resets, uses a lower pixel ratio on mobile, and the impact shake is deterministic rather than random, reducing visual jitter. The rise/sink has no camera shake.
+
 ### Stone Golem animation (Earth)
 
 - **0–1.1 animation seconds:** fissures spread in the arena and the golem emerges.
 - **1.0–2.4:** two arms lift the boulder from waist level until it is visibly **above the head**.
 - **2.4–3.1:** brief overhead brace followed by a forceful two-handed heave.
-- **3.09–3.54:** the released boulder flies as an independent rotating projectile toward the target.
-- **3.54:** impact shatters stone, kicks up debris, shakes the battlefield, and deals **900 Earth damage**.
+- **3.09–3.43:** the released boulder flies quickly as an independent rotating projectile toward the target.
+- **3.43:** impact shatters stone, kicks up debris, shakes the battlefield, and deals **900 Earth damage**.
 - **4.1–5.17:** golem withdraws and disintegrates, returning the arena to normal.
 
 ### Poseidon's Wrath animation (Water)

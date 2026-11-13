@@ -45,3 +45,158 @@
  .wizard-style label{flex:1 1 90px;min-width:0;font-size:8px}
  .wizard-style select{min-width:0;width:100%;font-size:10px}
 }
+
+
+/* v0.27 — One-screen combat HUD. The only two choices visible during combat
+   are the two summons and the enemies on the arena Canvas. */
+html,body{height:100%;overscroll-behavior:none}
+body{height:100dvh;overflow:hidden}
+.game{height:100dvh;max-height:100dvh;max-width:1180px;overflow:hidden;
+  display:flex;flex-direction:column;gap:6px;
+  padding:6px 10px max(6px,env(safe-area-inset-bottom,6px))}
+.mast{flex:0 0 auto;min-height:35px;padding:0 0 4px}
+.brand-gem{height:31px;flex:0 0 31px;font-size:17px}
+.brand strong{font-size:19px}.brand small{font-size:8px}
+.old-duel{font-size:10px;padding:7px 9px}
+.toolbar{flex:0 0 auto;min-height:0;display:flex;gap:5px;flex-wrap:wrap;
+ padding:5px 8px;justify-content:space-around}
+.toolbar-group{display:flex;gap:7px;width:auto;align-items:center;justify-content:space-between}
+.tool-label{font-size:9px}
+.chip{padding:6px 9px;font-size:11px}
+.battle{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+  align-items:stretch;justify-content:center}
+.battle-top{flex:0 0 auto;margin:0 0 4px;min-height:31px}
+.battle h1{font-size:clamp(15px,2.7vw,24px);line-height:1.1}
+.battle .eyebrow{font-size:9px}
+.phase{font-size:10px;gap:6px}
+.phase strong{padding:5px 8px;font-size:9px}
+.arena{flex:0 1 auto;width:100%;height:auto;max-height:100%;
+  aspect-ratio:1000/620;align-self:center;overflow:hidden;min-height:0;
+  max-width:min(100%,calc((100dvh - 342px)*1.6129))}
+.arena canvas{width:100%;height:100%;display:block}
+.turnbar{flex:0 0 auto;margin-top:5px;padding:6px 9px;min-height:31px;
+  font-size:11px}
+.turnbar #turnHint{white-space:normal;line-height:1.2;max-height:2.5em}
+.turnbar .count{font-size:9px}
+.initiative,.selection,.legacy-data{display:none!important}
+.hand{flex:0 0 auto;padding:7px 9px 6px;min-width:0;
+  background:#0a2132;border-radius:11px}
+.hand-head{align-items:center;gap:5px}
+.hand-head .eyebrow{font-size:8px}
+.hand h2{font-size:clamp(13px,2.5vw,18px);margin:2px 0}
+.hand .mana{font-size:10px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;gap:7px;width:100%;padding:5px 0 5px;
+  overflow:visible;scroll-snap-type:none}
+.spell{width:100%;height:120px;flex:initial;min-width:0;min-height:105px;
+  display:flex;flex-direction:column;align-items:center;justify-content:start;
+  gap:2px;padding:5px 6px;text-align:center;border-radius:10px}
+.spell:hover{transform:none}
+.spell .orb{top:4px;left:4px;min-width:23px;height:23px;font-size:12px}
+.spell-art{height:44px;font-size:37px;flex:0 0 44px}
+.spell-name{font-size:13px;line-height:1.08}
+.spell-descr{font-size:10px;line-height:1.1;white-space:nowrap}
+.spell-detail{font-size:10px;margin-top:auto}
+.spell.chosen{border-color:#83f5ee;box-shadow:0 0 0 2px #83f5ee,0 0 18px #55dfe454}
+.hand-assist{display:flex;align-items:center;justify-content:space-between;
+  gap:8px;min-height:23px;max-height:32px;padding-top:4px;border-top:1px solid #234557}
+.hand-assist strong{font-size:9px;letter-spacing:.06em;color:#d4eaa8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hand-assist span{font-size:10px;color:#b0d9dd;text-align:right;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.customize-menu{position:relative;margin-top:3px;border-top:1px solid #264655;
+  color:#89b7c2;z-index:15}
+.customize-menu summary{cursor:pointer;padding:4px 0;font-size:9px;
+  font-weight:700;letter-spacing:.07em;list-style-position:inside}
+.customize-menu[open] .wizard-style{position:absolute;left:0;right:0;
+  bottom:calc(100% + 6px);margin:0;z-index:16;padding:10px;
+  border:1px solid #5b8b98;border-radius:10px;background:#0a293a;
+  box-shadow:0 8px 32px #000c}
+.footer{flex:0 0 auto;min-height:24px;font-size:9px;padding:0;gap:8px}
+.footer #status{max-width:75%;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.reset{font-size:10px;padding:5px 8px}
+@media (max-width:700px){
+ .game{gap:5px;padding:5px 7px max(5px,env(safe-area-inset-bottom,5px))}
+ .toolbar{padding:4px 6px;gap:4px}
+ .toolbar-group{width:auto;gap:3px}
+ .tool-label{display:none}
+ .chip{font-size:10px;padding:6px 7px}
+ .battle-top{min-height:26px;margin-bottom:3px}
+ .battle h1{font-size:16px}
+ .battle .eyebrow{font-size:8px}
+ .phase{gap:4px;font-size:9px}
+ .phase strong{font-size:8px;padding:4px 6px}
+ .arena{max-width:min(100%,calc((100dvh - 330px)*1.6129))}
+ .turnbar{margin-top:4px;min-height:30px;font-size:10px}
+ .hand{padding:6px 8px 5px}
+ .hand h2{font-size:14px}
+ .hand .mana{font-size:9px}
+ .cards{gap:6px;padding:4px 0}
+ .spell{height:115px;min-height:100px;padding:4px 5px;gap:1px}
+ .spell-art{height:40px;flex-basis:40px;font-size:33px}
+ .spell-name{font-size:12px}
+ .spell-descr{font-size:9px}
+ .spell-detail{font-size:9px}
+ .hand-assist{min-height:21px}
+ .hand-assist strong,.hand-assist span{font-size:9px}
+ .customize-menu summary{padding:3px 0}
+ .footer{font-size:8px}
+}
+@media (max-height:650px) and (orientation:portrait){
+ .game{gap:3px;padding-top:3px}
+ .mast{min-height:29px}
+ .brand strong{font-size:17px}
+ .toolbar{padding:2px 5px}
+ .chip{font-size:9px;padding:4px 6px}
+ .battle-top{min-height:24px}
+ .arena{max-width:min(100%,calc((100dvh - 302px)*1.6129))}
+ .turnbar{min-height:25px;padding:4px 7px}
+ .hand{padding:5px 7px}
+ .spell{height:99px;min-height:92px}
+ .spell-art{height:31px;flex-basis:31px;font-size:28px}
+ .spell-name{font-size:11px}
+ .spell-descr{font-size:8px}
+ .spell-detail{font-size:8px}
+ .hand-assist{min-height:18px}
+ .customize-menu summary{padding:2px 0}
+ .footer{min-height:20px}
+}
+@media (orientation:landscape) and (max-height:620px) and (min-width:690px){
+ .game{display:grid;max-width:1500px;
+   grid-template-columns:minmax(0,1fr) minmax(260px,.66fr);
+   grid-template-rows:auto auto minmax(0,1fr) auto;
+   grid-template-areas:"head head" "toolbar toolbar" "arena hand" "footer footer";
+   align-items:stretch;gap:4px;padding:4px 8px}
+ .mast{grid-area:head;min-height:0}
+ .toolbar{grid-area:toolbar;min-height:0;flex-wrap:nowrap;
+   justify-content:flex-start;padding:3px 8px}
+ .tool-label{display:block}
+ .battle{grid-area:arena;min-height:0;justify-content:center}
+ .battle-top{margin-bottom:3px;min-height:21px}
+ .battle h1{font-size:15px}
+ .arena{width:auto;height:auto;max-height:calc(100dvh - 140px);
+   max-width:min(100%,calc((100dvh - 155px)*1.6129));
+   aspect-ratio:1000/620}
+ .turnbar{min-height:25px;margin-top:3px;padding:4px 8px}
+ .hand{grid-area:hand;align-self:center;width:100%;min-height:0;padding:7px}
+ .hand h2{font-size:14px}
+ .cards{display:grid;gap:5px;padding:5px 0}
+ .spell{height:118px;min-height:95px}
+ .spell-art{height:38px;flex-basis:38px;font-size:33px}
+ .spell-name{font-size:11px}
+ .spell-descr{font-size:8px}
+ .spell-detail{font-size:8px}
+ .footer{grid-area:footer;min-height:19px}
+}
+@media(max-height:390px) and (orientation:landscape){
+ .game{gap:2px;padding:2px 6px}
+ .brand strong{font-size:15px}
+ .mast{min-height:23px}
+ .chip{padding:3px 6px;font-size:9px}
+ .arena{max-width:min(100%,calc((100dvh - 134px)*1.6129))}
+ .spell{height:100px;min-height:90px}
+ .spell-art{height:30px;flex-basis:30px;font-size:27px}
+ .hand-assist{min-height:17px}
+ .customize-menu summary{padding:2px 0}
+}

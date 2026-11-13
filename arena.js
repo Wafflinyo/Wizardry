@@ -73,7 +73,7 @@
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))];
     for(const u of units){const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];}
     state={mode,size,units,round:1,phase:"planning",planningSide:0,
-      selectedCaster:units[0]?.id,selectedCard:"poseidon",selectedTarget:"e0",
+      selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null};
     ui.status.textContent=mode==="story"?
@@ -83,49 +83,71 @@
   }
   function caster(){const u=getUnit(state.selectedCaster);
     return u&&u.team===state.planningSide&&u.hp>0?u:null;}
-  function currentCard(){return BY_ID[state.selectedCard]||CARDS[0];}
+  // No implicit spell or enemy selection. Each player-controlled wizard
+  // must explicitly pick a card and target again for EVERY new round.
+  function currentCard(){return state.selectedCard?BY_ID[state.selectedCard]||null:null;}
   function targetsFor(card,c){
-    if(!c)return[];
+    if(!card||!c)return[];
     if(card.target==="team")return[];
     return alive(card.target==="ally"?c.team:1-c.team);
   }
   function correctTarget(){
     const c=caster(),card=currentCard();
-    if(!c)return null;
+    if(!c||!card)return null;
     if(card.target==="team"){state.selectedTarget=null;return null;}
-    const valid=targetsFor(card,c);
-    if(!valid.some(u=>u.id===state.selectedTarget))
-      state.selectedTarget=(card.target==="ally"?(valid.find(u=>u.id===c.id)||valid[0]):valid[0])?.id||null;
-    return getUnit(state.selectedTarget);
+    const selected=getUnit(state.selectedTarget);
+    if(!selected||!targetsFor(card,c).some(u=>u.id===selected.id)){
+      state.selectedTarget=null;
+      return null;
+    }
+    return selected;
+  }
+  function clearSelection(){
+    state.selectedCard=null;
+    state.selectedTarget=null;
   }
   function nearestAvailableCaster(){
     const u=alive(state.planningSide).find(x=>!state.plans[x.id]);
     state.selectedCaster=u?.id||alive(state.planningSide)[0]?.id||null;
-    correctTarget();
+    clearSelection();
   }
   function selectCaster(id){
     if(state.phase!=="planning")return;
-    const c=getUnit(id);if(!c||c.team!==state.planningSide||c.hp<=0)return;
-    state.selectedCaster=id;correctTarget();paintUI();
+    const c=getUnit(id);
+    if(!c||c.team!==state.planningSide||c.hp<=0)return;
+    if(state.selectedCaster!==id){
+      state.selectedCaster=id;
+      clearSelection();
+    }
+    paintUI();
   }
   function selectTarget(id){
     if(state.phase!=="planning")return;
     const u=getUnit(id),c=caster(),card=currentCard();
-    if(!c||!u||u.hp<=0||card.target==="team")return;
-    if((card.target==="ally"&&u.team!==c.team)||(card.target==="enemy"&&u.team===c.team))return;
-    state.selectedTarget=id;paintUI();
+    if(!c||!u||u.hp<=0)return;
+    // Selecting target first is allowed, before selecting either card.
+    const expectedTeam=card?.target==="ally"?c.team:1-c.team;
+    if(u.team!==expectedTeam)return;
+    state.selectedTarget=id;
+    paintUI();
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id])return;
-    state.selectedCard=id;correctTarget();paintUI();
+    state.selectedCard=id;
+    correctTarget(); // retain an explicitly tapped enemy when it is still valid
+    paintUI();
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    if(state.phase!=="planning"||!c||state.plans[c.id]||c.mana<card.cost)return;
+    if(state.phase!=="planning"||!c||!card||state.plans[c.id]||
+       c.mana<card.cost)return;
     if(card.target!=="team"&&!target)return;
-    state.plans[c.id]={casterId:c.id,cardId:card.id,targetId:target?.id||null,team:c.team,auto:false};
-    state.log=[c.name+" queued "+card.name,...state.log].slice(0,5);
-    nearestAvailableCaster();paintUI();
+    state.plans[c.id]={casterId:c.id,cardId:card.id,
+      targetId:target?.id||null,team:c.team,auto:false};
+    state.log=[c.name+" queued "+card.name+" against "+(target?.name||"team"),
+      ...state.log].slice(0,5);
+    nearestAvailableCaster();
+    paintUI();
   }
   function autoPlan(u){
     // Computer players also use only the same two tested summons.
@@ -148,7 +170,7 @@
     if(state.phase==="finished"){setBattle(state.mode,state.size);return;}
     if(state.phase!=="planning"||!allReady(state.planningSide))return;
     if(state.mode==="pvp"&&state.planningSide===0){
-      state.planningSide=1;nearestAvailableCaster();state.selectedCard="poseidon";correctTarget();paintUI();return;
+      state.planningSide=1;nearestAvailableCaster();paintUI();return;
     }
     if(state.mode==="story")for(const u of alive(1))state.plans[u.id]=autoPlan(u);
     runResolution();
@@ -347,9 +369,14 @@
       paintUI();return;
     }
     for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
-    state.round++;state.plans={};state.phase="planning";state.planningSide=0;
-    state.selectedCard="poseidon";nearestAvailableCaster();
-    state.log=["Round "+state.round+" begins. Mana restored.",...state.log].slice(0,5);
+    state.round++;
+    // Complete old round teardown: no queued player actions, target, card,
+    // or combat animation may carry into the next planning phase.
+    state.plans={};state.sequence=[];state.queueAt=0;state.animation=null;
+    state.phase="planning";state.planningSide=0;
+    nearestAvailableCaster();
+    state.log=["Round "+state.round+" begins. Select NEW cards and targets.",...state.log].slice(0,5);
+    ui.status.textContent="Round "+state.round+": select a new spell and enemy for every wizard. Auto-fill is optional for this round only.";
     paintUI();
   }
   function paintUI(){

@@ -40,12 +40,14 @@
   // Key pose samples are evaluated every screen refresh (60/120+ Hz), not
   // 9 image frames. Timing is animation seconds independent of refresh rate.
   const SPELL = Object.freeze({
-    riseStart: .45, riseEnd: 1.65,
-    aimStart: 1.13, aimEnd: 1.60,
-    windStart: 1.54, windEnd: 2.37,
-    releaseStart: 2.37, releaseEnd: 2.70,
-    launch: 2.55, hit: 2.86,
-    sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
+    // Summon -> idle -> windup -> throw -> post-hit hold -> unsummon.
+    riseStart:.06, riseEnd:.70,
+    aimStart:.86, aimEnd:1.18,
+    windStart:1.19, windEnd:1.94,
+    releaseStart:1.94, releaseEnd:2.19,
+    launch:2.12, hit:2.43,
+    // Hold after impact for 1.05 game seconds = 0.70 real seconds at 1x.
+    sinkStart:3.48, sinkEnd:4.45, end:4.47
   });
   // Earth: clasp two stone fists, raise overhead, ground slam, spikes travel.
   // Illustrated frame-by-frame Earth summon: complete rise first,
@@ -63,6 +65,8 @@
   // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
   const DEFAULT_SPELL_RATE = 1.5;
+  // Earth is intentionally a little slower: 3.16s versus Poseidon's 2.98s.
+  const EARTH_RATE_MULTIPLIER=1.11;
   let health = MAX_HP, mana = 8, round = 1;
   let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
@@ -601,43 +605,144 @@
     g.restore();
   }
 
+  // Poseidon sprite frames are vector-traced from the approved 4×3 sheet,
+  // exactly as Stone Golem's approved frames were. The compressed text is
+  // decompressed once on startup and compiled into 12 Canvas Path2D frames.
+  const POSEIDON_FRAME_TIMES=[
+    .04,.34,.63,.89,1.20,1.54,1.93,2.14,2.44,2.70,3.48,4.07
+  ];
+  const poseidonVectorFrames=[],poseidonCachedFrames=[];
+  let poseidonTrace=null,poseidonAssetReady=false,poseidonAssetError=null;
+  const POSEIDON_CACHE_PX=480;
+  const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false};
+  async function prepareTracedPoseidon() {
+    try {
+      if(!window.WIZARDRY_POSEIDON_TRACE_COMPRESSED)
+        throw new Error("Poseidon trace data missing");
+      if(typeof DecompressionStream!=="function")
+        throw new Error("Browser has no deflate decoder");
+      const compressed=window.WIZARDRY_POSEIDON_TRACE_COMPRESSED;
+      const compressedBytes=Uint8Array.from(atob(compressed),
+        char=>char.charCodeAt(0));
+      const stream=new Blob([compressedBytes]).stream().pipeThrough(
+        new DecompressionStream("deflate"));
+      const textData=await new Response(stream).text();
+      const asset=JSON.parse(textData);
+      if(asset.cell!==96||!Array.isArray(asset.frames)||
+         asset.frames.length!==12)
+         throw new Error("Poseidon vector frames are invalid");
+      poseidonTrace=asset;
+      for(const layers of asset.frames){
+        poseidonVectorFrames.push(layers.map(([color,path])=>
+          [color,new Path2D(path)]));
+      }
+      // Each frame is cached from the VECTOR source at 480px, never enlarged
+      // from a 96px bitmap. Direct paths remain as a no-cache fallback.
+      for(const layers of poseidonVectorFrames){
+        const frame=document.createElement("canvas");
+        frame.width=POSEIDON_CACHE_PX;
+        frame.height=POSEIDON_CACHE_PX;
+        const context=frame.getContext("2d",{alpha:true});
+        if(!context)break;
+        context.setTransform(POSEIDON_CACHE_PX/asset.cell,0,0,
+          POSEIDON_CACHE_PX/asset.cell,0,0);
+        for(const [color,path] of layers){
+          context.fillStyle=color;context.fill(path,"evenodd");
+        }
+        poseidonCachedFrames.push(frame);
+      }
+      poseidonDiagnostics.frames=poseidonVectorFrames.length;
+      poseidonDiagnostics.contours=poseidonVectorFrames.reduce(
+        (sum,x)=>sum+x.length,0);
+      poseidonDiagnostics.cachedFrames=poseidonCachedFrames.length;
+      poseidonAssetReady=true;poseidonDiagnostics.ready=true;
+      window.WIZARDRY_POSEIDON_RENDER_DIAGNOSTICS=poseidonDiagnostics;
+      const portrait=document.getElementById("poseidonCardPortrait");
+      if(portrait){
+        const artwork=asset.frames[2].map(([color,path])=>
+          '<path d="'+path+'" fill="'+color+'" fill-rule="evenodd"/>').join("");
+        portrait.innerHTML='<svg class="poseidon-vector-portrait" '+
+          'viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">'+
+          artwork+'</svg>';
+        portrait.parentElement.classList.add("has-poseidon-vector");
+      }
+      refreshUI();
+    } catch(error) {
+      poseidonAssetError=String(error);
+      console.warn("Poseidon traced art not loaded:",error);
+      // Keep the older Canvas figure as fallback rather than lose gameplay.
+      poseidonAssetReady=false;
+      refreshUI();
+    }
+  }
+  function poseidonFrameIndex(elapsed) {
+    let i=0;
+    while(i<POSEIDON_FRAME_TIMES.length-1 &&
+          elapsed>=POSEIDON_FRAME_TIMES[i+1])i++;
+    return i;
+  }
+  function drawTracedPoseidon(elapsed){
+    const i=poseidonFrameIndex(elapsed);
+    const paths=poseidonVectorFrames[i];
+    if(!paths)return;
+    const size=376,dx=505-size/2,dy=411-size*.91;
+    g.save();
+    g.beginPath();g.rect(296,-8,420,420);g.clip();
+    const opacity=ease(phase(elapsed,0,.18))*
+      (1-ease(phase(elapsed,SPELL.end-.22,SPELL.end)));
+    g.globalAlpha*=opacity;
+    if(poseidonCachedFrames.length===12) {
+      g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+      g.drawImage(poseidonCachedFrames[i],dx,dy,size,size);
+    }else{
+      g.translate(dx,dy);g.scale(size/poseidonTrace.cell,
+                                size/poseidonTrace.cell);
+      for(const [color,path] of paths){
+        g.fillStyle=color;g.fill(path,"evenodd");
+      }
+    }
+    g.restore();
+  }
   function drawSummon(t,elapsed) {
+    if(poseidonAssetReady){
+      drawTracedPoseidon(elapsed);
+      return;
+    }
+    // Only for browsers unable to decode the compressed vector asset.
     const opening=ease(phase(elapsed,.04,SPELL.riseStart));
     const rising=out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
     const sinking=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
     const rise=rising*(1-sinking);
-    // The summoning ring dims once the sea is formed; it is not a bright
-    // outline around the foot of a separate water tower.
-    const portalPower=opening*(1-sinking)*(.24+.76*(1-rising))+sinking*.14;
-    drawWhirlpool(t,portalPower);
+    drawWhirlpool(t,opening*(1-sinking));
     if(rise>.01) {
       const torso=throwPose(elapsed,t);
       drawWave(t,rise,torso.bodyY);
       drawPoseidon(t,rise,elapsed,elapsed>=SPELL.launch,clamp((1-sinking)*3));
     }
-    if(opening>.3&&elapsed<1.1)glow(505,405,90*opening,"#6df5fa2d");
   }
 
   function drawProjectile(elapsed,t) {
     if(elapsed<SPELL.launch||elapsed>=SPELL.hit)return;
-    const p=phase(elapsed,SPELL.launch,SPELL.hit);
-    // Flight starts at the exact tip location of the trident Poseidon released.
-    // The hand/weapon hand-off is seamless, with no snapped position or rotation.
-    const source=throwPose(SPELL.launch,t-(elapsed-SPELL.launch));
-    const start=tridentTip(source.worldHand,source.worldAngle,106);
-    const target=[785,290];
-    const head=[mix(start[0],target[0],p),mix(start[1],target[1],p)-Math.sin(Math.PI*p)*12];
-    const previousP=Math.max(0,p-.16);
-    const previous=[mix(start[0],target[0],previousP),mix(start[1],target[1],previousP)-Math.sin(Math.PI*previousP)*12];
-    const angle=Math.atan2(target[0]-start[0],start[1]-target[1]);
-    const length=106,reach=length*1.05;
-    const cx=head[0]-Math.sin(angle)*reach,cy=head[1]+Math.cos(angle)*reach;
+    const progress=phase(elapsed,SPELL.launch,SPELL.hit);
+    // Tip leaves Poseidon's raised trident in the approved release pose.
+    const tipStart=[629,205],tipEnd=[784,290];
+    const tipX=mix(tipStart[0],tipEnd[0],progress);
+    const tipY=mix(tipStart[1],tipEnd[1],progress)-
+      16*Math.sin(Math.PI*progress);
+    const earlier=Math.max(0,progress-.19);
+    const behindX=mix(tipStart[0],tipEnd[0],earlier);
+    const behindY=mix(tipStart[1],tipEnd[1],earlier)-
+      16*Math.sin(Math.PI*earlier);
+    const angle=Math.atan2(tipEnd[0]-tipStart[0],
+      tipStart[1]-tipEnd[1]);
+    // drawTrident() extends 1.05× length from its origin to its tip.
+    const length=105,reach=length*1.05;
+    const cx=tipX-Math.sin(angle)*reach;
+    const cy=tipY+Math.cos(angle)*reach;
     g.save();g.globalCompositeOperation="lighter";
-    const tailX=head[0]-(head[0]-previous[0])*1.5,tailY=head[1]-(head[1]-previous[1])*1.5;
-    line(tailX,tailY,head[0],head[1],"#0ab7ec",24);
-    line(tailX,tailY,head[0],head[1],"#d4ffff",5);
-    glow(head[0],head[1],32,"#bbffff83");
-    g.restore();
+    line(behindX,behindY,tipX,tipY,"#0cbee8",20);
+    line(behindX,behindY,tipX,tipY,"#dcffff",5);
+    glow(tipX,tipY,34,"#b3fdff70");g.restore();
     drawTrident(cx,cy,angle,length);
   }
 
@@ -1120,7 +1225,7 @@
     UI.state.textContent="SUMMONING";
     UI.status.textContent=spell.start;
     UI.caption.textContent=spell.caption;
-    UI.hint.textContent=spell.hint;
+    UI.hint.textContent="Spell in progress...";
     playEffect(selectedSpell==="stone"?"earthCast":"cast");
     refreshUI();
   }
@@ -1222,7 +1327,8 @@
     targetPulse=Math.max(0,targetPulse-dt*1.4);
     if(!cast){updateParticles(dt);return;}
     const type=cast.type,earth=type==="stone",timing=earth?EARTH:SPELL;
-    const spellDt=dt*speed*DEFAULT_SPELL_RATE;
+    const spellDt=dt*speed*DEFAULT_SPELL_RATE*
+      (earth?EARTH_RATE_MULTIPLIER:1);
     cast.elapsed+=spellDt;
     const stage=stageAt(cast.elapsed,type);
     if(stage!==cast.stage){cast.stage=stage;setStage(stage,type);}
@@ -1286,6 +1392,7 @@
   canvas.addEventListener("pointerdown",selectEnemy);
   // CSS handles both orientations; no resize observer mutates the Canvas.
   resize();reset();initSceneCache();prepareTracedGolem();
+  prepareTracedPoseidon();
   let lastPaintAt=-1000;
   function frame(now) {
     // High-refresh mobiles can overheat drawing at 120 Hz; 60fps keeps

@@ -425,37 +425,50 @@
       pathPoly(ctx,[[x-size*.5,y],[x-size*.8,y-size],[x,y-size*2],[x+size*.5,y-size*.6],[x+size*.65,y]],col+"55");
       pathPoly(ctx,[[x,y],[x,y-size*2],[x+size*.6,y-size],[x+size*.65,y]],col+"78");
     }
-    // Raised elliptical stone platform, angled like a 2.5D circle.
-    ellipse(ctx,500,436,494,175,"#040e17");
-    const rim=ctx.createLinearGradient(0,272,0,580);
-    rim.addColorStop(0,"#526c73");rim.addColorStop(.52,"#263a43");rim.addColorStop(1,"#101e2d");
-    ellipse(ctx,500,410,489,179,rim,"#c4a76a",6);
-    ellipse(ctx,500,400,464,161,"#152a39","#53777d",4);
+    // 3/4 SIDE-ANGLE camera: a shallow, diagonally sloped battle ring.
+    // Characters stand on LEFT/RIGHT arcs, not front/back enemy rows.
+    // A visible vertical edge below the fighting surface conveys height.
+    ctx.save();ctx.translate(500,412);ctx.rotate(-.115);
+    ellipse(ctx,0,42,481,143,"#03111b");
+    const edge=ctx.createLinearGradient(0,118,0,182);
+    edge.addColorStop(0,"#5c6972");edge.addColorStop(.4,"#263f4b");
+    edge.addColorStop(1,"#102432");
+    ellipse(ctx,0,31,481,147,edge,"#a5946e",4);
+    ellipse(ctx,0,0,478,140,"#284652","#d3bd89",5);
+    const surface=ctx.createLinearGradient(0,-145,0,148);
+    surface.addColorStop(0,"#294a55");surface.addColorStop(.45,"#173847");
+    surface.addColorStop(1,"#102b3c");
+    ellipse(ctx,0,-4,462,129,surface,"#5b7d7f",3);
+    // Side perspective grid follows the shallow ellipse rather than a
+    // centered overhead disc. Low-poly paving wedges fan from the seal.
     for(let i=0;i<24;i++){
       const a=i*Math.PI*2/24,b=(i+1)*Math.PI*2/24;
-      pathPoly(ctx,[[500,398],[500+461*Math.cos(a),400+157*Math.sin(a)],
-        [500+461*Math.cos(b),400+157*Math.sin(b)]],
-      i%2===0?"#3f586124":"#94a5a40d");
+      pathPoly(ctx,[[0,-4],[456*Math.cos(a),-4+127*Math.sin(a)],
+        [456*Math.cos(b),-4+127*Math.sin(b)]],
+        i%2===0?"#78919b10":"#0a1d2b12");
     }
-    ellipse(ctx,500,402,420,133,null,"#a28c63",3);
-    ellipse(ctx,500,404,301,91,null,"#b9a57369",3);
-    ellipse(ctx,500,407,143,54,null,"#d6c18e50",2);
+    ellipse(ctx,0,-4,417,113,null,"#baa7767a",3);
+    ellipse(ctx,0,-4,302,80,null,"#c4b58d55",2.5);
+    ellipse(ctx,0,-4,162,41,"#132d3b46","#d4bf7b70",2.5);
     for(let i=0;i<8;i++){
-      const a=Math.PI*2*i/8;
-      pathPoly(ctx,[[500+85*Math.cos(a),407+35*Math.sin(a)],
-        [500+155*Math.cos(a+.20),405+65*Math.sin(a+.20)],
-        [500+85*Math.cos(a+.40),407+35*Math.sin(a+.40)]],
-        i%2?"#b59c4a25":"#c6c69b22");
+      const a=i*Math.PI*2/8;
+      pathPoly(ctx,[[86*Math.cos(a),-4+25*Math.sin(a)],
+        [150*Math.cos(a+.15),-4+39*Math.sin(a+.15)],
+        [87*Math.cos(a+.35),-4+25*Math.sin(a+.35)]],
+        i%2?"#bca05d23":"#c9c9a01c");
     }
-    // Central compass seal.
-    pathPoly(ctx,[[500,374],[515,399],[500,439],[484,407]],"#cbb16b7a");
-    line(ctx,500,360,500,450,"#c5a76553",2);
-    // Shadowed front steps.
-    pathPoly(ctx,[[0,536],[196,559],[478,544],[763,561],[1000,529],[1000,620],[0,620]],"#122837");
-    pathPoly(ctx,[[0,539],[195,561],[477,550],[765,563],[1000,534],[1000,568],[760,589],[481,580],[192,593],[0,568]],"#233f4b");
-    for(let i=0;i<14;i++){
-      let x=i*82;
-      line(ctx,x,548+(i%2)*7,x+38,570+(i%3)*7,"#56707a49",2);
+    pathPoly(ctx,[[0,-29],[15,-4],[0,26],[-16,-4]],"#d6bd7d67");
+    line(ctx,0,-36,0,33,"#d0b67a4f",2);
+    ctx.restore();
+    // Stone foreground drops BELOW the arena's near edge. Never overdraw
+    // combatants or treat their lower-left arc as a back-facing camera.
+    pathPoly(ctx,[[0,565],[177,572],[492,566],[785,570],[1000,550],
+      [1000,620],[0,620]],"#102733");
+    pathPoly(ctx,[[0,568],[177,576],[492,570],[785,574],[1000,553],
+      [1000,577],[782,591],[490,585],[170,598],[0,590]],"#2a4450");
+    for(let i=0;i<13;i++){
+      const x=i*89;
+      line(ctx,x,573+(i%2)*5,x+32,583+(i%3)*5,"#59707e53",1.8);
     }
     // Colosseum edge torches.
     for(const x of [23,978]){

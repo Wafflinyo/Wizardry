@@ -620,9 +620,10 @@
   const POSEIDON_APPROVED_DRAW_H=381.33;
   const POSEIDON_APPROVED_DRAW_X=297;
   const POSEIDON_APPROVED_DRAW_Y=47;
-  const poseidonDiagnostics={source:"approved original five bottom-row poses",
-    frames:5,ready:false,frameWidth:360,frameHeight:330};
+  const poseidonDiagnostics={source:"five exact approved poses plus true generated in-betweens",
+    keyframes:5,frames:29,ready:false,frameWidth:360,frameHeight:330};
   let poseidonApprovedImage=null,poseidonAssetReady=false,poseidonAssetError=null;
+  let poseidonFrameSequence=null;
   function prepareApprovedPoseidon() {
     const manifest=window.WIZARDRY_POSEIDON_APPROVED;
     if(!manifest||!manifest.src){
@@ -637,8 +638,22 @@
         poseidonAssetError="Incorrect Poseidon sprite atlas dimensions.";
         poseidonAssetReady=false;
       }else{
+        // Prebuild 29 separate Canvas frames from the user's five approved
+        // originals: six rise, twelve real in-betweens, and seven sink.
+        // None of the intermediate images crossfade two whole figures, so
+        // the trident and arms never appear doubled.
+        if(typeof window.WIZARDRY_POSEIDON_BUILD_FRAMES==="function") {
+          try {
+            poseidonFrameSequence=window.WIZARDRY_POSEIDON_BUILD_FRAMES(image);
+          } catch(error) {
+            poseidonFrameSequence=null;
+            console.warn("Poseidon intermediate frames fallback:",error);
+          }
+        }
         poseidonAssetReady=true;
         poseidonDiagnostics.ready=true;
+        poseidonDiagnostics.frames=poseidonFrameSequence?.frames?.length||5;
+        poseidonDiagnostics.generatedFrames=poseidonFrameSequence?.frames?.length||0;
         poseidonDiagnostics.size=[image.naturalWidth,image.naturalHeight];
         window.WIZARDRY_POSEIDON_RENDER_DIAGNOSTICS=poseidonDiagnostics;
         const portrait=document.getElementById("poseidonCardPortrait");
@@ -662,43 +677,81 @@
     image.src=manifest.src;
   }
   function poseidonApprovedPose(elapsed){
-    if(elapsed<SPELL.windStart)return 0; // real idle, not another generated pose
-    if(elapsed<SPELL.windStart+.43)return 1; // Windup A
-    if(elapsed<SPELL.launch)return 2; // Windup B: last trident-in-hand pose
-    if(elapsed<SPELL.hit)return 3; // Throw: right hand releases weapon
-    return 4; // Empty-hand hold, then sink
+    if(poseidonFrameSequence?.frames?.length!==29){
+      // Legacy five-frame fallback if the browser cannot prebuild the cache.
+      if(elapsed<SPELL.windStart)return 0;
+      if(elapsed<SPELL.windStart+.43)return 1;
+      if(elapsed<SPELL.launch)return 2;
+      if(elapsed<SPELL.hit)return 3;
+      return 4;
+    }
+    // 29 individual, cohesive image frames: no vertical animation of a
+    // still sprite. The five original key poses remain intact at 6,10,14,
+    // 17 and 21; all other frames are real generated Canvas images.
+    if(elapsed<SPELL.riseEnd){
+      const p=phase(elapsed,SPELL.riseStart,SPELL.riseEnd);
+      return Math.min(5,Math.floor(p*6));
+    }
+    if(elapsed<SPELL.windStart)return 6;
+    if(elapsed<SPELL.windStart+.43){
+      const p=phase(elapsed,SPELL.windStart,SPELL.windStart+.43);
+      return 7+Math.min(3,Math.floor(p*4));
+    }
+    if(elapsed<SPELL.launch-.15){
+      const p=phase(elapsed,SPELL.windStart+.43,SPELL.launch-.15);
+      return 11+Math.min(3,Math.floor(p*4));
+    }
+    if(elapsed<SPELL.launch){
+      const p=phase(elapsed,SPELL.launch-.15,SPELL.launch);
+      return 15+Math.min(1,Math.floor(p*2));
+    }
+    if(elapsed<SPELL.hit){
+      const p=phase(elapsed,SPELL.launch,SPELL.hit);
+      return 17+Math.min(3,Math.floor(p*4));
+    }
+    if(elapsed<SPELL.sinkStart)return 21;
+    if(elapsed<SPELL.sinkEnd){
+      const p=phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd);
+      return 22+Math.min(6,Math.floor(p*7));
+    }
+    return 28;
   }
   function drawApprovedPose(index,opacity=1,shiftY=0) {
     if(!poseidonAssetReady||!poseidonApprovedImage)return;
     g.save();
     g.globalAlpha*=Math.max(0,Math.min(1,opacity));
-    g.drawImage(poseidonApprovedImage,
-      index*POSEIDON_APPROVED_FRAME_W,0,
-      POSEIDON_APPROVED_FRAME_W,POSEIDON_APPROVED_FRAME_H,
-      POSEIDON_APPROVED_DRAW_X,POSEIDON_APPROVED_DRAW_Y+shiftY,
-      POSEIDON_APPROVED_DRAW_W,POSEIDON_APPROVED_DRAW_H);
+    if(poseidonFrameSequence?.frames?.length===29){
+      // Frames have their own water entry and exit artwork, not a shifting
+      // full-body image. All sprites maintain exactly the same anchor.
+      g.drawImage(poseidonFrameSequence.frames[index],
+        POSEIDON_APPROVED_DRAW_X,POSEIDON_APPROVED_DRAW_Y,
+        POSEIDON_APPROVED_DRAW_W,POSEIDON_APPROVED_DRAW_H);
+    } else {
+      g.drawImage(poseidonApprovedImage,
+        index*POSEIDON_APPROVED_FRAME_W,0,
+        POSEIDON_APPROVED_FRAME_W,POSEIDON_APPROVED_FRAME_H,
+        POSEIDON_APPROVED_DRAW_X,POSEIDON_APPROVED_DRAW_Y+shiftY,
+        POSEIDON_APPROVED_DRAW_W,POSEIDON_APPROVED_DRAW_H);
+    }
     g.restore();
   }
   function drawSummon(t,elapsed) {
     if(!poseidonAssetReady)return;
-    const rise=ease(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
-    const sink=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
-    // The ground line is fixed, but the opaque character moves through it.
-    // This reveal/retreat animation uses the real approved IDLE/HOLD poses.
-    const shift=elapsed<SPELL.riseEnd?(1-rise)*245:sink*245;
-    const splashPower=elapsed<SPELL.riseEnd?(1-rise*.30):
-      elapsed>=SPELL.sinkStart?(1-sink*.50):.13;
+    const fullSequence=poseidonFrameSequence?.frames?.length===29;
     g.save();
     g.beginPath();g.rect(280,-6,460,417);g.clip();
-    drawApprovedPose(poseidonApprovedPose(elapsed),1,shift);
-    g.restore();
-    // One restrained water-ring effect unifies his entrance and exit.
-    if((elapsed<SPELL.riseEnd||elapsed>=SPELL.sinkStart)&&splashPower>.02){
-      g.save();g.globalAlpha=Math.max(.08,splashPower*.65);
-      oval(505,407,130+Math.sin(t*8)*4,18,null,"#76e4f0",2.1);
-      oval(505,409,91+Math.sin(t*7)*3,10,null,"#b4ffff",1.5);
-      g.restore();
+    if(fullSequence) {
+      drawApprovedPose(poseidonApprovedPose(elapsed));
+    } else {
+      // Degraded fallback remains playable if the 29-frame rasterizer fails.
+      const rise=ease(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
+      const sink=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
+      const shift=elapsed<SPELL.riseEnd?(1-rise)*245:sink*245;
+      drawApprovedPose(poseidonApprovedPose(elapsed),1,shift);
     }
+    g.restore();
+    // The generated first/last frames already contain natural water
+    // splashes. Do not overlay a second artificial ring during entry/exit.
   }
 
   function drawProjectile(elapsed,t) {
@@ -709,7 +762,7 @@
     // accelerates toward the Sentinel. No hand swap or pre-release flight.
     // Source: right-hand grip of the final 24° wound-up pose at (x≈568,y≈217).
     // The trident departs the SAME hand, not the old (644,211) teleport.
-    const start=[468,100],target=[785,290];
+    const start=[453,75],target=[785,290];
     const flight=ease(phase(elapsed,SPELL.launch+.025,SPELL.hit));
     const x=mix(start[0],target[0],flight);
     const y=mix(start[1],target[1],flight)-21*Math.sin(Math.PI*flight);

@@ -1,14 +1,14 @@
-## NEW — Play 2.5D Wizardry with one wizard and two taps (v0.27)
+## NEW — Side HP plates, Confirm Target and summon layering (v0.28)
 
-**[Open the 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.27.0)**
+**[Play the updated 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.28.0)**
 
-In Story mode, **you control only Tidecaller**. Your three teammates and all four enemies are CPU-controlled (at 4v4). The other wizards can become other people later when online co-op is implemented.
+Story mode remains **one human-controlled wizard and CPU teammates/enemies**. Both approved cards remain visible beneath the battlefield, with no roster or scrolling required.
 
-**No scrolling to choose a card or target:** Both spell cards sit directly below the arena in a compact portrait/landscape layout. Select **Poseidon's Wrath** or **Stone Golem**, then **tap any living enemy on the field**. This immediately locks your action and resolves the full round, with every other fighter choosing their own spell and target. No Queue, Auto-fill, Resolve, or extra target dropdown is required. The next round returns to fresh card and target selection.
+The selection sequence is now: **Tap Poseidon's Wrath or Stone Golem → tap an enemy → see a downward gold arrow above its head → press Confirm Target**. You can switch the selected enemy before confirming. No mana is spent or combat started until confirmation, after which teammates and enemies select their own actions and the round resolves. New rounds require a fresh player choice.
 
-Both spell runes draw themselves. Poseidon has **70% accuracy / 1,200 damage**; Stone Golem has **85% accuracy / 900 damage**. Both original 16-frame assets remain unchanged. On a successful cast the summon attacks and vanishes; on a miss it fizzles and deals no damage.
+To reduce overlapping characters, small name/HP plates now sit **left of each allied wizard and right of each enemy**. The animated Poseidon, Stone Golem, projectiles, seismic fissures and spell effects are **rendered behind all standing fighter models**, while nameplates, the target arrow and damage feedback remain readable in front.
 
-The battle circle remains a level three-quarter side view. In local hot-seat PvP, each of two local players controls one wizard; remaining slots are CPU. **Online friends, quests, ranked matches and persistent accounts are future work**, not live functionality. [Read the arena test details](ARENA_TEST.md).
+No approved art, damage, or accuracy values were changed: **Poseidon 70% accuracy / 1,200 damage; Stone Golem 85% accuracy / 900 damage**. Online friends and ranked matches remain future work. Details: [ARENA_TEST.md](ARENA_TEST.md).
 
 ---
 

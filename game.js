@@ -1063,13 +1063,13 @@
     UI.spellCost.textContent=spell.cost+" Mana";
     UI.spellDamage.textContent=spell.damage.toLocaleString()+" HP";
     UI.spellTarget.textContent="Single enemy";
-    UI.cast.disabled=!!cast||defeated||mana<spell.cost||(false);
-    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":false?(golemSpriteError?"ARTWORK UNAVAILABLE":"LOADING GOLEM..."):"CAST "+spell.name.toUpperCase();
+    UI.cast.disabled=!!cast||defeated||mana<spell.cost;
+    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {
     if(cast||defeated||!SPELLS[type])return;
     selectedSpell=type;
-    UI.status.textContent=type==="stone"&&!golemSpriteReady?"Loading illustrated Stone Golem...":SPELLS[type].name+" selected.";
+    UI.status.textContent=SPELLS[type].name+" selected.";
     UI.hint.textContent=type==="stone"?"Tap Cast to summon an Earth golem.":"Tap Cast to summon Poseidon.";
     UI.caption.textContent=type==="stone"?"EARTH SCHOOL · STONE GOLEM":"WATER SCHOOL · POSEIDON'S WRATH";
     refreshUI();

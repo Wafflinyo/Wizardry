@@ -1083,17 +1083,10 @@
     updateParticles(spellDt);
   }
 
-  // Hard viewport lock: iOS Safari changes visual viewport dimensions when
-  // its toolbars expand/collapse. This game keeps a single CSS layout height
-  // and a permanent 1000x560 Canvas drawing buffer for the entire session.
+  // Canvas drawing coordinates always remain 1000×560. The arena's CSS
+  // aspect ratio controls display size; browser chrome/orientation changes
+  // never rewrite this backing buffer or stretch its contents.
   let battleCanvasInitialized=false;
-  function lockBattleViewport() {
-    const root=document.documentElement;
-    const viewport=Math.max(320,Math.round(window.innerHeight||
-      root.clientHeight||720));
-    if(root&&root.style&&root.style.setProperty)
-      root.style.setProperty("--wizardry-fixed-height",viewport+"px");
-  }
   function resize() {
     if(battleCanvasInitialized)return;
     canvas.width=W;canvas.height=H;
@@ -1125,9 +1118,7 @@
     if(sound)tone(660,.16,"sine",.03,880);
   });
   canvas.addEventListener("pointerdown",selectEnemy);
-  // Deliberately no window.resize or ResizeObserver writing to Canvas.
-  // For landscape changes use a fresh page load; toolbar motion stays stable.
-  lockBattleViewport();
+  // CSS handles both orientations; no resize observer mutates the Canvas.
   resize();reset();initSceneCache();prepareTracedGolem();
   let lastPaintAt=-1000;
   function frame(now) {

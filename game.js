@@ -5,7 +5,7 @@
 (() => {
   "use strict";
   const canvas = document.getElementById("battlefield");
-  const g = canvas.getContext("2d", { alpha: false });
+  let g = canvas.getContext("2d", { alpha: false });
   const UI = {
     cast: document.getElementById("castButton"),
     castText: document.getElementById("castButtonText"),
@@ -243,6 +243,9 @@
         const a=j*Math.PI/3;line(x+72*Math.cos(a),401+20*Math.sin(a),x+86*Math.cos(a),401+24*Math.sin(a),"#ddc78c69",2);
       }
     }
+  }
+
+  function drawSummonGlyph(t) {
     // Spinning summoning glyph only while active
     if(cast && cast.elapsed < (cast.type==="stone"?EARTH.end:SPELL.end)){
       const duration=cast.type==="stone"?EARTH.end:SPELL.end;
@@ -935,30 +938,57 @@
     g.translate(Math.sin(elapsed*98)*strength*.57,Math.sin(elapsed*112)*strength*.32);
   }
 
-  function render(t){
-    const scaleX=canvas.width/W,scaleY=canvas.height/H;
-    g.setTransform(scaleX,0,0,scaleY,0,0);
+  // Background and foreground are rasterized ONCE at logical resolution.
+  // Previously 95 stars, mountains, 32 arena triangles, fog gradients and
+  // shadow-blurred scenery were rebuilt every animation frame on mobile.
+  let sceneCache=null,foregroundCache=null;
+  function cachedLayer(draw) {
+    const c=document.createElement("canvas");
+    c.width=W;c.height=H;
+    const ctx=c.getContext("2d");
+    if(!ctx)return null;
+    const current=g;
+    try {
+      g=ctx;g.setTransform(1,0,0,1,0,0);
+      draw();
+    } finally {g=current;}
+    return c;
+  }
+  function initSceneCache() {
+    try {
+      sceneCache=cachedLayer(()=>{drawSky(0);drawArena(0);});
+      foregroundCache=cachedLayer(()=>drawForeground(0));
+    } catch(error) {
+      // Older browser fallback still renders a complete interactive arena.
+      sceneCache=null;foregroundCache=null;
+    }
+  }
+  function render(t) {
+    const sx=canvas.width/W,sy=canvas.height/H;
+    g.setTransform(sx,0,0,sy,0,0);
     g.save();
     if(cast)applyShake(cast.elapsed);
-    drawSky(t);
-    drawArena(t);
+    if(sceneCache)g.drawImage(sceneCache,0,0,W,H);
+    else {drawSky(0);drawArena(0);}
+    drawSummonGlyph(t);
     drawWizard(t);
-    if(cast) {
+    if(cast){
       if(cast.type==="stone")drawEarthSummon(cast.elapsed,t);
       else drawSummon(t,cast.elapsed);
     }
     drawSentinel(t);
-    if(cast) {
-      if(cast.type==="stone") {
+    if(cast){
+      if(cast.type==="stone"){
         drawEarthProjectile(cast.elapsed,t);
         drawEarthImpact(cast.elapsed);
-      } else {
+      }else{
         drawProjectile(cast.elapsed,t);
         drawImpact(cast.elapsed);
       }
     }
     drawParticles();
-    drawForeground(t);
+    if(foregroundCache)g.drawImage(foregroundCache,0,0,W,H);
+    else drawForeground(0);
     g.restore();
   }
 
@@ -1200,7 +1230,7 @@
   function resize(){
     const rect=canvas.getBoundingClientRect();
     // Avoid expensive 4x pixel redraws on high-DPI phones.
-    const dpr=Math.min(window.devicePixelRatio||1,rect.width<720?1.5:2);
+    const dpr=Math.min(window.devicePixelRatio||1,rect.width<720?1.25:1.75);
     const width=Math.max(1,Math.round(rect.width*dpr));
     const height=Math.max(1,Math.round(rect.height*dpr));
     // Reassigning canvas.width/height clears its drawing surface and can
@@ -1237,13 +1267,20 @@
   window.addEventListener("resize",resize);
   // Observe the stable arena parent, never the canvas we resize inside it.
   if(window.ResizeObserver)new ResizeObserver(resize).observe(document.getElementById("arena"));
-  resize();reset();
-  function frame(now){
-    // Render a fresh interpolated pose every display refresh, including 120 Hz.
-    // Use elapsed time, so additional in-between frames do not slow the spell.
-    const dt=Math.min(Math.max(0,(now-previousTime)/1000),.04);
+  resize();reset();initSceneCache();
+  let lastPaintAt=-1000;
+  function frame(now) {
+    // High-refresh mobiles can overheat drawing at 120 Hz; 60fps keeps
+    // smooth pose interpolation while cutting GPU and geometry work in half.
+    if(now-lastPaintAt<13.3){
+      requestAnimationFrame(frame);
+      return;
+    }
+    lastPaintAt=now;
+    const dt=Math.min(Math.max(0,(now-previousTime)/1000),.055);
     previousTime=now;totalTime+=dt;
-    update(dt);render(totalTime);requestAnimationFrame(frame);
+    update(dt);render(totalTime);
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 })();

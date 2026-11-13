@@ -127,7 +127,7 @@ body{height:100dvh;overflow:hidden}
  .battle .eyebrow{font-size:8px}
  .phase{gap:4px;font-size:9px}
  .phase strong{font-size:8px;padding:4px 6px}
- .arena{max-width:min(100%,calc((100dvh - 330px)*1.6129))}
+ .arena{max-width:min(100%,calc((100dvh - 395px)*1.6129))}
  .turnbar{margin-top:4px;min-height:30px;font-size:10px}
  .hand{padding:6px 8px 5px}
  .hand h2{font-size:14px}
@@ -150,7 +150,7 @@ body{height:100dvh;overflow:hidden}
  .toolbar{padding:2px 5px}
  .chip{font-size:9px;padding:4px 6px}
  .battle-top{min-height:24px}
- .arena{max-width:min(100%,calc((100dvh - 302px)*1.6129))}
+ .arena{max-width:min(100%,calc((100dvh - 365px)*1.6129))}
  .turnbar{min-height:25px;padding:4px 7px}
  .hand{padding:5px 7px}
  .spell{height:99px;min-height:92px}
@@ -200,3 +200,6 @@ body{height:100dvh;overflow:hidden}
  .hand-assist{min-height:17px}
  .customize-menu summary{padding:2px 0}
 }
+
+/* Keep the battlefield\u2019s 1000:620 proportions when the viewport is shorter. */
+.arena canvas{object-fit:fill}

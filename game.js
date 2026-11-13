@@ -623,6 +623,9 @@
     SPELL.launch,2.48,2.80,3.24,SPELL.sinkStart,4.00
   ];
   const POSEIDON_SHEET_W=1254;
+  // Original cells were cropped with round-to-even boundaries.
+  const POSEIDON_EDGES=[0,314,627,940,1254];
+  const POSEIDON_ROW_HEIGHTS=[314,313,313,314];
   const POSEIDON_DRAW_SIZE=398;
   const POSEIDON_DRAW_X=303,POSEIDON_DRAW_Y=34;
   const poseidonRows=[];
@@ -650,7 +653,7 @@
       const im=new Image();poseidonRows[i]=im;
       im.onload=()=>{
         if(im.naturalWidth!==POSEIDON_SHEET_W||
-           im.naturalHeight!==(Math.round((i+1)*1254/4)-Math.round(i*1254/4))){
+           im.naturalHeight!==POSEIDON_ROW_HEIGHTS[i]){
           failed=true;poseidonAssetError="Approved Poseidon row size mismatch.";
         } else ready++;
         if(failed){poseidonAssetReady=false;refreshUI();return;}
@@ -667,7 +670,7 @@
             const pc=picture.getContext("2d");
             if(pc){
               // The approved standing frame, fourth cell of the second row.
-              const x0=Math.round(3*POSEIDON_SHEET_W/4);
+              const x0=POSEIDON_EDGES[3];
               pc.drawImage(poseidonRows[1],x0,0,POSEIDON_SHEET_W-x0,
                 poseidonRows[1].naturalHeight,0,0,314,314);
             }
@@ -690,8 +693,8 @@
     const row=Math.floor(index/4),col=index%4;
     const image=poseidonRows[row];
     if(!image)return;
-    const srcX=Math.round(col*POSEIDON_SHEET_W/4);
-    const srcX2=Math.round((col+1)*POSEIDON_SHEET_W/4);
+    const srcX=POSEIDON_EDGES[col];
+    const srcX2=POSEIDON_EDGES[col+1];
     g.save();
     g.imageSmoothingEnabled=true;
     g.imageSmoothingQuality="high";

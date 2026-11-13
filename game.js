@@ -53,20 +53,22 @@
   // Illustrated frame-by-frame Earth summon: complete rise first,
   // clasp + raise + slam second, traveling spikes third, retreat last.
   const EARTH = Object.freeze({
-    emergeStart:.10,emergeEnd:1.06,
-    claspStart:1.09,claspEnd:1.40,
-    liftStart:1.40,liftEnd:2.33,
-    holdStart:2.33,holdEnd:2.54,
-    slamStart:2.54,slamEnd:2.92,
-    spikesStart:2.92,spikesEnd:3.67,hit:3.67,
-    settleStart:4.02,crumbleStart:4.27,crumbleEnd:5.09,end:5.26
+    emergeStart:.07,emergeEnd:.78,
+    claspStart:.80,claspEnd:1.05,
+    liftStart:1.05,liftEnd:1.83,
+    holdStart:1.83,holdEnd:2.01,
+    slamStart:2.01,slamEnd:2.30,
+    spikesStart:2.30,spikesEnd:2.87,hit:2.87,
+    settleStart:3.12,recoveryStart:3.18,idleStart:3.32,
+    sinkStart:4.19,crumbleStart:4.19,crumbleEnd:4.84,end:4.92
   });
   const duration = SPELL.end;
   // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
-  const DEFAULT_SPELL_RATE = 1.5;
-  // Earth is intentionally a little slower: 3.16s versus Poseidon's 2.98s.
-  const EARTH_RATE_MULTIPLIER=1.11; // Earth 3.16s, Poseidon 2.98s.
+  // Faster cast playback; Poseidon's post-hit hold remains ~0.61s real,
+  // and Stone Golem still plays a little more slowly with its new idle.
+  const DEFAULT_SPELL_RATE = 1.7;
+  const EARTH_RATE_MULTIPLIER=1.04; // Poseidon ~2.63s; Golem ~2.78s.
   let health = MAX_HP, mana = 8, round = 1;
   let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
@@ -785,9 +787,9 @@
   // positions are preserved, including fist overlap, perspective and rubble.
   const golemTrace=window.WIZARDRY_GOLEM_TRACED;
   const GOLEM_FRAME_TIMES=[
-    EARTH.emergeStart,.48,.91,EARTH.claspStart,
-    1.72,2.12,EARTH.holdStart,2.77,
-    3.00,3.22,3.49,EARTH.crumbleStart
+    EARTH.emergeStart,.34,.69,EARTH.claspStart,
+    1.18,1.52,EARTH.holdStart,2.26,
+    2.42,2.60,2.79,EARTH.sinkStart
   ];
   // All 12 Golem poses are individually traced vector contours.
   // High-resolution color-layer frames are rasterized ONCE, then drawn with
@@ -803,8 +805,13 @@
   };
   function golemAnimationFrame(elapsed) {
     if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
+    // Frame 10 contains the advancing spikes. Finish and CLEAR them before
+    // returning to the real full-body standing idle (frame 2).
+    if(elapsed>=EARTH.sinkStart)return 2;
+    if(elapsed>=EARTH.idleStart)return 2; // Full upright hands-down idle.
+    if(elapsed>=EARTH.recoveryStart)return 3; // Brief recovery, no spikes.
     let i=0;
-    while(i<GOLEM_FRAME_TIMES.length-1&&elapsed>=GOLEM_FRAME_TIMES[i+1])i++;
+    while(i<10&&elapsed>=GOLEM_FRAME_TIMES[i+1])i++;
     return i;
   }
   function buildGolemCache() {
@@ -901,6 +908,10 @@
     if(index<0)return;
     if(!golemVectorPaths[index])return;
     const size=416,dx=306,dy=411-size*.975;
+    // Sink the STANDING idle model below the arena plane. The character
+    // exits smoothly rather than switching abruptly to the old sunk pose.
+    const retreat=ease(phase(elapsed,EARTH.sinkStart,EARTH.crumbleEnd));
+    const offset=retreat*390;
     g.save();
     g.beginPath();g.rect(280,-8,560,420);g.clip();
     const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
@@ -909,10 +920,10 @@
     if(golemRenderMode==="cached"&&golemCachedFrames[index]){
       g.imageSmoothingEnabled=true;
       g.imageSmoothingQuality="high";
-      g.drawImage(golemCachedFrames[index],dx,dy,size,size);
+      g.drawImage(golemCachedFrames[index],dx,dy+offset,size,size);
     }else{
       // Fallback uses the SAME original traced vector contours.
-      g.translate(dx,dy);
+      g.translate(dx,dy+offset);
       const scale=size/golemTrace.cell;
       g.scale(scale,scale);
       for(const [color,path] of golemVectorPaths[index]){
@@ -925,10 +936,10 @@
   function drawEarthImpact(elapsed) {
     // Small target-only hit confirmation. NO extra rising stones; the
     // traveling spikes are already illustrated in frames 8–10.
-    if(elapsed<EARTH.hit||elapsed>EARTH.hit+.75)return;
-    const t=phase(elapsed,EARTH.hit,EARTH.hit+.75);
+    if(elapsed<EARTH.hit||elapsed>EARTH.settleStart)return;
+    const t=phase(elapsed,EARTH.hit,EARTH.settleStart);
     g.save();
-    g.globalAlpha*=1-ease(phase(elapsed,EARTH.hit+.32,EARTH.hit+.75));
+    g.globalAlpha*=1-ease(phase(elapsed,EARTH.hit+.10,EARTH.settleStart));
     g.beginPath();g.ellipse(785,295,25+t*48,37+t*30,0,0,Math.PI*2);
     g.strokeStyle="#a4ecaa";g.lineWidth=3*(1-t)+.5;g.stroke();
     g.font="bold 51px Georgia,serif";g.textAlign="center";
@@ -1236,7 +1247,9 @@
       if(e<EARTH.spikesStart)return "slam";
       if(e<EARTH.hit)return "spikes";
       if(e<EARTH.settleStart)return "impact";
-      if(e<EARTH.crumbleStart)return "settle";
+      if(e<EARTH.recoveryStart)return "settle";
+      if(e<EARTH.idleStart)return "recovery";
+      if(e<EARTH.sinkStart)return "idle";
       if(e<EARTH.crumbleEnd)return "sink";
       return "complete";
     }
@@ -1260,7 +1273,9 @@
       slam:["GROUND SLAM","Both fists crash into the floor!"],
       spikes:["SPIKE SURGE","A trail of stone spikes races toward the Sentinel!"],
       impact:["EARTH IMPACT","Stone spikes strike for 900 Earth damage!"],
-      settle:["FISSURE SUBSIDES","The jagged spikes settle back into the arena."],
+      settle:["FISSURE SUBSIDES","The stone spikes recede and disappear."],
+      recovery:["RECOVERING","The golem brings its fists down."],
+      idle:["IDLE","Stone Golem stands still before unsummoning."],
       sink:["UNSUMMONING","The golem sinks beneath the ground."],
       complete:["EARTH SPELL COMPLETE","The ground grows still."]
     }:{

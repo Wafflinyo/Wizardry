@@ -1,57 +1,41 @@
-# Wizardry — Elemental Battle Prototype v0.18.0
+# Wizardry — Elemental Battle Prototype v0.19.0
 
-## v0.18 — Poseidon-only continuity and opacity repair
+Play: https://wafflinyo.github.io/Wizardry/?v=0.19.0
 
-- **The windup is visible again.** Instead of holding frame 4 throughout the cast, the game now plays three distinct right-handed windup poses (frames 4, 5 and 6). They are rebuilt once at startup from Poseidon's approved single-trident right-handed idle art: his upper body, right hand and the held trident lean progressively backward together while the ocean base stays anchored. The old erroneous double-trident windup frames are never rendered.
-- **The trident doesn't jump between hands.** It stays in Poseidon's screen-right hand up to the launch timestamp; then his illustrated hand is empty and the independent projectile begins at the final right-hand grip around battle coordinate (568, 217), rather than appearing at (644, 211).
-- **Opaque body/wave repair.** When the approved trace is cached, the game adds a continuous water-and-skin backing and scans the alpha channel to fill enclosed transparent holes and small open cracks in the body, beard, and ocean core. This runs once at startup, not every game frame; exterior background transparency is kept.
-- **Timing unchanged:** Poseidon takes about **2.63 seconds** at displayed 1×; impact deals 1,200 Water damage, followed by roughly 0.61 seconds before unsummoning. No extra on-screen stage-by-stage narration.
-- **Stone Golem is unchanged** in this release.
+## v0.19 — use the exact approved Poseidon artwork
 
-The runtime retains the approved traced vector look and Canvas 2D renderer. It does not depend on CSS character animation.
+The earlier Poseidon vector traces were rejected because they introduced broken body transparency, a duplicated/switching trident, and a weak windup. Version 0.19 **replaces them with the actual five low-poly bottom-row poses approved by the user**. No character geometry is regenerated for the five primary poses.
 
-Play: https://wafflinyo.github.io/Wizardry/
+The approved transparent sheet contains five 360×330 cells in this exact order:
 
-A mobile-friendly Canvas 2D spellcasting card-game prototype featuring Poseidon's Wrath (Water, 1,200 damage) and Stone Golem (Earth, 900 damage).
+1. **Idle:** full Poseidon emerging from the water, holding a single trident.
+2. **Windup A:** right-hand trident begins drawing back.
+3. **Windup B:** trident drawn overhead, held for the final charging beat.
+4. **Throw:** empty-handed forward extension after release.
+5. **Hold:** empty-handed recovery after the hit.
 
-## v0.16 animation updates
+These are stored at `assets/poseidon-approved-five-v19.js` as a WebP sprite atlas created from the approved isolated PNG frames. The original individual transparent PNG frames were preserved separately for comparison. This corrects the illustrated body's transparent cutouts without painting artificial replacement skin/water over it.
 
-Both summons run a little faster at displayed 1× speed:
+### Complete Poseidon attack
 
-| Spell | Previous duration | New duration | Impact behavior |
-| --- | ---: | ---: | --- |
-| Poseidon's Wrath | ~2.98 seconds | **~2.63 seconds** | A trident launches from the same screen-right throwing hand; 1,200 damage at target impact |
-| Stone Golem | ~3.16 seconds | **~2.78 seconds** | Stone spike damage lands at the last traveling-spike impact, then the effect clears |
+- **Rise:** the approved idle artwork emerges from below the constant arena waterline.
+- **Idle → Windup A → Windup B:** two distinct held-trident poses; no duplicate projectile.
+- **Release:** the held-trident illustration disappears at the same instant the separate moving trident begins.
+- **Trident travel:** a Canvas 2D golden trident moves with cyan trail toward the Stone Sentinel, with its tip aligned to the trajectory.
+- **Impact:** hit particles and water splash appear when the Sentinel loses **1,200 HP**, not before.
+- **Hold:** the empty-handed approved pose remains visible for approximately **0.61 seconds** after impact.
+- **Unsummon:** the approved hold pose slides below the arena waterline, with a subtle ring of surf at the surface.
 
-### Poseidon: right-handed trident and opaque artwork
+At the displayed 1× speed, Poseidon takes approximately **2.63 seconds** from summon through disappearance. The battle HUD remains Canvas-only; there is no unwanted on-screen animation narration.
 
-The corrected traced frame asset is `assets/poseidon-approved-trace-v3.js`. The character remains a **Canvas Path2D low-poly trace**, cached at game startup for smooth display, with the alpha gaps repaired in the source art.
+**Stone Golem was deliberately left unchanged.** It still deals 900 Earth damage with its ground-slam and traveling-spike effect.
 
-- The trident stays in Poseidon's **screen-right throwing hand** through summoning, aiming, and winding.
-- The former windup poses that put the trident on the opposite side have been replaced with corrected right-handed tracings.
-- The pre-release flying trident frame is held back until the actual launch timestamp.
-- On release, the separate moving trident starts at the throwing wrist and rotates outward as it travels toward the Stone Sentinel.
-- The character stays visible after the 1,200 damage lands for approximately **0.61 seconds** before sinking into the sea.
+## Technical details
 
-### Stone Golem: attack clears before idle and unsummoning
+- **`game.js`:** fixed 1000×560 Canvas 2D battle coordinates, combat timing, Poseidon's approved five-pose playback, projectile and impact, Stone Golem, UI and sounds.
+- **`assets/poseidon-approved-five-v19.js`:** exactly the five approved image poses in one transparent atlas, used in battle and on Poseidon's spell card.
+- **`assets/stone-golem-true-trace-v1.js`:** Stone Golem's twelve traced poses, unaffected in this release.
+- **`index.html`:** card selection and external controls, versioned scripts.
+- **`style.css`:** responsive card layout, permanent arena aspect ratio, portrait artwork.
 
-The Golem uses the original twelve approved low-poly source traces at `assets/stone-golem-true-trace-v1.js` rather than the old procedural polygon model.
-
-1. Rise from the earth
-2. Clasp both stone fists and lift them overhead
-3. Slam the ground; the stone spikes travel to the Sentinel
-4. Apply 900 damage on impact; let the spikes finish and disappear
-5. Recover to the **full, hands-down standing idle pose** and remain idle for about **0.49 seconds**
-6. Sink the idle character smoothly below the arena floor, then disappear
-
-The original spike art plays only once. The hit indicator is separate from the spike artwork. Stone Golem is intentionally a little slower than Poseidon.
-
-## Rendering and interface
-
-Everything inside the battlefield uses **Canvas 2D**, including the character animations, spells, HP bars, mana, effects, and victory graphics. CSS controls the cards, buttons, and responsive outer layout; it does not animate the characters. Stage-by-stage narration is not shown over the battle (accessible status messages remain for screen readers).
-
-The arena has a permanently sized **1000×560** canvas backing buffer and an aspect-locked responsive CSS wrapper. Static scenery is cached. Poseidon and Golem frames are cached from the vector traces, with direct Canvas vector fallback.
-
-## Testing
-
-Mock Canvas simulation tests at 60 Hz and 120 Hz passed for Earth and Water damage timing, Golem's spike → recovery → idle → sink frames, Poseidon's right-handed pre-release frame selection, complete casts, and follow-up rounds. Actual phone hardware still needs visual verification.
+In simulated 60 Hz and 120 Hz battle runs, all five approved Poseidon sprite indices displayed, impact deducted exactly 1,200 HP, Stone Golem still deducted 900 HP, and the canvas drawing buffer was initialized only once. Physical-phone smoothness and visual alignment should still be checked on an iPhone.

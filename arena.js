@@ -11,23 +11,13 @@
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
     status:$("status"),reset:$("resetButton")};
+  // Two approved summons only. Future shields, traps and support cards
+  // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
-    {id:"lance",name:"Tidal Lance",school:"water",cost:3,target:"enemy",kind:"damage",damage:320,
-      icon:"❄",description:"A focused water strike",short:"320 WATER",duration:850,hit:.67},
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"Summon, strike, vanish",short:"1,200 WATER",duration:2100,hit:.60},
+      icon:"♆",description:"Right-hand trident · summon and vanish",short:"1,200 WATER",duration:2100,hit:.60},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
-      icon:"◆",description:"Seismic fissure and rubble",short:"900 EARTH",duration:2360,hit:.62},
-    {id:"mend",name:"Mending Current",school:"water",cost:3,target:"ally",kind:"heal",heal:420,
-      icon:"✚",description:"Restore an ally's HP",short:"+420 HP",duration:860,hit:.62},
-    {id:"ward",name:"Surge Ward",school:"status",cost:2,target:"ally",kind:"shield",
-      icon:"⬡",description:"55% shield · next hit",short:"PERSISTENT SHIELD",duration:850,hit:.58},
-    {id:"blade",name:"Current Blade",school:"status",cost:2,target:"ally",kind:"blade",
-      icon:"✦",description:"+50% next attack",short:"PERSISTENT BOOST",duration:850,hit:.58},
-    {id:"trap",name:"Fault Trap",school:"earth",cost:2,target:"enemy",kind:"trap",
-      icon:"◈",description:"+35% next hit received",short:"PERSISTENT TRAP",duration:850,hit:.58},
-    {id:"aura",name:"Aether Field",school:"status",cost:4,target:"team",kind:"aura",
-      icon:"◎",description:"+20% team damage · 2 rounds",short:"TEAM AURA",duration:1000,hit:.60}
+      icon:"◆",description:"Seismic fissure · rubble collapse",short:"900 EARTH",duration:2360,hit:.62}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -42,11 +32,15 @@
     {name:"Crystal Brute",style:"crystal",color:"#d6adff",hp:1470,speed:71},
     {name:"Shadow Idol",style:"shadow",color:"#b49bff",hp:1180,speed:95}
   ];
+  // Side-on 3/4 arc seating. Allies LEFT, enemies RIGHT, never front/back.
+  // Y offsets provide depth; preserve the same camera and ground plane
+  // for 1v1, 2v2, 3v3 and 4v4.
   const scenePositions={
-    1:[[[342,460]],[[661,316]]],
-    2:[[[245,443],[748,456]],[[250,295],[747,295]]],
-    3:[[[140,435],[500,477],[860,435]],[[163,285],[500,252],[835,285]]],
-    4:[[[110,431],[350,477],[650,477],[890,431]],[[135,289],[350,252],[650,252],[865,289]]]
+    1:[[[235,435]],[[769,376]]],
+    2:[[[194,390],[297,480]],[[709,346],[816,450]]],
+    3:[[[178,359],[239,433],[319,495]],[[681,320],[760,395],[834,465]]],
+    4:[[[175,340],[205,404],[270,461],[341,508]],
+       [[667,315],[742,370],[802,428],[831,488]]]
   };
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -55,7 +49,8 @@
   let state=null,background=null,frameLast=0,spriteCache={};
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
-      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],x:0,y:0};
+      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],x:0,y:0,
+      facing:team?-.69:.69,desiredFacing:team?-.69:.69};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
@@ -66,7 +61,7 @@
                  ...ENEMIES.slice(0,size).map((d,i)=>createUnit(d,1,i))];
     for(const u of units){const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];}
     state={mode,size,units,round:1,phase:"planning",planningSide:0,
-      selectedCaster:units[0]?.id,selectedCard:"lance",selectedTarget:"e0",
+      selectedCaster:units[0]?.id,selectedCard:"poseidon",selectedTarget:"e0",
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null};
     ui.status.textContent=mode==="story"?
@@ -121,18 +116,11 @@
     nearestAvailableCaster();paintUI();
   }
   function autoPlan(u){
-    let choice="lance";
-    const wounded=alive(u.team).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
+    // Computer players also use only the same two tested summons.
     const seed=state.round*21+u.index*13+u.team*29;
-    if(wounded&&wounded.hp/wounded.maxHp<.5&&u.mana>=3&&rand(seed)>.49)choice="mend";
-    else if(u.mana>=6&&rand(seed+2)>.75)choice="golem";
-    else if(u.mana>=2&&rand(seed+4)>.83&&!u.statuses.some(e=>e.kind==="shield"))choice="ward";
-    else if(u.mana<3)choice="blade";
-    let card=BY_ID[choice];
-    if(card.cost>u.mana)card=BY_ID.blade;
-    const team=card.target==="ally"?alive(u.team):alive(1-u.team);
-    const target=card.target==="ally"?(choice==="mend"?wounded:u):
-      team.length?team[Math.floor(rand(seed+7)*team.length)]:null;
+    const card=u.mana>=8&&rand(seed+.7)>.40?BY_ID.poseidon:BY_ID.golem;
+    const enemies=alive(1-u.team);
+    const target=enemies.length?enemies[Math.floor(rand(seed+7)*enemies.length)]:null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,team:u.team};
   }
   function autoFill(){
@@ -148,7 +136,7 @@
     if(state.phase==="finished"){setBattle(state.mode,state.size);return;}
     if(state.phase!=="planning"||!allReady(state.planningSide))return;
     if(state.mode==="pvp"&&state.planningSide===0){
-      state.planningSide=1;nearestAvailableCaster();state.selectedCard="lance";correctTarget();paintUI();return;
+      state.planningSide=1;nearestAvailableCaster();state.selectedCard="poseidon";correctTarget();paintUI();return;
     }
     if(state.mode==="story")for(const u of alive(1))state.plans[u.id]=autoPlan(u);
     runResolution();
@@ -251,9 +239,9 @@
         (state.winner===0?"Allies":"Enemy team")+" wins!";
       paintUI();return;
     }
-    for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+4);
+    for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
     state.round++;state.plans={};state.phase="planning";state.planningSide=0;
-    state.selectedCard="lance";nearestAvailableCaster();
+    state.selectedCard="poseidon";nearestAvailableCaster();
     state.log=["Round "+state.round+" begins. Mana restored.",...state.log].slice(0,5);
     paintUI();
   }

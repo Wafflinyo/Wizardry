@@ -1223,23 +1223,21 @@
     updateParticles(spellDt);
   }
 
-  // Canvas backing pixels are fixed while a cast is playing. Safari's
-  // expanding/collapsing toolbar must not repeatedly blank/reflow the battle.
-  let canvasCSSWidth=0,canvasCSSHeight=0;
+  // Hard viewport lock: iOS Safari changes visual viewport dimensions when
+  // its toolbars expand/collapse. This game keeps a single CSS layout height
+  // and a permanent 1000x560 Canvas drawing buffer for the entire session.
+  let battleCanvasInitialized=false;
+  function lockBattleViewport() {
+    const root=document.documentElement;
+    const viewport=Math.max(320,Math.round(window.innerHeight||
+      root.clientHeight||720));
+    if(root&&root.style&&root.style.setProperty)
+      root.style.setProperty("--wizardry-fixed-height",viewport+"px");
+  }
   function resize() {
-    if(cast&&canvas.width>1&&canvas.height>1)return;
-    const box=canvas.getBoundingClientRect();
-    const cssW=Math.round(box.width),cssH=Math.round(box.height);
-    if(cssW<1||cssH<1)return;
-    // Ignore sub-pixel layout jitter, especially on iPhones.
-    if(canvasCSSWidth&&Math.abs(cssW-canvasCSSWidth)<2&&
-        Math.abs(cssH-canvasCSSHeight)<6)return;
-    const dpr=Math.min(window.devicePixelRatio||1,cssW<720?1.25:1.75);
-    const pixelsW=Math.max(1,Math.round(cssW*dpr));
-    const pixelsH=Math.max(1,Math.round(cssH*dpr));
-    canvasCSSWidth=cssW;canvasCSSHeight=cssH;
-    if(canvas.width!==pixelsW)canvas.width=pixelsW;
-    if(canvas.height!==pixelsH)canvas.height=pixelsH;
+    if(battleCanvasInitialized)return;
+    canvas.width=W;canvas.height=H;
+    battleCanvasInitialized=true;
   }
   function selectEnemy(event){
     if(defeated||cast)return;
@@ -1249,7 +1247,7 @@
     if(x>650&&x<920&&y>155&&y<454){
       targeted=true;targetPulse=1;
       UI.status.textContent="Stone Sentinel targeted.";
-      UI.hint.textContent="Target acquired. Cast Poseidon's Wrath!";
+      UI.hint.textContent="Target acquired. Cast "+SPELLS[selectedSpell].name+"!";
       tone(640,.17,"sine",.05,350);
     }
   }
@@ -1267,9 +1265,9 @@
     if(sound)tone(660,.16,"sine",.03,880);
   });
   canvas.addEventListener("pointerdown",selectEnemy);
-  window.addEventListener("resize",resize);
-  // Observe the stable arena parent, never the canvas we resize inside it.
-  if(window.ResizeObserver)new ResizeObserver(resize).observe(document.getElementById("arena"));
+  // Deliberately no window.resize or ResizeObserver writing to Canvas.
+  // For landscape changes use a fresh page load; toolbar motion stays stable.
+  lockBattleViewport();
   resize();reset();initSceneCache();
   let lastPaintAt=-1000;
   function frame(now) {

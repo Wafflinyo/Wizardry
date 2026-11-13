@@ -10,7 +10,10 @@
     enemies:$("enemyRoster"),hand:$("cardHand"),handTitle:$("handTitle"),mana:$("selectedMana"),
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
-    status:$("status"),reset:$("resetButton")};
+    status:$("status"),reset:$("resetButton"),hat:$("wizardHat"),robe:$("wizardRobe"),
+    robeColor:$("wizardColor"),runePanel:$("runePanel"),runeCanvas:$("runeCanvas"),
+    runeTitle:$("runeTitle"),runeElement:$("runeElement"),runeInstruction:$("runeInstruction"),
+    runeFeedback:$("runeFeedback"),runeSkip:$("runeSkip")};
   // Two approved summons only. Future shields, traps and support cards
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
@@ -47,10 +50,15 @@
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const rand=(seed)=>{let n=(seed*9301+49297)%233280;return n/233280};
   let state=null,background=null,frameLast=0,spriteCache={};
+  const ARM_RAISE_MS=300,AUTO_TRACE_MS=570,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  let activeStroke=[],strokeInProgress=false,runePointerId=null;
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
       hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],x:0,y:0,
-      facing:team?-.69:.69,desiredFacing:team?-.69:.69};
+      hat:["pointed","wide","hood","scholar"][index],
+      robe:["classic","split","armored","classic"][index],
+      robeColor:["#267eab","#6f4ab4","#bc503d","#367d59"][index],
+      armRaise:0,facing:team?-.74:.74};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
@@ -64,6 +72,7 @@
       selectedCaster:units[0]?.id,selectedCard:"poseidon",selectedTarget:"e0",
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null};
+    ui.runePanel.hidden=true;
     ui.status.textContent=mode==="story"?
       "Story encounter prototype: you control the allied slots; CPU controls enemies.":
       "PvP local hot-seat simulation only. No real matchmaking or connected friends yet.";
@@ -111,7 +120,7 @@
     const c=caster(),card=currentCard(),target=correctTarget();
     if(state.phase!=="planning"||!c||state.plans[c.id]||c.mana<card.cost)return;
     if(card.target!=="team"&&!target)return;
-    state.plans[c.id]={casterId:c.id,cardId:card.id,targetId:target?.id||null,team:c.team};
+    state.plans[c.id]={casterId:c.id,cardId:card.id,targetId:target?.id||null,team:c.team,auto:false};
     state.log=[c.name+" queued "+card.name,...state.log].slice(0,5);
     nearestAvailableCaster();paintUI();
   }
@@ -121,7 +130,7 @@
     const card=u.mana>=8&&rand(seed+.7)>.40?BY_ID.poseidon:BY_ID.golem;
     const enemies=alive(1-u.team);
     const target=enemies.length?enemies[Math.floor(rand(seed+7)*enemies.length)]:null;
-    return {casterId:u.id,cardId:card.id,targetId:target?.id||null,team:u.team};
+    return {casterId:u.id,cardId:card.id,targetId:target?.id||null,team:u.team,auto:true};
   }
   function autoFill(){
     if(state.phase!=="planning")return;
@@ -147,6 +156,8 @@
       .sort((a,b)=>getUnit(b.casterId).speed-getUnit(a.casterId).speed||
         a.casterId.localeCompare(b.casterId));
     state.sequence=order;state.queueAt=0;state.animation=null;state.phase="resolving";
+    ui.runePanel.hidden=true;
+    for(const u of state.units)u.armRaise=0;
     state.log=["Actions resolve from fastest to slowest.",...state.log].slice(0,5);
     paintUI();
     startNextAction();

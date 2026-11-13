@@ -1202,11 +1202,11 @@
     // startCast() already refuses re-entry while cast is active.
     const castBlocked=!!cast||defeated||mana<spell.cost;
     UI.cast.disabled=!cast&&(defeated||mana<spell.cost||
-      (selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError));
+      (selectedSpell==="poseidon"&&!poseidonAssetReady));
     UI.cast.setAttribute("aria-disabled",String(castBlocked));
     UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":
-      selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError?
-      "PREPARING POSEIDON...":"CAST "+spell.name.toUpperCase();
+      selectedSpell==="poseidon"&&!poseidonAssetReady?
+      (poseidonAssetError?"POSEIDON ART UNAVAILABLE":"PREPARING POSEIDON..."):"CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {
     if(cast||defeated||!SPELLS[type])return;
@@ -1233,7 +1233,7 @@
   function startCast() {
     const spell=SPELLS[selectedSpell];
     if(cast||defeated||mana<spell.cost)return;
-    if(selectedSpell==="poseidon"&&!poseidonAssetReady&&!poseidonAssetError)return;
+    if(selectedSpell==="poseidon"&&!poseidonAssetReady)return;
     if(sound)tone(440,.04,"sine",.001);
     mana-=spell.cost;
     cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};

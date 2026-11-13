@@ -911,9 +911,11 @@
   // Small plates sit OUTSIDE each character silhouette: allies on the
   // left, enemies on the right. Shared placements also inform tap hitboxes.
   function unitPlateRect(u){
-    const w=122;
-    const x=clamp(u.team?u.x+57:u.x-w-57,8,W-w-8);
-    const y=u.y-123;
+    // Narrow side plates avoid the adjacent front-row character silhouettes
+    // in dense 4v4 seating, particularly the two rightmost enemies.
+    const w=100;
+    const x=clamp(u.team?u.x+82:u.x-w-82,8,W-w-8);
+    const y=u.y-132;
     return {x,y,w,h:43};
   }
   function drawUnitPlate(u){

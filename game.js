@@ -925,7 +925,10 @@
   }
 
   function applyShake(elapsed) {
-    const strikeTime=cast&&cast.type==="stone"?EARTH.hit:SPELL.hit;
+    // Never move the entire camera for Earth. This was perceived as
+    // stuttering during its formation/impact on lower-power phones.
+    if(cast&&cast.type==="stone")return;
+    const strikeTime=SPELL.hit;
     if(elapsed<strikeTime||elapsed>strikeTime+.4)return;
     const strength=12*(1-phase(elapsed,strikeTime,strikeTime+.4));
     // Deterministic easing prevents random full-scene teleporting/flicker.
@@ -1072,12 +1075,14 @@
   function stageAt(e,type) {
     if(type==="stone"){
       if(e<EARTH.emergeStart)return "opening";
-      if(e<EARTH.liftStart)return "rise";
-      if(e<EARTH.braceStart)return "lift";
-      if(e<EARTH.releaseStart)return "brace";
-      if(e<EARTH.launch)return "wind";
-      if(e<EARTH.hit)return "throw";
-      if(e<EARTH.crumbleStart)return "impact";
+      if(e<EARTH.claspStart)return "rise";
+      if(e<EARTH.liftStart)return "clasp";
+      if(e<EARTH.holdStart)return "lift";
+      if(e<EARTH.slamStart)return "brace";
+      if(e<EARTH.spikesStart)return "slam";
+      if(e<EARTH.hit)return "spikes";
+      if(e<EARTH.settleStart)return "impact";
+      if(e<EARTH.crumbleStart)return "settle";
       if(e<EARTH.crumbleEnd)return "sink";
       return "complete";
     }
@@ -1093,14 +1098,16 @@
   function setStage(stage,type) {
     const earth=type==="stone";
     const stages=earth?{
-      opening:["EARTH AWAKENS","Cracks race across the arena floor."],
-      rise:["STONE GOLEM SUMMONED","An ancient Earth guardian rises!"],
-      lift:["HEAVY OVERHEAD LIFT","The golem bends both elbows and hauls the boulder upward."],
-      brace:["CHARGING THE THROW","It leans back, lifts its left foot and draws the boulder behind its head."],
-      wind:["DRIVING FORWARD","The lead foot plants, hips drive, and both arms whip overhead!"],
-      throw:["BOULDER RELEASED","The spinning boulder rockets straight toward the Sentinel!"],
-      impact:["CRUSHING IMPACT","Stone Sentinel takes 900 Earth damage!"],
-      sink:["CRUMBLING AWAY","The golem returns to the earth."],
+      opening:["EARTH AWAKENS","The ground begins to tremble."],
+      rise:["STONE GOLEM RISES","A towering granite guardian emerges."],
+      clasp:["STONE FISTS CLASPED","Its two hands lock together."],
+      lift:["FISTS OVERHEAD","The joined stone fists lift high above its head."],
+      brace:["TECTONIC CHARGE","The golem gathers power for the slam."],
+      slam:["GROUND SLAM","Both fists crash into the floor!"],
+      spikes:["SPIKE SURGE","A trail of stone spikes races toward the Sentinel!"],
+      impact:["EARTH IMPACT","Stone spikes strike for 900 Earth damage!"],
+      settle:["FISSURE SUBSIDES","The jagged spikes settle back into the arena."],
+      sink:["UNSUMMONING","The golem sinks beneath the ground."],
       complete:["EARTH SPELL COMPLETE","The ground grows still."]
     }:{
       opening:["THE SEA STIRS","The ocean begins to turn..."],
@@ -1117,7 +1124,8 @@
     if(earth){
       if(stage==="rise")playEffect("stoneRise");
       if(stage==="lift")playEffect("stoneLift");
-      if(stage==="throw")playEffect("stoneThrow");
+      if(stage==="slam")playEffect("stoneHit");
+      if(stage==="spikes")playEffect("stoneRise");
       if(stage==="impact")playEffect("stoneHit");
       if(stage==="sink")playEffect("stoneSink");
     }else{
@@ -1167,22 +1175,18 @@
       health=Math.max(0,health-SPELLS[type].damage);
       targetPulse=1.3;
       refreshUI();
-      if(earth){
-        for(let i=0;i<72;i++)addParticle(785+rand(-24,24),300+rand(-25,40),"rock",rand(.7,1.8));
-        for(let i=0;i<34;i++)addParticle(785+rand(-30,30),311+rand(-12,33),"dust",rand(.55,1.35));
+      if(earth) {
+        // The advancing spikes carry the impact visuals. A small batch of
+        // deterministic debris keeps the frame lightweight on phones.
+        for(let i=0;i<12;i++)addParticle(785+rand(-18,18),354+rand(-8,10),"rock",.55);
       }else{
         for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
         for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
       }
     }
-    if(earth){
-      if(cast.elapsed>EARTH.emergeStart&&cast.elapsed<EARTH.liftEnd){
-        earthCarry+=25*spellDt;
-        while(earthCarry>=1){
-          earthCarry--;
-          addParticle(502+rand(-86,86),409+rand(-8,4),"dust",.45);
-        }
-      }
+    if(earth) {
+      // No large frame-dependent dust cloud: the stone model and traveling
+      // geometry provide the full visual, at constant rendering cost.
     }else{
       if(cast.elapsed>SPELL.riseStart&&cast.elapsed<SPELL.sinkEnd)
         spawnTimed("spray",33*spellDt,505,399,140,80,.45);

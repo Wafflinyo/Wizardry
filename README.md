@@ -1,61 +1,47 @@
-# Wizardry — Elemental Battle Prototype v0.15.0
+# Wizardry — Elemental Battle Prototype v0.16.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/
+Play: https://wafflinyo.github.io/Wizardry/
 
-Mobile-friendly browser game with two elemental spell cards, a fixed-ratio Canvas 2D battlefield and the 3,000-HP Stone Sentinel.
+A mobile-friendly Canvas 2D spellcasting card-game prototype featuring Poseidon's Wrath (Water, 1,200 damage) and Stone Golem (Earth, 900 damage).
 
-## Two spell animations
+## v0.16 animation updates
 
-| Spell | Cost | Damage | UI 1× duration |
-| --- | ---: | ---: | ---: |
-| Poseidon's Wrath (Water) | 8 mana | 1,200 | **2.98 seconds** |
-| Stone Golem (Earth) | 6 mana | 900 | **3.16 seconds** |
+Both summons run a little faster at displayed 1× speed:
 
-Mana replenishes each prototype round. Both spells use synchronized frame-animation clocks; target damage occurs only at the registered hit time.
+| Spell | Previous duration | New duration | Impact behavior |
+| --- | ---: | ---: | --- |
+| Poseidon's Wrath | ~2.98 seconds | **~2.63 seconds** | A trident launches from the same screen-right throwing hand; 1,200 damage at target impact |
+| Stone Golem | ~3.16 seconds | **~2.78 seconds** | Stone spike damage lands at the last traveling-spike impact, then the effect clears |
 
-### Poseidon's Wrath — approved 12-frame illustrated trace
+### Poseidon: right-handed trident and opaque artwork
 
-**v0.15 uses the approved image with the large white beard, angular gold crown, teal wave body and glowing trident.** Its twelve actual 4×3 sheet cells were retraced into **224×224 low-poly vector paths with an 18-color palette per frame**, not redrawn as the previous generic Canvas figure.
+The corrected traced frame asset is `assets/poseidon-approved-trace-v3.js`. The character remains a **Canvas Path2D low-poly trace**, cached at game startup for smooth display, with the alpha gaps repaired in the source art.
 
-The original approved character sequence is preserved: summoning wave → rising Poseidon → fully summoned idle → aiming → windup → full trident throw → follow-through → post-hit idle → unsummoning back into the wave.
+- The trident stays in Poseidon's **screen-right throwing hand** through summoning, aiming, and winding.
+- The former windup poses that put the trident on the opposite side have been replaced with corrected right-handed tracings.
+- The pre-release flying trident frame is held back until the actual launch timestamp.
+- On release, the separate moving trident starts at the throwing wrist and rotates outward as it travels toward the Stone Sentinel.
+- The character stays visible after the 1,200 damage lands for approximately **0.61 seconds** before sinking into the sea.
 
-| Game-clock time | Poseidon action |
-| --- | --- |
-| 0.04–0.70 | Whirlpool forms and Poseidon rises |
-| 0.70–1.19 | Fully summoned idle/aim |
-| 1.19–2.14 | Winding up his trident |
-| 2.14 | Trident leaves his hand and travels independently |
-| **2.45** | Trident strikes the Sentinel; **1,200 HP damage** |
-| 2.45–3.48 | Poseidon remains visible after impact (about **0.69 real seconds**) |
-| 3.48–4.47 | He sinks into the collapsing wave |
-| 4.47 | Water spell completes |
+### Stone Golem: attack clears before idle and unsummoning
 
-The exact 12-frame trace is in `assets/poseidon-approved-trace-v2.js`. Its compressed vector paths are decompressed once when the page starts, then cached at 480×480 Canvas pixels per frame; the original paths are available for direct rendering if caching fails. The card artwork uses the traced third frame as SVG.
+The Golem uses the original twelve approved low-poly source traces at `assets/stone-golem-true-trace-v1.js` rather than the old procedural polygon model.
 
-### Stone Golem — same visual pipeline
+1. Rise from the earth
+2. Clasp both stone fists and lift them overhead
+3. Slam the ground; the stone spikes travel to the Sentinel
+4. Apply 900 damage on impact; let the spikes finish and disappear
+5. Recover to the **full, hands-down standing idle pose** and remain idle for about **0.49 seconds**
+6. Sink the idle character smoothly below the arena floor, then disappear
 
-The previously approved Golem still uses 12 traced low-poly frames, with interlocked fists, a raised overhead slam, and stone spikes traveling to the Sentinel. Its game-clock hit occurs at 3.67, and its full spell is approximately **0.18 seconds slower** than Poseidon at the displayed 1× rate.
+The original spike art plays only once. The hit indicator is separate from the spike artwork. Stone Golem is intentionally a little slower than Poseidon.
 
-The Golem compares cached high-resolution vector frames against direct Path2D drawing on startup and chooses the faster rendering mode.
+## Rendering and interface
 
-## No on-screen frame narration
+Everything inside the battlefield uses **Canvas 2D**, including the character animations, spells, HP bars, mana, effects, and victory graphics. CSS controls the cards, buttons, and responsive outer layout; it does not animate the characters. Stage-by-stage narration is not shown over the battle (accessible status messages remain for screen readers).
 
-The battlefield shows the player and Sentinel's HP/mana, the round counter, the spell animation, and impact numbers. It **does not show a text explanation for each individual frame, attack phase or pose**. A visually hidden status mirror remains available to screen readers.
+The arena has a permanently sized **1000×560** canvas backing buffer and an aspect-locked responsive CSS wrapper. Static scenery is cached. Poseidon and Golem frames are cached from the vector traces, with direct Canvas vector fallback.
 
-## Responsive game engine
+## Testing
 
-- Canvas 2D handles **all artwork and combat HUD**, including spell effects, health, mana and victory display.
-- CSS handles the outer spell cards, buttons and responsive page layout.
-- The Canvas drawing buffer is fixed at **1000×560**; CSS maintains the **1000:560 arena ratio** in portrait and landscape.
-- The app avoids repeated Canvas resize observers, and mobile rendering work is capped around 60fps.
-- Background scenery is cached separately; neither character shares the old procedural Earth spikes.
-
-## Files
-
-- `index.html` — spell selection, outer controls and accessible status mirror.
-- `style.css` — responsive spell cards and fixed-ratio battlefield layout.
-- `game.js` — game timing, Canvas 2D battle, both spells, HUD and damage.
-- `assets/stone-golem-true-trace-v1.js` — approved 12-frame Earth trace.
-- `assets/poseidon-approved-trace-v2.js` — approved 12-frame higher-fidelity Water trace.
-
-Simulated 60 Hz and 120 Hz checks passed for loading Poseidon's traced artwork, frame timing, both spells' impact damage, mana restoration and a single Canvas buffer initialization. Actual-device performance and visuals should still be checked in mobile Safari.
+Mock Canvas simulation tests at 60 Hz and 120 Hz passed for Earth and Water damage timing, Golem's spike → recovery → idle → sink frames, Poseidon's right-handed pre-release frame selection, complete casts, and follow-up rounds. Actual phone hardware still needs visual verification.

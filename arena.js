@@ -11,7 +11,9 @@
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
     status:$("status"),reset:$("resetButton"),hat:$("wizardHat"),robe:$("wizardRobe"),
-    robeColor:$("wizardColor"),confirm:$("confirmTarget")};
+    robeColor:$("wizardColor"),confirm:$("confirmTarget"),
+    statusPopup:$("statusPopup"),statusName:$("statusName"),
+    statusText:$("statusText"),statusClose:$("statusClose")};
   // Two approved summons only. Future shields, traps and support cards
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
@@ -78,7 +80,8 @@
       humanByTeam:{0:"a0",1:mode==="pvp"?"e0":null},
       selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
-      flashes:[],log:[],activeCard:null};
+      flashes:[],log:[],activeCard:null,inspectedStatus:null};
+    ui.statusPopup.hidden=true;
     ui.status.textContent=mode==="story"?
       "You control Tidecaller only. All other allies and enemies are CPU-controlled.":
       "PvP local hot-seat simulation only. No real matchmaking or connected friends yet.";
@@ -585,11 +588,15 @@
     }
     ui.reset.onclick=()=>setBattle(state.mode,state.size);
     if(ui.targetPicker)ui.targetPicker.onchange=()=>{};
+    ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
-      if(state.phase!=="planning")return;
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;
+      // Magical runes remain inspectable even during spell animations.
+      if(hitStatusRune(x,y))return;
+      closeStatusInfo();
+      if(state.phase!=="planning")return;
       // Opposing models and their new SIDE nameplates are both tappable.
       // Selection previews the down arrow; only Confirm Target starts a cast.
       if(!currentCard()||!caster())return;
@@ -957,6 +964,61 @@
     const y=u.y-132;
     return {x,y,w,h:43};
   }
+  function unitStatuses(u){
+    const list=u.statuses.slice(0,3);
+    if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
+    return list.slice(0,4);
+  }
+  function statusRuneRect(u,index){
+    const p=unitPlateRect(u);
+    return {x:p.x+18+index*31,y:p.y+58,r:13,hitRadius:24};
+  }
+  function describeStatus(u,st){
+    switch(st.kind){
+      case "recharge":
+        return {title:"⧖ Recharge · Debuff",
+          detail:u.name+" must skip Round "+u.rechargeRound+
+          " after using Poseidon's Wrath. The status expires once that round has passed."};
+      case "tidal_echo":
+        return {title:"≈ Tidal Echo · Water buff",
+          detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
+          " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "shield":return {title:"⬡ Shield",detail:"Reduces the next incoming hit by "+
+        Math.round(st.value*100)+"%, then disappears."};
+      case "blade":return {title:"✦ Damage boost",detail:"The next successful attack deals "+
+        Math.round(st.value*100)+"% bonus damage."};
+      case "trap":return {title:"◈ Trap",detail:"The next damaging hit against this combatant deals "+
+        Math.round(st.value*100)+"% bonus damage."};
+      case "aura":return {title:"◎ Team aura",detail:"Team damage is boosted by "+
+        Math.round(st.value*100)+"% while the aura remains."};
+      default:return {title:st.kind,detail:"Active magical effect."};
+    }
+  }
+  function showStatusInfo(u,st){
+    const info=describeStatus(u,st);
+    state.inspectedStatus={unitId:u.id,kind:st.kind};
+    ui.statusName.textContent=info.title;
+    ui.statusText.textContent=info.detail;
+    ui.statusPopup.hidden=false;
+  }
+  function closeStatusInfo(){
+    if(!state)return;
+    state.inspectedStatus=null;
+    ui.statusPopup.hidden=true;
+  }
+  function hitStatusRune(x,y){
+    for(const u of state.units){
+      if(u.hp<=0)continue;
+      for(const [i,st] of unitStatuses(u).entries()){
+        const r=statusRuneRect(u,i);
+        if(Math.abs(x-r.x)<=r.hitRadius&&Math.abs(y-r.y)<=r.hitRadius){
+          showStatusInfo(u,st);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
   function drawUnitPlate(u){
     const {x,y,w}=unitPlateRect(u);
     g.save();
@@ -974,14 +1036,18 @@
     g.font="700 9px system-ui,sans-serif";
     g.fillStyle=disabled?"#f2b4aa":"#d4e3d8";
     g.fillText(disabled?"K.O.":u.hp+" / "+u.maxHp+" HP",x+w/2,y+38,w-4);
-    if(u.statuses.length||state.auras[u.team]){
-      const symbols=u.statuses.map(s=>s.icon);
-      if(state.auras[u.team])symbols.push("◎");
-      g.font="bold 17px system-ui,sans-serif";g.fillStyle="#f2db99";
-      symbols.slice(0,4).forEach((symbol,i)=>{
-        g.fillText(symbol,x+12+i*22,y-11);
-      });
-    }
+    // Persistent magic runes sit BELOW the HP plate, never over the
+    // fighter's face. Each rune is independently tappable for details.
+    const symbols=unitStatuses(u);
+    symbols.forEach((st,i)=>{
+      const r=statusRuneRect(u,i);
+      const glow=st.kind==="tidal_echo"?"#44dbee":
+        st.kind==="recharge"?"#e6b75b":"#b4eac2";
+      ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
+      g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
+      g.textAlign="center";g.textBaseline="middle";
+      g.fillText(st.icon,r.x,r.y+1);
+    });
     g.restore();
   }
   function drawTargetArrow(u,time){
@@ -1193,6 +1259,7 @@
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
+    statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

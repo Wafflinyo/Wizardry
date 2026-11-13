@@ -617,7 +617,7 @@
   const poseidonVectorFrames=[],poseidonCachedFrames=[];
   let poseidonTrace=null,poseidonAssetReady=false,poseidonAssetError=null;
   const POSEIDON_CACHE_PX=480; // High-detail 224px vector source cached once.
-  const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false};
+  const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false,windupFrames:3,hand:'right'};
   // The source artwork contains accidental transparent holes through the
   // torso and flowing-water body. Paint a continuous silhouette BEHIND the
   // traced color layers; destination-over fills transparent gaps only and
@@ -676,6 +676,34 @@
       if(x<width-1)mark(idx+1);
       if(y>0)mark(idx-width);
       if(y<width-1)mark(idx+width);
+    }
+    // Some generated cutouts connect to the outside through a very narrow
+    // slit. Seal those too, but ONLY within the face/torso/water core and
+    // only across short gaps between two real opaque pixels. Never fill the
+    // intentional open air between Poseidon's extended arms and the wave.
+    for(const [x0,x1,y0,y1] of [
+      [.45,.65,.20,.48], // face/beard central interior
+      [.34,.69,.38,.76], // skin and ocean torso
+      [.28,.73,.70,.88]  // lower connected ocean body
+    ]){
+      const xMin=Math.floor(x0*width),xMax=Math.ceil(x1*width);
+      const yMin=Math.floor(y0*width),yMax=Math.ceil(y1*width);
+      for(let y=yMin;y<yMax;y++){
+        let previous=-1;
+        for(let x=xMin;x<xMax;x++){
+          const i=y*width+x;
+          if(data[i*4+3]>=175){
+            if(previous>=0&&x-previous>1&&x-previous<=30){
+              for(let xx=previous+1;xx<x;xx++){
+                const p=y*width+xx;
+                // The fill is completed in the inpainting pass below.
+                outside[p]=0;
+              }
+            }
+            previous=x;
+          }
+        }
+      }
     }
     // Interior transparent pixels are actual missing body artwork. Copy
     // their nearest already-painted color, then make them fully opaque.

@@ -1171,6 +1171,9 @@
         image.src=src;return image;
       });
     }
+    // Redraw once after all atlas references are installed, including
+    // browsers that fire a cached data-image load event synchronously.
+    requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
   // This preserves the exact right-hand windup and empty-hand release.

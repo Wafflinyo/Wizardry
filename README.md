@@ -1,4 +1,4 @@
-# Wizardry — Elemental Battle Prototype v0.22.0
+# Wizardry — Elemental Battle Prototype v0.22.1
 
 **Play:** https://wafflinyo.github.io/Wizardry/?v=0.22.0
 
@@ -37,3 +37,7 @@ This synchronizes the disappearing hand-held weapon with the separately drawn pr
 Canvas owns all battlefield graphics, characters, health and mana indicators, effects, and impact messages. The fixed 1000×560 backing buffer maintains its aspect ratio; responsive HTML/CSS is used only for the cards and controls. There's no recurring Canvas resize observer.
 
 Simulated 60 Hz and 120 Hz tests passed for all sixteen Poseidon sprite indices, the trident transition from frame 9 to 10, 1,200 Water damage, 900 Earth damage, turn progression, and stable Canvas size. Physical iPhone rendering still needs verification.
+
+## Poseidon animation speed (v0.22.1)
+
+At displayed Speed 1×, Poseidon now runs at **125% of its previous animation playback rate**, completing in about **2.10 seconds** instead of **2.63 seconds**. The original 16 sprite cells, cast timeline, right-hand trident release, projectile hit and 1,200 damage are unchanged. **Stone Golem playback speed and visuals are unchanged.** Automated 60 Hz and 120 Hz combat simulations passed.

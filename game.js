@@ -690,7 +690,9 @@
                      stoneRotate([x+58,base-164],pivot,lean)];
     // The ball follows an arc BACK BEHIND the skull before it goes forward.
     // It is NOT moved by extending the hands independently.
-    const rockX=502+2-42*lift-50*load+186*drive;
+    // A shallow backswing arc keeps the wrists clear of the shoulders while
+    // the boulder passes chest height; both fists remain locked to the rock.
+    const rockX=502+2-42*lift-50*load+186*drive-42*Math.sin(Math.PI*lift)*(1-load);
     const rockY=base-113-211*lift-16*load+76*drive;
     const hands=[[rockX-34,rockY+29],[rockX+34,rockY+29]];
     // Fixed stone-bone lengths are verified at all 60/120 Hz in-between poses.
@@ -710,7 +712,7 @@
     const leftFoot=[mix(mix(445,424,load),565,drive),base-3-54*footLift];
     const rightFoot=[524,base-3];
     const feet=[leftFoot,rightFoot];
-    const legUpper=54,legLower=52;
+    const legUpper=59,legLower=57;
     const knees=[
       stoneIK(hips[0],feet[0],legUpper,legLower,1),
       stoneIK(hips[1],feet[1],legUpper,legLower,-1)

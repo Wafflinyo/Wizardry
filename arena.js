@@ -383,9 +383,12 @@
     state.plans={};state.sequence=[];state.queueAt=0;state.animation=null;
     state.phase="planning";state.planningSide=0;
     nearestAvailableCaster();
-    state.log=["Round "+state.round+" begins. Select NEW cards and targets.",...state.log].slice(0,5);
-    ui.status.textContent="Round "+state.round+": select a new spell and enemy for every wizard. Auto-fill is optional for this round only.";
+    state.log=["Round "+state.round+" begins: your spell and target choice.",...state.log].slice(0,5);
+    ui.status.textContent="Round "+state.round+": select one spell, then tap an enemy on the field.";
     paintUI();
+    // If the controlled wizard was knocked out, teammates remain autonomous.
+    // Do not ask the player to control another wizard.
+    if(!caster())resolvePressed();
   }
   function paintUI(){
     if(!state)return;
@@ -394,18 +397,17 @@
       toPlan=alive(state.planningSide).length,
       count=alive(state.planningSide).filter(u=>state.plans[u.id]).length;
     ui.round.textContent="ROUND "+state.round;
-    ui.phase.textContent=planning?(state.planningSide?"TEAM B · PICK AGAIN":"CHOOSE SPELLS"):
+    ui.phase.textContent=planning?(state.planningSide?"TEAM B · SELECT":"YOUR MOVE"):
       state.phase==="finished"?"BATTLE COMPLETE":"RESOLVING SPELLS";
     ui.badge.textContent=state.size+" vs "+state.size+" · "+
       (state.mode==="story"?"STORY / CPU":"PvP LOCAL TEST");
-    ui.queueCount.textContent=planning?count+" / "+toPlan+" READY":
+    ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
-    if(planning)ui.hint.textContent="ROUND "+state.round+" · "+
-      (state.planningSide?"Team B":"Your team")+
-      ": select a NEW spell and target for each wizard.";
-    ui.handTitle.textContent=(c?c.name:(planning?"All spells queued":"Battle"))+" · "+
-      (planning?(c?"Choose a spell and target":"Ready to resolve"):
-        state.phase==="finished"?"Victory test":"Resolving");
+    if(planning)ui.hint.textContent=c?
+      (card?"Tap a glowing enemy to cast "+card.name+".":"Tap one of your two spells below."):
+      "Your wizard is knocked out. Teammates are CPU-controlled.";
+    ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
+      (planning?" · "+(card?"Tap an enemy":"Choose a spell"):" · Casting");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
@@ -413,7 +415,7 @@
     if(c){ui.hat.value=c.hat;ui.robe.value=c.robe;ui.robeColor.value=c.robeColor;}
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
     ui.chosenTarget.textContent=target?"Target: "+target.name:
-      "Target: tap an enemy in the arena or roster";
+      "Tap an enemy on the battlefield";
     // Actual initiative preview, ordered by speed. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -445,8 +447,8 @@
         '<span class="unit-metrics">'+u.hp+' HP · '+u.mana+' MP</span>'+
         '<span class="unit-tags">'+tags+'</span>';
       b.title=u.name+" · "+u.hp+"/"+u.maxHp+" HP";
-      b.disabled=u.hp<=0||!planning;
-      b.onclick=()=>{if(u.team===state.planningSide)selectCaster(u.id);else selectTarget(u.id);};
+      b.disabled=true; // Detailed rosters are status-only, never extra control.
+      b.onclick=null;
       root.appendChild(b);
     }};
     paintRoster(0,ui.allies);paintRoster(1,ui.enemies);
@@ -490,12 +492,12 @@
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
       c.mana<card.cost||(card.target!=="team"&&!target);
-    ui.auto.disabled=!planning||toPlan===count;
-    ui.resolve.disabled=!planning||count<toPlan;
+    ui.auto.disabled=true;
+    ui.resolve.disabled=true;
     ui.resolve.textContent=state.mode==="pvp"&&state.planningSide===0?
       "Pass to Team B":state.phase==="finished"?"Fight again":"Resolve round";
     ui.queue.textContent=card&&target?"Queue spell":"Choose spell + target";
-    ui.auto.textContent="Auto-fill this round";
+    ui.auto.textContent="CPU controls other wizards";
     ui.plans.innerHTML="";
     for(const u of state.units){
       const p=state.plans[u.id];if(!p)continue;
@@ -518,7 +520,10 @@
       for(const x of ui.sizes.querySelectorAll("button"))x.classList.toggle("active",x===b);
       setBattle(state.mode,Number(b.dataset.size));
     };
-    ui.queue.onclick=queueSpell;ui.auto.onclick=autoFill;ui.resolve.onclick=resolvePressed;
+    // Card and enemy taps are the entire casting UI; no Queue/Resolve tap.
+    ui.queue.onclick=()=>{};
+    ui.auto.onclick=()=>{};
+    ui.resolve.onclick=()=>{};
     for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"]]){
       input.onchange=()=>{
         const u=caster();
@@ -528,21 +533,21 @@
       };
     }
     ui.reset.onclick=()=>setBattle(state.mode,state.size);
-    if(ui.targetPicker)ui.targetPicker.onchange=()=>selectTarget(ui.targetPicker.value);
+    if(ui.targetPicker)ui.targetPicker.onchange=()=>{};
     canvas.addEventListener("pointerdown",event=>{
       if(state.phase!=="planning")return;
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;
-      const candidates=state.units.filter(u=>u.hp>0)
-        .map(u=>({u,d:Math.hypot(x-u.x,(y-(u.y-67))*1.05)}))
+      // Only opponents can be targeted. Enlarged sprite/HP label tap area
+      // ensures even the back row is easy to hit on a phone.
+      if(!currentCard()||!caster())return;
+      const candidates=alive(1-state.planningSide)
+        .map(u=>({u,dx:Math.abs(x-u.x),dy:Math.abs(y-(u.y-88)),
+          d:Math.hypot((x-u.x)*.92,(y-(u.y-88))*.83)}))
         .sort((a,b)=>a.d-b.d);
-      if(!candidates[0]||candidates[0].d>83)return;
-      const u=candidates[0].u;
-      if(u.team===state.planningSide){
-        if(currentCard()?.target==="ally"&&u.id!==state.selectedCaster)selectTarget(u.id);
-        else selectCaster(u.id);
-      }else selectTarget(u.id);
+      if(!candidates[0]||candidates[0].dx>90||candidates[0].dy>135)return;
+      selectTarget(candidates[0].u.id);
     });
   }
   function pathPoly(ctx,pts,fill,stroke=null,width=1){
@@ -867,8 +872,10 @@
     if(state.auras[u.team]){
       ellipse(g,0,3,72*scale,23*scale,"#5edbd41b","#76f1d39b",2);
     }
-    if(state.selectedCaster===u.id&&state.phase==="planning"&&u.team===state.planningSide)
+    if(state.phase==="planning"&&u.id===state.humanByTeam[state.planningSide]&&u.hp>0)
       ellipse(g,0,5,77*scale,27*scale,"#18e8d21f","#70f6f2",4);
+    if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&u.team!==state.planningSide)
+      ellipse(g,0,5,87*scale,30*scale,"#d4b64d20","#f6d487",4);
     if(state.selectedTarget===u.id&&state.phase==="planning")
       ellipse(g,0,5,77*scale,26*scale,"#d4b64d1a","#f6d487",4);
     if(state.animation&&(state.animation.source===u.id||state.animation.target===u.id)){

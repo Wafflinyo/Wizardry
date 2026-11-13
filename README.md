@@ -1,27 +1,14 @@
-# Wizardry — Elemental Battle Prototype v0.17.0
+# Wizardry — Elemental Battle Prototype v0.18.0
 
-## v0.17 animation continuity repairs
+## v0.18 — Poseidon-only continuity and opacity repair
 
-**Poseidon:** The old windup frame that still depicted the opposite-hand
-trident is excluded from playback. His raised-trident pose keeps the weapon
-in the same (right) hand until release, at which instant the illustrated pose
-switches to an empty-hand follow-through and the projectile becomes the
-**only** trident drawn. An opaque sea-and-torso backing is painted behind
-the traced detail with `destination-over`, filling accidental transparent
-body/wave gaps without covering the original character artwork. This underlay
-is built once into cached traced frames and used by the vector fallback.
+- **The windup is visible again.** Instead of holding frame 4 throughout the cast, the game now plays three distinct right-handed windup poses (frames 4, 5 and 6). They are rebuilt once at startup from Poseidon's approved single-trident right-handed idle art: his upper body, right hand and the held trident lean progressively backward together while the ocean base stays anchored. The old erroneous double-trident windup frames are never rendered.
+- **The trident doesn't jump between hands.** It stays in Poseidon's screen-right hand up to the launch timestamp; then his illustrated hand is empty and the independent projectile begins at the final right-hand grip around battle coordinate (568, 217), rather than appearing at (644, 211).
+- **Opaque body/wave repair.** When the approved trace is cached, the game adds a continuous water-and-skin backing and scans the alpha channel to fill enclosed transparent holes and small open cracks in the body, beard, and ocean core. This runs once at startup, not every game frame; exterior background transparency is kept.
+- **Timing unchanged:** Poseidon takes about **2.63 seconds** at displayed 1×; impact deals 1,200 Water damage, followed by roughly 0.61 seconds before unsummoning. No extra on-screen stage-by-stage narration.
+- **Stone Golem is unchanged** in this release.
 
-**Stone Golem:** The advancing spikes finish, then the original frame
-transitions through two eased, overlapping recovery phases into the
-hands-down pose (frame 1 of the approved animation). It pauses visibly
-before the hands-down character sinks below the arena. No instantaneous
-snap back to the original first pose.
-
-Both spells retain their approximately 2.6–2.8-second normal casts,
-with Stone Golem slightly slower than Poseidon. Damage remains 1,200 Water
-and 900 Earth, respectively. Neither cast displays narration for individual
-animation phases. The battle canvas backing buffer remains fixed.
-
+The runtime retains the approved traced vector look and Canvas 2D renderer. It does not depend on CSS character animation.
 
 Play: https://wafflinyo.github.io/Wizardry/
 

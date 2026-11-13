@@ -108,7 +108,7 @@
   }
   function nearestAvailableCaster(){
     const u=alive(state.planningSide).find(x=>!state.plans[x.id]);
-    state.selectedCaster=u?.id||alive(state.planningSide)[0]?.id||null;
+    state.selectedCaster=u?.id||null; // Nobody remains to choose once team is fully queued
     clearSelection();
   }
   function selectCaster(id){
@@ -382,7 +382,8 @@
   function paintUI(){
     if(!state)return;
     const planning=state.phase==="planning",c=caster(),card=currentCard(),
-      target=correctTarget(),toPlan=alive(state.planningSide).length,
+      target=correctTarget()||(!card?getUnit(state.selectedTarget):null),
+      toPlan=alive(state.planningSide).length,
       count=alive(state.planningSide).filter(u=>state.plans[u.id]).length;
     ui.round.textContent="ROUND "+state.round;
     ui.phase.textContent=planning?(state.planningSide?"TEAM B · PICK AGAIN":"CHOOSE SPELLS"):
@@ -394,8 +395,9 @@
     if(planning)ui.hint.textContent="ROUND "+state.round+" · "+
       (state.planningSide?"Team B":"Your team")+
       ": select a NEW spell and target for each wizard.";
-    ui.handTitle.textContent=(c?c.name:(planning?"No caster":"Battle"))+" · "+
-      (planning?"Choose a spell":state.phase==="finished"?"Victory test":"Resolving");
+    ui.handTitle.textContent=(c?c.name:(planning?"All spells queued":"Battle"))+" · "+
+      (planning?(c?"Choose a spell and target":"Ready to resolve"):
+        state.phase==="finished"?"Victory test":"Resolving");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");

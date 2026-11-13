@@ -11,7 +11,7 @@
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
     status:$("status"),reset:$("resetButton"),hat:$("wizardHat"),robe:$("wizardRobe"),
-    robeColor:$("wizardColor")};
+    robeColor:$("wizardColor"),confirm:$("confirmTarget")};
   // Two approved summons only. Future shields, traps and support cards
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
@@ -125,9 +125,10 @@
     if(state.phase!=="planning")return;
     const u=getUnit(id),c=caster(),card=currentCard();
     if(!c||!card||!u||u.hp<=0||u.team!==1-c.team)return;
+    // Selecting or changing an enemy only previews the target; no spell is
+    // queued or mana spent until the visible Confirm Target is pressed.
     state.selectedTarget=id;
-    // Two-tap spell flow: CARD -> ENEMY. Nothing else is required.
-    if(queueSpell())resolvePressed();
+    paintUI();
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
@@ -135,6 +136,10 @@
     state.selectedCard=id;
     state.selectedTarget=null;
     paintUI();
+  }
+  function confirmTarget(){
+    if(state.phase!=="planning"||!caster()||!currentCard()||!correctTarget())return;
+    if(queueSpell())resolvePressed();
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
@@ -404,7 +409,8 @@
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
     if(planning)ui.hint.textContent=c?
-      (card?"Tap a glowing enemy to cast "+card.name+".":"Tap one of your two spells below."):
+      (card?(target?"Confirm "+card.name+" on "+target.name+".":"Tap an enemy to target "+card.name+"."):
+        "Tap one of your two spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
       (planning?" · "+(card?"Tap an enemy":"Choose a spell"):" · Casting");
@@ -416,6 +422,11 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
     ui.chosenTarget.textContent=target?"Target: "+target.name:
       "Tap an enemy on the battlefield";
+    const canConfirm=planning&&!!c&&!!card&&!!target&&
+      c.mana>=card.cost&&!state.plans[c.id];
+    ui.confirm.hidden=!canConfirm;
+    ui.confirm.disabled=!canConfirm;
+    ui.confirm.textContent=target?"Confirm Target":"Confirm Target";
     // Actual initiative preview, ordered by speed. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -520,7 +531,8 @@
       for(const x of ui.sizes.querySelectorAll("button"))x.classList.toggle("active",x===b);
       setBattle(state.mode,Number(b.dataset.size));
     };
-    // Card and enemy taps are the entire casting UI; no Queue/Resolve tap.
+    // Card -> enemy -> explicit confirmation. CPU teammates still auto-plan.
+    ui.confirm.onclick=confirmTarget;
     ui.queue.onclick=()=>{};
     ui.auto.onclick=()=>{};
     ui.resolve.onclick=()=>{};
@@ -876,8 +888,6 @@
       ellipse(g,0,5,77*scale,27*scale,"#18e8d21f","#70f6f2",4);
     if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&u.team!==state.planningSide)
       ellipse(g,0,5,87*scale,30*scale,"#d4b64d20","#f6d487",4);
-    if(state.selectedTarget===u.id&&state.phase==="planning")
-      ellipse(g,0,5,77*scale,26*scale,"#d4b64d1a","#f6d487",4);
     if(state.animation&&(state.animation.source===u.id||state.animation.target===u.id)){
       ellipse(g,0,4,82*scale,29*scale,null,
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
@@ -1054,17 +1064,6 @@
   function render(time){
     g.setTransform(1,0,0,1,0,0);
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
-    // Ground-plane aim indicator. Subtle enough not to clutter the arena,
-    // but it makes target choice and profile turns legible on small phones.
-    if(state.phase==="planning"&&state.selectedCaster&&state.selectedTarget){
-      const from=getUnit(state.selectedCaster),to=getUnit(state.selectedTarget);
-      if(from&&to&&from.hp>0&&to.hp>0&&from.team!==to.team){
-        g.save();g.setLineDash([8,13]);g.lineWidth=2.2;
-        g.strokeStyle="#79e5e578";g.beginPath();g.moveTo(from.x,from.y+3);
-        g.quadraticCurveTo((from.x+to.x)/2,(from.y+to.y)/2+13,to.x,to.y+3);
-        g.stroke();g.restore();
-      }
-    }
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     for(const u of [...state.units].sort((a,b)=>a.y-b.y))drawUnit(u,time);

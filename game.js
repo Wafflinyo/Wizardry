@@ -673,12 +673,13 @@
   // Sandstone-and-moss creature, separate from the blue-grey enemy Sentinel.
   // Real illustrated sprite frames, replacing all procedural golem polygons.
   // The 480x640 WebP stores a 3-column x 4-row grid of 160px squares.
-  const GOLEM_FRAME=160,GOLEM_COLUMNS=4,GOLEM_COUNT=12;
+  const GOLEM_FRAME=90,GOLEM_COLUMNS=3,GOLEM_COUNT=12;
   const golemSprite=document.createElement("img");
   let golemSpriteReady=false;
   let golemSpriteError=false;
   golemSprite.onload=()=>{
-    golemSpriteReady=golemSprite.naturalWidth>=640&&golemSprite.naturalHeight>=480;
+    golemSpriteReady=golemSprite.naturalWidth===GOLEM_COLUMNS*GOLEM_FRAME&&
+      golemSprite.naturalHeight===4*GOLEM_FRAME;
     if(selectedSpell==="stone"&&!cast)refreshUI();
   };
   golemSprite.onerror=()=>{
@@ -688,10 +689,10 @@
       refreshUI();
     }
   };
-  golemSprite.src="./assets/stone-golem-lowpoly-v070.webp";
+  golemSprite.src="./assets/stone-golem-geom-v08.avif";
 
   function golemAnimationFrame(elapsed) {
-    // The 4x3 atlas already contains the complete rise, hand clasp, overhead
+    // The approved 3x4 atlas already contains the complete rise, hand clasp, overhead
     // pose, slam, spike sequence and sinking. No separate polygon spikes.
     if(elapsed<EARTH.emergeStart)return -1;
     if(elapsed<EARTH.emergeEnd){
@@ -719,7 +720,7 @@
     const frame=golemAnimationFrame(elapsed);
     if(frame<0||elapsed>=EARTH.crumbleEnd)return;
     const col=frame%GOLEM_COLUMNS,row=Math.floor(frame/GOLEM_COLUMNS);
-    // One stationary, game-space anchored sprite. The illustrations already
+    // One stationary, game-space anchored sprite. The approved illustrations already
     // show emergence and disappearance. Do not double-animate vertical position.
     const size=392,dx=350,dy=411-size*.927;
     g.save();
@@ -728,6 +729,7 @@
     const fadeOut=1-ease(phase(elapsed,EARTH.crumbleEnd-.17,EARTH.crumbleEnd));
     g.globalAlpha*=fadeIn*fadeOut;
     g.imageSmoothingEnabled=true;
+    g.imageSmoothingQuality="high";
     g.drawImage(golemSprite,col*GOLEM_FRAME,row*GOLEM_FRAME,
       GOLEM_FRAME,GOLEM_FRAME,dx,dy,size,size);
     g.restore();

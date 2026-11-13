@@ -39,6 +39,15 @@
     launch: 2.55, hit: 2.86,
     sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
   });
+  // Stone Golem has its own summon, double-arm lift, projectile and crumble clock.
+  // At normal speed the full sequence plays in about 3.4 seconds.
+  const EARTH = Object.freeze({
+    emergeStart: .16, emergeEnd: 1.14,
+    liftStart: 1.01, liftEnd: 2.37,
+    braceStart: 2.37, releaseStart: 2.69,
+    launch: 3.09, hit: 3.54,
+    crumbleStart: 4.11, crumbleEnd: 5.02, end: 5.17
+  });
   const duration = SPELL.end;
   // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
@@ -584,6 +593,189 @@
       g.strokeText("-1,200",782,y);g.fillStyle="#fef8df";g.fillText("-1,200",782,y);
       g.restore();
     }
+  }
+
+  // --- EARTH SCHOOL: STONE GOLEM -------------------------------------------
+  // Sandstone-and-moss creature, separate from the blue-grey enemy Sentinel.
+  function drawBoulder(x,y,r,spin=0,opacity=1) {
+    g.save();g.translate(x,y);g.rotate(spin);g.globalAlpha*=opacity;
+    const pts=[[-.88,-.52],[-.43,-.96],[.23,-1],[.76,-.67],[1,-.13],[.72,.62],[.12,.99],[-.58,.88],[-1,.25]].map(p=>[p[0]*r,p[1]*r]);
+    polygon(pts,"#686958","#d3bc8d",2.8);
+    triangleFacet(-.88*r,-.52*r,-.43*r,-.96*r,-.16*r,-.18*r,"#a2a18a");
+    triangleFacet(-.43*r,-.96*r,.23*r,-r,.31*r,-.21*r,"#b2ac8e");
+    triangleFacet(.23*r,-r,.76*r,-.67*r,.31*r,-.21*r,"#7e826a");
+    triangleFacet(.76*r,-.67*r,r,-.13*r,.15*r,.17*r,"#525f51");
+    triangleFacet(-r,.25*r,-.16*r,-.18*r,.12*r,.99*r,"#92917b");
+    triangleFacet(.15*r,.17*r,.72*r,.62*r,.12*r,.99*r,"#434d41");
+    triangleFacet(-.58*r,.88*r,.12*r,.99*r,-.12*r,.27*r,"#686d5a");
+    g.beginPath();g.moveTo(-.54*r,-.58*r);
+    g.lineTo(-.12*r,-.28*r);g.lineTo(.12*r,-.39*r);g.lineTo(.36*r,-.12*r);
+    g.strokeStyle="#d8c592";g.lineWidth=2.2;g.stroke();
+    g.beginPath();g.moveTo(-.29*r,.12*r);
+    g.lineTo(-.1*r,.42*r);g.lineTo(.15*r,.48*r);
+    g.strokeStyle="#9ac16f";g.lineWidth=3.5;g.stroke();
+    // Faceted quartz inclusions distinguish the projectile from plain rocks.
+    polygon([[.37*r,-.54*r],[.52*r,-.31*r],[.32*r,-.20*r],[.20*r,-.40*r]],"#bde6a1","#d9edb7",1.1);
+    g.restore();
+  }
+  function earthPose(elapsed,t=0) {
+    const emerging=out(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
+    const descent=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
+    const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd));
+    const throwPower=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
+    const base=411+(1-emerging)*159+descent*66;
+    const x=502;
+    const crouch=Math.sin(t*2.3)*1.2*(1-descent);
+    const rockX=x+throwPower*91;
+    const rockY=base-84-lift*205+throwPower*16+crouch;
+    return {x,base,emerging,descent,lift,throwPower,rockX,rockY,
+      hands:[[rockX-43,rockY+17],[rockX+43,rockY+17]]};
+  }
+  function stoneLimb(a,b,thickA,thickB,light,shadow) {
+    const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.max(1,Math.hypot(dx,dy));
+    const nx=-dy/length,ny=dx/length;
+    polygon([
+      [a[0]+nx*thickA,a[1]+ny*thickA],
+      [b[0]+nx*thickB,b[1]+ny*thickB],
+      [b[0]-nx*thickB,b[1]-ny*thickB],
+      [a[0]-nx*thickA,a[1]-ny*thickA]
+    ],light,"#b2a683",2);
+    triangleFacet(a[0]+nx*thickA,a[1]+ny*thickA,
+      b[0]+nx*thickB,b[1]+ny*thickB,b[0],b[1],shadow);
+  }
+  function drawStoneGolem(elapsed,t) {
+    const p=earthPose(elapsed,t);
+    if(p.emerging<.01 || p.descent>.998)return;
+    const x=p.x,y=p.base;
+    g.save();
+    // Sink underground: feet and debris never show past the arena surface.
+    g.beginPath();g.rect(290,36,420,375);g.clip();
+    g.globalAlpha*=1-ease(phase(p.descent,.72,1));
+    glow(x,y-84,116,"#abd56a1f");
+    oval(x,y+1,91,21,"#252e29a8");
+    // Moss-encrusted foot stones
+    polygon([[x-62,y-59],[x-21,y-63],[x-14,y-2],[x-70,y+4]],"#565d4d","#9b9e7b",2);
+    triangleFacet(x-62,y-57,x-21,y-63,x-44,y-4,"#91977a");
+    polygon([[x+20,y-65],[x+61,y-63],[x+73,y+2],[x+12,y-3]],"#4e574a","#a1a488",2);
+    triangleFacet(x+21,y-63,x+61,y-62,x+28,y-7,"#77836a");
+    // Golem's chest: broad squat sandstone slabs with green mineral seams
+    polygon([[x-74,y-154],[x-33,y-176],[x+36,y-174],[x+79,y-153],[x+69,y-78],[x+28,y-52],[x-36,y-49],[x-74,y-88]],
+      "#687360","#b9b38f",3);
+    triangleFacet(x-73,y-151,x-32,y-175,x-21,y-111,"#b6ae8b");
+    triangleFacet(x-32,y-176,x+34,y-174,x+1,y-112,"#939b7b");
+    triangleFacet(x+35,y-173,x+79,y-153,x+27,y-110,"#526450");
+    triangleFacet(x-21,y-110,x+24,y-114,x+28,y-51,"#566d55");
+    triangleFacet(x-71,y-87,x-21,y-109,x-37,y-51,"#818b70");
+    triangleFacet(x+25,y-110,x+69,y-81,x+28,y-52,"#3f5346");
+    polygon([[x-25,y-132],[x,y-151],[x+25,y-134],[x+14,y-104],[x-10,y-102]],"#405744");
+    polygon([[x-16,y-132],[x,y-142],[x+16,y-132],[x+12,y-120],[x-9,y-119]],"#b9d57b","#d7e79b",1.2);
+    // Huge earth pauldrons, clearly not Poseidon's gold armor.
+    polygon([[x-87,y-178],[x-58,y-193],[x-29,y-166],[x-44,y-134],[x-80,y-140]],"#8f9777","#c3b596",2);
+    triangleFacet(x-83,y-179,x-60,y-191,x-56,y-151,"#b6b293");
+    polygon([[x+56,y-194],[x+88,y-175],[x+78,y-138],[x+45,y-133],[x+28,y-165]],"#75816a","#b8b493",2);
+    triangleFacet(x+59,y-188,x+85,y-175,x+63,y-150,"#aaad88");
+    // Chunky golem head with a rocky brow and amber-green eyes
+    polygon([[x-38,y-208],[x-30,y-255],[x-6,y-271],[x+31,y-257],[x+45,y-212],[x+24,y-176],[x-23,y-178]],
+      "#788470","#c2bd98",2);
+    triangleFacet(x-38,y-208,x-31,y-255,x+1,y-214,"#acb195");
+    triangleFacet(x-30,y-253,x-6,y-269,x+29,y-257,"#c4c09b");
+    triangleFacet(x+30,y-256,x+45,y-213,x+5,y-211,"#576f5c");
+    polygon([[x-31,y-225],[x-8,y-231],[x-3,y-216],[x-30,y-211]],"#2f4239");
+    polygon([[x+8,y-230],[x+32,y-225],[x+31,y-211],[x+9,y-216]],"#2f4239");
+    polygon([[x-26,y-223],[x-11,y-225],[x-10,y-218],[x-25,y-215]],"#c3f49b");
+    polygon([[x+12,y-224],[x+28,y-223],[x+27,y-216],[x+11,y-217]],"#c3f49b");
+    line(x-10,y-202,x+8,y-202,"#435447",4);
+    // Two independent arms supporting the same boulder.
+    const leftShoulder=[x-69,y-154],rightShoulder=[x+69,y-154];
+    const hands=p.hands;
+    const leftElbow=[mix(x-107,x-83,p.lift)+p.throwPower*18,
+                     mix(y-125,y-222,p.lift)-p.throwPower*8];
+    const rightElbow=[mix(x+107,x+82,p.lift)+p.throwPower*32,
+                      mix(y-125,y-223,p.lift)-p.throwPower*5];
+    const leftHand=hands[0],rightHand=hands[1];
+    stoneLimb(leftShoulder,leftElbow,23,19,"#777f68","#4e5e4b");
+    stoneLimb(leftElbow,leftHand,19,13,"#9a9c7e","#55634d");
+    stoneLimb(rightShoulder,rightElbow,24,19,"#7a8870","#4e6554");
+    stoneLimb(rightElbow,rightHand,19,13,"#a1a488","#63745b");
+    // The rock stays between BOTH hands as it is raised above his head.
+    if(elapsed<EARTH.launch)
+      drawBoulder(p.rockX,p.rockY,52,Math.sin(t*1.4)*.045);
+    // Knuckles are in front of the boulder for a two-handed grip.
+    for(let side=0;side<2;side++){
+      const hand=hands[side];
+      polygon([[hand[0]-13,hand[1]-11],[hand[0]+12,hand[1]-8],
+        [hand[0]+14,hand[1]+13],[hand[0]-10,hand[1]+13]],
+        side===0?"#a5a68a":"#878e74","#d6c9a2",1.7);
+      triangleFacet(hand[0]-12,hand[1]-10,hand[0]+10,hand[1]-9,
+        hand[0]+1,hand[1]+5,side===0?"#c0bc9b":"#a9ac8a");
+    }
+    g.restore();
+  }
+  function drawEarthPortal(elapsed,t) {
+    const emerge=ease(phase(elapsed,.05,EARTH.emergeEnd));
+    const fade=1-ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
+    if(emerge<=.01||fade<=.01)return;
+    const x=502,y=410;
+    g.save();g.globalAlpha=emerge*fade;
+    glow(x,y,115,"#9eca6a30");
+    oval(x,y+1,146,35,"#383b2a90","#bea86f",2.6);
+    oval(x,y,115,26,"#47422e72","#a8bb74",2);
+    // Earth cracks radiate from the golem's emergence, not a water whirlpool.
+    for(let i=0;i<12;i++){
+      const a=i*Math.PI/6+t*.015;
+      const dx=Math.cos(a),dy=Math.sin(a)*.28;
+      line(x+dx*45,y+dy*40,x+dx*(84+(i%3)*18),y+dy*(90+(i%3)*15),
+           i%3?"#9f9e6e":"#d9ca8a",2.5);
+    }
+    g.restore();
+  }
+  function drawEarthProjectile(elapsed,t) {
+    if(elapsed<EARTH.launch||elapsed>=EARTH.hit)return;
+    const p=phase(elapsed,EARTH.launch,EARTH.hit);
+    const start=earthPose(EARTH.launch,t-(elapsed-EARTH.launch));
+    const x=mix(start.rockX,783,p);
+    const y=mix(start.rockY,285,p)-Math.sin(Math.PI*p)*47;
+    g.save();
+    g.globalCompositeOperation="lighter";
+    const dustX=mix(start.rockX,783,Math.max(0,p-.14));
+    const dustY=mix(start.rockY,285,Math.max(0,p-.14))-
+      Math.sin(Math.PI*Math.max(0,p-.14))*47;
+    line(dustX,dustY,x,y,"#d1bf7d5c",17);
+    glow(x,y,58,"#cfe0a12c");
+    g.restore();
+    drawBoulder(x,y,52,p*5.8);
+  }
+  function drawEarthImpact(elapsed) {
+    if(elapsed<EARTH.hit||elapsed>EARTH.hit+1.03)return;
+    const p=phase(elapsed,EARTH.hit,EARTH.hit+1.03);
+    const alpha=1-ease(p),x=784,y=287;
+    g.save();g.globalAlpha=alpha;
+    glow(x,y,175*(1-p)+20,"#c8d5878c");
+    // Jagged chunks of stone instead of a watery splash.
+    for(let i=0;i<15;i++){
+      const a=i*Math.PI*2/15+.37;
+      const dis=23+p*(125+(i%3)*26);
+      const cx=x+Math.cos(a)*dis,cy=y+Math.sin(a)*dis;
+      g.save();g.translate(cx,cy);g.rotate(a+p*3);
+      polygon([[-8,-6],[1,-15],[13,-4],[9,10],[-5,11]],
+        i%2===0?"#d3c499":"#879274","#e2d9af",1.3);
+      g.restore();
+    }
+    for(let i=0;i<3;i++)
+      oval(x,390,30+p*(90+i*21),9+p*(29+i*7),null,
+        i%2?"#b5ae77":"#ded3a1",4-i*.7);
+    g.restore();
+    if(p<.94){
+      g.save();g.globalAlpha=1-ease(phase(elapsed,EARTH.hit+.63,EARTH.hit+1));
+      g.font="bold 53px Georgia,serif";g.textAlign="center";
+      g.lineWidth=6;g.strokeStyle="#292916";g.shadowBlur=12;g.shadowColor="#dff6a4";
+      g.strokeText("-900",x,214-52*ease(p));
+      g.fillStyle="#fbefd3";g.fillText("-900",x,214-52*ease(p));g.restore();
+    }
+  }
+  function drawEarthSummon(elapsed,t) {
+    drawEarthPortal(elapsed,t);
+    drawStoneGolem(elapsed,t);
   }
 
   function drawForeground(t){

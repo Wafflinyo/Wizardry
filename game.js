@@ -1082,10 +1082,10 @@
     const stages=earth?{
       opening:["EARTH AWAKENS","Cracks race across the arena floor."],
       rise:["STONE GOLEM SUMMONED","An ancient Earth guardian rises!"],
-      lift:["LIFTING BOULDER","Both hands raise the massive rock overhead!"],
-      brace:["BOULDER OVERHEAD","Stone Golem braces for a mighty throw."],
-      wind:["MIGHTY HEAVE","Both arms send the boulder toward the target!"],
-      throw:["BOULDER RELEASED","The boulder flies through the air!"],
+      lift:["HEAVY OVERHEAD LIFT","The golem bends both elbows and hauls the boulder upward."],
+      brace:["CHARGING THE THROW","It leans back, lifts its left foot and draws the boulder behind its head."],
+      wind:["DRIVING FORWARD","The lead foot plants, hips drive, and both arms whip overhead!"],
+      throw:["BOULDER RELEASED","The spinning boulder rockets straight toward the Sentinel!"],
       impact:["CRUSHING IMPACT","Stone Sentinel takes 900 Earth damage!"],
       sink:["CRUMBLING AWAY","The golem returns to the earth."],
       complete:["EARTH SPELL COMPLETE","The ground grows still."]

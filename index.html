@@ -7,7 +7,7 @@
   <meta name="description" content="Wizardry — a playable low-poly spellcasting prototype. Summon Poseidon or an Earth Stone Golem, then hurl Poseidon's trident or summon Stone Golem's ground-shattering spikes against the Stone Sentinel.">
   <title>Wizardry | Earth & Water Spells</title>
   
-  <link rel="stylesheet" href="./style.css?v=0.9.0">
+  <link rel="stylesheet" href="./style.css?v=0.10.0">
 </head>
 <body>
   <main class="app">
@@ -95,34 +95,7 @@
           <span class="card-cost"><span class="cost-number">6</span></span>
           <span class="card-topline">EPIC · EARTH</span>
           <span class="card-art earth-art">
-            <span class="golem-card-portrait" aria-hidden="true">
-              <svg class="golem-vector-portrait" viewBox="0 0 210 240" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 221L52 214L76 226L135 216L185 225V240H21Z" fill="#2c4539"/>
-                <path d="M53 174L77 168L75 226L45 230Z" fill="#969788" stroke="#3d4f40" stroke-width="3"/>
-                <path d="M130 170L155 168L169 227L139 229Z" fill="#606f61" stroke="#36493b" stroke-width="3"/>
-                <path d="M45 177L69 155L137 155L161 177L142 209L67 211Z" fill="#737c6d" stroke="#354b3c" stroke-width="3"/>
-                <path d="M45 177L69 155L99 186L67 208Z" fill="#aaa797"/>
-                <path d="M137 155L161 177L141 208L105 187Z" fill="#455c4c"/>
-                <path d="M41 103L68 82L139 83L169 107L151 174L62 175Z" fill="#868a79" stroke="#37463a" stroke-width="3"/>
-                <path d="M41 103L68 82L98 136L63 174Z" fill="#b1ac9a"/>
-                <path d="M140 84L169 106L151 173L113 140Z" fill="#4e6655"/>
-                <path d="M86 132L103 143L109 133L124 147L114 160" fill="none" stroke="#b5f374" stroke-width="4"/>
-                <path d="M30 106L45 78L75 87L69 135L37 138Z" fill="#9d9d88" stroke="#384b3c" stroke-width="3"/>
-                <path d="M139 87L165 79L181 110L170 142L141 136Z" fill="#68796a" stroke="#384b3c" stroke-width="3"/>
-                <path d="M26 89L41 58L73 77L60 100Z" fill="#737e45"/>
-                <path d="M41 75L50 34L70 76Z" fill="#9cdd58" stroke="#3d693c" stroke-width="2"/>
-                <path d="M49 35L50 75L66 73Z" fill="#d5fa99"/>
-                <path d="M52 105L63 51L83 26L100 39L83 122Z" fill="#a2a18b" stroke="#3b4c3c" stroke-width="3"/>
-                <path d="M119 43L138 31L158 65L156 107L129 115Z" fill="#747f6d" stroke="#3b4c3c" stroke-width="3"/>
-                <path d="M70 67L81 21L124 20L140 56L126 91L87 92Z" fill="#878c7b" stroke="#394a3e" stroke-width="3"/>
-                <path d="M70 67L81 21L97 63Z" fill="#b6b3a0"/>
-                <path d="M124 20L140 56L126 90L104 64Z" fill="#4c6553"/>
-                <path d="M75 57L89 60L87 68L74 67M113 61L128 58L128 67L113 69Z" fill="#bef87a"/>
-                <path d="M91 111L101 100L119 109L122 139L100 145L87 136Z" fill="#a4a18c" stroke="#465747" stroke-width="3"/>
-                <path d="M119 109L131 100L147 113L142 137L122 143Z" fill="#6e7b6a" stroke="#455645" stroke-width="3"/>
-                <path d="M109 114L119 126L124 117" fill="none" stroke="#b5f475" stroke-width="3"/>
-              </svg>
-            </span>
+            <span class="golem-card-portrait" id="golemCardPortrait" aria-hidden="true"></span>
             <span class="earth-spark earth-spark-left"></span><span class="earth-spark earth-spark-right"></span>
           </span>
           <span class="card-name">STONE<br>GOLEM</span>
@@ -146,8 +119,9 @@
       </div>
     </section>
 
-    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.9.0</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
+    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.10.0</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
   </main>
-  <script src="./game.js?v=0.9.0" defer></script>
+  <script src="./assets/stone-golem-true-trace-v1.js?v=0.10.0" defer></script>
+  <script src="./game.js?v=0.10.0" defer></script>
 </body>
 </html>

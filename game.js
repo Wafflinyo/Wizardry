@@ -53,7 +53,7 @@
     emergeStart: .16, emergeEnd: 1.14,
     liftStart: 1.01, liftEnd: 2.37,
     braceStart: 2.37, releaseStart: 2.69,
-    launch: 3.09, hit: 3.54,
+    launch: 3.09, hit: 3.43,
     crumbleStart: 4.11, crumbleEnd: 5.02, end: 5.17
   });
   const duration = SPELL.end;
@@ -679,7 +679,10 @@
     const legRaise=ease(phase(elapsed,EARTH.liftEnd-.18,EARTH.releaseStart))*
       (1-ease(phase(elapsed,EARTH.releaseStart,EARTH.launch+.12)));
     const lean=-.23*charge*(1-release)+.16*release*(1-follow*.40);
-    const base=411+(1-emerging)*157+descent*140;
+    // Begin with the entire creature hidden below y=411. Previously its
+    // head appeared above ground before the rise began, creating a pop.
+    // The same 300px travel is mirrored on retreat for a smooth burial.
+    const base=411+(1-emerging)*300+descent*300;
     const x=502;
     const pivot=[x,base-71];
     const shoulders=[
@@ -833,7 +836,7 @@
   }
   function drawEarthProjectile(elapsed,t) {
     if(elapsed<EARTH.launch||elapsed>=EARTH.hit)return;
-    const p=ease(phase(elapsed,EARTH.launch,EARTH.hit));
+    const p=phase(elapsed,EARTH.launch,EARTH.hit); // constant high-speed throw
     // Sample the exact release point so the boulder does not teleport out
     // of either hand when the game switches to projectile animation.
     const start=earthPose(EARTH.launch,t);

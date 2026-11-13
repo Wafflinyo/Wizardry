@@ -846,7 +846,7 @@
       g.strokeStyle="#b8f6b2";g.lineWidth=2.3;g.stroke();
     }
     for(let i=0;i<n;i++){
-      const local=EARTH.spikesStart+i*travel/(n-1);
+      const local=EARTH.spikesStart+i*(travel-.17)/(n-1);
       const rise=ease(phase(elapsed,local,local+.17))*(1-retract);
       if(rise<.002)continue;
       const x=startX+(endX-startX)*i/(n-1);

@@ -809,67 +809,101 @@
   }
 
   function drawEarthPortal(elapsed,t) {
-    const emerge=ease(phase(elapsed,.05,EARTH.emergeEnd));
+    const emerge=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
     const fade=1-ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
     if(emerge<=.01||fade<=.01)return;
-    const x=502,y=410;
     g.save();g.globalAlpha=emerge*fade;
-    glow(x,y,115,"#9eca6a30");
-    oval(x,y+1,146,35,"#383b2a90","#bea86f",2.6);
-    oval(x,y,115,26,"#47422e72","#a8bb74",2);
-    // Earth cracks radiate from the golem's emergence, not a water whirlpool.
-    for(let i=0;i<12;i++){
-      const a=i*Math.PI/6+t*.015;
-      const dx=Math.cos(a),dy=Math.sin(a)*.28;
-      line(x+dx*45,y+dy*40,x+dx*(84+(i%3)*18),y+dy*(90+(i%3)*15),
-           i%3?"#9f9e6e":"#d9ca8a",2.5);
+    oval(505,409,102,22,"#233729c3","#829977",2);
+    oval(505,409,77,13,null,"#b9d8ae72",1.5);
+    for(let i=0;i<7;i++){
+      const x=505+(i-3)*24;
+      line(x,405,x+(i-3)*14,416+(i%2)*3,
+        i%2?"#94aa88":"#58775c",1.7);
+    }
+    g.restore();
+  }
+
+  function drawEarthSpikes(elapsed,t) {
+    if(elapsed<EARTH.spikesStart||elapsed>EARTH.crumbleEnd)return;
+    const n=11,travel=EARTH.spikesEnd-EARTH.spikesStart;
+    const retract=ease(phase(elapsed,EARTH.settleStart,EARTH.crumbleEnd));
+    const progress=clamp((elapsed-EARTH.spikesStart)/travel);
+    const startX=568,endX=785,groundY=404;
+    g.save();
+    // A fissure visibly propagates out from the golem's slammed fists.
+    if(progress>.002){
+      const edgeX=mix(startX,endX,progress);
+      g.beginPath();g.moveTo(startX,groundY-4);
+      const segments=Math.max(1,Math.ceil(progress*16));
+      for(let j=1;j<=segments;j++){
+        const q=j/segments,xx=mix(startX,edgeX,q);
+        g.lineTo(xx,groundY-11-5*Math.sin(xx*.083));
+      }
+      g.strokeStyle="#416b53";g.lineWidth=9;g.stroke();
+      g.strokeStyle="#b8f6b2";g.lineWidth=2.3;g.stroke();
+    }
+    for(let i=0;i<n;i++){
+      const local=EARTH.spikesStart+i*travel/(n-1);
+      const rise=ease(phase(elapsed,local,local+.17))*(1-retract);
+      if(rise<.002)continue;
+      const x=startX+(endX-startX)*i/(n-1);
+      const y=groundY-i*.67;
+      const h=(50+13*(i%4)+i*4.9)*rise;
+      const half=(11+3*(i%3))*Math.min(1,rise*3);
+      const tipX=x+(i%2?-7:8)*rise,tipY=y-h;
+      polygon([[x-half,y+4],[x-half*.75,y-h*.37],
+        [tipX,tipY],[x+half*.7,y-h*.23],[x+half,y+4]],
+        i%2?"#637f6e":"#89a08d","#c6d3bb",1.7);
+      triangleFacet(x-half,y+4,x-half*.75,y-h*.37,tipX,tipY,
+        i%2?"#aebea5":"#c0cdb7");
+      triangleFacet(tipX,tipY,x+half*.7,y-h*.23,x+half,y+4,
+        i%2?"#344f43":"#4c6c5c");
+      triangleFacet(x-half*.4,y+1,tipX,tipY,x+half*.1,y-h*.1,
+        "#87b98c70");
+      line(x,y-5,tipX,tipY+12*rise,"#b5efae9e",1.3);
+      oval(x,y+2,half*1.25,3.5,"#aabc95a1");
+      // Deterministic stone chips (avoid dozens of random particles).
+      if(elapsed<local+.3){
+        const fly=ease(phase(elapsed,local,local+.3));
+        for(let k=0;k<3;k++){
+          const px=x+(k-1)*21*fly;
+          const py=y-5-24*Math.sin(fly*Math.PI)*(1+k*.15);
+          polygon([[px-3,py],[px,py-5],[px+5,py+2]],
+            k%2?"#bbccb4":"#8ca38d");
+        }
+      }
     }
     g.restore();
   }
   function drawEarthProjectile(elapsed,t) {
-    if(elapsed<EARTH.launch||elapsed>=EARTH.hit)return;
-    const p=phase(elapsed,EARTH.launch,EARTH.hit); // decisive release
-    const source=earthPose(EARTH.launch,t-(elapsed-EARTH.launch));
-    const x=mix(source.rockX,783,p);
-    const y=mix(source.rockY,286,p)-Math.sin(Math.PI*p)*22;
-    const q=Math.max(0,p-.21);
-    const trailX=mix(source.rockX,783,q);
-    const trailY=mix(source.rockY,286,q)-Math.sin(Math.PI*q)*22;
-    g.save();g.globalCompositeOperation="lighter";
-    line(trailX,trailY,x,y,"#ddc59c6b",21);
-    glow(x,y,44,"#dfe9b337");
-    g.restore();
-    drawBoulder(x,y,51,-.18+p*5.4);
+    // The "projectile" is now a ground-traveling chain of Earth spikes.
+    drawEarthSpikes(elapsed,t);
   }
 
   function drawEarthImpact(elapsed) {
-    if(elapsed<EARTH.hit||elapsed>EARTH.hit+1.03)return;
-    const p=phase(elapsed,EARTH.hit,EARTH.hit+1.03);
-    const alpha=1-ease(p),x=784,y=287;
-    g.save();g.globalAlpha=alpha;
-    glow(x,y,175*(1-p)+20,"#c8d5878c");
-    // Jagged chunks of stone instead of a watery splash.
-    for(let i=0;i<15;i++){
-      const a=i*Math.PI*2/15+.37;
-      const dis=23+p*(125+(i%3)*26);
-      const cx=x+Math.cos(a)*dis,cy=y+Math.sin(a)*dis;
-      g.save();g.translate(cx,cy);g.rotate(a+p*3);
-      polygon([[-8,-6],[1,-15],[13,-4],[9,10],[-5,11]],
-        i%2===0?"#d3c499":"#879274","#e2d9af",1.3);
-      g.restore();
+    if(elapsed<EARTH.hit||elapsed>EARTH.hit+.84)return;
+    const p=phase(elapsed,EARTH.hit,EARTH.hit+.84);
+    const f=1-ease(p),x=785,y=320;
+    g.save();g.globalAlpha=f;
+    const r=20+p*94;
+    oval(x,395,r,r*.27,null,"#d1edba",5*f+1);
+    for(let i=0;i<9;i++){
+      const a=i*Math.PI*2/9,dis=16+p*(65+i%3*15);
+      const px=x+Math.cos(a)*dis,py=y+Math.sin(a)*dis*.72;
+      polygon([[px-5,py+3],[px+1,py-9],[px+9,py+2]],
+        i%2?"#90a88e":"#c5d8b8");
     }
-    for(let i=0;i<3;i++)
-      oval(x,390,30+p*(90+i*21),9+p*(29+i*7),null,
-        i%2?"#b5ae77":"#ded3a1",4-i*.7);
     g.restore();
     if(p<.94){
-      g.save();g.globalAlpha=1-ease(phase(elapsed,EARTH.hit+.63,EARTH.hit+1));
+      g.save();g.globalAlpha=1-ease(phase(elapsed,EARTH.hit+.54,EARTH.hit+.84));
       g.font="bold 53px Georgia,serif";g.textAlign="center";
-      g.lineWidth=6;g.strokeStyle="#292916";g.shadowBlur=12;g.shadowColor="#dff6a4";
-      g.strokeText("-900",x,214-52*ease(p));
-      g.fillStyle="#fbefd3";g.fillText("-900",x,214-52*ease(p));g.restore();
+      g.lineWidth=5;g.strokeStyle="#273729";
+      g.strokeText("-900",x,214-40*ease(p));
+      g.fillStyle="#e5f5ce";g.fillText("-900",x,214-40*ease(p));
+      g.restore();
     }
   }
+
   function drawEarthSummon(elapsed,t) {
     drawEarthPortal(elapsed,t);
     drawStoneGolem(elapsed,t);

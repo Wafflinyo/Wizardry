@@ -320,3 +320,49 @@
   font-variant-numeric: lining-nums tabular-nums;
   writing-mode: horizontal-tb;
 }
+
+
+/* v0.5 — polished elemental spell styling and low-cost mobile paint */
+.earth-cast.primary-button {
+  background: linear-gradient(115deg,#466943,#7c9963 46%,#3f6b55);
+  color: #f7ffe9;
+  border-color: #cde6ac;
+  box-shadow: inset 0 1px 0 #eaffca65,0 4px 17px #91bd6430;
+}
+.earth-cast.primary-button:hover:not(:disabled) {
+  filter: brightness(1.14);
+}
+.earth-card .card-name {
+  color: #f0ecca;
+  text-shadow: 0 2px 8px #10281a;
+}
+.earth-card .card-type {
+  color: #c5e4a7;
+}
+.earth-art {
+  background: radial-gradient(ellipse at 52% 28%,#829e78 0%,#3f6757 47%,#172c2b 86%);
+  border-color: #a7bc8d;
+}
+.earth-card .golem-card-art {
+  filter: drop-shadow(0 0 5px #b9e7a755);
+}
+.arena {
+  box-shadow: 0 17px 48px #000a,0 0 0 2px #233d4a;
+}
+.earth-card.selected {
+  box-shadow: inset 0 0 0 3px #111e17,inset 0 0 0 5px #bacd99,
+    0 0 0 2px #b8d99e,0 0 20px #9bc76e59;
+}
+.spell-card {
+  will-change: auto;
+  backface-visibility: hidden;
+}
+@media(max-width:700px){
+  /* iOS backdrop blur over a rescaling canvas costs excessive GPU memory. */
+  .cast-status {backdrop-filter: none;background:#071a24e8;}
+  .spell-tray {backdrop-filter: none;background:#0a1724f5;}
+  .win-overlay {backdrop-filter: none;}
+  .canvas-vignette {box-shadow: inset 0 0 34px #0615229e;}
+  .arena {box-shadow:0 8px 25px #0009,0 0 0 1px #345360;}
+  .hand-cards .earth-card .card-art {background:#335449;}
+}

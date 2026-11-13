@@ -10,7 +10,7 @@ The original 1v1 spell-animation duel is preserved at https://wafflinyo.github.i
 - **Story · CPU:** the local user plans actions for up to four allied wizards, and computer opponents automatically plan their responses. "Auto-fill" can queue actions for unassigned allies (simulated teammates).
 - **PvP · local test:** hot-seat planning for Team A, then Team B, followed by a shared resolution. This is **NOT online multiplayer**: no friends, lobbies, matchmaking, accounts, invitations or ranked games are connected yet.
 - Tap a combatant in the arena or a roster button to choose a caster/target. A target dropdown is provided for shields, heals, boosts and traps.
-- One queued action per living combatant per round; **actions resolve by descending speed**, not simultaneously. Missing friendly actions can be auto-filled; CPU actions are generated for story encounters.
+- One queued action per living combatant per round; **actions resolve by descending speed**, not simultaneously. A visible initiative strip previews the order and highlights the current caster. Missing friendly actions can be auto-filled; CPU actions are generated for story encounters.
 - Each fighter has independent HP, mana (10 maximum), speed and up to **three personal status slots**.
 - Mana is spent when the action actually begins; surviving combatants recover 4 mana at the end of each round.
 

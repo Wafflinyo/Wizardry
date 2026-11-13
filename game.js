@@ -32,7 +32,8 @@
     hpText: document.getElementById("enemyHealthText"),
     enemyHud: document.getElementById("enemyHud"),
     win: document.getElementById("winOverlay"),
-    winReplay: document.getElementById("winReplay")
+    winReplay: document.getElementById("winReplay"),
+    winFlavor: document.getElementById("winFlavor")
   };
   const W = 1000, H = 560, MAX_HP = 3000, DAMAGE = 1200, COST = 8;
   // All keyframes share one clock: the projectile and damage cannot drift apart.
@@ -949,6 +950,7 @@
     health=MAX_HP;mana=8;round=1;targeted=true;selectedSpell="poseidon";
     defeated=false;targetPulse=0;
     UI.win.hidden=true;
+    UI.winFlavor.textContent="The elements answer your call.";
     UI.state.textContent="READY TO CAST";
     UI.caption.textContent="Choose Water or Earth magic.";
     UI.status.textContent="Select a card, then Cast.";
@@ -1035,6 +1037,7 @@
     cast=null;mana=8;round++;
     if(health<=0){
       defeated=true;UI.win.hidden=false;UI.state.textContent="VICTORY";
+      UI.winFlavor.textContent=type==="stone"?"The earth rests after a mighty blow.":"The sea reclaims its champion.";
       UI.caption.textContent=spell.caption+" · VICTORY";
       UI.status.textContent="The Stone Sentinel has fallen.";
       UI.hint.textContent="Victory! Restart to test another spell.";

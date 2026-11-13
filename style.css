@@ -421,49 +421,221 @@ html,body { overscroll-behavior: none; }
 }
 
 
-/* v0.9 — the phone viewport and battle surface NEVER change dimensions
-   because the address bar slides in or out. JavaScript sets the height
-   variable once at startup; pixel-buffer size remains 1000×560. */
-html,body {
-  width:100%;
-  height:var(--wizardry-fixed-height,100svh);
-  max-height:var(--wizardry-fixed-height,100svh);
-  overflow:hidden;
-  overscroll-behavior:none;
+
+/* v0.11 — restore responsive, non-stretching battle layout.
+   Never make the document clip its spell cards to keep the arena tall. */
+html {
+  height:auto!important;
+  min-height:100%;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:auto;
 }
 body {
-  position:fixed;
-  left:0;
-  top:0;
-  right:0;
+  position:static!important;
+  height:auto!important;
+  min-height:100svh;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
   margin:0;
 }
 .app {
+  display:flex;
+  flex-direction:column;
+  width:min(1320px,100%);
   box-sizing:border-box;
-  height:var(--wizardry-fixed-height,100svh)!important;
-  min-height:0;
-  max-height:var(--wizardry-fixed-height,100svh)!important;
-  overflow:hidden;
+  height:auto!important;
+  min-height:100svh!important;
+  max-height:none!important;
+  overflow:visible!important;
+  margin:0 auto;
 }
+.masthead { flex-shrink:0; }
+.battle {
+  margin-top:10px;
+  flex:0 0 auto!important;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.battle-header {flex:0 0 auto;min-height:0;}
 .arena {
+  position:relative;
+  display:block;
+  width:100%;
+  height:auto!important;
+  max-height:none!important;
   min-height:0!important;
-  max-height:none;
+  flex:0 0 auto!important;
+  aspect-ratio:1000 / 560!important;
+  overflow:hidden;
   contain:layout paint;
-  flex-shrink:1;
   transition:none!important;
 }
 .arena canvas {
-  width:100%;
-  height:100%;
+  position:absolute;
+  inset:0;
   display:block;
-  image-rendering:auto;
+  width:100%!important;
+  height:100%!important;
+  object-fit:fill;
   transition:none!important;
 }
-@media(max-width:700px){
-  .golem-card-portrait {
-    width:80px;height:80px;
+.battle-controls { flex:0 0 auto; }
+.spell-tray {
+  flex:0 0 auto!important;
+  min-height:0;
+  overflow:visible!important;
+}
+.card-row {min-width:0;}
+.hand-cards {min-width:0;}
+.spell-details {min-width:0;}
+
+/* Portrait phones: all controls stay in one compact page; if browser bars
+   or accessibility text make it taller, page scrolls instead of clipping. */
+@media(max-width:700px) {
+  .app {padding:0 10px max(12px,env(safe-area-inset-bottom));}
+  .masthead {height:46px;flex:0 0 46px;}
+  .battle {margin-top:5px;}
+  .battle-header {margin-bottom:4px;}
+  .arena {border-radius:9px;}
+  .battle-controls {padding:5px 0 4px;}
+  .spell-tray {padding-top:5px;}
+  .tray-heading {margin-bottom:5px;}
+  .card-row {
+    display:grid;
+    grid-template-columns:minmax(0,1.7fr) minmax(105px,1fr);
+    gap:8px;
+    align-items:stretch;
   }
-  .canvas-vignette {
-    box-shadow:inset 0 0 26px #0615228a;
+  .hand-cards {
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
   }
+  .hand-cards .spell-card {
+    width:100%;
+    min-width:0;
+    height:160px;
+    padding:5px 4px;
+  }
+  .hand-cards .card-art {height:59px;flex:0 0 59px;}
+  .hand-cards .card-topline {font-size:6px;letter-spacing:0;white-space:nowrap;}
+  .hand-cards .card-name {font-size:10px;}
+  .hand-cards .card-type {font-size:6px;}
+  .hand-cards .card-damage {font-size:6px;white-space:nowrap;}
+  .hand-cards .card-damage strong {font-size:9px;}
+  .spell-details {
+    width:100%;
+    min-width:0;
+    height:160px;
+    padding:0;
+  }
+  .spell-details h3 {font-size:clamp(14px,3.6vw,18px);}
+  .spell-details .mechanic-grid {grid-template-columns:1fr;gap:4px;margin:3px 0;}
+  .spell-details .mechanic-grid>div {padding:5px;}
+  .spell-details .mechanic-grid>div:nth-child(2) {display:none;}
+  .spell-details .primary-button {min-height:39px;font-size:9px;padding:7px 4px;}
+}
+
+/* Landscape phones have less HEIGHT, not less width. Put the battlefield
+   and the card tray SIDE BY SIDE so the player can see both at once. */
+@media (orientation:landscape) and (max-height:600px) and (min-width:650px) {
+  html,body {overflow-y:auto!important;}
+  .app {
+    display:grid!important;
+    grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);
+    grid-template-rows:38px auto;
+    align-items:start;
+    column-gap:12px;
+    padding:0 max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));
+    min-height:100svh!important;
+  }
+  .masthead {grid-column:1 / -1;grid-row:1;height:36px;min-height:0;flex:0 0 auto;}
+  .brand-rune {width:28px;height:28px;font-size:18px;}
+  .brand-name {font-size:15px;}
+  .brand-subtitle {font-size:6px;}
+  .trial-label {display:none;}
+  .battle {
+    grid-column:1;
+    grid-row:2;
+    margin:2px 0 0;
+    min-width:0;
+    display:block;
+  }
+  .battle-header {margin-bottom:4px;}
+  .battle-title .eyebrow {display:none;}
+  .battle-title h1 {font-size:16px;margin:0;}
+  .round-meta {font-size:8px;padding-bottom:1px;}
+  .arena {width:100%;aspect-ratio:1000 / 560!important;max-height:none!important;}
+  .battle-controls {padding:4px 0 0;}
+  .button-group {width:100%;}
+  .secondary-button {padding:5px;font-size:10px;}
+  .spell-tray {
+    grid-column:2;
+    grid-row:2;
+    padding:0;
+    margin:0;
+    min-width:0;
+  }
+  .tray-heading {margin:0 0 3px;}
+  .tray-heading .eyebrow {display:none;}
+  .tray-heading h2 {font-size:16px;margin:0;}
+  .tray-stats strong {font-size:13px;}
+  .card-row {display:flex;flex-direction:column;gap:4px;}
+  .hand-cards {
+    display:grid;
+    width:100%;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .hand-cards .spell-card {
+    width:100%;
+    min-width:0;
+    height:135px;
+    padding:4px 6px;
+  }
+  .hand-cards .card-art {height:45px;flex:0 0 45px;}
+  .hand-cards .card-name {font-size:11px;}
+  .hand-cards .card-type {font-size:7px;}
+  .hand-cards .card-description {display:none;}
+  .hand-cards .card-damage {font-size:7px;}
+  .spell-details {
+    width:100%;
+    min-width:0;
+    height:auto;
+    min-height:80px;
+    padding:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 132px;
+    grid-template-rows:auto auto;
+    gap:4px 8px;
+  }
+  .spell-details>.eyebrow,.spell-details>p {display:none!important;}
+  .spell-details h3 {font-size:16px;margin:0;grid-column:1;grid-row:1;}
+  .spell-details .mechanic-grid {grid-column:1;grid-row:2;margin:0;display:flex;gap:5px;}
+  .spell-details .mechanic-grid>div {padding:3px 5px;}
+  .spell-details .mechanic-grid>div:nth-child(n+2) {display:none;}
+  .spell-details .mechanic-grid span {font-size:7px;}
+  .spell-details .mechanic-grid strong {font-size:10px;}
+  .spell-details .primary-button {
+    grid-column:2;grid-row:1 / 3;
+    align-self:stretch;
+    min-height:44px;
+    max-width:none;
+    font-size:9px;
+    padding:4px;
+  }
+  .footer {display:none;}
+}
+
+/* Extra-short mobile screens: keep the arena ratio; allow scrolling rather
+   than ever squeezing it vertically or hiding the Cast button. */
+@media(max-height:420px) and (max-width:649px) {
+  .arena {height:auto!important;aspect-ratio:1000/560!important;}
+  .app {min-height:100svh!important;overflow:visible!important;}
+  .hand-cards .spell-card {height:130px;}
+  .spell-details {height:130px;}
 }

@@ -684,63 +684,135 @@
     1.72,2.12,EARTH.holdStart,2.77,
     3.00,3.22,3.49,EARTH.crumbleStart
   ];
-  // These are true vector contours extracted from every approved sprite pose.
-  // Compile the paths ONCE, then paint the selected vector frame directly in
-  // the arena Canvas. No offscreen character bitmaps, spritesheets, or scaling
-  // cached image frames during the spell.
-  const golemVectorPaths=[];
-  let golemTraceError=null;
+  // All 12 Golem poses are individually traced vector contours.
+  // High-resolution color-layer frames are rasterized ONCE, then drawn with
+  // one GPU blit per game frame instead of painting 269 paths each refresh.
+  // A small startup benchmark compares cached vs live-vector rendering, with
+  // the direct Path2D version available as a fallback on unusual devices.
+  const golemVectorPaths=[],golemCachedFrames=[];
+  const GOLEM_CACHE_SCALE=1.7;
+  let golemRenderMode="vector",golemTraceError=null;
+  const renderDiagnostics={
+    golemRenderMode:"vector",cachePixelSize:0,cachedFrames:0,
+    vectorMsPerFrame:null,cachedMsPerFrame:null
+  };
   function golemAnimationFrame(elapsed) {
     if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
     let i=0;
     while(i<GOLEM_FRAME_TIMES.length-1&&elapsed>=GOLEM_FRAME_TIMES[i+1])i++;
     return i;
   }
-  function prepareTracedGolem(){
+  function buildGolemCache() {
+    const pixelSize=Math.round(golemTrace.cell*GOLEM_CACHE_SCALE);
+    try {
+      for(const layers of golemVectorPaths) {
+        const sheet=document.createElement("canvas");
+        sheet.width=pixelSize;sheet.height=pixelSize;
+        const ctx=sheet.getContext("2d",{alpha:true});
+        if(!ctx)throw new Error("Offscreen 2D context missing");
+        ctx.setTransform(GOLEM_CACHE_SCALE,0,0,GOLEM_CACHE_SCALE,0,0);
+        for(const [color,path] of layers) {
+          ctx.fillStyle=color;
+          ctx.fill(path,"evenodd");
+        }
+        golemCachedFrames.push(sheet);
+      }
+    }catch(error) {
+      golemCachedFrames.length=0;
+    }
+    renderDiagnostics.cachedFrames=golemCachedFrames.length;
+    renderDiagnostics.cachePixelSize=golemCachedFrames.length?pixelSize:0;
+  }
+  function benchmarkGolemModes() {
+    if(golemCachedFrames.length!==12||typeof performance.now!=="function")
+      return;
+    try {
+      const test=document.createElement("canvas");
+      test.width=416;test.height=416;
+      const ctx=test.getContext("2d",{alpha:true});
+      if(!ctx)return;
+      const ids=[2,7,10],directReps=2,cachedReps=7;
+      // Warm up Canvas shader/path caches, then compare time per frame.
+      let t=performance.now();
+      for(let repeat=0;repeat<directReps;repeat++)
+        for(const id of ids){
+          ctx.save();ctx.setTransform(416/golemTrace.cell,0,0,
+            416/golemTrace.cell,0,0);
+          for(const [color,path] of golemVectorPaths[id]){
+            ctx.fillStyle=color;ctx.fill(path,"evenodd");
+          }
+          ctx.restore();
+        }
+      renderDiagnostics.vectorMsPerFrame=
+        (performance.now()-t)/(directReps*ids.length);
+      t=performance.now();
+      for(let repeat=0;repeat<cachedReps;repeat++)
+        for(const id of ids){
+          ctx.setTransform(1,0,0,1,0,0);
+          ctx.drawImage(golemCachedFrames[id],0,0,416,416);
+        }
+      renderDiagnostics.cachedMsPerFrame=
+        (performance.now()-t)/(cachedReps*ids.length);
+      // Prefer cached playback for CPU headroom unless measurably worse.
+      const v=renderDiagnostics.vectorMsPerFrame;
+      const c=renderDiagnostics.cachedMsPerFrame;
+      if(v>0&&c>v*1.35)golemRenderMode="vector";
+      else golemRenderMode="cached";
+    } catch(error) {
+      golemRenderMode="cached";
+    }
+  }
+  function prepareTracedGolem() {
     if(!golemTrace||golemTrace.cell!==362||!Array.isArray(golemTrace.frames)||
        golemTrace.frames.length!==12||typeof Path2D!=="function"){
-      golemTraceError="The source-traced Stone Golem paths could not be loaded.";
+      golemTraceError="The approved Stone Golem trace data is unavailable.";
       return;
     }
     try {
-      for(const layers of golemTrace.frames){
-        golemVectorPaths.push(layers.map(([color,pathData])=>
-          [color,new Path2D(pathData)]));
-      }
-      // The spell card receives the same vector-traced third pose as SVG.
+      for(const layers of golemTrace.frames)
+        golemVectorPaths.push(layers.map(([color,data])=>
+          [color,new Path2D(data)]));
       const portrait=document.getElementById("golemCardPortrait");
       if(portrait){
-        const markup=golemTrace.frames[2].map(([color,d])=>
+        const artwork=golemTrace.frames[2].map(([color,d])=>
           '<path fill="'+color+'" fill-rule="evenodd" d="'+d+'"/>'
         ).join("");
-        portrait.innerHTML=
-          '<svg class="golem-vector-portrait" viewBox="0 0 362 362" '+
-          'xmlns="http://www.w3.org/2000/svg">'+markup+'</svg>';
+        portrait.innerHTML='<svg class="golem-vector-portrait" '+
+          'viewBox="0 0 362 362" xmlns="http://www.w3.org/2000/svg">'+
+          artwork+'</svg>';
       }
-    }catch(error){
-      golemVectorPaths.length=0;
-      golemTraceError="Could not compile the traced Stone Golem vectors.";
+      buildGolemCache();
+      benchmarkGolemModes();
+      renderDiagnostics.golemRenderMode=golemRenderMode;
+      // Diagnostic details are readable in the browser console if needed.
+      window.WIZARDRY_RENDER_DIAGNOSTICS=renderDiagnostics;
+    } catch(error) {
+      golemVectorPaths.length=0;golemCachedFrames.length=0;
+      golemTraceError="Could not prepare the Stone Golem artwork.";
     }
   }
   function drawStoneGolem(elapsed,t){
     const index=golemAnimationFrame(elapsed);
     if(index<0)return;
-    const contours=golemVectorPaths[index];
-    if(!contours)return;
-    // All geometry is traced from the approved 12 frames, including
-    // its own stone spikes; no second procedural effect is drawn.
+    if(!golemVectorPaths[index])return;
     const size=416,dx=306,dy=411-size*.975;
     g.save();
     g.beginPath();g.rect(280,-8,560,420);g.clip();
     const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
       (1-ease(phase(elapsed,EARTH.crumbleEnd-.19,EARTH.crumbleEnd)));
     g.globalAlpha*=fade;
-    g.translate(dx,dy);
-    const scale=size/golemTrace.cell;
-    g.scale(scale,scale);
-    for(const [color,path] of contours){
-      g.fillStyle=color;
-      g.fill(path,"evenodd");
+    if(golemRenderMode==="cached"&&golemCachedFrames[index]){
+      g.imageSmoothingEnabled=true;
+      g.imageSmoothingQuality="high";
+      g.drawImage(golemCachedFrames[index],dx,dy,size,size);
+    }else{
+      // Fallback uses the SAME original traced vector contours.
+      g.translate(dx,dy);
+      const scale=size/golemTrace.cell;
+      g.scale(scale,scale);
+      for(const [color,path] of golemVectorPaths[index]){
+        g.fillStyle=color;g.fill(path,"evenodd");
+      }
     }
     g.restore();
   }

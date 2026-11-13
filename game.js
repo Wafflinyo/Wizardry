@@ -923,7 +923,12 @@
     UI.spellCost.textContent=spell.cost+" Mana";
     UI.spellDamage.textContent=spell.damage.toLocaleString()+" HP";
     UI.spellTarget.textContent="Single enemy";
-    UI.cast.disabled=!!cast||defeated||mana<spell.cost;
+    // Do not disable the currently focused Cast button mid-animation.
+    // Mobile Safari can move the document when a tapped control loses focus.
+    // startCast() already refuses re-entry while cast is active.
+    const castBlocked=!!cast||defeated||mana<spell.cost;
+    UI.cast.disabled=!cast&&(defeated||mana<spell.cost);
+    UI.cast.setAttribute("aria-disabled",String(castBlocked));
     UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST "+spell.name.toUpperCase();
   }
   function chooseSpell(type) {

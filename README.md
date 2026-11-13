@@ -1,4 +1,4 @@
-# Wizardry — Elemental Battle Prototype v0.13.0
+# Wizardry — Elemental Battle Prototype v0.13.1
 
 **Play the game:** https://wafflinyo.github.io/Wizardry/
 

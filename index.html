@@ -7,7 +7,7 @@
   <meta name="description" content="Wizardry — a playable low-poly spellcasting prototype. Summon Poseidon or an Earth Stone Golem, then hurl Poseidon's trident or summon Stone Golem's ground-shattering spikes against the Stone Sentinel.">
   <title>Wizardry | Earth & Water Spells</title>
   
-  <link rel="stylesheet" href="./style.css?v=0.12.0">
+  <link rel="stylesheet" href="./style.css?v=0.13.0">
 </head>
 <body>
   <main class="app">
@@ -28,39 +28,35 @@
           <span class="eyebrow">THE SUNKEN COLOSSEUM</span>
           <h1>Trial of the Elements</h1>
         </div>
-        <div class="round-meta"><span class="indicator"></span><span id="roundLabel">ROUND 1</span><span class="meta-divider"></span><span id="stateLabel">READY TO CAST</span></div>
+
       </div>
 
       <div class="arena" id="arena">
-        <canvas id="battlefield" aria-label="Battlefield with your wizard and the Stone Sentinel enemy. Tap the enemy to target them."></canvas>
-        <div class="canvas-vignette" aria-hidden="true"></div>
-
-        <div class="arena-player">
-          <span class="small-caps">YOUR WIZARD</span>
-          <strong>Tidecaller</strong>
-          <div class="mana-pips" id="manaPips" aria-label="8 of 8 mana"></div>
-        </div>
-        <div class="arena-enemy" id="enemyHud">
-          <span class="small-caps">ENEMY · TARGET SELECTED</span>
-          <strong>Stone Sentinel</strong>
-          <div class="health-line"><div id="enemyHealthFill"></div></div>
-          <span class="health-number" id="enemyHealthText">3,000 / 3,000 HP</span>
-        </div>
-
-        <div class="spell-caption" id="spellCaption">A primordial force stirs beneath the arena.</div>
-        <div class="cast-status" id="castStatus" aria-live="polite">Select Poseidon's Wrath to begin.</div>
-        <div class="win-overlay" id="winOverlay" hidden>
-          <div class="win-rays" aria-hidden="true">✦</div>
-          <span class="eyebrow">BATTLE COMPLETE</span>
-          <h2>Sentinel Vanquished</h2>
-          <p id="winFlavor">The elements answer your call.</p>
-          <button type="button" class="primary-button" id="winReplay">Fight Again</button>
-        </div>
+        <canvas id="battlefield" width="1000" height="560"
+          aria-label="Wizardry battle arena. Your Tidecaller wizard faces the Stone Sentinel. Tap the Sentinel to target it. Health, mana, spell effects, and combat messages are drawn in the arena."></canvas>
+      </div>
+      <!-- Screen reader mirror only. All VISUAL battle HUD information now
+           belongs to Canvas 2D, not changing-position HTML overlays. -->
+      <div class="battle-a11y visually-hidden">
+        <span id="roundLabel">ROUND 1</span>
+        <span id="stateLabel">READY TO CAST</span>
+        <span id="manaPips" aria-label="8 of 8 mana"></span>
+        <span id="enemyHealthText">3,000 / 3,000 HP</span>
+        <span id="enemyHealthFill"></span>
+        <span id="spellCaption">A primordial force stirs beneath the arena.</span>
+        <span id="castStatus" role="status" aria-live="polite">Select a spell to begin.</span>
       </div>
 
       <div class="battle-controls">
         <div class="battle-advice"><span class="diamond">◈</span><span id="battleHint">Tap the card, then cast to summon Poseidon.</span></div>
-        <div class="button-group"><button type="button" class="secondary-button" id="speedButton">Speed: 1×</button><button type="button" class="secondary-button" id="resetButton">↺ Reset Duel</button></div>
+        <div class="button-group">
+          <button type="button" class="secondary-button" id="speedButton">Speed: 1×</button>
+          <button type="button" class="secondary-button" id="resetButton">↺ Reset Duel</button>
+          <div id="winOverlay" hidden>
+            <span id="winFlavor" class="visually-hidden">The elements answer your call.</span>
+            <button type="button" class="secondary-button win-replay-button" id="winReplay">Fight Again</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -119,9 +115,9 @@
       </div>
     </section>
 
-    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.12.0</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
+    <footer class="footer"><span>WIZARDRY · PROTOTYPE 0.13.0</span><span>Built to test summon creatures, spell timing, combat feedback, and mobile controls.</span></footer>
   </main>
   <script src="./assets/stone-golem-true-trace-v1.js?v=0.10.0" defer></script>
-  <script src="./game.js?v=0.12.0" defer></script>
+  <script src="./game.js?v=0.13.0" defer></script>
 </body>
 </html>

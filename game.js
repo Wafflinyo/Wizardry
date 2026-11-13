@@ -59,8 +59,9 @@
     holdStart:1.83,holdEnd:2.01,
     slamStart:2.01,slamEnd:2.30,
     spikesStart:2.30,spikesEnd:2.87,hit:2.87,
-    settleStart:3.12,recoveryStart:3.18,idleStart:3.32,
-    sinkStart:4.19,crumbleStart:4.19,crumbleEnd:4.84,end:4.92
+    settleStart:3.06,recoveryStart:3.15,handsDownStart:3.40,
+    idleStart:3.66,sinkStart:4.35,
+    crumbleStart:4.35,crumbleEnd:4.94,end:5.01
   });
   const duration = SPELL.end;
   // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
@@ -819,14 +820,23 @@
   };
   function golemAnimationFrame(elapsed) {
     if(elapsed<EARTH.emergeStart||elapsed>=EARTH.crumbleEnd)return -1;
-    // Frame 10 contains the advancing spikes. Finish and CLEAR them before
-    // returning to the real full-body standing idle (frame 2).
-    if(elapsed>=EARTH.sinkStart)return 2;
-    if(elapsed>=EARTH.idleStart)return 2; // Full upright hands-down idle.
-    if(elapsed>=EARTH.recoveryStart)return 3; // Brief recovery, no spikes.
+    // The 12 traced frames drive the original summon and stone attack.
+    // The recovery is blended separately below — no jump to an old frame.
     let i=0;
     while(i<10&&elapsed>=GOLEM_FRAME_TIMES[i+1])i++;
     return i;
+  }
+  function golemRecoveryPose(elapsed) {
+    if(elapsed<EARTH.recoveryStart)return null;
+    if(elapsed<EARTH.handsDownStart) {
+      return {from:9,to:2,mix:ease(phase(elapsed,EARTH.recoveryStart,EARTH.handsDownStart))};
+    }
+    if(elapsed<EARTH.idleStart) {
+      return {from:2,to:1,mix:ease(phase(elapsed,EARTH.handsDownStart,EARTH.idleStart))};
+    }
+    // Frame 1 has both rock hands down beside the body, unlike frame 2,
+    // which retains the clenched forward attack stance.
+    return {from:1,to:1,mix:1};
   }
   function buildGolemCache() {
     const pixelSize=Math.round(golemTrace.cell*GOLEM_CACHE_SCALE);
@@ -917,32 +927,47 @@
       golemTraceError="Could not prepare the Stone Golem artwork.";
     }
   }
-  function drawStoneGolem(elapsed,t){
-    const index=golemAnimationFrame(elapsed);
-    if(index<0)return;
-    if(!golemVectorPaths[index])return;
-    const size=416,dx=306,dy=411-size*.975;
-    // Sink the STANDING idle model below the arena plane. The character
-    // exits smoothly rather than switching abruptly to the old sunk pose.
-    const retreat=ease(phase(elapsed,EARTH.sinkStart,EARTH.crumbleEnd));
-    const offset=retreat*390;
+  function drawGolemPoseFrame(index,dx,dy,size,opacity) {
+    if(opacity<=.001||!golemVectorPaths[index])return;
     g.save();
-    g.beginPath();g.rect(280,-8,560,420);g.clip();
-    const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
-      (1-ease(phase(elapsed,EARTH.crumbleEnd-.19,EARTH.crumbleEnd)));
-    g.globalAlpha*=fade;
+    g.globalAlpha*=opacity;
     if(golemRenderMode==="cached"&&golemCachedFrames[index]){
       g.imageSmoothingEnabled=true;
       g.imageSmoothingQuality="high";
-      g.drawImage(golemCachedFrames[index],dx,dy+offset,size,size);
+      g.drawImage(golemCachedFrames[index],dx,dy,size,size);
     }else{
-      // Fallback uses the SAME original traced vector contours.
-      g.translate(dx,dy+offset);
+      g.translate(dx,dy);
       const scale=size/golemTrace.cell;
       g.scale(scale,scale);
       for(const [color,path] of golemVectorPaths[index]){
         g.fillStyle=color;g.fill(path,"evenodd");
       }
+    }
+    g.restore();
+  }
+  function drawStoneGolem(elapsed,t){
+    const index=golemAnimationFrame(elapsed);
+    if(index<0)return;
+    const recovery=golemRecoveryPose(elapsed);
+    const size=416,dx=306,dy=411-size*.975;
+    const retreat=ease(phase(elapsed,EARTH.sinkStart,EARTH.crumbleEnd));
+    const offset=retreat*390;
+    const fade=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeStart+.12))*
+      (1-ease(phase(elapsed,EARTH.crumbleEnd-.16,EARTH.crumbleEnd)));
+    g.save();
+    g.beginPath();g.rect(280,-8,560,420);g.clip();
+    g.globalAlpha*=fade;
+    if(recovery){
+      // Real artwork-to-artwork recovery: spikes disappear while he rises
+      // from the slam; then the fists lower to his sides. Crossfade BOTH
+      // silhouettes continuously instead of teleporting to the idle frame.
+      const t0=recovery.mix;
+      const a=recovery.from,b=recovery.to;
+      const lift=a===9? -6*t0 : -3*t0;
+      drawGolemPoseFrame(a,dx,dy+offset+lift,size,1-t0);
+      drawGolemPoseFrame(b,dx,dy+offset+lift,size,t0);
+    }else{
+      drawGolemPoseFrame(index,dx,dy+offset,size,1);
     }
     g.restore();
   }

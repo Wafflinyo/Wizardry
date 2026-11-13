@@ -1,6 +1,6 @@
-# Wizardry · 2.5D Battle Test v0.28.0
+# Wizardry · 2.5D Battle Test v0.29.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.28.0
+**Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.29.0
 
 The original 1v1 duel, the approved Poseidon / Stone Golem 16-frame art assets, and their summon damage/accuracy are unchanged.
 
@@ -40,3 +40,20 @@ Portrait and landscape have separate responsive sizing rules; the existing 1000�
 The battle is a playable local prototype. It has no connected accounts, friend invites, co-op synchronization, authoritative online combat, matchmaking or ranked 4v4. Those need multiplayer infrastructure.
 
 Automated simulated tests checked one-human-per-side ownership, two-card accessibility, **selecting and changing targets without casting, confirming to commit**, CPU teammate/enemy plans, hit/miss behavior, 1v1–4v4 resolution, fresh player input each round, side-bar positions, arrow rendering, **both approved summons drawn behind fighters**, and fixed Canvas dimensions. Actual iPhone browser visual review is still recommended.
+
+
+## v0.29 — Approved summon art on actual cards, recharge and Tidal Echo
+
+**Card splash art:** Instead of generic symbols or newly designed monsters, the two ornate cards display pixel-exact crops from the same previously approved 16-frame sprites used during casts: **Poseidon frame 8** (trident raised) and **Stone Golem frame 10** (fissure emanating from the slam). The original sprite files and live animations have NOT been altered. Gold-bordered cards present school, mana, name, **1,200 Water / 70% accuracy** or **900 Earth / 85% accuracy**, and effect descriptions. The two cards remain adjacent and visible without horizontal scrolling on a phone.
+
+**Poseidon's Wrath new gameplay tradeoff:**
+
+1. Costs **8 mana**. A new 70% accuracy roll occurs on each cast, unchanged.
+2. After the attempt completes (hit OR miss), the caster gains an amber **⧖ Recharge** rune and cyan **≈ Tidal Echo** rune.
+3. **Recharge:** The caster is unable to cast any spell throughout the **following round** (cast in Round N, automatically skip N+1, can act again in N+2). CPU and player wizards follow the same rule. The round still plays and opponents act; a local human is not prompted to select a card while recharging.
+4. **Tidal Echo:** The next **successful damaging Water spell** by that wizard deals **30% more damage**. For example, Poseidon's Wrath hits for **1,560** rather than 1,200 when Echo applies. Earth spells and missed Water spells do not consume it; Echo persists until a successful Water hit and **does not stack**. When Poseidon is cast again, an existing Echo can affect the hit before the spell grants a fresh Echo.
+5. Both statuses are represented as independently tappable runes **under the affected wizard's side HP plate**. Tap a rune to read its type and duration/effect; tap × to close. The same symbols appear under CPU casters when they gain them.
+
+**Stone Golem:** Still costs 6 mana, hits for 900 Earth damage with 85% accuracy, and creates its existing seismic fissure. It does not trigger or consume Tidal Echo and has no added recharge effect.
+
+Only the two approved spell cards are available. Rendering order remains: background, temporary summons/fissures, depth-sorted fighter models, side HP plates and rune icons, arrow/damage feedback.

@@ -18,9 +18,9 @@
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"Right-hand trident · summon and vanish",short:"1,200 WATER",duration:2100,hit:.60},
+      icon:"♆",description:"Right-hand trident · summon and vanish",short:"1,200 WATER · 70% ACC",accuracy:.70,duration:2100,hit:.60},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
-      icon:"◆",description:"Seismic fissure · rubble collapse",short:"900 EARTH",duration:2360,hit:.62}
+      icon:"◆",description:"Seismic fissure · rubble collapse",short:"900 EARTH · 85% ACC",accuracy:.85,duration:2360,hit:.62}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -660,7 +660,7 @@
     // 3/4 SIDE-ANGLE camera: a shallow, diagonally sloped battle ring.
     // Characters stand on LEFT/RIGHT arcs, not front/back enemy rows.
     // A visible vertical edge below the fighting surface conveys height.
-    ctx.save();ctx.translate(500,412);ctx.rotate(-.115);
+    ctx.save();ctx.translate(500,412); // level horizon, no side-to-side tilt
     ellipse(ctx,0,42,481,143,"#03111b");
     const edge=ctx.createLinearGradient(0,118,0,182);
     edge.addColorStop(0,"#5c6972");edge.addColorStop(.4,"#263f4b");

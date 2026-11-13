@@ -1,0 +1,638 @@
+/* Wizardry — Poseidon's Wrath prototype.
+ * Self-contained Canvas 2D low-poly/2.5D battle renderer.
+ * No game engine, asset hosting, build step, or external scripts required.
+ */
+(() => {
+  "use strict";
+  const canvas = document.getElementById("battlefield");
+  const g = canvas.getContext("2d", { alpha: false });
+  const UI = {
+    cast: document.getElementById("castButton"),
+    castText: document.getElementById("castButtonText"),
+    reset: document.getElementById("resetButton"),
+    speed: document.getElementById("speedButton"),
+    sound: document.getElementById("soundButton"),
+    soundLabel: document.getElementById("soundLabel"),
+    card: document.getElementById("poseidonCard"),
+    manaPips: document.getElementById("manaPips"),
+    manaText: document.getElementById("manaText"),
+    round: document.getElementById("roundLabel"),
+    state: document.getElementById("stateLabel"),
+    caption: document.getElementById("spellCaption"),
+    status: document.getElementById("castStatus"),
+    hint: document.getElementById("battleHint"),
+    hpFill: document.getElementById("enemyHealthFill"),
+    hpText: document.getElementById("enemyHealthText"),
+    enemyHud: document.getElementById("enemyHud"),
+    win: document.getElementById("winOverlay"),
+    winReplay: document.getElementById("winReplay")
+  };
+  const W = 1000, H = 560, MAX_HP = 3000, DAMAGE = 1200, COST = 8;
+  const duration = 7.55;
+  let health = MAX_HP, mana = 8, round = 1;
+  let selected = true, targeted = true, defeated = false;
+  let cast = null, particles = [], speed = 1, sound = true;
+  let previousTime = performance.now(), totalTime = 0, targetPulse = 0;
+  let audio = null;
+
+  const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
+  const mix = (a, b, t) => a + (b - a) * t;
+  const ease = n => { n = clamp(n); return n * n * (3 - 2 * n); };
+  const out = n => 1 - Math.pow(1 - clamp(n), 3);
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const phase = (t, start, end) => clamp((t - start) / (end - start));
+
+  function polygon(points, color, stroke = null, lineWidth = 1) {
+    g.beginPath(); g.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) g.lineTo(points[i][0], points[i][1]);
+    g.closePath(); g.fillStyle = color; g.fill();
+    if (stroke) { g.lineWidth = lineWidth; g.strokeStyle = stroke; g.stroke(); }
+  }
+  function oval(x, y, rx, ry, fill, stroke, width = 1) {
+    g.beginPath(); g.ellipse(x, y, Math.max(.001, rx), Math.max(.001, ry), 0, 0, Math.PI * 2);
+    if (fill) { g.fillStyle = fill; g.fill(); }
+    if (stroke) { g.strokeStyle = stroke; g.lineWidth = width; g.stroke(); }
+  }
+  function line(x1, y1, x2, y2, stroke, width = 2) {
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2);
+    g.strokeStyle = stroke; g.lineWidth = width; g.stroke();
+  }
+  function glow(x, y, r, core, edge = "transparent") {
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, core); grad.addColorStop(1, edge);
+    oval(x, y, r, r, grad);
+  }
+  function label(text, x, y, size, color, align = "center") {
+    g.save(); g.textAlign = align; g.font = "bold " + size + "px Georgia,serif";
+    g.shadowColor = "#021321"; g.shadowBlur = 6; g.fillStyle = color; g.fillText(text, x, y); g.restore();
+  }
+  function triangleFacet(x1, y1, x2, y2, x3, y3, color) {
+    polygon([[x1,y1],[x2,y2],[x3,y3]],color);
+  }
+
+  function drawSky(t) {
+    const sky = g.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#071524"); sky.addColorStop(.48, "#153248"); sky.addColorStop(.8, "#172d3d"); sky.addColorStop(1, "#061824");
+    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    glow(505, 105, 300, "#2b859427", "#0f284400");
+    glow(493, 135, 92, "#a7e8df13", "#23597300");
+    oval(500, 108, 37, 37, "#c9e4df", "#ecffff", 2);
+    oval(509, 101, 36, 35, "#254456");
+    for (let i=0;i<95;i++) {
+      const x = (i*191.67 + 62) % W, y = (i*63.11 + 19) % 275;
+      const f = .5 + .5 * Math.sin(t*.9 + i*5);
+      oval(x,y,.4+f*.8,.4+f*.8,"rgba(204,237,255,"+(.08+f*.3)+")");
+    }
+    const fog = g.createLinearGradient(0, 140, 0, 386);
+    fog.addColorStop(0, "#36738700"); fog.addColorStop(.55, "#2d6c7e22"); fog.addColorStop(1, "#1b546218");
+    g.fillStyle = fog; g.fillRect(0,140,W,260);
+    polygon([[0,308],[39,247],[80,290],[129,218],[182,314],[244,240],[297,298],[349,223],[409,306],[458,251],[509,315],[565,219],[635,295],[686,238],[759,308],[803,207],[866,297],[913,246],[1000,317],[1000,402],[0,402]], "#142f40");
+    polygon([[0,322],[68,269],[119,328],[183,269],[245,327],[314,253],[383,328],[446,279],[496,340],[555,274],[603,326],[675,271],[737,327],[809,253],[870,322],[936,259],[1000,320],[1000,400],[0,400]], "#1d3e4d");
+    for(let i=0;i<7;i++) {
+      const x = 55 + i*152;
+      const y = 330 + (i%2)*15;
+      polygon([[x-19,y],[x-15,y-120],[x+9,y-120],[x+14,y],[x-19,y]],"#233a46");
+      polygon([[x-22,y-119],[x-31,y-136],[x+24,y-136],[x+16,y-119]], "#54606a");
+      polygon([[x-15,y-120],[x-4,y-120],[x-4,y]],"#354a52");
+      oval(x-3,y-137,21,4,"#5d636a");
+      if (i===0 || i===6) glow(x,y-134,33,"#57eeea3a");
+    }
+  }
+
+  function drawArena(t) {
+    oval(500,426,492,143,"#050d15");
+    const rim = g.createLinearGradient(0,335,0,515);
+    rim.addColorStop(0,"#53636e");rim.addColorStop(.55,"#152f3b");rim.addColorStop(1,"#0b1b2a");
+    oval(500,401,486,133,rim,"#9e9a78",4);
+    oval(500,392,464,118,"#122c3c","#3e6870",3);
+    for(let i=0;i<32;i++) {
+      const a0=(i/32)*Math.PI*2, a1=((i+1)/32)*Math.PI*2;
+      triangleFacet(500,395,500+460*Math.cos(a0),395+117*Math.sin(a0),500+460*Math.cos(a1),395+117*Math.sin(a1), i%2 ? "#233e4b38" : "#47677226");
+    }
+    for(let i=0;i<4;i++) oval(500,391,440-i*75,112-i*19,null,i%2?"#65a0a94a":"#95c8bc35",i===0?2:1);
+    for(let i=0;i<12;i++) {
+      const a=i*Math.PI/6;
+      const x=500+390*Math.cos(a),y=392+95*Math.sin(a);
+      g.save();g.translate(x,y);g.rotate(a+Math.PI/2);
+      polygon([[-7,-9],[0,-17],[7,-9],[0,13]],"#8ababb45");g.restore();
+    }
+    // Water reflection across the floor
+    glow(504,388,200,"#1c92b922");
+    oval(500,390,154,48,"#1a617630","#55b9b63b",1.7);
+    // Combatant platforms
+    oval(214,409,114,37,"#0b1728","#5aa5ad",2);
+    oval(785,400,114,38,"#211c2b","#ca9d6b",2);
+    for(const x of [214,785]) {
+      oval(x,400,81,25,null,x===214?"#79d6da77":"#f2bc8777",1.4);
+      for(let j=0;j<6;j++){
+        const a=j*Math.PI/3;line(x+72*Math.cos(a),401+20*Math.sin(a),x+86*Math.cos(a),401+24*Math.sin(a),"#ddc78c69",2);
+      }
+    }
+    // Spinning summoning glyph only while active
+    if(cast && cast.elapsed < 7.3){
+      const alpha=cast.elapsed<.7?phase(cast.elapsed,0,.7):1-phase(cast.elapsed,6.6,7.3);
+      g.save();g.globalAlpha=alpha;
+      for(let k=0;k<3;k++){
+        g.save();g.translate(505,402);g.rotate(t*(k%2?-.14:.19)+k);g.scale(1,.34);
+        g.beginPath();g.arc(0,0,96-k*22,0,Math.PI*2);
+        g.strokeStyle=k===0?"#72f9ee":"#3ccbf2";g.lineWidth=3-k*.5;g.shadowBlur=12;g.shadowColor="#4ffcf1";g.stroke();
+        for(let q=0;q<9;q++){let a=q*Math.PI*2/9;line(70*Math.cos(a),70*Math.sin(a),78*Math.cos(a),78*Math.sin(a),"#a1ffff",4);}
+        g.restore();
+      }
+      g.restore();
+    }
+  }
+
+  function drawWizard(t) {
+    const bob=Math.sin(t*1.8)*2;
+    g.save();g.translate(216,377+bob);
+    oval(0,35,60,14,"#0009");
+    // Cape, polygon robe, folds
+    polygon([[-29,-41],[22,-39],[49,37],[-42,40]],"#122c5d","#4088ae",2);
+    triangleFacet(-29,-38,-9,-17,-41,39,"#245487");
+    triangleFacet(19,-36,10,-10,45,37,"#1a3870");
+    triangleFacet(-9,-19,5,38,19,-36,"#3976a4");
+    polygon([[-33,-50],[-5,-67],[29,-52],[10,-24],[-19,-25]],"#173c65","#4f9bb2",2);
+    polygon([[-22,-53],[-1,-88],[21,-58],[18,-38],[-19,-40]],"#305881");
+    oval(-1,-56,13,17,"#c8987a","#916d5b",1.5);
+    polygon([[-22,-48],[-7,-60],[6,-48],[20,-43],[6,-34],[-11,-34]],"#081725");
+    oval(0,-55,5,3,"#72e9ff");
+    // Staff with animated blue magic
+    line(29,17,43,-87,"#b4a17b",6);line(29,17,43,-87,"#f3d28d",2);
+    polygon([[36,-94],[43,-108],[50,-94],[43,-82]],"#4df4ff","#e6fdff",2);
+    glow(43,-94,22,"#39d9ff74");
+    g.restore();
+  }
+
+  function drawSentinel(t) {
+    const alive = health>0;
+    const bob = alive?Math.sin(t*1.4)*3:0;
+    const jolt = cast && cast.elapsed>4.9 && cast.elapsed<5.45 ? Math.sin(cast.elapsed*90)*7*(1-phase(cast.elapsed,4.9,5.45)) : 0;
+    g.save();g.translate(785+jolt,371+bob);
+    if (!alive) g.globalAlpha=.36;
+    oval(0,36,70,17,"#040b13a0");
+    // Legs
+    polygon([[-45,-21],[-8,-18],[-12,33],[-51,35]],"#596a73","#98a5a3",2);
+    triangleFacet(-45,-20,-8,-18,-36,31,"#87979c");
+    polygon([[10,-19],[48,-22],[54,34],[13,33]],"#50616c","#91a4aa",2);
+    triangleFacet(10,-19,50,-24,16,31,"#788f98");
+    // Two-dimensional faceted body conveys a low-poly rock monster
+    polygon([[-50,-130],[-18,-152],[26,-148],[56,-128],[49,-42],[18,-12],[-30,-17],[-57,-63]],"#5d6d79","#a4b2ad",2);
+    triangleFacet(-50,-130,-18,-150,-10,-82,"#7c8d9c");
+    triangleFacet(-18,-150,25,-146,-10,-82,"#92a5ac");
+    triangleFacet(25,-146,55,-128,15,-82,"#526776");
+    triangleFacet(-10,-82,15,-82,49,-41,"#435769");
+    triangleFacet(-55,-64,-10,-82,-28,-18,"#667b83");
+    triangleFacet(-10,-82,48,-43,-30,-18,"#8297a0");
+    // arms and rock spikes
+    polygon([[-48,-126],[-85,-116],[-96,-48],[-63,-39],[-45,-82]],"#6b8390","#adc0bb",2);
+    polygon([[54,-122],[85,-116],[99,-50],[68,-37],[45,-80]],"#667b88","#a3b9b9",2);
+    triangleFacet(-84,-117,-102,-136,-62,-119,"#95a9b0");
+    triangleFacet(83,-116,98,-143,63,-122,"#8299a0");
+    triangleFacet(-63,-45,-92,-64,-106,-43,"#455d68");
+    triangleFacet(66,-42,101,-55,111,-31,"#516773");
+    // head/helmet
+    polygon([[-37,-172],[-25,-202],[18,-207],[41,-175],[33,-132],[-29,-132]],"#758896","#bdc5c2",2);
+    triangleFacet(-37,-172,-25,-202,0,-167,"#9fadb2");
+    triangleFacet(-25,-202,18,-207,0,-168,"#c3d0c8");
+    triangleFacet(18,-207,41,-175,0,-168,"#556a79");
+    triangleFacet(-29,-131,0,-168,33,-132,"#566b78");
+    polygon([[-25,-174],[-8,-170],[-10,-158],[-28,-160]],"#0a2432");
+    polygon([[9,-170],[27,-174],[29,-160],[10,-158]],"#0a2432");
+    glow(-18,-165,18,"#64fdff66");glow(19,-165,18,"#64fdff66");
+    polygon([[-22,-166],[-12,-167],[-15,-163],[-22,-162]],"#91fbff");
+    polygon([[13,-167],[23,-166],[22,-162],[15,-163]],"#91fbff");
+    // central energy seam
+    line(0,-125,0,-52,"#0f3747",7);line(0,-125,0,-52,"#7de8e6",2);
+    polygon([[-11,-100],[0,-112],[11,-100],[0,-87]],"#3cd4d6","#b3fded",2);
+    if(targeted && alive){
+      const pulse=1+.07*Math.sin(t*4)+targetPulse*.11;
+      g.save();g.translate(0,24);g.scale(pulse,.29*pulse);
+      g.beginPath();g.arc(0,0,111,0,Math.PI*2);g.strokeStyle="#f6d38cbb";g.lineWidth=4;g.setLineDash([16,10]);g.stroke();g.setLineDash([]);
+      g.restore();
+      polygon([[-8,-239],[0,-252],[8,-239],[0,-226]],"#eecb73");
+    }
+    g.restore();
+  }
+
+  function addParticle(x,y,kind="spray",scale=1){
+    if(particles.length>300)particles.splice(0,particles.length-300);
+    const hot=kind==="impact", gold=kind==="gold";
+    particles.push({
+      x,y, vx:rand(-3.8,3.8)*scale + (hot?rand(-5,5):0),
+      vy:rand(-5.5,-1)*scale, life:rand(.4,1.15),
+      max:0, size:rand(2,6)*(hot?1.4:1), kind,
+      color: gold?"#f6da87":hot?["#eaffff","#6efbff","#2abedb"][Math.floor(rand(0,3))]:["#9cfaff","#29b5d5","#deffff"][Math.floor(rand(0,3))]
+    });
+    particles[particles.length-1].max=particles[particles.length-1].life;
+  }
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];p.life-=dt;
+      if(p.life<=0){particles.splice(i,1);continue;}
+      p.x+=p.vx*dt*55;p.y+=p.vy*dt*55;p.vy+=dt*(p.kind==="impact"?4:3.2);
+    }
+  }
+  function drawParticles(){
+    for(const p of particles){
+      const alpha=clamp(p.life/p.max);
+      g.globalAlpha=alpha;
+      if(p.kind==="spray"){triangleFacet(p.x,p.y-p.size,p.x-p.size*.6,p.y+p.size*.8,p.x+p.size*.6,p.y+p.size*.8,p.color);}
+      else {glow(p.x,p.y,p.size*2,"#6afaff66");oval(p.x,p.y,p.size,p.size,p.color);}
+    }
+    g.globalAlpha=1;
+  }
+  function foamCurve(points,alpha=1){
+    g.save();g.globalAlpha=alpha;g.beginPath();g.moveTo(points[0],points[1]);
+    for(let i=2;i<points.length;i+=4)g.bezierCurveTo(points[i],points[i+1],points[i+2],points[i+3],points[i+4],points[i+5]);
+    g.strokeStyle="#b6fbff";g.lineWidth=5;g.shadowColor="#27ecfd";g.shadowBlur=12;g.stroke();g.restore();
+  }
+  function drawWhirlpool(t,power){
+    if(power<=0)return;
+    g.save();g.globalAlpha=power;glow(505,405,129,"#28d6f37c");
+    oval(505,407,153,36,"#07556b","#4ec8d4",4);
+    oval(505,408,117,25,"#0c7385","#91fcf9",3);
+    oval(505,408,78,17,"#06374d","#34b3d0",3);
+    oval(505,409,39,9,"#031e37","#93f7fb",2);
+    for(let i=0;i<4;i++){
+      g.save();g.translate(505,408);g.rotate(t*(i%2?-.8:.8)+i*1.57);g.scale(1,.22);
+      g.beginPath();g.arc(0,0,67+i*18,.1,2.6);
+      g.strokeStyle=i%2?"#a8faff":"#48c7e8";g.lineWidth=5;g.stroke();g.restore();
+    }
+    g.restore();
+  }
+  function drawWave(t,rise){
+    if(rise<=.01)return;
+    const x=505,y=411;
+    const h=148*rise;
+    g.save();
+    glow(x,y-h*.44,90,"#03edff25");
+    const grad=g.createLinearGradient(x-140,y-h,x+140,y);
+    grad.addColorStop(0,"#72dbe7");grad.addColorStop(.25,"#168fae");grad.addColorStop(.58,"#084e78");grad.addColorStop(1,"#042c57");
+    g.beginPath();g.moveTo(x-153,y+2);
+    g.bezierCurveTo(x-117,y-h*.28,x-104,y-h*.9,x-32,y-h*.84);
+    g.bezierCurveTo(x+25,y-h*1.25,x+91,y-h*.84,x+75,y-h*.62);
+    g.bezierCurveTo(x+120,y-h*.68,x+129,y-h*.26,x+153,y+4);
+    g.closePath();g.fillStyle=grad;g.fill();
+    triangleFacet(x-125,y-5,x-31,y-h*.83,x-48,y-28,"#137ea28c");
+    triangleFacet(x-31,y-h*.83,x+27,y-h*.98,x+46,y-12,"#78dde651");
+    triangleFacet(x+27,y-h*.98,x+118,y-h*.44,x+65,y-18,"#138ab25b");
+    triangleFacet(x-39,y-h*.7,x+7,y-h*.9,x-5,y-20,"#0b446b99");
+    const lift=Math.sin(t*3)*4;
+    g.beginPath();g.moveTo(x-143,y-5);
+    g.bezierCurveTo(x-93,y-h*.65+lift,x-76,y-h*.92,x-12,y-h*.89);
+    g.bezierCurveTo(x+68,y-h*1.18,x+96,y-h*.59,x+87,y-h*.53);
+    g.strokeStyle="#bdfbfb";g.lineWidth=8;g.shadowColor="#57eaf6";g.shadowBlur=15;g.stroke();g.shadowBlur=0;
+    g.beginPath();g.moveTo(x-129,y+2);g.bezierCurveTo(x-53,y-35,x+58,y-32,x+143,y-4);g.strokeStyle="#59e2f3";g.lineWidth=7;g.stroke();
+    for(let i=0;i<10;i++){
+      const a=(i/9)*Math.PI;
+      oval(x-100+202*i/9,y-8-Math.sin(a)*rise*17+Math.sin(t*3+i)*4,rand(2,3),rand(1,2),"#c8ffff");
+    }
+    g.restore();
+  }
+
+  function drawTrident(x,y,angle,length=145,alpha=1){
+    g.save();g.translate(x,y);g.rotate(angle);g.globalAlpha=alpha;
+    g.shadowColor="#4ef8ff";g.shadowBlur=13;
+    // The trident points towards LOCAL negative y; a 90 degree turn points right.
+    line(0,length*.46,0,-length*.37,"#483e39",11);
+    line(0,length*.46,0,-length*.37,"#efd58c",6);
+    line(-2,length*.42,-2,-length*.34,"#fff4b7",1.8);
+    const top=-length*.38;
+    line(0,top,0,-length*.59,"#ffe69a",7);
+    line(-28,top+20,-28,top-10,"#d6b570",7);
+    line(28,top+20,28,top-10,"#d6b570",7);
+    line(-28,top+19,-17,top+30,"#d6b570",6);
+    line(28,top+19,17,top+30,"#d6b570",6);
+    line(-17,top+30,17,top+30,"#e8cb86",6);
+    polygon([[-36,top-5],[-28,top-22],[-20,top-5]],"#f9e4a9","#fff8d8",1.2);
+    polygon([[-8,top-49],[0,top-67],[8,top-49]],"#f9e4a9","#fff8d8",1.2);
+    polygon([[20,top-5],[28,top-22],[36,top-5]],"#f9e4a9","#fff8d8",1.2);
+    polygon([[-10,top+20],[0,top+11],[10,top+20],[0,top+31]],"#42deeb","#c9ffff",1);
+    g.restore();
+  }
+
+  function drawPoseidon(t,rise,wind,afterThrow,alpha=1){
+    if(rise<=.01)return;
+    const x=505,waist=406-112*rise,bob=Math.sin(t*2.4)*2;
+    const bodyY=waist+bob;
+    g.save();g.globalAlpha=alpha;
+    // Hair behind shoulders
+    polygon([[x-36,bodyY-132],[x-65,bodyY-92],[x-73,bodyY-38],[x-33,bodyY-59],[x+35,bodyY-57],[x+83,bodyY-34],[x+69,bodyY-109],[x+34,bodyY-135]],"#a0d8df","#d4faff",2);
+    triangleFacet(x-55,bodyY-96,x-67,bodyY-40,x-17,bodyY-81,"#62a9bf");
+    triangleFacet(x+38,bodyY-102,x+73,bodyY-40,x+18,bodyY-69,"#4c899f");
+    // Chest is a faceted torso; below the waist there are NO legs.
+    polygon([[x-57,bodyY-102],[x-32,bodyY-117],[x+37,bodyY-118],[x+61,bodyY-97],[x+45,bodyY-27],[x+12,bodyY+1],[x-27,bodyY+2],[x-53,bodyY-37]],"#bc8870","#f6c4a6",2);
+    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-55,"#e3b090");
+    triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-74,"#f3c5a7");
+    triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-59,"#9e7667");
+    triangleFacet(x-44,bodyY-46,x-7,bodyY-67,x+1,bodyY-4,"#9e7667");
+    triangleFacet(x+4,bodyY-70,x+49,bodyY-42,x+10,bodyY-5,"#d09b81");
+    // Gold shoulder plates
+    polygon([[x-71,bodyY-100],[x-58,bodyY-126],[x-30,bodyY-125],[x-25,bodyY-94]],"#ac8a56","#ffec9f",2);
+    triangleFacet(x-70,bodyY-101,x-51,bodyY-119,x-34,bodyY-102,"#f6d999");
+    polygon([[x+26,bodyY-97],[x+37,bodyY-126],[x+69,bodyY-124],[x+76,bodyY-102]],"#a68150","#f3d88c",2);
+    triangleFacet(x+37,bodyY-126,x+70,bodyY-123,x+62,bodyY-107,"#f5db98");
+    // Blue ceremonial collar
+    polygon([[x-44,bodyY-114],[x-9,bodyY-96],[x+17,bodyY-100],[x+45,bodyY-115],[x+32,bodyY-102],[x-2,bodyY-89]],"#2d94b1","#c1ffff",1);
+    // Left arm extends forward (towards viewer)
+    polygon([[x-55,bodyY-90],[x-88,bodyY-66],[x-121,bodyY-26],[x-104,bodyY-8],[x-62,bodyY-49]],"#c29379","#f2c3a3",2);
+    triangleFacet(x-87,bodyY-67,x-121,bodyY-26,x-94,bodyY-34,"#e1b297");
+    polygon([[x-113,bodyY-34],[x-126,bodyY-13],[x-119,bodyY+1],[x-105,bodyY-5]],"#b88970","#dfb79b",1.5);
+    // Right arm changes pose in preparation for the THROW
+    const armX=x+73, armY=bodyY-99;
+    const elbowX=mix(x+98,x+104,wind),elbowY=mix(bodyY-72,bodyY-142,wind);
+    const handX=mix(x+117,x+161,wind),handY=mix(bodyY-58,bodyY-137,wind);
+    polygon([[armX-14,armY-18],[elbowX+10,elbowY-18],[elbowX+19,elbowY+6],[armX+3,armY+18]],"#bf9175","#f6c4a0",2);
+    polygon([[elbowX-4,elbowY-10],[handX+2,handY-11],[handX+12,handY+10],[elbowX+13,elbowY+12]],"#d3a081","#f3c5a4",1.5);
+    polygon([[elbowX-1,elbowY-16],[elbowX+14,elbowY-16],[elbowX+19,elbowY],[elbowX+3,elbowY+1]],"#e0c16b","#fce6aa",1.2);
+    oval(handX+7,handY,12,12,"#e3ae88","#ffe0b0",1);
+    // Head, blue-white windswept beard and crown
+    oval(x+2,bodyY-148,39,43,"#d5a48a","#f5ccae",2);
+    triangleFacet(x-33,bodyY-153,x+1,bodyY-189,x+29,bodyY-152,"#ecc0a3");
+    oval(x-14,bodyY-157,6,3,"#12253d");oval(x+18,bodyY-157,6,3,"#12253d");
+    oval(x-13,bodyY-158,3,2,"#9bfaff");oval(x+19,bodyY-158,3,2,"#9bfaff");
+    polygon([[x-16,bodyY-141],[x+4,bodyY-147],[x+22,bodyY-142],[x+38,bodyY-122],[x+16,bodyY-72],[x-15,bodyY-82],[x-41,bodyY-120]],"#a8dde3","#eafffa",2);
+    triangleFacet(x-37,bodyY-120,x-13,bodyY-131,x-16,bodyY-82,"#6fbacb");
+    triangleFacet(x-12,bodyY-130,x+15,bodyY-128,x+16,bodyY-76,"#d1f6f2");
+    triangleFacet(x+14,bodyY-124,x+34,bodyY-119,x+15,bodyY-77,"#75b7c7");
+    polygon([[x-38,bodyY-165],[x-32,bodyY-205],[x-10,bodyY-190],[x+2,bodyY-216],[x+14,bodyY-190],[x+33,bodyY-204],[x+40,bodyY-161]],"#d5b26c","#ffea9f",2);
+    triangleFacet(x-37,bodyY-167,x-12,bodyY-186,x+3,bodyY-171,"#f5dc8a");
+    polygon([[x-7,bodyY-185],[x+2,bodyY-195],[x+11,bodyY-185],[x+2,bodyY-176]],"#5af2ff","#dcffff",1);
+    // Decorative runes and marine glow
+    line(x-12,bodyY-51,x+16,bodyY-34,"#55d6e6",2.5);
+    glow(x+5,bodyY-51,30,"#4db5d51d");
+    if(!afterThrow){
+      const tx=mix(x+143,handX+12,wind),ty=mix(bodyY-154,handY-45,wind);
+      drawTrident(tx,ty,mix(-.12,.65,wind),124,alpha);
+    }
+    g.restore();
+  }
+
+  function drawSummon(t,elapsed){
+    const opening=phase(elapsed,.05,.7),rising=out(phase(elapsed,.72,2.6));
+    const sinking=ease(phase(elapsed,5.42,7.22));
+    const rise=rising*(1-sinking);
+    const begin=1-phase(elapsed,1.1,2.15);
+    drawWhirlpool(t,opening*(1-sinking)+.5*sinking);
+    if(rise>.01){
+      drawWave(t,rise);
+      drawPoseidon(t,rise,ease(phase(elapsed,3.34,4.15)),elapsed>=4.20,clamp((1-sinking)*3));
+      if(Math.random()<.65*(1-sinking))addParticle(505+rand(-135,135),409-rand(10,90)*rise,"spray",.48);
+    }
+    if(begin>0 && opening>.3) glow(505,405,90*opening,"#6df5fa2d");
+    if(elapsed>5.4 && elapsed<7.23 && Math.random()<.6)addParticle(505+rand(-120,120),401-rand(2,100)*rise,"spray",.6);
+  }
+
+  function drawProjectile(elapsed,t) {
+    if(elapsed<4.17||elapsed>4.92)return;
+    const p=ease(phase(elapsed,4.17,4.92));
+    const px=mix(639,781,p),py=mix(164,285,p)-Math.sin(p*Math.PI)*70;
+    const trail=[];
+    for(let k=0;k<8;k++){
+      let q=clamp(p-k*.032);
+      trail.push([mix(639,781,q),mix(164,285,q)-Math.sin(q*Math.PI)*70]);
+    }
+    g.save();g.globalCompositeOperation="lighter";
+    g.beginPath();g.moveTo(trail[0][0],trail[0][1]);
+    for(const pos of trail.slice(1))g.lineTo(pos[0],pos[1]);
+    g.strokeStyle="#48e9ff";g.lineWidth=25;g.shadowColor="#32ecff";g.shadowBlur=30;g.stroke();
+    g.strokeStyle="#e4ffff";g.lineWidth=5;g.stroke();g.restore();
+    glow(px,py,44,"#d5ffff6b");
+    drawTrident(px,py,1.1+Math.sin(p*2)*.2,125,1);
+    if(Math.random()<.9)addParticle(px+rand(-16,16),py+rand(-13,13),"gold",.5);
+  }
+
+  function drawImpact(elapsed) {
+    if(elapsed<4.88||elapsed>6.15)return;
+    const p=phase(elapsed,4.88,6.15);
+    g.save();g.globalCompositeOperation="lighter";
+    const flare=1-ease(p);
+    glow(783,291,175*flare+30,"rgba(155,255,255,"+(.5*flare)+")");
+    glow(782,309,96*flare+10,"rgba(68,210,250,"+(.7*flare)+")");
+    for(let i=0;i<4;i++){
+      g.save();g.globalAlpha=flare;
+      oval(783,393,35+p*195,12+p*41,null,i%2?"#62dcff":"#d3ffff",6-i);
+      g.restore();
+    }
+    for(let i=0;i<9;i++){
+      const a=i*(Math.PI*2/9)+.23;
+      const inner=18+p*32,outer=55+p*162;
+      line(783+Math.cos(a)*inner,301+Math.sin(a)*inner,783+Math.cos(a)*outer,301+Math.sin(a)*outer,i%2?"#48e7ef":"#c4fcff",8*flare);
+    }
+    g.restore();
+    if(elapsed<5.91) {
+      const y=233-40*phase(elapsed,4.9,5.9);
+      g.save();g.globalAlpha=1-phase(elapsed,5.56,6.1);
+      g.textAlign="center";g.font="bold 56px Georgia,serif";g.lineWidth=6;g.strokeStyle="#061823";g.shadowBlur=18;g.shadowColor="#8afaff";g.strokeText("-1,200",782,y);g.fillStyle="#fef8df";g.fillText("-1,200",782,y);g.restore();
+    }
+  }
+
+  function drawForeground(t){
+    // Cracked stone foreground gives the scene depth.
+    polygon([[0,482],[162,471],[319,492],[495,479],[633,494],[845,468],[1000,475],[1000,560],[0,560]],"#0b1825");
+    polygon([[0,485],[162,475],[319,495],[495,482],[633,498],[845,471],[1000,478],[1000,502],[839,499],[632,514],[496,500],[320,512],[155,496],[0,508]],"#263b48");
+    polygon([[0,505],[158,496],[322,512],[499,499],[630,514],[840,498],[1000,502],[1000,560],[0,560]],"#101e2d");
+    for(let i=0;i<18;i++){
+      const x=i*60-15,y=493+Math.sin(i*2.33)*6;
+      line(x,y,x+25,y+7,"#4b6471",1.4);
+    }
+    // light mist
+    g.save();g.globalAlpha=.14+.05*Math.sin(t*.7);
+    const mist=g.createLinearGradient(0,475,0,560);mist.addColorStop(0,"#65d0d100");mist.addColorStop(1,"#367e9a");
+    g.fillStyle=mist;g.fillRect(0,475,W,85);g.restore();
+  }
+
+  function applyShake(elapsed) {
+    if(elapsed<4.89||elapsed>5.45)return;
+    const strength=12*(1-phase(elapsed,4.89,5.45));
+    g.translate(rand(-strength,strength),rand(-strength,strength));
+  }
+
+  function render(t){
+    const scaleX=canvas.width/W,scaleY=canvas.height/H;
+    g.setTransform(scaleX,0,0,scaleY,0,0);
+    g.save();
+    if(cast)applyShake(cast.elapsed);
+    drawSky(t);
+    drawArena(t);
+    drawWizard(t);
+    if(cast)drawSummon(t,cast.elapsed);
+    drawSentinel(t);
+    if(cast){drawProjectile(cast.elapsed,t);drawImpact(cast.elapsed);}
+    drawParticles();
+    drawForeground(t);
+    g.restore();
+  }
+
+  function tone(frequency,durationSecs,type="sine",volume=.13,to=undefined){
+    if(!sound)return;
+    try{
+      const A=window.AudioContext||window.webkitAudioContext;
+      if(!A)return;
+      if(!audio)audio=new A();
+      if(audio.state==="suspended")audio.resume();
+      const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime;
+      oscillator.type=type;oscillator.frequency.setValueAtTime(frequency,now);
+      if(to)oscillator.frequency.exponentialRampToValueAtTime(Math.max(25,to),now+durationSecs);
+      gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume,now+.023);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+durationSecs);
+      oscillator.connect(gain);gain.connect(audio.destination);
+      oscillator.start(now);oscillator.stop(now+durationSecs+.01);
+    }catch(err){console.warn("Sound unavailable",err);}
+  }
+  function noise(durationSecs=.3,volume=.06){
+    if(!sound)return;
+    try{
+      if(!audio){tone(80,.02);if(!audio)return;}
+      const sampleRate=audio.sampleRate,buffer=audio.createBuffer(1,Math.floor(sampleRate*durationSecs),sampleRate);
+      const channel=buffer.getChannelData(0);
+      for(let i=0;i<channel.length;i++)channel[i]=(Math.random()*2-1)*(1-i/channel.length);
+      const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+      source.buffer=buffer;filter.type="lowpass";filter.frequency.value=1100;gain.gain.value=volume;
+      source.connect(filter);filter.connect(gain);gain.connect(audio.destination);source.start();
+    }catch(err){console.warn("Sound unavailable",err);}
+  }
+  function playEffect(name){
+    if(name==="cast"){tone(140,1.1,"sawtooth",.08,60);tone(380,.8,"sine",.11,110);noise(.48,.035);}
+    else if(name==="rise"){tone(90,1.5,"triangle",.12,300);tone(180,1.3,"sine",.07,520);}
+    else if(name==="wind"){tone(300,.4,"sawtooth",.075,700);}
+    else if(name==="throw"){tone(800,.5,"sawtooth",.08,125);noise(.3,.065);}
+    else if(name==="hit"){tone(105,.9,"sawtooth",.17,45);tone(620,.35,"square",.05,100);noise(.8,.18);}
+    else if(name==="sink"){tone(300,1.3,"sine",.085,55);noise(.7,.04);}
+  }
+
+  function refreshUI(){
+    UI.manaText.textContent=mana+" / 8";
+    UI.manaPips.innerHTML="";
+    for(let i=0;i<8;i++){
+      const pip=document.createElement("span");pip.className="mana-pip"+(i>=mana?" spent":"");UI.manaPips.appendChild(pip);
+    }
+    UI.manaPips.setAttribute("aria-label",mana+" of 8 mana");
+    UI.round.textContent="ROUND "+round;
+    UI.hpText.textContent=health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP";
+    UI.hpFill.style.width=(health/MAX_HP*100)+"%";
+    UI.cast.disabled=!!cast || defeated || mana<COST || !selected;
+    UI.card.setAttribute("aria-pressed",String(selected));
+    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST POSEIDON'S WRATH";
+  }
+  function reset(){
+    cast=null;particles.length=0;health=MAX_HP;mana=8;round=1;targeted=true;selected=true;defeated=false;targetPulse=0;
+    UI.win.hidden=true;UI.card.classList.add("selected");
+    UI.state.textContent="READY TO CAST";
+    UI.caption.textContent="A primordial force stirs beneath the arena.";
+    UI.status.textContent="Select Poseidon's Wrath to begin.";
+    UI.hint.textContent="Tap the card, then cast to summon Poseidon.";
+    refreshUI();
+  }
+  function startCast(){
+    if(cast||defeated||mana<COST||!selected)return;
+    // User interaction unlocks WebAudio on mobile browsers.
+    if(sound)tone(440,.04,"sine",.001);
+    mana-=COST;cast={elapsed:0,stage:"opening",hit:false};
+    UI.state.textContent="SUMMONING";
+    UI.status.textContent="The ocean answers your call...";
+    UI.caption.textContent="POSEIDON'S WRATH";
+    UI.hint.textContent="Whirlpool → rising wave → thrown trident → strike → unsummon.";
+    UI.card.classList.remove("selected");
+    playEffect("cast");refreshUI();
+  }
+  function stageAt(e){
+    if(e<1.12)return"opening";
+    if(e<3.36)return"rise";
+    if(e<4.17)return"wind";
+    if(e<4.90)return"throw";
+    if(e<5.42)return"impact";
+    if(e<7.24)return"sink";
+    return"complete";
+  }
+  function setStage(stage){
+    const stages={
+      opening:["THE SEA STIRS","The water begins to spiral..."],
+      rise:["POSEIDON RISES","The god of the ocean ascends with the wave!"],
+      wind:["THE TRIDENT IS DRAWN","Poseidon prepares his throw."],
+      throw:["TRIDENT RELEASED","The trident flies toward the enemy!"],
+      impact:["DEVASTATING IMPACT","The Stone Sentinel takes 1,200 water damage!"],
+      sink:["UNSUMMONING","Poseidon dissolves into sea spray and sinks below."],
+      complete:["SPELL COMPLETE","The waters grow still."]
+    };
+    UI.state.textContent=stages[stage][0];UI.status.textContent=stages[stage][1];
+    if(stage==="rise")playEffect("rise");
+    if(stage==="wind")playEffect("wind");
+    if(stage==="throw")playEffect("throw");
+    if(stage==="impact")playEffect("hit");
+    if(stage==="sink")playEffect("sink");
+  }
+  function completeCast(){
+    cast=null;mana=8;round++;
+    if(health<=0){
+      defeated=true;UI.win.hidden=false;UI.state.textContent="VICTORY";
+      UI.caption.textContent="POSEIDON'S WRATH · VICTORY";
+      UI.status.textContent="The Stone Sentinel has fallen.";
+      UI.hint.textContent="The battle is won. Restart to summon Poseidon again.";
+    }else{
+      UI.card.classList.add("selected");UI.state.textContent="READY TO CAST";
+      UI.caption.textContent="The waters are calm. Another spell awaits.";
+      UI.status.textContent="Poseidon has been fully unsummoned.";
+      UI.hint.textContent="Mana restored. Cast again to defeat the Sentinel.";
+    }
+    refreshUI();
+  }
+  function update(dt){
+    targetPulse=Math.max(0,targetPulse-dt*1.4);
+    if(!cast){updateParticles(dt);return;}
+    cast.elapsed+=dt*speed;
+    const stage=stageAt(cast.elapsed);
+    if(stage!==cast.stage){cast.stage=stage;setStage(stage);}
+    if(!cast.hit&&cast.elapsed>=4.9){
+      cast.hit=true;health=Math.max(0,health-DAMAGE);
+      targetPulse=1.3;refreshUI();
+      for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
+      for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
+    }
+    if(cast.elapsed>=duration)completeCast();
+    updateParticles(dt);
+  }
+  function resize(){
+    const rect=canvas.getBoundingClientRect();
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.max(1,Math.round(rect.width*dpr));
+    canvas.height=Math.max(1,Math.round(rect.height*dpr));
+  }
+  function selectEnemy(event){
+    if(defeated||cast)return;
+    const box=canvas.getBoundingClientRect();
+    const x=(event.clientX-box.left)/box.width*W;
+    const y=(event.clientY-box.top)/box.height*H;
+    if(x>650&&x<920&&y>155&&y<454){
+      targeted=true;targetPulse=1;
+      UI.status.textContent="Stone Sentinel targeted.";
+      UI.hint.textContent="Target acquired. Cast Poseidon's Wrath!";
+      tone(640,.17,"sine",.05,350);
+    }
+  }
+  UI.cast.addEventListener("click",startCast);
+  UI.card.addEventListener("click",()=>{
+    if(cast||defeated)return;
+    selected=true;UI.card.classList.add("selected");UI.status.textContent="Poseidon's Wrath selected.";refreshUI();
+  });
+  UI.reset.addEventListener("click",reset);
+  UI.winReplay.addEventListener("click",reset);
+  UI.speed.addEventListener("click",()=>{
+    speed=speed===1?2:1;UI.speed.textContent="Speed: "+speed+"×";
+  });
+  UI.sound.addEventListener("click",()=>{
+    sound=!sound;UI.soundLabel.textContent=sound?"ON":"OFF";
+    UI.sound.setAttribute("aria-pressed",String(sound));
+    if(sound)tone(660,.16,"sine",.03,880);
+  });
+  canvas.addEventListener("pointerdown",selectEnemy);
+  window.addEventListener("resize",resize);
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
+  resize();reset();
+  function frame(now){
+    const dt=Math.min((now-previousTime)/1000,.05);previousTime=now;totalTime+=dt;
+    update(dt);render(totalTime);requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();

@@ -1,6 +1,6 @@
 # Wizardry
 
-## Spell Trial 001 — Poseidon's Wrath (v0.3)
+## Spell Trial 001 — Poseidon's Wrath (v0.3.1)
 
 A playable, mobile-friendly spellcasting battle prototype. This is a real interactive game test, **not a GIF or static illustration**.
 
@@ -26,9 +26,11 @@ The URL above is the expected Pages address, not confirmation that Pages has alr
 - Mana regenerates between rounds for this spell test; defeat the 3,000-HP Sentinel in three casts.
 - Use the sound toggle, 1×/2× playback speed, or Reset Duel.
 
-### Spell timeline (v0.3)
+### Spell timeline (v0.3.1)
 
-The full cast is approximately **4.9 seconds** at 1× (previously 6.5 seconds). Procedural arm poses use additional intermediate joint keys with cubic interpolation at every display refresh (typically 60 Hz, or 120 Hz on supported screens).
+The keyframe timestamps below are animation-clock times. At default 1× speed, divide the listed times by 2 to get real seconds.
+
+The full cast is approximately **2.44 seconds at 1×**, which is the former 2× playback pace (and **1.22 seconds at 2×**). The spell's relative keyframe timings are preserved, so throw, impact, and unsummoning stay synchronized. Procedural arm poses use additional intermediate joint keys with cubic interpolation at every display refresh (typically 60 Hz, or 120 Hz on supported screens).
 
 | Approximate time | Animation |
 |---|---|

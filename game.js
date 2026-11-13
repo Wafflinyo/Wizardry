@@ -40,6 +40,9 @@
     sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
   });
   const duration = SPELL.end;
+  // v0.3.1: the former 2× animation pace is now the natural 1× speed.
+  // UI speed remains relative (1×/2×), so 2× remains optional.
+  const DEFAULT_SPELL_RATE = 2;
   let health = MAX_HP, mana = 8, round = 1;
   let selected = true, targeted = true, defeated = false;
   let cast = null, particles = [], speed = 1, sound = true;
@@ -706,7 +709,8 @@
   function update(dt){
     targetPulse=Math.max(0,targetPulse-dt*1.4);
     if(!cast){updateParticles(dt);return;}
-    cast.elapsed+=dt*speed;
+    const spellDt = dt * speed * DEFAULT_SPELL_RATE;
+    cast.elapsed+=spellDt;
     const stage=stageAt(cast.elapsed);
     if(stage!==cast.stage){cast.stage=stage;setStage(stage);}
     if(!cast.hit&&cast.elapsed>=SPELL.hit){
@@ -718,11 +722,11 @@
     // Particle emission is rate-based rather than 'chance per rendered frame':
     // a 120-Hz phone no longer creates twice as many particles as a 60-Hz one.
     if(cast.elapsed> SPELL.riseStart && cast.elapsed<SPELL.sinkEnd)
-      spawnTimed("spray", 33*dt, 505, 399, 140, 80, .45);
+      spawnTimed("spray", 33*spellDt, 505, 399, 140, 80, .45);
     if(cast.elapsed>=SPELL.launch && cast.elapsed<SPELL.hit)
-      spawnTimed("gold", 35*dt, 700, 245, 85, 36, .45);
+      spawnTimed("gold", 35*spellDt, 700, 245, 85, 36, .45);
     if(cast.elapsed>=duration)completeCast();
-    updateParticles(dt);
+    updateParticles(spellDt);
   }
   function resize(){
     const rect=canvas.getBoundingClientRect();

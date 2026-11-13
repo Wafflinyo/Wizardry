@@ -755,3 +755,105 @@ html { scroll-behavior:auto!important; }
   .battle-title .eyebrow {display:none!important;}
   .round-meta {width:min(47%,190px);flex-basis:min(47%,190px);}
 }
+
+
+/* v0.13 — Canvas owns the ENTIRE battle scene and HUD.
+   No overlay DOM elements are allowed to participate in scene layout. */
+.visually-hidden,.battle-a11y {
+  position:absolute!important;
+  width:1px!important;height:1px!important;
+  padding:0!important;margin:-1px!important;border:0!important;
+  white-space:nowrap!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;
+  clip:rect(0,0,0,0)!important;
+}
+.battle {min-width:0;}
+.battle-header {
+  height:38px!important;min-height:38px!important;
+  max-height:38px!important;flex:0 0 38px!important;
+  display:flex!important;align-items:center!important;
+  margin-bottom:7px;
+  overflow:hidden!important;
+}
+.battle-title {min-width:0;}
+.battle-title .eyebrow {font-size:9px;white-space:nowrap;}
+.battle-title h1 {margin:2px 0 0;line-height:1.1;}
+.arena {
+  position:relative!important;
+  display:block!important;
+  aspect-ratio:1000 / 560!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  flex:0 0 auto!important;
+  overflow:hidden!important;
+  isolation:isolate;
+  contain:layout paint;
+}
+.arena > canvas {
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  image-rendering:auto;
+  touch-action:manipulation;
+}
+.battle-controls {
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  min-height:52px;
+  gap:9px;
+}
+.battle-advice {
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+}
+#battleHint {
+  display:block;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.button-group {flex:0 0 auto;min-width:0;align-items:center;}
+#winOverlay {flex:0 0 auto;}
+.win-replay-button {
+  color:#fdeab2;
+  border-color:#9b875c;
+  background:#433822;
+}
+@media(max-width:700px) {
+  .battle-header {
+    height:32px!important;
+    min-height:32px!important;
+    max-height:32px!important;
+    flex:0 0 32px!important;
+    margin-bottom:4px;
+  }
+  .battle-controls {
+    min-height:43px;
+    height:43px;
+    padding:3px 0 5px;
+    overflow:hidden;
+  }
+  .battle-advice {font-size:10px;gap:5px;}
+  .battle-advice .diamond {font-size:11px;}
+  .button-group {gap:4px;}
+  .secondary-button {font-size:9px;padding:6px 7px;}
+  #winOverlay .win-replay-button {padding:6px 5px;font-size:9px;}
+}
+@media(orientation:landscape) and (max-height:600px) and (min-width:650px) {
+  .battle-header {
+    height:26px!important;min-height:26px!important;
+    max-height:26px!important;flex:0 0 26px!important;
+  }
+  .battle-controls {height:39px;min-height:39px;}
+  .battle-advice {font-size:9px;}
+  .secondary-button {padding:5px 7px;}
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071422">
   <title>Wizardry · 2.5D Battle Test</title>
-  <link rel="stylesheet" href="./arena.css?v=0.24.0">
+  <link rel="stylesheet" href="./arena.css?v=0.25.0">
 </head>
 <body>
 <main class="game" id="game">
@@ -34,6 +34,17 @@
     </div>
     <div class="turnbar" aria-live="polite"><span class="turn-orb">✦</span><span id="turnHint">Choose a wizard, spell and target.</span><span class="count" id="queueCount">0 / 4 READY</span></div>
     <div class="initiative" id="initiative" aria-label="Speed-based combat turn order"></div>
+    <!-- Fixed-position trace overlay does not resize the battle arena. -->
+    <section class="rune-panel" id="runePanel" role="dialog" aria-modal="true" aria-labelledby="runeTitle" hidden>
+      <div class="rune-card">
+        <div class="rune-kicker" id="runeElement">WATER SIGIL</div>
+        <h2 id="runeTitle">Trace to summon</h2>
+        <p id="runeInstruction">Trace the glowing rune from green dot to gold dot in one stroke.</p>
+        <canvas id="runeCanvas" width="200" height="200" aria-label="Trace the displayed elemental rune from the starting dot to the ending dot"></canvas>
+        <div class="rune-hint" id="runeFeedback">Hold and drag your finger or mouse along the symbol.</div>
+        <button type="button" class="rune-skip" id="runeSkip">Skip cast · fizzle</button>
+      </div>
+    </section>
   </section>
   <section class="selection">
     <div class="pick-group"><div class="pick-heading"><span>YOUR TEAM</span><small>Tap a caster</small></div><div id="allyRoster" class="units"></div></div>
@@ -41,16 +52,28 @@
   </section>
   <section class="hand" aria-label="Cards">
     <div class="hand-head"><div><span class="eyebrow">YOUR HAND</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div><span class="mana" id="selectedMana">10 / 10 MANA</span></div>
+    <div class="wizard-style" aria-label="Wizard appearance">
+      <span class="wizard-style-title">WIZARD APPEARANCE</span>
+      <label>HAT
+        <select id="wizardHat"><option value="pointed">Pointed</option><option value="wide">Wide brim</option><option value="hood">Hood</option><option value="scholar">Scholar</option></select>
+      </label>
+      <label>ROBES
+        <select id="wizardRobe"><option value="classic">Classic</option><option value="split">Split-tail</option><option value="armored">Armored</option></select>
+      </label>
+      <label>COLOR
+        <select id="wizardColor"><option value="#267eab">Ocean blue</option><option value="#6f4ab4">Amethyst</option><option value="#bc503d">Ember red</option><option value="#367d59">Emerald</option><option value="#656f88">Steel grey</option><option value="#9b792f">Royal gold</option></select>
+      </label>
+    </div>
     <div class="cards" id="cardHand" role="group" aria-label="Available spells"></div>
     <div class="card-actions">
-      <div class="selection-note"><strong id="chosenSpell">TIDAL LANCE</strong><span id="chosenTarget">Target: Stone Sentinel</span></div>
+      <div class="selection-note"><strong id="chosenSpell">POSEIDON’S WRATH</strong><span id="chosenTarget">Target: Stone Sentinel</span></div>
       <select id="targetPicker" class="target-picker" aria-label="Choose spell target"><option>Stone Sentinel</option></select>
       <button id="queueButton" type="button" class="btn gold">Queue spell</button>
       <button id="autoButton" type="button" class="btn light">Auto-fill</button>
       <button id="resolveButton" type="button" class="btn cyan">Resolve round</button>
     </div>
     <div class="planned" id="plannedList" aria-live="polite">No actions queued yet.</div>
-    <p class="legend">Temporary summons attack and vanish. <b>Shields</b>, <b>blades</b>, <b>traps</b> and <b>auras</b> remain until triggered or expired. Targets are selectable by tapping the arena or roster.</p>
+    <p class="legend">Your wizard lifts a staff toward the arena center. <b>Trace the elemental rune</b> to summon Poseidon or Stone Golem; a failed trace fizzles, and the next fighter takes their turn. Summons attack once, then disappear. Local CPU casters trace automatically.</p>
   </section>
   <footer class="footer"><span id="status">Local, playable battle prototype — no accounts or online matchmaking yet.</span><button id="resetButton" class="reset" type="button">↺ New battle</button></footer>
 </main>
@@ -62,5 +85,5 @@
 <script src="./assets/stone-golem-approved-v23-row1.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row2.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row3.js?v=0.23.0" defer></script>
-<script src="./arena.js?v=0.24.0" defer></script>
+<script src="./arena.js?v=0.25.0" defer></script>
 </body></html>

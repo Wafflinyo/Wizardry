@@ -597,6 +597,15 @@
       spriteCache[kind]=sources.map(src=>{const image=new Image();image.src=src;return image;});
     }
   }
+  // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
+  // This preserves the exact right-hand windup and empty-hand release.
+  const POSEIDON_KEY_TIMES=[.06,.30,.53,.73,.90,1.17,1.41,1.62,
+    1.80,2.04,2.26,2.48,2.80,3.24,3.59,4.00].map(t=>t/4.47);
+  function approvedPoseidonIndex(progress){
+    let i=0;
+    while(i<15&&progress>=POSEIDON_KEY_TIMES[i+1])i++;
+    return i;
+  }
   function drawAction(anim,time){
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
@@ -605,7 +614,7 @@
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
     if(card.kind==="summon"){
-      const idx=clamp(Math.floor(p*16),0,15);
+      const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
       const done=renderSprite(card.id,idx,500,470,310);
       if(!done){
         const col=card.id==="poseidon"?"#66daf0":"#96b97e";
@@ -613,8 +622,9 @@
         g.font="bold 22px system-ui";g.fillStyle=col;g.textAlign="center";
         g.fillText(card.name,500,337);
       }
-      if(card.id==="poseidon"&&p>.55&&p<card.hit&&target){
-        const t=ease((p-.55)/(card.hit-.55));
+      const release=POSEIDON_KEY_TIMES[10];
+      if(card.id==="poseidon"&&p>=release&&p<card.hit&&target){
+        const t=ease((p-release)/(card.hit-release));
         const x=lerp(550,target.x,t),y=lerp(284,target.y-105,t)-38*Math.sin(Math.PI*t);
         line(g,x-70,y+15,x,y,"#3acfe3",18);
         line(g,x-38,y+7,x,y,"#d3fdff",5);

@@ -1,63 +1,51 @@
-# Wizardry
+# Wizardry — Spellcasting Battle Prototype (v0.4.0)
 
-## Spell Trial 001 — Poseidon's Wrath (v0.3.2)
+A playable, mobile-friendly low-poly/2.5D spellcasting trial in your browser. Pick a card, target the Stone Sentinel and cast a summoning spell. Both cards and the Cast button remain visible on the same screen on phones.
 
-A playable, mobile-friendly spellcasting battle prototype. This is a real interactive game test, **not a GIF or static illustration**.
+## Play
 
-### Play the game
+**Live game:** https://wafflinyo.github.io/Wizardry/
 
-Open **index.html** in a browser, or publish it through GitHub Pages:
+The game is deployed from the `main` branch via GitHub Pages. To run locally, open `index.html` in a modern browser. No dependencies or build step required.
 
-1. In this repository open **Settings → Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**.
-3. Select **main** and **/(root)**, then save.
-4. Once GitHub finishes publishing, play at the expected URL: https://wafflinyo.github.io/Wizardry/
+## Your hand: two playable cards
 
-The URL above is the expected Pages address, not confirmation that Pages has already been enabled. The game requires no build or third-party game engine.
+| Spell | School | Mana | Direct-hit damage | Animation |
+|---|---|---:|---:|---|
+| **Poseidon's Wrath** | Water | 8 | 1,200 | Poseidon rises in one connected wave, points at the target, winds up, throws his trident, and sinks into the water |
+| **Stone Golem** | Earth | 6 | 900 | A moss-and-sandstone golem rises from cracked earth, **lifts a massive boulder overhead using both hands**, hurls it at the enemy, then crumbles back to the ground |
 
-### Combat controls
+**Choose a card by tapping it**, then tap **Cast**. After each round, the mana meter replenishes to 8 so you can repeatedly test the spell animations. Spell damage is applied only when its projectile strikes.
 
-- Tap the Stone Sentinel to target it.
-- Select the **Poseidon's Wrath** card and press **Cast**.
-- Poseidon rises out of a massive wave, his lower half formed entirely from the water.
-- He **points his free arm at the target** while lifting his throwing arm, and the trident **stays pointed at the enemy throughout the wind-up**. A denser set of interpolated poses creates smoother movement; the separate projectile launches at high speed with no discontinuity. The shoulder and elbow animate continuously through the throw.
-- The trident hits the target, producing a powerful splash, camera shake, and **1,200 water damage**.
-- After the strike, Poseidon **unsummons**, sinking back into the collapsing wave and fading away.
-- Mana regenerates between rounds for this spell test; defeat the 3,000-HP Sentinel in three casts.
-- Use the sound toggle, 1×/2× playback speed, or Reset Duel.
+### Stone Golem animation (Earth)
 
-### Spell timeline (v0.3.1)
+- **0–1.1 animation seconds:** fissures spread in the arena and the golem emerges.
+- **1.0–2.4:** two arms lift the boulder from waist level until it is visibly **above the head**.
+- **2.4–3.1:** brief overhead brace followed by a forceful two-handed heave.
+- **3.09–3.54:** the released boulder flies as an independent rotating projectile toward the target.
+- **3.54:** impact shatters stone, kicks up debris, shakes the battlefield, and deals **900 Earth damage**.
+- **4.1–5.17:** golem withdraws and disintegrates, returning the arena to normal.
 
-The keyframe timestamps below are animation-clock times. At default 1× speed, divide the listed times by 2 to get real seconds.
+### Poseidon's Wrath animation (Water)
 
-The full cast is approximately **2.44 seconds at 1×**, which is the former 2× playback pace (and **1.22 seconds at 2×**). The spell's relative keyframe timings are preserved, so throw, impact, and unsummoning stay synchronized. Procedural arm poses use additional intermediate joint keys with cubic interpolation at every display refresh (typically 60 Hz, or 120 Hz on supported screens).
+A whirlpool opens, Poseidon rises with his lower half formed from a **single smooth wave**, aims his trident while his other arm points at the target, winds up, throws the trident as a projectile, delivers 1,200 damage upon impact, and sinks back into the sea. The old centre-column outline and oversized side humps have been removed.
 
-| Approximate time | Animation |
-|---|---|
-| 0–0.45 s | Whirlpool forms |
-| 0.45–1.65 s | Poseidon rises as part of the wave |
-| 1.13–1.60 s | His free hand points at the Sentinel; trident tips turn toward the target |
-| 1.54–2.37 s | Throwing arm raises and winds backward through intermediate poses, with the trident aimed at the target |
-| 2.37–2.70 s | Fluid shoulder, elbow, and wrist release and follow-through |
-| 2.55–2.86 s | Fast independent flying trident (0.31 seconds), launched from the hand-held weapon tip |
-| 2.86 s | Impact, 1,200 damage, water shockwave |
-| 3.52–4.74 s | Poseidon sinks *with* the wave and dissolves into sea spray |
-| 4.88 s | Arena returns to playable state |
+**Normal animation speed:** 1.5× the initial pose-timeline, approximately **3.25 seconds** for Poseidon and **3.45 seconds** for Stone Golem. The optional **Speed: 2×** button doubles the current normal speed.
 
-### Poseidon's ocean-form body (v0.3.2)
+## Visual and UI notes
 
-Poseidon's upper chest and shoulders stay solid, while his lower torso transitions through a continuous skin → turquoise → deep ocean-blue gradient. His lower silhouette becomes a translucent, curved water column that blends into the same rising wave, with gently moving foam contours. There is no separate set of legs or hard cutoff at the waist.
+- The rotated mana diamonds now contain **upright numerals**: 8 for Poseidon and 6 for Stone Golem.
+- Both cards appear together in the hand, including in the no-scroll mobile layout.
+- The selected card sets the school, description, mana cost, damage, and Cast button.
+- Procedural Canvas low-poly animation interpolates joints on each browser refresh, supports touch and mouse input, and provides optional Web Audio sound effects.
+- Creature appearance, spell effects and projectiles are drawn directly in Canvas/SVG with no game-engine dependencies.
 
-**Animation speed:** The former 2× playback rate is now the default **1×** speed: approximately **2.44 seconds** for the full spell. The optional 2× setting completes it in approximately 1.22 seconds. The trident hit, damage, follow-through and unsummoning remain synchronized.
+## Scope
 
-### Technical notes
+This is a **two-spell prototype**, not yet a complete campaign, deck-building system or multiplayer battle. The current target is one **3,000-HP Stone Sentinel**; you can mix Water and Earth spells within the same duel.
 
-The prototype uses plain HTML, CSS, and JavaScript with a procedural **low-poly-styled 2.5D Canvas renderer**. It does not yet use full 3D character models. All character and water effects are drawn at runtime; synthetic sound uses Web Audio. It works with mouse and touch controls and has no runtime game dependencies.
+### Source files
 
-**The card hand and Cast button remain visible in a single-screen layout** on both phones and desktops; no scrolling down to the hand is required. This initial version focuses on a single card and a single target to test creature animation, combat feedback, targeting, and mobile performance. Full deck management and multiplayer have not been implemented.
-
-### Files
-
-- **index.html** — battle UI, spell card, controls
-- **style.css** — responsive fantasy game styling
-- **game.js** — renderer, spell state machine, thrown trident, impact and unsummoning
+- `index.html` — battle UI, two spell cards and controls
+- `style.css` — responsive fantasy interface and upright mana badges
+- `game.js` — combat state, golem and Poseidon animation timelines, impacts and particles

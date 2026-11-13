@@ -340,54 +340,55 @@
     }
     g.restore();
   }
-  function drawWave(t,rise) {
+  function drawWave(t,rise,bodyY) {
     if(rise<=.01)return;
-    const x=505,y=411,h=148*rise,drift=Math.sin(t*3.7)*3*rise;
+    const x=505, floor=411;
+    // The wave IS Poseidon's lower half. Its narrow upper edge begins INSIDE
+    // his fading chest, then fans smoothly into the floor-level tide.
+    // No separate side peaks, outlined stalk, or enclosing bell silhouette.
+    const top=bodyY-57;
+    const height=Math.max(1,floor-top);
+    const flow=Math.sin(t*2.8)*2.6*rise;
+    const water=g.createLinearGradient(x,top,x,floor+12);
+    water.addColorStop(0,"rgba(122,211,207,0.14)");
+    water.addColorStop(.24,"rgba(45,171,183,0.59)");
+    water.addColorStop(.50,"rgba(25,133,164,0.86)");
+    water.addColorStop(.80,"rgba(12,92,138,0.94)");
+    water.addColorStop(1,"rgba(9,71,113,0.92)");
     g.save();
-    glow(x,y-h*.43,135,"#0cdff123");
-    // ONE connected sea mass. Its highest crest runs beneath the torso
-    // rather than a second narrow, outlined column extending from the waist.
-    const sea=g.createLinearGradient(x-64,y-h*1.24,x+105,y+14);
-    sea.addColorStop(0,"#63d7df");
-    sea.addColorStop(.24,"#2097af");
-    sea.addColorStop(.54,"#116386");
-    sea.addColorStop(.82,"#08486d");
-    sea.addColorStop(1,"#053157");
+    glow(x,top+height*.65,112,"#0cdff01c");
     g.beginPath();
-    g.moveTo(x-160,y+4);
-    g.bezierCurveTo(x-134,y-25*rise,x-116,y-99*rise,x-79,y-133*rise);
-    g.bezierCurveTo(x-60,y-154*rise,x-54,y-166*rise,x-23,y-161*rise+drift);
-    g.bezierCurveTo(x+3,y-175*rise,x+41,y-160*rise,x+60,y-144*rise+drift);
-    g.bezierCurveTo(x+102,y-125*rise,x+135,y-48*rise,x+164,y+4);
+    // Continuous taper from the torso to a single low breaking wave.
+    g.moveTo(x-37,top);
+    g.bezierCurveTo(x-44,top+height*.20,x-46+flow,top+height*.43,x-65,top+height*.59);
+    g.bezierCurveTo(x-80,top+height*.78,x-106, floor-16,x-126,floor+3);
+    g.quadraticCurveTo(x,floor+12,x+126,floor+3);
+    g.bezierCurveTo(x+106,floor-16,x+80,top+height*.78,x+65,top+height*.59);
+    g.bezierCurveTo(x+46-flow,top+height*.43,x+44,top+height*.20,x+37,top);
     g.closePath();
-    g.fillStyle=sea;g.fill();
-    // The faceted low-poly water shapes share the same body of water.
-    // Do not outline a vertical torso/tail silhouette.
-    triangleFacet(x-155,y-2,x-84,y-h*.84,x-83,y-14,"#2089a35d");
-    triangleFacet(x-82,y-16,x-29,y-h*1.08,x+5,y-12,"#50cada39");
-    triangleFacet(x+28,y-h*1.04,x+137,y-25,x+52,y-10,"#1785aa63");
-    triangleFacet(x-26,y-h*.98,x+45,y-h*.92,x+7,y-13,"#0646714b");
-    // Whitewater only on the outer curling crests. A bright outline
-    // running down the centre would visually detach Poseidon from the wave.
-    g.lineCap="round";
-    g.beginPath();g.moveTo(x-153,y-5);
-    g.bezierCurveTo(x-124,y-43*rise,x-109,y-113*rise,x-76,y-140*rise);
-    g.strokeStyle="#a0edf5";g.lineWidth=4.2;
-    g.shadowColor="#54e8ed";g.shadowBlur=6;g.stroke();
-    g.beginPath();g.moveTo(x+76,y-133*rise);
-    g.bezierCurveTo(x+115,y-109*rise,x+144,y-34*rise,x+159,y-3);
-    g.strokeStyle="#8fe7f0";g.lineWidth=4;g.stroke();g.shadowBlur=0;
-    // Foam radiates sideways into the wave instead of outlining a stalk.
-    for(let i=0;i<5;i++){
-      const side=i%2===0?-1:1;
-      const offset=(i+1)*19;
-      const fx=x+side*(77+offset*.8),fy=y-18-Math.sin(t*2.4+i)*3;
-      oval(fx,fy,3.5+rise,1.8+rise,"#acfcfa9b");
+    g.fillStyle=water;g.fill();
+    // The soft internal shading shares the same geometry and dissolves at top.
+    const shade=g.createLinearGradient(x-110,floor,x+110,top);
+    shade.addColorStop(0,"rgba(14,75,115,0.05)");
+    shade.addColorStop(.48,"rgba(112,221,222,0.08)");
+    shade.addColorStop(1,"rgba(8,49,84,0.18)");
+    g.fillStyle=shade;g.fill();
+    // Low, sideways-moving eddies; do not outline the vertical sides.
+    g.globalAlpha=.16+.08*Math.sin(t*2);
+    g.beginPath();g.moveTo(x-69,top+height*.68);
+    g.bezierCurveTo(x-45,top+height*.72,x+36,top+height*.75,x+70,top+height*.68);
+    g.strokeStyle="#b1eff2";g.lineWidth=3;g.stroke();
+    g.globalAlpha=.28;
+    g.beginPath();g.moveTo(x-109,floor-9);
+    g.quadraticCurveTo(x,floor-25,x+110,floor-8);
+    g.strokeStyle="#a0e9e9";g.lineWidth=2.5;g.stroke();
+    g.globalAlpha=1;
+    // Only surface spray at the base, not white arches beside the torso.
+    for(let i=0;i<8;i++){
+      const xi=x-115+i*33;
+      const yi=floor-4+Math.sin(t*3+i*.8)*3;
+      oval(xi,yi,2.1+rise,1.3,"#9cece9a0");
     }
-    // A subdued waterline is part of the full wave, not a body boundary.
-    g.beginPath();g.moveTo(x-149,y-2);
-    g.bezierCurveTo(x-76,y-23,x+74,y-21,x+155,y+1);
-    g.strokeStyle="#54d6e69c";g.lineWidth=3;g.stroke();
     g.restore();
   }
 
@@ -449,41 +450,29 @@
     // Arm holding the trident stays behind the chest until the release.
     limb(rightShoulder,rightElbow,22,17,"#bc9079","#876b65");
     limb(rightElbow,rightHand,16,11,"#d9a789","#9b766e");
-    // Skin becomes ocean from the sternum down. There is no separately
-    // filled water stalk and no waist/torso edge: the lower half is literally
-    // transparent over the wave behind it.
-    const skinToSea=g.createLinearGradient(x,bodyY-119,x,bodyY+26);
+    // The lower torso fades directly into the ONE wave behind him.
+    // It is not a second shape running down to the arena floor.
+    const skinToSea=g.createLinearGradient(x,bodyY-120,x,bodyY+42);
     skinToSea.addColorStop(0,"#d8ad90");
     skinToSea.addColorStop(.25,"#cd9e83");
-    skinToSea.addColorStop(.43,"#bba88c");
-    skinToSea.addColorStop(.60,"rgba(93,185,187,0.89)");
-    skinToSea.addColorStop(.78,"rgba(33,145,171,0.50)");
-    skinToSea.addColorStop(1,"rgba(12,109,152,0)");
+    skinToSea.addColorStop(.40,"#b8a88c");
+    skinToSea.addColorStop(.56,"rgba(87,184,185,0.82)");
+    skinToSea.addColorStop(.73,"rgba(39,145,166,0.42)");
+    skinToSea.addColorStop(1,"rgba(24,117,147,0)");
+    // The silhouette reaches only a few pixels below the sternum and is
+    // swallowed by the matching water mass beneath (no column).
     g.beginPath();
     g.moveTo(x-57,bodyY-102);
     g.lineTo(x-32,bodyY-117);g.lineTo(x+37,bodyY-118);
     g.lineTo(x+61,bodyY-97);
-    g.bezierCurveTo(x+55,bodyY-59,x+55,bodyY-4,x+73,bodyY+21);
-    g.quadraticCurveTo(x,bodyY+42,x-72,bodyY+21);
-    g.bezierCurveTo(x-55,bodyY-7,x-62,bodyY-58,x-57,bodyY-102);
-    g.closePath();
-    g.fillStyle=skinToSea;g.fill();
-    // Facets are restricted to the solid upper chest; they no longer form
-    // a contrasting triangular tip or rim running into the middle of the wave.
-    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-76,"#e3b090");
-    triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-79,"#f3c5a7");
-    triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-77,"#9e7667");
-    // A few translucent currents blend sideways with the surrounding swell.
-    // No long cyan strokes or contour lines down the centre.
-    g.save();g.globalAlpha*=.20;
-    const ripple=Math.sin(t*4)*5;
-    g.beginPath();g.moveTo(x-45,bodyY-39);
-    g.bezierCurveTo(x-71+ripple,bodyY-10,x-99,bodyY+9,x-121,bodyY+22);
-    g.strokeStyle="#70dbe5";g.lineWidth=6;g.stroke();
-    g.beginPath();g.moveTo(x+45,bodyY-37);
-    g.bezierCurveTo(x+72-ripple,bodyY-12,x+98,bodyY+8,x+124,bodyY+22);
-    g.strokeStyle="#3fbad5";g.lineWidth=6;g.stroke();
-    g.restore();
+    g.bezierCurveTo(x+54,bodyY-56,x+43,bodyY-17,x+38,bodyY+18);
+    g.quadraticCurveTo(x,bodyY+39,x-38,bodyY+18);
+    g.bezierCurveTo(x-43,bodyY-17,x-54,bodyY-56,x-57,bodyY-102);
+    g.closePath();g.fillStyle=skinToSea;g.fill();
+    // Chest facets are confined to the solid upper body, not the water.
+    triangleFacet(x-57,bodyY-101,x-23,bodyY-109,x-8,bodyY-80,"#e3b090");
+    triangleFacet(x-23,bodyY-109,x+29,bodyY-112,x+1,bodyY-81,"#f3c5a7");
+    triangleFacet(x+29,bodyY-112,x+59,bodyY-94,x+28,bodyY-80,"#9e7667");
     polygon([[x-71,bodyY-100],[x-58,bodyY-126],[x-30,bodyY-125],[x-25,bodyY-94]],"#ac8a56","#ffec9f",2);
     triangleFacet(x-70,bodyY-101,x-51,bodyY-119,x-34,bodyY-102,"#f6d999");
     polygon([[x+26,bodyY-97],[x+37,bodyY-126],[x+69,bodyY-124],[x+76,bodyY-102]],"#a68150","#f3d88c",2);
@@ -531,12 +520,15 @@
   function drawSummon(t,elapsed) {
     const opening=ease(phase(elapsed,.04,SPELL.riseStart));
     const rising=out(phase(elapsed,SPELL.riseStart,SPELL.riseEnd));
-    const aiming=ease(phase(elapsed,SPELL.aimStart,SPELL.aimEnd));
     const sinking=ease(phase(elapsed,SPELL.sinkStart,SPELL.sinkEnd));
     const rise=rising*(1-sinking);
-    drawWhirlpool(t,opening*(1-sinking)+sinking*.45);
+    // The summoning ring dims once the sea is formed; it is not a bright
+    // outline around the foot of a separate water tower.
+    const portalPower=opening*(1-sinking)*(.24+.76*(1-rising))+sinking*.14;
+    drawWhirlpool(t,portalPower);
     if(rise>.01) {
-      drawWave(t,rise);
+      const torso=throwPose(elapsed,t);
+      drawWave(t,rise,torso.bodyY);
       drawPoseidon(t,rise,elapsed,elapsed>=SPELL.launch,clamp((1-sinking)*3));
     }
     if(opening>.3&&elapsed<1.1)glow(505,405,90*opening,"#6df5fa2d");

@@ -45,7 +45,7 @@
     aimStart:.86, aimEnd:1.18,
     windStart:1.19, windEnd:1.94,
     releaseStart:1.94, releaseEnd:2.19,
-    launch:2.12, hit:2.43,
+    launch:2.14, hit:2.45,
     // Hold after impact for 1.05 game seconds = 0.70 real seconds at 1x.
     sinkStart:3.48, sinkEnd:4.45, end:4.47
   });

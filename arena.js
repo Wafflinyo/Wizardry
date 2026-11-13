@@ -35,6 +35,12 @@
     {name:"Crystal Brute",style:"crystal",color:"#d6adff",hp:1470,speed:71},
     {name:"Shadow Idol",style:"shadow",color:"#b49bff",hp:1180,speed:95}
   ];
+  const PVP_WIZARDS=[
+    {name:"Dusk Magus",style:"night",color:"#a8a0ef",hp:1260,speed:81},
+    {name:"Frost Scholar",style:"frost",color:"#a6ecf2",hp:1260,speed:72},
+    {name:"Crimson Witch",style:"flame",color:"#f2a28d",hp:1260,speed:69},
+    {name:"Astral Seer",style:"astral",color:"#e5d49b",hp:1260,speed:89}
+  ];
   // Side-on 3/4 arc seating. Allies LEFT, enemies RIGHT, never front/back.
   // Y offsets provide depth; preserve the same camera and ground plane
   // for 1v1, 2v2, 3v3 and 4v4.
@@ -66,7 +72,7 @@
   function setBattle(mode="story",size=4){
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i)),
-                 ...ENEMIES.slice(0,size).map((d,i)=>createUnit(d,1,i))];
+                 ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))];
     for(const u of units){const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];}
     state={mode,size,units,round:1,phase:"planning",planningSide:0,
       selectedCaster:units[0]?.id,selectedCard:"poseidon",selectedTarget:"e0",
@@ -476,6 +482,10 @@
     ui.handTitle.textContent=(c?c.name:(planning?"No caster":"Battle"))+" · "+
       (planning?"Choose a spell":state.phase==="finished"?"Victory test":"Resolving");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
+    // Dress-up controls affect the selected wizard immediately on Canvas.
+    const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
+    ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=!canDress;
+    if(c){ui.hat.value=c.hat;ui.robe.value=c.robe;ui.robeColor.value=c.robeColor;}
     ui.chosenSpell.textContent=card.name.toUpperCase();
     ui.chosenTarget.textContent=card.target==="team"?"Target: entire allied team":
       "Target: "+(target?.name||"none");
@@ -571,6 +581,14 @@
       setBattle(state.mode,Number(b.dataset.size));
     };
     ui.queue.onclick=queueSpell;ui.auto.onclick=autoFill;ui.resolve.onclick=resolvePressed;
+    for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"]]){
+      input.onchange=()=>{
+        const u=caster();
+        if(state.phase!=="planning"||!u||(u.team===1&&state.mode!=="pvp"))return;
+        u[field]=input.value;
+        paintUI();
+      };
+    }
     ui.reset.onclick=()=>setBattle(state.mode,state.size);
     if(ui.targetPicker)ui.targetPicker.onchange=()=>selectTarget(ui.targetPicker.value);
     canvas.addEventListener("pointerdown",event=>{

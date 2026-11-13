@@ -618,6 +618,42 @@
   let poseidonTrace=null,poseidonAssetReady=false,poseidonAssetError=null;
   const POSEIDON_CACHE_PX=480; // High-detail 224px vector source cached once.
   const poseidonDiagnostics={frames:0,contours:0,cachedFrames:0,ready:false};
+  // The source artwork contains accidental transparent holes through the
+  // torso and flowing-water body. Paint a continuous silhouette BEHIND the
+  // traced color layers; destination-over fills transparent gaps only and
+  // never covers the approved face, arms, clothing, or wave details.
+  function fillPoseidonOpaqueCore(ctx,index,behindExisting=true) {
+    if(index===0||index===11)return;
+    ctx.save();
+    if(behindExisting)ctx.globalCompositeOperation="destination-over";
+    // One uninterrupted lower ocean body joins the chest to the sea.
+    const sea=ctx.createLinearGradient(100,119,114,221);
+    sea.addColorStop(0,"#276c80");
+    sea.addColorStop(.37,"#1f8395");
+    sea.addColorStop(.74,"#09607b");
+    sea.addColorStop(1,"#075273");
+    ctx.beginPath();
+    ctx.moveTo(76,112);
+    ctx.bezierCurveTo(93,121,128,120,148,118);
+    ctx.bezierCurveTo(154,137,151,153,162,167);
+    ctx.bezierCurveTo(175,182,190,188,208,206);
+    ctx.bezierCurveTo(151,217,58,218,15,206);
+    ctx.bezierCurveTo(39,189,53,176,65,162);
+    ctx.bezierCurveTo(72,151,68,130,76,112);
+    ctx.closePath();ctx.fillStyle=sea;ctx.fill();
+    // Warm solid chest sits beneath the detailed illustrated skin planes.
+    const skin=ctx.createLinearGradient(110,71,111,151);
+    skin.addColorStop(0,"#bb957b");
+    skin.addColorStop(.55,"#aa8269");
+    skin.addColorStop(1,"#3e858c");
+    ctx.beginPath();ctx.moveTo(79,81);
+    ctx.bezierCurveTo(90,76,127,76,147,89);
+    ctx.lineTo(146,112);
+    ctx.bezierCurveTo(137,139,130,152,119,161);
+    ctx.bezierCurveTo(94,150,80,124,73,104);
+    ctx.closePath();ctx.fillStyle=skin;ctx.fill();
+    ctx.restore();
+  }
   async function prepareTracedPoseidon() {
     try {
       if(!window.WIZARDRY_POSEIDON_TRACE_COMPRESSED)
@@ -652,6 +688,7 @@
         for(const [color,path] of layers){
           context.fillStyle=color;context.fill(path,"evenodd");
         }
+        fillPoseidonOpaqueCore(context,poseidonCachedFrames.length,true);
         poseidonCachedFrames.push(frame);
       }
       poseidonDiagnostics.frames=poseidonVectorFrames.length;
@@ -682,10 +719,13 @@
     let i=0;
     while(i<POSEIDON_FRAME_TIMES.length-1 &&
           elapsed>=POSEIDON_FRAME_TIMES[i+1])i++;
-    // The trident remains held in the RIGHT hand until the exact
-    // release timestamp. Frame 6 is already the projected-trident image;
-    // using it early would make the weapon teleport out of his hand.
-    if(i===6 && elapsed<SPELL.launch)return 5;
+    // APPROVED CONTINUITY: the old winding image #5 still contains part of
+    // the opposite-hand staff. Never display it. Image #4 is the correct
+    // single right-hand hold, used until the trident ACTUALLY launches.
+    if(elapsed<SPELL.launch && (i===5||i===6))return 4;
+    // Frame #6 still depicts a held spear: after launch ONLY the independent
+    // projectile may own that weapon, so switch to the empty-hand throw.
+    if(elapsed>=SPELL.launch && elapsed<SPELL.hit)return 7;
     return i;
   }
   function drawTracedPoseidon(elapsed){
@@ -704,24 +744,14 @@
     }else{
       g.translate(dx,dy);g.scale(size/poseidonTrace.cell,
                                 size/poseidonTrace.cell);
+      fillPoseidonOpaqueCore(g,i,false);
       for(const [color,path] of paths){
         g.fillStyle=color;g.fill(path,"evenodd");
       }
     }
     g.restore();
-    // Rebuild Poseidon's free left fist after removing the original,
-    // incorrectly left-handed trident from the approved wind-up poses.
-    // The right-hand trident is part of the newly corrected traced artwork.
-    if(i===4||i===5){
-      const fx=i===4?381:398,fy=i===4?211:201;
-      g.save();g.globalAlpha*=opacity;
-      polygon([[fx-18,fy-10],[fx-6,fy-18],[fx+13,fy-14],
-        [fx+20,fy],[fx+11,fy+17],[fx-13,fy+16],[fx-22,fy+4]],
-        "#b4876b","#7a5949",1.3);
-      triangleFacet(fx-18,fy-10,fx-6,fy-18,fx+2,fy+4,"#dab18e");
-      triangleFacet(fx+13,fy-14,fx+20,fy,fx+11,fy+17,"#8f6754");
-      g.restore();
-    }
+    // No extra fist or staff overlays — the repaired held pose owns one
+    // right-hand trident; at release only drawProjectile() owns the weapon.
   }
   function drawSummon(t,elapsed) {
     if(poseidonAssetReady){

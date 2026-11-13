@@ -1,56 +1,57 @@
-# Wizardry — Spellcasting Battle Prototype v0.5.0
-
-A playable mobile-friendly elemental-card battle prototype, with two selectable spells and a responsive, always-visible card hand.
-
-## Play
+# Wizardry — Spellcasting Battle Prototype v0.6.0
 
 **Live game:** https://wafflinyo.github.io/Wizardry/
 
-The game runs directly in a modern browser from `index.html`. It uses Canvas, CSS and JavaScript with no dependencies or build step.
+Playable, mobile-friendly fantasy spellcasting prototype featuring two selectable summoning spells, one 3,000-HP Stone Sentinel target, and a no-scroll mobile layout.
 
-## Spell cards
+## Spells
 
-| Spell | School | Mana | Damage | Attack |
+| Card | School | Cost | Damage | Attack |
 | --- | --- | ---: | ---: | --- |
-| Poseidon's Wrath | Water | 8 | 1,200 | Poseidon rises as part of a wave, throws a trident, and disappears into the ocean |
-| Stone Golem | Earth | 6 | 900 | A granite golem interlocks its stone fists, raises both hands above its head, slams the ground, and sends a traveling line of stone spikes into the target |
+| Poseidon's Wrath | Water | 8 mana | 1,200 | Poseidon rises within a wave and throws a trident |
+| Stone Golem | Earth | 6 mana | 900 | Illustrated Stone Golem rises, clasps his hands, lifts overhead, slams the arena and sends traveling spikes into the Sentinel |
 
-Choose a card in the hand and press **Cast**. The 3,000-HP Stone Sentinel can be defeated with either spell or a combination. Mana replenishes between test rounds. Damage is applied when the corresponding spell strikes.
+Mana replenishes between test rounds; damage is applied on projectile/impact frames, not when the Cast button is pressed. Mix spells in one duel or restart after victory.
 
-## Stone Golem animation — complete redesign in v0.5
+## Illustrated Stone Golem animation — v0.6
 
-1. **Summon:** A massive faceted guardian rises from under the arena, grounded on two stone legs.
-2. **Clasp:** Both stone fists join into one interlocked grip.
-3. **Raise:** With rigid upper arms and forearms, it lifts those joined fists high above its head.
-4. **Slam:** The upper body leans forward and both hands crash into the ground.
-5. **Spikes:** Eleven jagged stone spikes erupt sequentially along a fissure that travels **from the golem to the Sentinel**.
-6. **Impact:** The final spike reaches the opponent; the Sentinel takes **900 Earth damage**.
-7. **Unsummon:** The spikes subside and the guardian sinks back beneath the stone.
+**This is no longer the manually drawn polygon creature.** The actual game renders the 12 illustrated animation frames created for Stone Golem.
 
-The previous boulder-lift-and-throw attack and boulder card artwork have been retired.
+- **Asset:** `assets/stone-golem-groundslam.webp` (480 × 640, 3 columns × 4 rows, 160 × 160 per frame, approximately 65 KB).
+- **Frames 0–3:** relaxed pose and clasping stone hands.
+- **Frames 3–6:** raising the clasped hands high above the head.
+- **Frames 6–8:** fast overhead-to-ground slam.
+- **Frames 8–11:** spike wave emerging from the slam.
+- **Return:** brief illustrated recovery, then the resting sprite sinks beneath the arena.
 
-### Graphics redesign
+**Key spell times are in animation-clock seconds** (the default game clock advances at 1.5×):
 
-- A visually heavier 3/4-view granite creature: chiseled chest slabs, thick faceted joints, glowing emerald mineral faults, stone brow and a more imposing head.
-- A single set of clasped fists replaces the distant/stretched hands and boulder.
-- New angular stone spikes and a travelling green fissure distinguish Earth from Poseidon's water magic.
-- The Earth card now illustrates the clasped overhead hands and the spikes.
-- The arena now has layered basalt cliffs, runed obelisks and glowing crystals; the selected Earth card gives the Cast button an Earth palette.
+| Clock | Action |
+| --- | --- |
+| 0.10–1.06 s | Stone Golem rises fully into view |
+| 1.09–1.40 s | Hands clasp |
+| 1.40–2.33 s | Fists lift overhead |
+| 2.33–2.54 s | Dramatic cartoon-style hold |
+| 2.54–2.92 s | Ground slam |
+| 2.92–3.67 s | Eleven ground spikes advance across the arena |
+| **3.67 s** | Final spike impacts the Sentinel: **−900 HP** |
+| 4.02–4.27 s | Illustrated recovery |
+| 4.27–5.09 s | Sprite sinks smoothly below the arena floor |
+| 5.26 s | Cast completes and mana refills |
 
-### Performance and visual stability
+The illustrated asset is preloaded in the HTML. When the Earth card is chosen, the Cast button waits until the image has loaded. The Earth card preview uses the same illustration so it matches the in-game appearance. The traveling spikes and impact are Canvas effects timed independently of the character's sprite frames.
 
-- Static stars, mountains, stone floor, pillars and foreground scenery are rendered once into cached Canvas layers instead of being regenerated on every frame.
-- Mobile canvas resolution is limited to a lower pixel density and high-refresh screens avoid drawing more than approximately 60 frames per second.
-- Mobile blur filters are reduced, Earth uses far fewer particles, and the Earth attack does **not** shake the whole screen.
-- Eased rise and sink animation starts and ends with the golem fully underground.
-- The stone arm and leg segment lengths stay constant during every sampled animation frame.
+### Animation stability and performance
 
-Automated simulation checks passed at **60 and 120 display refreshes per second** for joint lengths, hand clasp, overhead pose, floor contact, Earth impact damage, mixing Water/Earth spells and victory. These checks do not replace visual testing on a physical phone.
+The scene and foreground are cached into separate off-screen canvases instead of rebuilding the scenery each frame. Phones use a reduced internal canvas pixel ratio and rendering is capped around 60 FPS on high-refresh displays. The Earth spell has no camera shake. The sprite atlas is small and avoids per-frame generation of dozens of character polygons.
+
+Automated simulated playback at **60 and 120 Hz** confirmed that the full 12-frame sequence renders, the rising and sinking displacement is continuous, damage is delayed until the last traveling spike reaches the target, and both Earth/Water spells can be used in the same duel through victory and reset. These tests do not replace testing on a physical iPhone.
 
 ## Files
 
-- `index.html`: game interface and Earth/Water spell card artwork.
-- `style.css`: responsive UI, visual theme, mobile optimization.
-- `game.js`: render caching, spell animation, combat logic and particles.
+- `index.html`: game UI, two cards, sprite preload.
+- `style.css`: responsive UI and illustrated Earth card preview.
+- `game.js`: Canvas renderer, sprite timeline, projectile and damage logic.
+- `assets/stone-golem-groundslam.webp`: illustrated animation sprite atlas.
 
-This is still an early test arena, not a complete campaign, deck-builder or multiplayer game.
+This remains an experimental prototype, not a finished campaign or multiplayer game.

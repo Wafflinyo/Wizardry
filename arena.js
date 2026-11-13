@@ -966,14 +966,24 @@
     if(u.hp<=0){g.fillStyle="#f7c6b2";g.font="800 16px system-ui";
       g.fillText("K.O.",u.x,labelY+45);}
   }
-  function renderSprite(kind,index,x,base,size){
+  function renderSprite(kind,index,x,base,size,target,progress=0){
     const arr=spriteCache[kind];
     if(!arr||!arr.every(im=>im.complete&&im.naturalWidth))return false;
     const row=Math.floor(index/4),cell=index%4;
     const edges=[0,314,627,940,1254],top=row===0||row===3?314:313;
-    g.save();g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+    // Only temporary spell creatures face the currently selected target:
+    // mirror the approved low-poly animation for a LEFT target and apply a
+    // mild perspective yaw for its depth lane. The original source PNG
+    // pixels, order and hand-to-projectile release are NEVER edited.
+    const direction=target&&target.x<x?-1:1;
+    const dy=target?target.y-base:0;
+    const dx=target?Math.max(180,Math.abs(target.x-x)):300;
+    const yaw=clamp(dy/dx*.16,-.085,.085)*ease(progress/.19);
+    g.save();g.translate(x,0);g.scale(direction,1);
+    g.transform(.98,0,yaw,1,0,0);
+    g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
     g.drawImage(arr[row],edges[cell],0,edges[cell+1]-edges[cell],top,
-      x-size/2,base-size,size,size);
+      -size/2,base-size,size,size);
     g.restore();return true;
   }
   function setupSprites(){
@@ -1002,7 +1012,7 @@
     g.save();
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
-      const done=renderSprite(card.id,idx,500,470,310);
+      const done=renderSprite(card.id,idx,500,470,310,target,p);
       if(!done){
         const col=card.id==="poseidon"?"#66daf0":"#96b97e";
         ellipse(g,500,392,65+Math.sin(time*.006)*6,18,col+"66",col,3);
@@ -1012,19 +1022,24 @@
       const release=POSEIDON_KEY_TIMES[10];
       if(card.id==="poseidon"&&p>=release&&p<card.hit&&target){
         const t=ease((p-release)/(card.hit-release));
-        const x=lerp(550,target.x,t),y=lerp(284,target.y-105,t)-38*Math.sin(Math.PI*t);
-        line(g,x-70,y+15,x,y,"#3acfe3",18);
-        line(g,x-38,y+7,x,y,"#d3fdff",5);
-        drawFlyingTrident(x,y,Math.atan2(target.y-105-284,target.x-550));
+        const originX=target.x>=500?550:450,originY=284;
+        const x=lerp(originX,target.x,t);
+        const y=lerp(originY,target.y-105,t)-38*Math.sin(Math.PI*t);
+        const direction=target.x>=500?1:-1;
+        line(g,x-direction*70,y+15,x,y,"#3acfe3",18);
+        line(g,x-direction*38,y+7,x,y,"#d3fdff",5);
+        drawFlyingTrident(x,y,Math.atan2(target.y-105-originY,target.x-originX));
       }
       if(card.id==="golem"&&p>.45&&p<card.hit&&target){
         // A subdued ground fissure links the *integrated* sprite's impact
         // to the selected target; no duplicate procedural rock spikes.
         const t=ease((p-.45)/(card.hit-.45));
-        const ex=lerp(520,target.x,t),ey=lerp(409,target.y-8,t);
-        g.beginPath();g.moveTo(520,409);
-        g.quadraticCurveTo(lerp(520,ex,.52),lerp(409,ey,.54)-9,ex,ey);
-        g.strokeStyle="#a6ea79";g.lineWidth=4;g.shadowBlur=11;g.shadowColor="#9df58c";g.stroke();g.shadowBlur=0;
+        const fromX=500+(target.x>=500?18:-18),fromY=409;
+        const ex=lerp(fromX,target.x,t),ey=lerp(fromY,target.y-8,t);
+        g.beginPath();g.moveTo(fromX,fromY);
+        g.quadraticCurveTo(lerp(fromX,ex,.52),lerp(fromY,ey,.54)-9,ex,ey);
+        g.strokeStyle="#a6ea7988";g.lineWidth=3;g.shadowBlur=7;
+        g.shadowColor="#9df58c";g.stroke();g.shadowBlur=0;
       }
     }else{
       if(target&&card.target!=="team"){
@@ -1056,6 +1071,42 @@
     pathPoly(g,[[43,-6],[59,0],[43,6],[35,0]],"#54e4f0");
     g.restore();
   }
+  function drawAirborneRune(a){
+    if(!a||!["tracing-auto","tracing-manual"].includes(a.stage))return;
+    const points=runePath(a.card.id);
+    const color=a.card.id==="poseidon"?"#8cebf9":"#c2ed93";
+    const fraction=a.stage==="tracing-auto"?
+      ease(clamp(a.elapsed/a.duration,0,1)):0;
+    g.save();g.translate(425,224);g.scale(.78,.78);
+    ellipse(g,100,99,110,111,"#071c2b55",color+"55",2);
+    g.beginPath();g.moveTo(...points[0]);
+    for(let i=1;i<points.length;i++)g.lineTo(...points[i]);
+    g.strokeStyle=color+"77";g.lineWidth=7;g.lineCap="round";
+    g.lineJoin="round";g.stroke();
+    if(a.stage==="tracing-auto"&&fraction>0){
+      const traced=resampleStroke(points,40);
+      const count=Math.max(2,Math.floor(fraction*traced.length));
+      g.beginPath();g.moveTo(...traced[0]);
+      for(let i=1;i<count;i++)g.lineTo(...traced[i]);
+      g.strokeStyle=color;g.lineWidth=9;
+      g.shadowBlur=14;g.shadowColor=color;g.stroke();g.shadowBlur=0;
+    }
+    ellipse(g,...points[0],7,7,"#8aeda0");
+    ellipse(g,...points.at(-1),7,7,"#edc585");
+    g.restore();
+  }
+  function drawFizzle(a){
+    if(!a||a.stage!=="fizzle")return;
+    const c=getUnit(a.source);if(!c)return;
+    const progress=a.elapsed/a.duration;
+    const centerX=500,centerY=339;
+    g.save();g.globalAlpha=Math.max(0,1-progress);
+    ellipse(g,centerX,centerY,17+progress*77,17+progress*29,
+      null,"#ef9e9f",3);
+    line(g,centerX-20,centerY-20,centerX+20,centerY+20,"#faa9aa",3);
+    line(g,centerX+20,centerY-20,centerX-20,centerY+20,"#faa9aa",3);
+    g.restore();
+  }
   function render(time){
     g.setTransform(1,0,0,1,0,0);
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
@@ -1073,7 +1124,13 @@
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     for(const u of [...state.units].sort((a,b)=>a.y-b.y))drawUnit(u,time);
-    if(state.animation)drawAction(state.animation,time);
+    if(state.animation){
+      if(state.animation.stage==="summon")drawAction(state.animation,time);
+      else {
+        drawAirborneRune(state.animation);
+        drawFizzle(state.animation);
+      }
+    }
     for(const f of state.flashes){
       const alpha=clamp(1-f.age/.95,0,1);
       g.save();g.globalAlpha=alpha;g.textAlign="center";g.textBaseline="middle";

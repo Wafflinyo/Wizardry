@@ -47,14 +47,15 @@
     launch: 2.55, hit: 2.86,
     sinkStart: 3.52, sinkEnd: 4.74, end: 4.88
   });
-  // Stone Golem has its own summon, double-arm lift, projectile and crumble clock.
-  // At normal speed the full sequence plays in about 3.4 seconds.
+  // Earth: clasp two stone fists, raise overhead, ground slam, spikes travel.
   const EARTH = Object.freeze({
-    emergeStart: .16, emergeEnd: 1.14,
-    liftStart: 1.01, liftEnd: 2.37,
-    braceStart: 2.37, releaseStart: 2.69,
-    launch: 3.09, hit: 3.43,
-    crumbleStart: 4.11, crumbleEnd: 5.02, end: 5.17
+    emergeStart:.07,emergeEnd:1.02,
+    claspStart:.89,claspEnd:1.30,
+    liftStart:1.19,liftEnd:2.13,
+    holdStart:2.13,holdEnd:2.31,
+    slamStart:2.31,slamEnd:2.73,
+    spikesStart:2.73,spikesEnd:3.53,hit:3.53,
+    settleStart:3.83,crumbleStart:4.08,crumbleEnd:4.85,end:5.03
   });
   const duration = SPELL.end;
   // Middle ground between the original slower cast (4.88s) and v0.3.2 (2.44s).
@@ -72,10 +73,10 @@
     },
     stone: {
       name: "Stone Golem", school: "Earth", cost: 6, damage: 900,
-      summary: "An ancient Earth golem rises from the arena, hoists a massive boulder overhead with both hands, and throws it at the enemy.",
+      summary: "A towering golem clasps both stone fists, raises them overhead, and slams the floor. Jagged Earth spikes race toward the enemy.",
       start: "Stone rumbles beneath the arena...",
       caption: "STONE GOLEM",
-      hint: "Earth cracks → golem rises → both hands lift boulder → throw → impact → crumble.",
+      hint: "Rise → clasp stone fists → raise → ground slam → advancing stone spikes → impact.",
       finish: "Stone Golem has crumbled back into the earth."
     }
   });
@@ -667,61 +668,45 @@
       pivot[1]+dx*Math.sin(angle)+dy*Math.cos(angle)];
   }
   function earthPose(elapsed,t=0) {
-    // Front-facing 3/4 golem with its target to screen RIGHT.
-    // Choreographed from real two-hand overhead medicine ball throws:
-    // load behind head -> weight back -> lead foot plants -> hips/chest lead
-    // -> both elbows extend over head -> fast release -> follow-through.
+    // One interlocked grip: hands always travel as a single unit.
+    // Two-bone IK gives constant stone upper-arm and forearm lengths.
     const emerging=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
     const descent=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
-    const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd-.14));
-    const load=ease(phase(elapsed,EARTH.liftEnd-.23,EARTH.releaseStart));
-    const drive=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
-    const follow=ease(phase(elapsed,EARTH.launch,EARTH.launch+.34));
-    const footLift=load*(1-drive);
-    // Fully underground at both endpoints with zero vertical velocity.
-    const base=411+300*(1-emerging)+300*descent;
-    const x=502+24*drive*(1-follow*.20);
-    const pivot=[x,base-77];
-    // Backward arch pivots the rigid chest/head around the hips.
-    const lean=-.34*load*(1-drive)+.23*drive*(1-follow*.45);
-    const hips=[stoneRotate([x-34,base-74],pivot,lean),
-                stoneRotate([x+34,base-74],pivot,lean)];
-    const shoulders=[stoneRotate([x-58,base-164],pivot,lean),
-                     stoneRotate([x+58,base-164],pivot,lean)];
-    // The ball follows an arc BACK BEHIND the skull before it goes forward.
-    // It is NOT moved by extending the hands independently.
-    // A shallow backswing arc keeps the wrists clear of the shoulders while
-    // the boulder passes chest height; both fists remain locked to the rock.
-    const rockX=502+2-42*lift-50*load+186*drive-42*Math.sin(Math.PI*lift)*(1-load);
-    const rockY=base-113-211*lift-16*load+76*drive;
-    const hands=[[rockX-34,rockY+29],[rockX+34,rockY+29]];
-    // Fixed stone-bone lengths are verified at all 60/120 Hz in-between poses.
-    if(elapsed>=EARTH.launch){
-      hands[0][0]=mix(hands[0][0],x+54,follow);
-      hands[0][1]=mix(hands[0][1],base-199,follow);
-      hands[1][0]=mix(hands[1][0],x+97,follow);
-      hands[1][1]=mix(hands[1][1],base-197,follow);
-    }
-    const armUpper=100,armLower=95;
+    const clasp=ease(phase(elapsed,EARTH.claspStart,EARTH.claspEnd));
+    const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd));
+    const slam=ease(phase(elapsed,EARTH.slamStart,EARTH.slamEnd));
+    const settle=ease(phase(elapsed,EARTH.settleStart,EARTH.crumbleStart));
+    const base=411+306*(1-emerging)+306*descent;
+    const x=504+15*slam*(1-settle*.5);
+    const lean=-.09*lift*(1-slam)+.24*slam*(1-settle*.6);
+    const pivot=[x,base-83];
+    const shoulders=[
+      stoneRotate([x-61,base-165],pivot,lean),
+      stoneRotate([x+61,base-165],pivot,lean)
+    ];
+    const hips=[
+      stoneRotate([x-36,base-80],pivot,lean),
+      stoneRotate([x+36,base-80],pivot,lean)
+    ];
+    // Clasp at chest height, lift high above the head, smash down in front.
+    const fistX=mix(x-2,x+64,slam);
+    const fistY=mix(base-142-174*lift,base-13,slam);
+    const hands=[[fistX-8,fistY],[fistX+8,fistY]];
+    const armUpper=99,armLower=96;
     const elbows=[
       stoneIK(shoulders[0],hands[0],armUpper,armLower,-1),
       stoneIK(shoulders[1],hands[1],armUpper,armLower,1)
     ];
-    // Right/back foot stays on the ground. Left/lead foot lifts during
-    // loading, steps across, and plants toward the target BEFORE release.
-    const leftFoot=[mix(mix(445,424,load),565,drive),base-3-54*footLift];
-    const rightFoot=[524,base-3];
-    const feet=[leftFoot,rightFoot];
-    const legUpper=59,legLower=57;
+    const feet=[[x-65,base-4],[x+60,base-4]];
+    const legUpper=60,legLower=57;
     const knees=[
       stoneIK(hips[0],feet[0],legUpper,legLower,1),
       stoneIK(hips[1],feet[1],legUpper,legLower,-1)
     ];
-    return {x,base,pivot,emerging,descent,lift,load,drive,follow,footLift,
-      lean,rockX,rockY,hands,shoulders,elbows,hips,feet,knees,
+    return {x,base,pivot,emerging,descent,clasp,lift,slam,settle,lean,
+      fistX,fistY,hands,elbows,shoulders,hips,feet,knees,
       armUpper,armLower,legUpper,legLower};
   }
-
   function stoneLimb(a,b,thickA,thickB,light,shadow) {
     const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.max(1,Math.hypot(dx,dy));
     const nx=-dy/length,ny=dx/length;

@@ -551,14 +551,20 @@
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;
-      // Only opponents can be targeted. Enlarged sprite/HP label tap area
-      // ensures even the back row is easy to hit on a phone.
+      // Opposing models and their new SIDE nameplates are both tappable.
+      // Selection previews the down arrow; only Confirm Target starts a cast.
       if(!currentCard()||!caster())return;
       const candidates=alive(1-state.planningSide)
-        .map(u=>({u,dx:Math.abs(x-u.x),dy:Math.abs(y-(u.y-88)),
-          d:Math.hypot((x-u.x)*.92,(y-(u.y-88))*.83)}))
-        .sort((a,b)=>a.d-b.d);
-      if(!candidates[0]||candidates[0].dx>90||candidates[0].dy>135)return;
+        .map(u=>{
+          const plate=unitPlateRect(u);
+          const onPlate=x>=plate.x-3&&x<=plate.x+plate.w+3&&
+            y>=plate.y-5&&y<=plate.y+plate.h+5;
+          const dx=Math.abs(x-u.x),dy=Math.abs(y-(u.y-88));
+          return {u,onPlate,dx,dy,
+            d:onPlate?-1:Math.hypot(dx*.92,dy*.83)};
+        }).sort((a,b)=>a.d-b.d);
+      if(!candidates[0]||(!candidates[0].onPlate&&
+          (candidates[0].dx>90||candidates[0].dy>135)))return;
       selectTarget(candidates[0].u.id);
     });
   }
@@ -1145,7 +1151,7 @@
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
     setBattle,queueSpell,autoFill,resolvePressed,
-    chooseCard,selectCaster,selectTarget,
+    chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

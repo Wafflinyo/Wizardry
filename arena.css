@@ -203,3 +203,36 @@ body{height:100dvh;overflow:hidden}
 
 /* Keep the battlefield\u2019s 1000:620 proportions when the viewport is shorter. */
 .arena canvas{object-fit:fill}
+
+
+/* v0.28 — Confirm the on-field arrow target without adding another screen
+   or scrolling the two-card hand. */
+.hand-assist{min-height:36px;max-height:none;align-items:center;gap:9px}
+.spell-choice-info{min-width:0;flex:1 1 auto;display:flex;
+  flex-direction:column;align-items:flex-start;gap:3px}
+.hand-assist .spell-choice-info strong{display:block;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hand-assist .spell-choice-info span{display:block;text-align:left;
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.confirm-target{flex:0 0 auto;min-height:34px;padding:6px 13px;
+  border:1px solid #fae2a1;border-radius:8px;
+  background:linear-gradient(150deg,#f2dfa0,#b58c41);
+  box-shadow:0 0 14px #f1c56c33;color:#102d31;
+  font-size:11px;font-weight:900;letter-spacing:.025em}
+.confirm-target:active{transform:scale(.98)}
+.confirm-target:focus-visible{outline:2px solid #9ef3f0;outline-offset:3px}
+.confirm-target[hidden]{display:none!important}
+@media(max-width:700px){
+ .hand-assist{min-height:35px;gap:6px}
+ .confirm-target{min-height:33px;padding:5px 9px;font-size:10px}
+ .hand-assist .spell-choice-info strong,
+ .hand-assist .spell-choice-info span{font-size:9px}
+}
+@media(max-height:650px) and (orientation:portrait){
+ .hand-assist{min-height:31px}
+ .confirm-target{min-height:30px}
+}
+@media(max-height:390px) and (orientation:landscape){
+ .hand-assist{min-height:28px}
+ .confirm-target{min-height:27px;padding:3px 7px;font-size:9px}
+}

@@ -724,93 +724,87 @@
     if(p.emerging<.001||p.descent>.999)return;
     const x=p.x,y=p.base;
     g.save();
-    g.beginPath();g.rect(270,-120,480,531);g.clip();
-    g.globalAlpha*=1-ease(phase(p.descent,.68,1));
-    // Low, broad shadow reinforces his mass; NO random vertical bobbing.
-    oval(502,407,92,18,"#151f1695");
-    // A clear three-quarter silhouette: planted rear leg, raised leading
-    // stone leg, faceted knees and broad feet.
+    g.beginPath();g.rect(282,-140,462,551);g.clip();
+    g.globalAlpha*=1-ease(phase(p.descent,.61,1));
+    oval(505,406,89,17,"#18291ca5");
+    // Immense separate granite legs with angular knee joints and planted feet.
     for(let side=1;side>=0;side--){
       const hip=p.hips[side],knee=p.knees[side],foot=p.feet[side];
-      stoneLimb(hip,knee,24,20,side===0?"#829078":"#697961","#495a46");
-      oval(knee[0],knee[1],18,17,side===0?"#8c9576":"#74826d","#c7bf9e",1.2);
-      stoneLimb(knee,foot,21,17,side===0?"#9aa58b":"#727d68","#55624d");
-      g.save();g.translate(foot[0],foot[1]);g.rotate(side===0?-.21*p.footLift:0);
-      polygon([[-27,-8],[7,-12],[30,-1],[19,9],[-27,8]],
-        side===0?"#84957c":"#6d806a","#c7bea1",2);
-      triangleFacet(-27,-8,7,-12,6,3,"#b8b89b");
-      g.restore();
+      stoneLimb(hip,knee,27,23,side===0?"#849889":"#5e786e","#3d584a");
+      polygon([[knee[0]-21,knee[1]-13],[knee[0]+13,knee[1]-17],
+        [knee[0]+24,knee[1]+6],[knee[0]-14,knee[1]+18]],
+        side===0?"#abb8a1":"#819887","#d0d6b5",1.8);
+      stoneLimb(knee,foot,23,18,side===0?"#a1b29a":"#728a7c","#486453");
+      polygon([[foot[0]-29,foot[1]-10],[foot[0]+11,foot[1]-11],
+        [foot[0]+31,foot[1]+2],[foot[0]+13,foot[1]+10],[foot[0]-29,foot[1]+9]],
+        side===0?"#a2b59f":"#708e7f","#c4d1b7",2);
     }
-    // Far arms and massive faceted elbow hinges.
-    for(let side=1;side>=0;side--){
-      const shoulder=p.shoulders[side],elbow=p.elbows[side],hand=p.hands[side];
-      stoneLimb(shoulder,elbow,21,17,side===0?"#798b73":"#63765e","#425742");
-      oval(elbow[0],elbow[1],18,17,"#8d977d","#cfc8a7",1.4);
-      stoneLimb(elbow,hand,17,12,side===0?"#a3ab90":"#7b8e76","#526a52");
-    }
-    // One connected pelvis / chest / head: all rotate together through the
-    // same hip pivot, so charging with the spine does not stretch the stone.
-    g.save();
-    g.translate(p.pivot[0],p.pivot[1]);g.rotate(p.lean);
+    // A single massive body pivots at the hips for the overhead slam.
+    g.save();g.translate(p.pivot[0],p.pivot[1]);g.rotate(p.lean);
     g.translate(-p.pivot[0],-p.pivot[1]);
-    // Pelvis
-    polygon([[x-44,y-90],[x+43,y-91],[x+48,y-58],[x+23,y-43],[x-26,y-45],[x-48,y-63]],
-      "#5d735a","#b6b697",2);
-    triangleFacet(x-43,y-88,x+10,y-81,x-25,y-48,"#849076");
-    triangleFacet(x+10,y-81,x+45,y-86,x+25,y-48,"#405946");
-    // Large trapezoidal chest with crystalline moss seams
-    polygon([[x-74,y-161],[x-35,y-193],[x+33,y-194],[x+74,y-162],
-      [x+67,y-109],[x+48,y-77],[x-51,y-77],[x-69,y-110]],
-      "#647862","#beb899",3);
-    triangleFacet(x-74,y-159,x-35,y-191,x-12,y-123,"#a5b093");
-    triangleFacet(x-35,y-192,x+34,y-193,x+6,y-128,"#8e9f86");
-    triangleFacet(x+34,y-193,x+73,y-162,x+37,y-118,"#4e6651");
-    triangleFacet(x-70,y-110,x-12,y-126,x-51,y-79,"#758d70");
-    triangleFacet(x+6,y-127,x+67,y-109,x+46,y-80,"#435e4b");
-    polygon([[x-22,y-141],[x+2,y-156],[x+28,y-140],[x+16,y-116],
-      [x-12,y-115]],"#3c5942","#9baf7c",1.1);
-    polygon([[x-11,y-139],[x+3,y-146],[x+19,y-138],[x+14,y-126],[x-9,y-127]],
-      "#afd58a","#e6f5b9",1.5);
-    // Shoulder blocks are angular, not organic muscle shapes.
-    polygon([[x-91,y-179],[x-64,y-207],[x-28,y-189],[x-30,y-153],[x-76,y-145]],
-      "#869578","#d1c6a2",2.6);
-    triangleFacet(x-87,y-181,x-63,y-204,x-57,y-153,"#c0c5a3");
-    polygon([[x+58,y-207],[x+92,y-179],[x+81,y-145],[x+31,y-152],[x+29,y-187]],
-      "#728b72","#c6c4a3",2.6);
-    triangleFacet(x+60,y-205,x+90,y-179,x+59,y-160,"#9daf8e");
-    // Distinctive overhanging stone brow, prominent forward/right nose,
-    // and angular jaw so he faces the TARGET instead of staring front.
-    polygon([[x-34,y-215],[x-30,y-269],[x-1,y-290],[x+28,y-278],
-      [x+44,y-246],[x+55,y-235],[x+42,y-225],[x+28,y-197],[x-24,y-194]],
-      "#82937d","#d5caa4",2.8);
-    triangleFacet(x-32,y-268,x-1,y-288,x-6,y-247,"#bac3a4");
-    triangleFacet(x-1,y-287,x+28,y-278,x+16,y-251,"#d0caad");
-    triangleFacet(x+29,y-277,x+44,y-246,x+22,y-228,"#5e7968");
-    triangleFacet(x+27,y-210,x+55,y-235,x+37,y-221,"#a7ae94");
-    polygon([[x-34,y-248],[x-20,y-260],[x+14,y-259],[x+33,y-247],
-      [x+35,y-237],[x-31,y-236]],"#485f4d");
-    polygon([[x-23,y-246],[x-7,y-248],[x-7,y-241],[x-22,y-239]],"#c4f9a1");
-    polygon([[x+12,y-246],[x+29,y-243],[x+29,y-237],[x+12,y-240]],"#c4f9a1");
-    polygon([[x-19,y-211],[x+25,y-209],[x+31,y-220],[x+4,y-217]],
-      "#5b735c","#aab99a",1.7);
-    // Back crystal shards give an ancient, magical Earth silhouette.
-    polygon([[x-47,y-194],[x-57,y-224],[x-31,y-206]],"#9dc48a");
-    polygon([[x+41,y-186],[x+58,y-219],[x+63,y-183]],"#7ca67a");
+    polygon([[x-48,y-101],[x+46,y-101],[x+49,y-59],[x+20,y-43],
+      [x-25,y-45],[x-51,y-68]],"#587563","#abc2a5",2);
+    polygon([[x-83,y-178],[x-43,y-199],[x+43,y-198],[x+83,y-176],
+      [x+73,y-106],[x+40,y-70],[x-46,y-70],[x-76,y-113]],
+      "#60796b","#c6d1b8",3);
+    triangleFacet(x-81,y-177,x-43,y-198,x-14,y-129,"#9fb39f");
+    triangleFacet(x-43,y-198,x+43,y-197,x+4,y-137,"#7f9b89");
+    triangleFacet(x+43,y-197,x+83,y-176,x+37,y-119,"#3b5b4e");
+    triangleFacet(x-76,y-113,x-14,y-129,x-46,y-73,"#718d76");
+    triangleFacet(x+3,y-135,x+74,y-109,x+41,y-75,"#2d5146");
+    // Ancient emerald fault glowing through the heart of the stone.
+    g.beginPath();g.moveTo(x-24,y-160);g.lineTo(x-5,y-142);
+    g.lineTo(x+3,y-153);g.lineTo(x+19,y-139);
+    g.lineTo(x+9,y-118);g.lineTo(x+29,y-107);
+    g.strokeStyle="#345d45";g.lineWidth=5;g.stroke();
+    g.strokeStyle="#aeefb6";g.lineWidth=2.2;g.stroke();
+    polygon([[x-96,y-182],[x-73,y-216],[x-33,y-197],[x-41,y-153],
+      [x-86,y-147]],"#8da28d","#c9d7bd",2.8);
+    triangleFacet(x-94,y-181,x-72,y-215,x-62,y-157,"#c1d1bb");
+    polygon([[x+70,y-217],[x+98,y-183],[x+87,y-146],[x+37,y-152],
+      [x+36,y-197]],"#587c70","#bac9b4",2.8);
+    triangleFacet(x+71,y-214,x+96,y-183,x+63,y-154,"#84a797");
+    // Low-poly basalt skull: no organic skin or stretchy anatomy.
+    polygon([[x-39,y-219],[x-38,y-270],[x-10,y-290],[x+30,y-279],
+      [x+44,y-252],[x+45,y-220],[x+23,y-196],[x-22,y-195]],
+      "#748c7e","#d1d7be",2.8);
+    triangleFacet(x-39,y-267,x-10,y-288,x-5,y-247,"#abbfab");
+    triangleFacet(x-10,y-288,x+30,y-279,x+13,y-248,"#c0cdb9");
+    triangleFacet(x+31,y-277,x+44,y-252,x+11,y-228,"#426656");
+    polygon([[x-43,y-256],[x-14,y-268],[x+27,y-267],[x+48,y-249],
+      [x+44,y-235],[x-40,y-238]],"#3f614d","#92ad92",1.5);
+    polygon([[x-30,y-251],[x-10,y-252],[x-10,y-242],[x-31,y-241]],"#bef7b1");
+    polygon([[x+11,y-252],[x+34,y-249],[x+33,y-240],[x+11,y-242]],"#bef7b1");
+    polygon([[x-18,y-212],[x+26,y-210],[x+29,y-221],[x+1,y-218]],
+      "#3f604e","#b5c9ae",1.5);
+    polygon([[x-60,y-202],[x-73,y-232],[x-41,y-211]],"#99bd9b");
+    polygon([[x+57,y-196],[x+72,y-227],[x+77,y-191]],"#6c9a80");
     g.restore();
-    // The boulder is OVER/BEHIND the head at the loaded pose, held by BOTH
-    // hands. Its centre is never a detached, independently floating object.
-    if(elapsed<EARTH.launch)
-      drawBoulder(p.rockX,p.rockY,51,
-        -p.load*.18 + p.drive*.33);
-    // Visible wrist/knuckle blocks firmly cup the sides of the same rock.
+    // Both rock arms are one rigid upper segment + one rigid forearm;
+    // elbows flare out while clasped fists trace the shared lift/slam arc.
     for(let side=0;side<2;side++){
-      const hand=p.hands[side];
-      polygon([[hand[0]-13,hand[1]-12],[hand[0]+13,hand[1]-11],
-        [hand[0]+15,hand[1]+12],[hand[0]-9,hand[1]+14]],
-        side===0?"#b5b99d":"#969f87","#dfd5b4",1.9);
-      triangleFacet(hand[0]-11,hand[1]-10,hand[0]+10,hand[1]-10,
-        hand[0]+1,hand[1]+5,side===0?"#d8ceae":"#adb99c");
+      const shoulder=p.shoulders[side],elbow=p.elbows[side],hand=p.hands[side];
+      stoneLimb(shoulder,elbow,25,21,
+        side===0?"#9faf98":"#7c9c89",side===0?"#526f5b":"#496d61");
+      polygon([[elbow[0]-18,elbow[1]-14],[elbow[0]+12,elbow[1]-21],
+        [elbow[0]+23,elbow[1]+10],[elbow[0]-10,elbow[1]+19]],
+        side===0?"#a9bba6":"#799a87","#c9d8bf",1.8);
+      stoneLimb(elbow,hand,20,15,
+        side===0?"#b2c4ac":"#89aa98",side===0?"#657f6a":"#537969");
     }
+    // Two distinct fists LOCK INTO ONE interlaced silhouette (no boulder).
+    const fx=p.fistX,fy=p.fistY;
+    g.save();g.translate(fx,fy);
+    polygon([[-28,-14],[-12,-22],[3,-14],[11,-4],[5,19],[-21,18],[-30,5]],
+      "#becdb5","#e4e4cb",2);
+    polygon([[5,-16],[24,-20],[32,-9],[30,12],[12,21],[1,9]],
+      "#8fae9a","#cbdcbe",2);
+    triangleFacet(-28,-12,-12,-21,-12,11,"#e2e9d5");
+    triangleFacet(7,-15,24,-20,21,12,"#b3cbb5");
+    line(-6,-11,0,-1,"#375d4b",3);line(0,-1,7,8,"#375d4b",3);
+    line(7,8,14,2,"#bff0b7",2);
+    if(p.lift>.7&&p.slam<.02)glow(0,3,23,"#bcf5b12b");
+    g.restore();
     g.restore();
   }
 

@@ -4,3 +4,183 @@
 @media(max-width:800px){.header-right{gap:10px}.trial-label{font-size:9px}.spell-caption{top:80px;max-width:80%}.battle-controls{flex-wrap:wrap}.card-row{gap:25px}.spell-details{padding-top:4px}.mechanic-grid{gap:6px}.mechanic-grid>div{padding:10px 7px}.mechanic-grid strong{font-size:12px}}
 @media(max-width:600px){.app{padding:0 12px}.masthead{height:73px}.brand{gap:9px}.brand-rune{width:34px;height:34px;font-size:23px}.brand-name{font-size:17px;letter-spacing:.14em}.brand-subtitle{font-size:7px}.trial-label{display:none}.icon-button{padding:9px}.battle{margin-top:18px}.battle-title h1{font-size:23px}.round-meta{font-size:8px;gap:6px}.arena{min-height:310px;aspect-ratio:1.24;border-radius:8px}.arena-player{left:10px;top:12px}.arena-enemy{right:10px;top:12px;min-width:135px}.arena-player strong,.arena-enemy strong{font-size:13px}.arena-player .small-caps,.arena-enemy .small-caps{font-size:7px;letter-spacing:.11em}.mana-pip{width:9px;height:12px}.spell-caption{top:72px;font-size:10px;max-width:88%}.cast-status{padding:9px 11px;font-size:10px;bottom:10px;min-width:auto;white-space:nowrap}.battle-controls{padding:12px 0 18px}.battle-advice{font-size:11px}.secondary-button{font-size:10px;padding:9px 10px}.spell-tray{padding-top:18px}.tray-heading h2{font-size:19px}.card-row{display:flex;flex-direction:column;align-items:center;gap:16px}.spell-card{width:205px;min-width:205px;height:312px}.spell-details{width:100%;max-width:480px}.spell-details h3{font-size:25px;margin:7px 0}.spell-details p{font-size:12px}.primary-button{max-width:none}.footer{flex-direction:column;text-align:center;gap:8px}.health-line{height:7px}.health-number{font-size:9px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+
+/* V0.2 — single-screen combat: the hand and Cast button never live below the fold.
+ * This override intentionally comes last so it supersedes the old scrolling layout.
+ */
+.app {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+}
+.masthead { height: 60px; flex: 0 0 60px; }
+.battle {
+  margin-top: 10px;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.battle-header { flex: 0 0 auto; margin-bottom: 8px; }
+.battle-title h1 { font-size: clamp(18px, 2.2vw, 29px); }
+.arena {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  aspect-ratio: auto;
+}
+.battle-controls { flex: 0 0 auto; padding: 7px 0 8px; }
+.spell-tray { flex: 0 0 auto; min-height: 0; padding-top: 8px; }
+.tray-heading { margin-bottom: 7px; }
+.tray-heading h2 { font-size: 18px; margin-top: 2px; }
+.card-row { padding-bottom: 6px; gap: 20px; align-items: stretch; }
+.spell-card {
+  flex-shrink: 0;
+  width: 158px;
+  min-width: 158px;
+  height: 190px;
+  padding: 7px 9px;
+}
+.card-cost { width: 30px; height: 30px; top: 7px; left: 7px; font-size: 17px; }
+.card-topline { font-size: 7px; margin: 4px 0 4px 23px; }
+.card-art { height: 79px; min-height: 0; flex: 0 0 79px; }
+.art-trident { width: 64px; height: 95px; left: calc(50% - 32px); top: -1px; }
+.card-name { font-size: 13px; margin-top: 6px; }
+.card-type { font-size: 7px; margin-top: 3px; }
+.card-description { display: none; }
+.card-damage { padding-top: 4px; font-size: 8px; }
+.card-damage strong { font-size: 11px; }
+.spell-details {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  height: 190px;
+  padding: 3px 0 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.spell-details > .eyebrow { font-size: 9px; }
+.spell-details h3 { font-size: 23px; margin: 1px 0 3px; }
+.spell-details p:not(.replay-note), .spell-details .replay-note { display: none; }
+.mechanic-grid { gap: 8px; margin: 7px 0; }
+.mechanic-grid > div { padding: 8px; }
+.mechanic-grid span { margin-bottom: 4px; }
+.mechanic-grid strong { font-size: 12px; }
+.primary-button { max-width: 430px; padding: 11px 15px; }
+.footer { display: none; }
+
+@media (max-width: 700px) {
+  .app { padding: 0 10px max(6px, env(safe-area-inset-bottom)); }
+  .masthead { flex: 0 0 48px; height: 48px; }
+  .brand { gap: 9px; }
+  .brand-rune { width: 32px; height: 32px; font-size: 22px; }
+  .brand-name { font-size: 16px; letter-spacing: .13em; }
+  .brand-subtitle { font-size: 7px; }
+  .trial-label { display: none; }
+  .icon-button { padding: 7px 9px; }
+  .battle { margin-top: 6px; }
+  .battle-header { margin-bottom: 4px; }
+  .battle-title .eyebrow { font-size: 8px; }
+  .battle-title h1 { font-size: 18px; margin-top: 1px; }
+  .round-meta { font-size: 8px; gap: 5px; padding-bottom: 2px; }
+  .arena { min-height: 0; aspect-ratio: auto; max-height: none; border-radius: 9px; }
+  .arena-player { left: 10px; top: 10px; }
+  .arena-enemy { right: 10px; top: 10px; min-width: 135px; }
+  .arena-player strong, .arena-enemy strong { font-size: 13px; }
+  .arena-player .small-caps, .arena-enemy .small-caps { font-size: 7px; letter-spacing: .10em; }
+  .mana-pip { width: 9px; height: 12px; }
+  .health-line { height: 7px; }
+  .health-number { font-size: 9px; }
+  .spell-caption { top: 66px; font-size: 10px; max-width: 85%; }
+  .cast-status {
+    bottom: 7px;
+    padding: 7px 10px;
+    max-width: 93%;
+    min-width: 0;
+    white-space: normal;
+    text-wrap: balance;
+    font-size: 10px;
+  }
+  .battle-controls { padding: 5px 0; gap: 4px; flex-wrap: nowrap; }
+  .battle-advice { display: none; }
+  .button-group { width: 100%; flex: 1 1 auto; gap: 7px; }
+  .secondary-button { flex: 1 1 0; padding: 7px 9px; font-size: 10px; }
+  .spell-tray { padding-top: 6px; }
+  .tray-heading { margin-bottom: 5px; }
+  .tray-heading .eyebrow { font-size: 8px; }
+  .tray-heading h2 { font-size: 16px; margin-top: 1px; }
+  .tray-stats strong { font-size: 14px; }
+  .card-row {
+    display: grid;
+    grid-template-columns: 129px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+    padding: 0 0 2px;
+  }
+  .spell-card { width: 129px; min-width: 0; height: 168px; padding: 5px 7px; }
+  .spell-card:hover, .spell-card.selected { transform: translateY(-2px); }
+  .card-cost { width: 25px; height: 25px; font-size: 13px; top: 5px; left: 5px; }
+  .card-topline { font-size: 7px; margin: 4px 0 4px 19px; }
+  .card-art { height: 65px; flex: 0 0 65px; }
+  .art-trident { width: 54px; height: 80px; left: calc(50% - 27px); }
+  .card-name { font-size: 12px; margin-top: 5px; }
+  .card-type { font-size: 7px; margin-top: 2px; }
+  .card-damage { font-size: 7px; padding-top: 3px; }
+  .card-damage strong { font-size: 10px; }
+  .spell-details { height: 168px; min-width: 0; width: auto; padding: 0; }
+  .spell-details > .eyebrow { display: none; }
+  .spell-details h3 { font-size: clamp(16px, 4vw, 21px); line-height: 1.1; margin: 0; }
+  .mechanic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 6px 0; }
+  .mechanic-grid > div { padding: 7px 6px; }
+  .mechanic-grid > div:last-child { display: none; }
+  .mechanic-grid span { font-size: 8px; }
+  .mechanic-grid strong { font-size: 11px; }
+  .primary-button { max-width: none; min-height: 43px; padding: 10px 6px; font-size: 10px; letter-spacing: .015em; }
+  .button-rune { font-size: 17px; }
+}
+
+@media (max-width: 380px) {
+  .card-row { grid-template-columns: 117px minmax(0, 1fr); gap: 9px; }
+  .spell-card { width: 117px; }
+  .card-topline { font-size: 6px; }
+  .card-name { font-size: 11px; }
+  .spell-details h3 { font-size: 16px; }
+  .primary-button { font-size: 9px; }
+}
+
+@media (max-height: 620px) {
+  .masthead { flex-basis: 42px; height: 42px; }
+  .battle { margin-top: 4px; }
+  .spell-card, .spell-details { height: 145px; }
+  .card-art { height: 52px; flex-basis: 52px; }
+  .tray-heading { margin-bottom: 3px; }
+  .tray-heading .eyebrow { display: none; }
+  .spell-tray { padding-top: 4px; }
+  .spell-details h3 { font-size: 16px; }
+  .mechanic-grid { margin: 3px 0; }
+  .mechanic-grid > div { padding: 5px 6px; }
+  .card-name { margin-top: 3px; }
+  .card-damage { margin-top: auto; }
+}
+
+@media (max-height: 430px) {
+  .battle-title .eyebrow, .tray-heading { display: none; }
+  .masthead { flex-basis: 36px; height: 36px; }
+  .battle-header { margin-bottom: 2px; }
+  .battle-title h1 { font-size: 15px; }
+  .battle-controls { padding: 2px 0; }
+  .spell-card, .spell-details { height: 116px; }
+  .card-art { height: 30px; flex-basis: 30px; }
+  .card-name { font-size: 10px; }
+  .card-type { display: none; }
+  .mechanic-grid { display: none; }
+}

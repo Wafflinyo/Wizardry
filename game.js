@@ -333,12 +333,15 @@
 
   function addParticle(x,y,kind="spray",scale=1){
     if(particles.length>300)particles.splice(0,particles.length-300);
-    const hot=kind==="impact", gold=kind==="gold";
+    const hot=kind==="impact"||kind==="rock", gold=kind==="gold";
     particles.push({
       x,y, vx:rand(-3.8,3.8)*scale + (hot?rand(-5,5):0),
       vy:rand(-5.5,-1)*scale, life:rand(.4,1.15),
       max:0, size:rand(2,6)*(hot?1.4:1), kind,
-      color: gold?"#f6da87":hot?["#eaffff","#6efbff","#2abedb"][Math.floor(rand(0,3))]:["#9cfaff","#29b5d5","#deffff"][Math.floor(rand(0,3))]
+      color:kind==="rock"?["#d2c39b","#7c886f","#555e4e"][Math.floor(rand(0,3))]
+        :kind==="dust"?["#b8a987","#88856b","#d6c597"][Math.floor(rand(0,3))]
+        :gold?"#f6da87":hot?["#eaffff","#6efbff","#2abedb"][Math.floor(rand(0,3))]
+        :["#9cfaff","#29b5d5","#deffff"][Math.floor(rand(0,3))]
     });
     particles[particles.length-1].max=particles[particles.length-1].life;
   }
@@ -354,6 +357,7 @@
       const alpha=clamp(p.life/p.max);
       g.globalAlpha=alpha;
       if(p.kind==="spray")triangleFacet(p.x,p.y-p.size,p.x-p.size*.6,p.y+p.size*.8,p.x+p.size*.6,p.y+p.size*.8,p.color);
+      else if(p.kind==="rock")polygon([[p.x-p.size,p.y-p.size*.5],[p.x+p.size*.5,p.y-p.size],[p.x+p.size,p.y+p.size*.7],[p.x-p.size*.6,p.y+p.size]],p.color);
       else oval(p.x,p.y,p.size,p.size,p.color);
     }
     g.globalAlpha=1;
@@ -898,43 +902,84 @@
     else if(name==="stoneSink"){tone(138,.6,"triangle",.08,50);noise(.7,.10);}
   }
 
-  function refreshUI(){
+  function refreshUI() {
+    const spell=SPELLS[selectedSpell];
     UI.manaText.textContent=mana+" / 8";
     UI.manaPips.innerHTML="";
     for(let i=0;i<8;i++){
-      const pip=document.createElement("span");pip.className="mana-pip"+(i>=mana?" spent":"");UI.manaPips.appendChild(pip);
+      const pip=document.createElement("span");
+      pip.className="mana-pip"+(i>=mana?" spent":"");
+      UI.manaPips.appendChild(pip);
     }
     UI.manaPips.setAttribute("aria-label",mana+" of 8 mana");
     UI.round.textContent="ROUND "+round;
     UI.hpText.textContent=health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP";
     UI.hpFill.style.width=(health/MAX_HP*100)+"%";
-    UI.cast.disabled=!!cast || defeated || mana<COST || !selected;
-    UI.card.setAttribute("aria-pressed",String(selected));
-    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST POSEIDON'S WRATH";
+    UI.card.setAttribute("aria-pressed",String(selectedSpell==="poseidon"));
+    UI.golemCard.setAttribute("aria-pressed",String(selectedSpell==="stone"));
+    if(selectedSpell==="poseidon"){
+      UI.card.classList.add("selected");UI.golemCard.classList.remove("selected");
+    }else{
+      UI.golemCard.classList.add("selected");UI.card.classList.remove("selected");
+    }
+    UI.card.disabled=!!cast||defeated;
+    UI.golemCard.disabled=!!cast||defeated;
+    UI.spellSchool.textContent="SUMMONING SPELL · "+spell.school.toUpperCase()+" SCHOOL";
+    UI.spellName.textContent=spell.name;
+    UI.spellSummary.textContent=spell.summary;
+    UI.spellCost.textContent=spell.cost+" Mana";
+    UI.spellDamage.textContent=spell.damage.toLocaleString()+" HP";
+    UI.spellTarget.textContent="Single enemy";
+    UI.cast.disabled=!!cast||defeated||mana<spell.cost;
+    UI.castText.textContent=cast?"SPELL IN PROGRESS":defeated?"TARGET DEFEATED":"CAST "+spell.name.toUpperCase();
   }
-  function reset(){
-    cast=null;particles.length=0;sprayCarry=0;goldCarry=0;health=MAX_HP;mana=8;round=1;targeted=true;selected=true;defeated=false;targetPulse=0;
-    UI.win.hidden=true;UI.card.classList.add("selected");
-    UI.state.textContent="READY TO CAST";
-    UI.caption.textContent="A primordial force stirs beneath the arena.";
-    UI.status.textContent="Select Poseidon's Wrath to begin.";
-    UI.hint.textContent="Tap the card, then cast to summon Poseidon.";
+  function chooseSpell(type) {
+    if(cast||defeated||!SPELLS[type])return;
+    selectedSpell=type;
+    UI.status.textContent=SPELLS[type].name+" selected.";
+    UI.hint.textContent=type==="stone"?"Tap Cast to summon an Earth golem.":"Tap Cast to summon Poseidon.";
+    UI.caption.textContent=type==="stone"?"EARTH SCHOOL · STONE GOLEM":"WATER SCHOOL · POSEIDON'S WRATH";
     refreshUI();
   }
-  function startCast(){
-    if(cast||defeated||mana<COST||!selected)return;
-    // User interaction unlocks WebAudio on mobile browsers.
-    if(sound)tone(440,.04,"sine",.001);
-    mana-=COST;cast={elapsed:0,stage:"opening",hit:false};
-    UI.state.textContent="SUMMONING";
-    UI.status.textContent="The ocean answers your call...";
-    UI.caption.textContent="POSEIDON'S WRATH";
-    UI.hint.textContent="Whirlpool → wave → point and wind up → rapid throw → impact → unsummon.";
-    UI.caption.textContent="POSEIDON’S WRATH";
-    UI.card.classList.remove("selected");
-    playEffect("cast");refreshUI();
+
+  function reset() {
+    cast=null;particles.length=0;sprayCarry=0;goldCarry=0;earthCarry=0;
+    health=MAX_HP;mana=8;round=1;targeted=true;selectedSpell="poseidon";
+    defeated=false;targetPulse=0;
+    UI.win.hidden=true;
+    UI.state.textContent="READY TO CAST";
+    UI.caption.textContent="Choose Water or Earth magic.";
+    UI.status.textContent="Select a card, then Cast.";
+    UI.hint.textContent="Choose Poseidon's Wrath or Stone Golem.";
+    refreshUI();
   }
-  function stageAt(e) {
+
+  function startCast() {
+    const spell=SPELLS[selectedSpell];
+    if(cast||defeated||mana<spell.cost)return;
+    if(sound)tone(440,.04,"sine",.001);
+    mana-=spell.cost;
+    cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};
+    UI.state.textContent="SUMMONING";
+    UI.status.textContent=spell.start;
+    UI.caption.textContent=spell.caption;
+    UI.hint.textContent=spell.hint;
+    playEffect(selectedSpell==="stone"?"earthCast":"cast");
+    refreshUI();
+  }
+
+  function stageAt(e,type) {
+    if(type==="stone"){
+      if(e<EARTH.emergeStart)return "opening";
+      if(e<EARTH.liftStart)return "rise";
+      if(e<EARTH.braceStart)return "lift";
+      if(e<EARTH.releaseStart)return "brace";
+      if(e<EARTH.launch)return "wind";
+      if(e<EARTH.hit)return "throw";
+      if(e<EARTH.crumbleStart)return "impact";
+      if(e<EARTH.crumbleEnd)return "sink";
+      return "complete";
+    }
     if(e<.8)return "opening";
     if(e<SPELL.aimStart)return "rise";
     if(e<SPELL.windStart)return "aim";
@@ -944,8 +989,19 @@
     if(e<SPELL.sinkEnd)return "sink";
     return "complete";
   }
-  function setStage(stage) {
-    const stages={
+  function setStage(stage,type) {
+    const earth=type==="stone";
+    const stages=earth?{
+      opening:["EARTH AWAKENS","Cracks race across the arena floor."],
+      rise:["STONE GOLEM SUMMONED","An ancient Earth guardian rises!"],
+      lift:["LIFTING BOULDER","Both hands raise the massive rock overhead!"],
+      brace:["BOULDER OVERHEAD","Stone Golem braces for a mighty throw."],
+      wind:["MIGHTY HEAVE","Both arms send the boulder toward the target!"],
+      throw:["BOULDER RELEASED","The boulder flies through the air!"],
+      impact:["CRUSHING IMPACT","Stone Sentinel takes 900 Earth damage!"],
+      sink:["CRUMBLING AWAY","The golem returns to the earth."],
+      complete:["EARTH SPELL COMPLETE","The ground grows still."]
+    }:{
       opening:["THE SEA STIRS","The ocean begins to turn..."],
       rise:["POSEIDON RISES","The sea god surges from the towering wave!"],
       aim:["TRIDENT AIMED","The raised trident points at the Sentinel."],
@@ -955,58 +1011,86 @@
       sink:["UNSUMMONING","Poseidon dissolves into the collapsing wave."],
       complete:["SPELL COMPLETE","The waters grow still."]
     };
-    UI.state.textContent=stages[stage][0];UI.status.textContent=stages[stage][1];
-    if(stage==="rise")playEffect("rise");
-    if(stage==="aim")playEffect("wind");
-    if(stage==="throw")playEffect("throw");
-    if(stage==="impact")playEffect("hit");
-    if(stage==="sink")playEffect("sink");
+    UI.state.textContent=stages[stage][0];
+    UI.status.textContent=stages[stage][1];
+    if(earth){
+      if(stage==="rise")playEffect("stoneRise");
+      if(stage==="lift")playEffect("stoneLift");
+      if(stage==="throw")playEffect("stoneThrow");
+      if(stage==="impact")playEffect("stoneHit");
+      if(stage==="sink")playEffect("stoneSink");
+    }else{
+      if(stage==="rise")playEffect("rise");
+      if(stage==="aim")playEffect("wind");
+      if(stage==="throw")playEffect("throw");
+      if(stage==="impact")playEffect("hit");
+      if(stage==="sink")playEffect("sink");
+    }
   }
 
-  function completeCast(){
+  function completeCast() {
+    const type=cast.type,spell=SPELLS[type];
     cast=null;mana=8;round++;
     if(health<=0){
       defeated=true;UI.win.hidden=false;UI.state.textContent="VICTORY";
-      UI.caption.textContent="POSEIDON'S WRATH · VICTORY";
+      UI.caption.textContent=spell.caption+" · VICTORY";
       UI.status.textContent="The Stone Sentinel has fallen.";
-      UI.hint.textContent="The battle is won. Restart to summon Poseidon again.";
+      UI.hint.textContent="Victory! Restart to test another spell.";
     }else{
-      UI.card.classList.add("selected");UI.state.textContent="READY TO CAST";
-      UI.caption.textContent="The waters are calm. Another spell awaits.";
-      UI.status.textContent="Poseidon has been fully unsummoned.";
-      UI.hint.textContent="Mana restored. Cast again to defeat the Sentinel.";
+      UI.state.textContent="READY TO CAST";
+      UI.caption.textContent=type==="stone"?"The earth settles. Choose your next spell.":"The waters are calm. Choose your next spell.";
+      UI.status.textContent=spell.finish;
+      UI.hint.textContent="Mana restored. Choose either card for your next spell.";
     }
     refreshUI();
   }
-  let sprayCarry=0,goldCarry=0;
+  let sprayCarry=0,goldCarry=0,earthCarry=0;
   function spawnTimed(kind, rate, x, y, width, height, scale) {
     let carry=kind==="spray"?sprayCarry:goldCarry;
     carry+=rate;
     for(;carry>=1;carry--)addParticle(x+rand(-width,width),y-rand(0,height),kind,scale);
     if(kind==="spray")sprayCarry=carry;else goldCarry=carry;
   }
-  function update(dt){
+
+  function update(dt) {
     targetPulse=Math.max(0,targetPulse-dt*1.4);
     if(!cast){updateParticles(dt);return;}
-    const spellDt = dt * speed * DEFAULT_SPELL_RATE;
+    const type=cast.type,earth=type==="stone",timing=earth?EARTH:SPELL;
+    const spellDt=dt*speed*DEFAULT_SPELL_RATE;
     cast.elapsed+=spellDt;
-    const stage=stageAt(cast.elapsed);
-    if(stage!==cast.stage){cast.stage=stage;setStage(stage);}
-    if(!cast.hit&&cast.elapsed>=SPELL.hit){
-      cast.hit=true;health=Math.max(0,health-DAMAGE);
-      targetPulse=1.3;refreshUI();
-      for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
-      for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
+    const stage=stageAt(cast.elapsed,type);
+    if(stage!==cast.stage){cast.stage=stage;setStage(stage,type);}
+    if(!cast.hit&&cast.elapsed>=timing.hit){
+      cast.hit=true;
+      health=Math.max(0,health-SPELLS[type].damage);
+      targetPulse=1.3;
+      refreshUI();
+      if(earth){
+        for(let i=0;i<72;i++)addParticle(785+rand(-24,24),300+rand(-25,40),"rock",rand(.7,1.8));
+        for(let i=0;i<34;i++)addParticle(785+rand(-30,30),311+rand(-12,33),"dust",rand(.55,1.35));
+      }else{
+        for(let i=0;i<82;i++)addParticle(785+rand(-26,26),310+rand(-22,44),"impact",rand(.5,1.8));
+        for(let i=0;i<16;i++)addParticle(785,310,"gold",rand(.8,1.2));
+      }
     }
-    // Particle emission is rate-based rather than 'chance per rendered frame':
-    // a 120-Hz phone no longer creates twice as many particles as a 60-Hz one.
-    if(cast.elapsed> SPELL.riseStart && cast.elapsed<SPELL.sinkEnd)
-      spawnTimed("spray", 33*spellDt, 505, 399, 140, 80, .45);
-    if(cast.elapsed>=SPELL.launch && cast.elapsed<SPELL.hit)
-      spawnTimed("gold", 35*spellDt, 700, 245, 85, 36, .45);
-    if(cast.elapsed>=duration)completeCast();
+    if(earth){
+      if(cast.elapsed>EARTH.emergeStart&&cast.elapsed<EARTH.liftEnd){
+        earthCarry+=25*spellDt;
+        while(earthCarry>=1){
+          earthCarry--;
+          addParticle(502+rand(-86,86),409+rand(-8,4),"dust",.45);
+        }
+      }
+    }else{
+      if(cast.elapsed>SPELL.riseStart&&cast.elapsed<SPELL.sinkEnd)
+        spawnTimed("spray",33*spellDt,505,399,140,80,.45);
+      if(cast.elapsed>=SPELL.launch&&cast.elapsed<SPELL.hit)
+        spawnTimed("gold",35*spellDt,700,245,85,36,.45);
+    }
+    if(cast.elapsed>=timing.end)completeCast();
     updateParticles(spellDt);
   }
+
   function resize(){
     const rect=canvas.getBoundingClientRect();
     const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -1026,10 +1110,8 @@
     }
   }
   UI.cast.addEventListener("click",startCast);
-  UI.card.addEventListener("click",()=>{
-    if(cast||defeated)return;
-    selected=true;UI.card.classList.add("selected");UI.status.textContent="Poseidon's Wrath selected.";refreshUI();
-  });
+  UI.card.addEventListener("click",()=>chooseSpell("poseidon"));
+  UI.golemCard.addEventListener("click",()=>chooseSpell("stone"));
   UI.reset.addEventListener("click",reset);
   UI.winReplay.addEventListener("click",reset);
   UI.speed.addEventListener("click",()=>{

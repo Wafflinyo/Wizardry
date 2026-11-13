@@ -6,7 +6,7 @@
   const canvas=document.getElementById("battleCanvas"),g=canvas.getContext("2d");
   const $=id=>document.getElementById(id);
   const ui={mode:$("modeControls"),sizes:$("sizeControls"),round:$("roundLabel"),phase:$("phaseLabel"),
-    badge:$("battleBadge"),hint:$("turnHint"),queueCount:$("queueCount"),allies:$("allyRoster"),
+    badge:$("battleBadge"),hint:$("turnHint"),queueCount:$("queueCount"),initiative:$("initiative"),allies:$("allyRoster"),
     enemies:$("enemyRoster"),hand:$("cardHand"),handTitle:$("handTitle"),mana:$("selectedMana"),
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
@@ -277,6 +277,23 @@
     ui.chosenSpell.textContent=card.name.toUpperCase();
     ui.chosenTarget.textContent=card.target==="team"?"Target: entire allied team":
       "Target: "+(target?.name||"none");
+    // Actual initiative preview, ordered by speed. The active resolving
+    // action is highlighted, so 4v4 never leaves turn order ambiguous.
+    if(ui.initiative){
+      ui.initiative.innerHTML="";
+      const ordered=state.phase==="resolving"?
+        state.sequence.map(a=>getUnit(a.casterId)).filter(Boolean):
+        [...state.units].filter(u=>u.hp>0).sort((a,b)=>b.speed-a.speed||a.id.localeCompare(b.id));
+      ordered.forEach((u,i)=>{
+        const chip=document.createElement("span");
+        chip.className="initiative-slot"+(u.team?" enemy":"")+
+          (state.animation?.source===u.id?" current":"")+
+          (u.hp<=0?" dimmed":"");
+        chip.textContent=(i+1)+". "+u.name+" · "+u.speed;
+        chip.title=u.name+": speed "+u.speed;
+        ui.initiative.appendChild(chip);
+      });
+    }
     ui.allies.innerHTML="";ui.enemies.innerHTML="";
     const paintRoster=(team,root)=>{for(const u of sideUnits(team)){
       const b=document.createElement("button");b.type="button";

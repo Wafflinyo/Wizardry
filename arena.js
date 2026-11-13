@@ -556,8 +556,46 @@
     }
   }
   function unitPosition(u){return {x:u.x,y:u.y};}
+  // Simulated 3D yaw: body width shrinks and the visible side shifts.
+  // Positions remain in one fixed 2.5D world; NO camera-facing sprite
+  // switching or rotating around the screen Z-axis (which would look tilted).
+  function facingTarget(u){
+    if(u.hp<=0)return null;
+    if(state.animation){
+      if(state.animation.source===u.id)return getUnit(state.animation.target);
+      if(state.animation.target===u.id)return getUnit(state.animation.source);
+    }
+    if(state.phase==="planning"){
+      if(state.selectedCaster===u.id)return getUnit(state.selectedTarget);
+      if(state.selectedTarget===u.id)return getUnit(state.selectedCaster);
+      const p=state.plans[u.id];
+      if(p)return getUnit(p.targetId);
+    }
+    return null;
+  }
+  function desiredYaw(u){
+    const side=u.team?-1:1;
+    const base=side*.84; // 3/4 profile, normally facing the opposing arc.
+    const target=facingTarget(u);
+    if(!target||target.id===u.id)return base;
+    const dx=Math.max(150,Math.abs(target.x-u.x));
+    const dy=target.y-u.y;
+    const change=clamp(Math.atan2(dy,dx)*.78,-.36,.36);
+    return clamp(base+side*change,-1.23,1.23);
+  }
+  function updateFacing(dt){
+    for(const u of state.units){
+      const goal=desiredYaw(u);
+      u.desiredFacing=goal;
+      // Real eased turn. Per-frame delta works at 60Hz and 120Hz without
+      // snapping when the user changes targets or the caster attacks.
+      u.facing+=(goal-u.facing)*Math.min(1,dt*.009);
+    }
+  }
   function drawUnit(u,time){
-    const scale=u.team?(u.y<270?.68:.75):(u.y>465?.92:.86);
+    // Physical depth scale from the same arena floor, not separate
+    // front/back teams. Lower Y sits nearer the 3/4 camera.
+    const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
     g.save();g.translate(u.x,u.y);
     ellipse(g,0,8,66*scale,17*scale,"#010910a8");
     if(u.hp<=0)g.globalAlpha=.28;
@@ -575,6 +613,13 @@
     g.scale(scale,scale);
     const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
     g.translate(0,bob);
+    // 2.5D rotation around the VERTICAL axis: foreshortening plus lateral
+    // shear. Team A shows its right-facing 3/4 profile; Team B mirrors it.
+    // The angle interpolates towards whichever target is selected.
+    const yaw=u.facing;
+    const horizontal=Math.max(.48,Math.cos(Math.abs(yaw)));
+    const skew=-Math.sin(yaw)*.26;
+    g.transform(horizontal,0,skew,1,0,0);
     if(u.team)drawEnemy(g,u,time*.001);else drawWizard(g,u,time*.001);
     g.restore();
     // Individual target HP bars and attached status slots.
@@ -715,6 +760,7 @@
     // benefit, which is expensive on iPhones. Cap to roughly 60 fps.
     if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
+    updateFacing(dt);
     if(state.phase==="resolving"&&state.animation){
       const a=state.animation;
       a.elapsed=Math.min(a.duration,a.elapsed+dt);
@@ -729,7 +775,7 @@
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
-    cards:CARDS,
+    cards:CARDS,desiredYaw,updateFacing,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,
     advanceAction:(ms)=>{if(!state.animation)return;state.animation.elapsed+=ms;

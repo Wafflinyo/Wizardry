@@ -2,69 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071422">
   <title>Wizardry · 2.5D Battle Test</title>
-  <link rel="stylesheet" href="./arena.css?v=0.26.0">
+  <link rel="stylesheet" href="./arena.css?v=0.27.0">
 </head>
 <body>
 <main class="game" id="game">
   <header class="mast">
-    <div class="brand"><span class="brand-gem">✦</span><div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM · 2.5D BATTLE TEST</small></div></div>
+    <div class="brand">
+      <span class="brand-gem">✦</span>
+      <div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM</small></div>
+    </div>
     <a href="./index.html?v=0.23.0" class="old-duel">Original duel</a>
   </header>
-  <section class="toolbar" aria-label="Battle configuration">
-    <div class="toolbar-group"><span class="tool-label">MODE</span><div class="switch-row" id="modeControls">
-      <button type="button" class="chip active" data-mode="story" aria-pressed="true">Story · CPU</button>
-      <button type="button" class="chip" data-mode="pvp" aria-pressed="false">PvP · local test</button>
-    </div></div>
-    <div class="toolbar-group"><span class="tool-label">TEAM SIZE</span><div class="switch-row" id="sizeControls">
-      <button type="button" class="chip" data-size="1">1v1</button><button type="button" class="chip" data-size="2">2v2</button>
-      <button type="button" class="chip" data-size="3">3v3</button><button type="button" class="chip active" data-size="4">4v4</button>
-    </div></div>
-  </section>
-  <section class="battle" aria-label="2.5D Sunken Colosseum">
+  <nav class="toolbar" aria-label="Battle settings">
+    <div class="toolbar-group"><span class="tool-label">MODE</span>
+      <div class="switch-row" id="modeControls">
+        <button type="button" class="chip active" data-mode="story" aria-pressed="true">Story · CPU</button>
+        <button type="button" class="chip" data-mode="pvp" aria-pressed="false">PvP · local</button>
+      </div>
+    </div>
+    <div class="toolbar-group"><span class="tool-label">SIZE</span>
+      <div class="switch-row" id="sizeControls">
+        <button type="button" class="chip" data-size="1">1v1</button>
+        <button type="button" class="chip" data-size="2">2v2</button>
+        <button type="button" class="chip" data-size="3">3v3</button>
+        <button type="button" class="chip active" data-size="4">4v4</button>
+      </div>
+    </div>
+  </nav>
+  <section class="battle" aria-label="2.5D battle arena">
     <div class="battle-top">
-      <div><span class="eyebrow">THE SUNKEN COLOSSEUM</span><h1>Trial of the Elements</h1></div>
-      <div class="phase"><span id="roundLabel">ROUND 1</span><strong id="phaseLabel">TURN PLANNING</strong></div>
+      <div><span class="eyebrow">SIDE-VIEW BATTLE</span><h1>Trial of the Elements</h1></div>
+      <div class="phase"><span id="roundLabel">ROUND 1</span><strong id="phaseLabel">YOUR MOVE</strong></div>
     </div>
     <div class="arena" id="arena">
-      <canvas id="battleCanvas" width="1000" height="620" aria-label="Perspective battle arena with up to four allied wizards and four enemies. Tap a character to select it."></canvas>
-      <div class="arena-bug" id="battleBadge">4 vs 4 · STORY TEST</div>
+      <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Select one spell below, then tap a living enemy here to cast."></canvas>
+      <div class="arena-bug" id="battleBadge">4 vs 4 · STORY / CPU</div>
     </div>
-    <div class="turnbar" aria-live="polite"><span class="turn-orb">✦</span><span id="turnHint">Choose a wizard, spell and target.</span><span class="count" id="queueCount">0 / 4 READY</span></div>
-    <div class="initiative" id="initiative" aria-label="Speed-based combat turn order"></div>
-  </section>
-  <section class="selection">
-    <div class="pick-group"><div class="pick-heading"><span>YOUR TEAM</span><small>Tap a caster</small></div><div id="allyRoster" class="units"></div></div>
-    <div class="pick-group"><div class="pick-heading"><span>ENEMY TEAM</span><small>Tap a target</small></div><div id="enemyRoster" class="units"></div></div>
-  </section>
-  <section class="hand" aria-label="Cards">
-    <div class="hand-head"><div><span class="eyebrow">YOUR HAND</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div><span class="mana" id="selectedMana">10 / 10 MANA</span></div>
-    <div class="wizard-style" aria-label="Wizard appearance">
-      <span class="wizard-style-title">WIZARD APPEARANCE</span>
-      <label>HAT
-        <select id="wizardHat"><option value="pointed">Pointed</option><option value="wide">Wide brim</option><option value="hood">Hood</option><option value="scholar">Scholar</option></select>
-      </label>
-      <label>ROBES
-        <select id="wizardRobe"><option value="classic">Classic</option><option value="split">Split-tail</option><option value="armored">Armored</option></select>
-      </label>
-      <label>COLOR
-        <select id="wizardColor"><option value="#267eab">Ocean blue</option><option value="#6f4ab4">Amethyst</option><option value="#bc503d">Ember red</option><option value="#367d59">Emerald</option><option value="#656f88">Steel grey</option><option value="#9b792f">Royal gold</option></select>
-      </label>
+    <div class="turnbar" aria-live="polite">
+      <span class="turn-orb">✦</span><span id="turnHint">Tap a spell below, then an enemy here.</span>
+      <span class="count" id="queueCount">YOUR TURN</span>
     </div>
-    <div class="cards" id="cardHand" role="group" aria-label="Available spells"></div>
-    <div class="card-actions">
-      <div class="selection-note"><strong id="chosenSpell">POSEIDON’S WRATH</strong><span id="chosenTarget">Target: Stone Sentinel</span></div>
-      <select id="targetPicker" class="target-picker" aria-label="Choose spell target"><option>Stone Sentinel</option></select>
-      <button id="queueButton" type="button" class="btn gold">Queue spell</button>
-      <button id="autoButton" type="button" class="btn light">Auto-fill</button>
-      <button id="resolveButton" type="button" class="btn cyan">Resolve round</button>
-    </div>
-    <div class="planned" id="plannedList" aria-live="polite">No actions queued yet. Choose spells and targets for this round.</div>
-    <p class="legend">Every wizard automatically traces the selected elemental rune. <b>Poseidon’s Wrath has 70% accuracy; Stone Golem has 85% accuracy.</b> A miss fizzles without damage, the staff lowers, and the next fighter acts. Summons attack once, then disappear.</p>
+    <div class="initiative" id="initiative" aria-label="Initiative order" hidden></div>
   </section>
-  <footer class="footer"><span id="status">Local, playable battle prototype — no accounts or online matchmaking yet.</span><button id="resetButton" class="reset" type="button">↺ New battle</button></footer>
+  <section class="hand" aria-label="Your wizard's two spell cards">
+    <div class="hand-head">
+      <div><span class="eyebrow">YOUR WIZARD</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
+      <span class="mana" id="selectedMana">10 / 10 MANA</span>
+    </div>
+    <div class="cards" id="cardHand" role="group" aria-label="Choose Poseidon's Wrath or Stone Golem"></div>
+    <div class="hand-assist" aria-live="polite">
+      <strong id="chosenSpell">SELECT A SPELL</strong>
+      <span id="chosenTarget">Then tap an enemy on the battlefield</span>
+    </div>
+    <details class="customize-menu">
+      <summary>Customize your wizard</summary>
+      <div class="wizard-style" aria-label="Wizard appearance">
+        <label>HAT
+          <select id="wizardHat"><option value="pointed">Pointed</option><option value="wide">Wide brim</option><option value="hood">Hood</option><option value="scholar">Scholar</option></select>
+        </label>
+        <label>ROBES
+          <select id="wizardRobe"><option value="classic">Classic</option><option value="split">Split-tail</option><option value="armored">Armored</option></select>
+        </label>
+        <label>COLOR
+          <select id="wizardColor"><option value="#267eab">Ocean blue</option><option value="#6f4ab4">Amethyst</option><option value="#bc503d">Ember red</option><option value="#367d59">Emerald</option><option value="#656f88">Steel grey</option><option value="#9b792f">Royal gold</option></select>
+        </label>
+      </div>
+    </details>
+  </section>
+  <footer class="footer">
+    <span id="status">You control one wizard; other fighters are CPU-controlled.</span>
+    <button id="resetButton" class="reset" type="button">↺ New battle</button>
+  </footer>
+  <!-- Retained as hidden compatibility nodes; these are NOT gameplay controls. -->
+  <section class="legacy-data" hidden aria-hidden="true">
+    <div id="allyRoster"></div><div id="enemyRoster"></div>
+    <select id="targetPicker"></select>
+    <button type="button" id="queueButton"></button>
+    <button type="button" id="autoButton"></button>
+    <button type="button" id="resolveButton"></button>
+    <div id="plannedList"></div>
+  </section>
 </main>
 <script src="./assets/poseidon-v22-row0.js?v=0.22.0" defer></script>
 <script src="./assets/poseidon-v22-row1.js?v=0.22.0" defer></script>
@@ -74,5 +94,6 @@
 <script src="./assets/stone-golem-approved-v23-row1.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row2.js?v=0.23.0" defer></script>
 <script src="./assets/stone-golem-approved-v23-row3.js?v=0.23.0" defer></script>
-<script src="./arena.js?v=0.26.1" defer></script>
-</body></html>
+<script src="./arena.js?v=0.27.0" defer></script>
+</body>
+</html>

@@ -11,3 +11,17 @@
 .target-picker:focus-visible{outline:2px solid #7cebe8;outline-offset:2px}
 @media(max-width:700px){.target-picker{flex:1 1 130px;min-width:0;max-width:none;
   height:36px;font-size:10px}.card-actions .btn{flex:1 1 auto;justify-content:center}}
+
+/* Speed-based turn preview, one stable-height horizontal strip on phones. */
+.initiative{display:flex;align-items:center;gap:5px;overflow-x:auto;min-height:30px;
+  white-space:nowrap;padding:5px 0 2px;scrollbar-width:thin;
+  scrollbar-color:#527682 transparent}
+.initiative-slot{display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;border:1px solid #3e7180;border-radius:7px;padding:5px 8px;
+  background:#102c3b;color:#c4ebe9;font-size:10px;font-weight:700}
+.initiative-slot.enemy{border-color:#795863;color:#edc1bd;background:#35242e}
+.initiative-slot.current{border:1px solid #f6cf79;background:#504126;color:#fff1c0;
+  box-shadow:0 0 10px #ffd27150}
+.initiative-slot.dimmed{opacity:.4}
+@media(max-width:700px){.initiative{min-height:24px;padding:3px 0 0}
+ .initiative-slot{font-size:9px;padding:4px 6px}}

@@ -131,7 +131,7 @@
     let card=BY_ID[choice];
     if(card.cost>u.mana)card=BY_ID.blade;
     const team=card.target==="ally"?alive(u.team):alive(1-u.team);
-    const target=card.target==="ally"?u:
+    const target=card.target==="ally"?(choice==="mend"?wounded:u):
       team.length?team[Math.floor(rand(seed+7)*team.length)]:null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,team:u.team};
   }

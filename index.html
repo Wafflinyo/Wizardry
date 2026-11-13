@@ -90,51 +90,55 @@
           <span class="card-damage">⚔ <strong>1,200</strong> WATER DAMAGE</span>
         </button>
 
-        <button type="button" class="spell-card earth-card" id="stoneGolemCard" aria-pressed="false" aria-label="Select Stone Golem. Six mana. Deals 900 Earth damage.">
+        <button type="button" class="spell-card earth-card" id="stoneGolemCard" aria-pressed="false" aria-label="Select Stone Golem. Six mana. Ground slam and traveling spikes deal 900 Earth damage.">
           <span class="card-cost"><span class="cost-number">6</span></span>
           <span class="card-topline">EPIC · EARTH</span>
           <span class="card-art earth-art">
             <svg class="golem-card-art" viewBox="0 0 180 145" role="presentation" aria-hidden="true">
               <defs>
-                <linearGradient id="earthStone" x1="0" y1="0" x2="1" y2="1">
-                  <stop stop-color="#cfc09a"/><stop offset=".5" stop-color="#848870"/><stop offset="1" stop-color="#4b5d4b"/>
+                <linearGradient id="stoneGolemBody" x1="0" y1="0" x2="1" y2="1">
+                  <stop stop-color="#c6d0ad"/><stop offset=".42" stop-color="#819b83"/>
+                  <stop offset="1" stop-color="#405d51"/>
                 </linearGradient>
               </defs>
-              <path d="M2 136L34 118L61 128L107 121L146 128L180 120V145H0Z" fill="#273e2e"/>
-              <!-- Broad emerald-veined low-poly torso and earth-stone legs -->
-              <path d="M59 96L76 82L113 81L132 96L124 126L108 138L70 137L55 117Z" fill="#6d8068" stroke="#bcc59f" stroke-width="2"/>
-              <path d="M59 97L79 83L82 110L69 132L55 117Z" fill="#a2aa87"/>
-              <path d="M84 110L110 83L130 98L123 124L107 133Z" fill="#465b49"/>
-              <path d="M73 129L90 130L91 145L66 145Z" fill="#737e65"/>
-              <path d="M101 130L122 127L128 145L101 145Z" fill="#556a52"/>
-              <!-- Both arms lift upward to the SAME overhead boulder -->
-              <path d="M62 98L39 87L34 61L48 55L60 73L76 85Z" fill="#8f987c" stroke="#c4ba96" stroke-width="2"/>
-              <path d="M118 85L133 65L145 57L156 65L147 91L126 102Z" fill="#697d66" stroke="#b0b89a" stroke-width="2"/>
-              <path d="M38 83L35 61L48 57L57 72Z" fill="#bac19f"/>
-              <path d="M134 66L146 56L156 64L146 76Z" fill="#a1b092"/>
-              <!-- Low-poly head and glowing green eyes -->
-              <path d="M77 70L78 56L93 48L111 52L118 69L109 88L81 88Z" fill="#8d9b7c" stroke="#d6c9a6" stroke-width="2"/>
-              <path d="M79 58L94 49L93 72L82 73Z" fill="#c4c6a1"/>
-              <path d="M95 51L111 53L117 68L105 75Z" fill="#526954"/>
-              <path d="M82 70L92 73L91 77L83 76ZM103 73L113 70L112 76L104 77Z" fill="#d7f8a6"/>
-              <path d="M84 101L93 92L109 101L100 117L87 116Z" fill="#b2ce87"/>
-              <!-- One giant boulder ABOVE his head, spanning both hands -->
-              <path d="M44 21L58 5L96 0L123 6L143 27L135 49L110 60L65 58L42 42Z" fill="url(#earthStone)" stroke="#efe0ac" stroke-width="2.5"/>
-              <path d="M44 21L59 6L76 21L67 49L44 42Z" fill="#c4b797"/>
-              <path d="M59 6L96 0L98 32L77 22Z" fill="#d7caa8"/>
-              <path d="M96 0L123 6L141 27L105 33Z" fill="#8a9075"/>
-              <path d="M67 50L99 32L110 60L65 58Z" fill="#666e5b"/>
-              <path d="M107 33L143 27L135 49L110 60Z" fill="#455748"/>
-              <path d="M73 36L87 47L99 36L113 45" fill="none" stroke="#afc787" stroke-width="3"/>
-              <!-- Knuckles sit IN FRONT of the boulder, clearly gripping it -->
-              <path d="M38 46L54 44L60 52L55 61L41 61L34 55Z" fill="#bfc4a1" stroke="#e8d8ac" stroke-width="2"/>
-              <path d="M128 48L141 45L150 51L147 61L134 63L125 55Z" fill="#a9b495" stroke="#d9d1aa" stroke-width="2"/>
+              <!-- Earth fissure and advancing spikes, not a thrown rock -->
+              <path d="M0 128L41 122L73 131L114 124L180 130V145H0Z" fill="#233c30"/>
+              <path d="M106 132L128 113L132 130L147 93L158 125L172 75L180 131Z"
+                fill="#7eaa8e" stroke="#d6e5c3" stroke-width="1.8"/>
+              <path d="M144 122L147 93L151 126M167 125L172 75L177 130" fill="none"
+                stroke="#bef3b0" stroke-width="2"/>
+              <!-- Immense feet and angular basalt chest -->
+              <path d="M48 110L69 109L67 140L39 143Z" fill="#819882"/>
+              <path d="M103 110L126 110L138 143L109 141Z" fill="#536d5b"/>
+              <path d="M45 97L59 76L110 77L131 96L120 129L65 131Z" fill="url(#stoneGolemBody)" stroke="#d3dbbd" stroke-width="2"/>
+              <path d="M45 96L59 76L83 103L64 128Z" fill="#a8ba9e"/>
+              <path d="M110 77L132 97L119 128L92 110Z" fill="#3f6250"/>
+              <path d="M74 90L88 99L95 89L101 102L91 111" stroke="#bdf4a6" stroke-width="3" fill="none"/>
+              <path d="M41 90L56 73L73 85L57 104Z" fill="#91aa94" stroke="#c3d0b3" stroke-width="1.8"/>
+              <path d="M107 85L126 74L139 92L122 109Z" fill="#64846f" stroke="#b6c8a6" stroke-width="1.8"/>
+              <!-- Both solid arms rise, elbows flare outward and fists meet -->
+              <path d="M55 82L29 72L34 44L48 43L54 63L71 67Z" fill="#97ae93" stroke="#dce1be" stroke-width="2"/>
+              <path d="M123 80L144 70L146 44L133 40L127 61L107 67Z" fill="#6d8d78" stroke="#c1d4ad" stroke-width="2"/>
+              <path d="M32 48L45 43L52 62L42 65Z" fill="#becab0"/>
+              <path d="M134 44L146 46L144 68L131 63Z" fill="#a1bba0"/>
+              <path d="M49 48L68 22L80 26L68 65L53 67Z" fill="#98ac94" stroke="#d1d8b7" stroke-width="2"/>
+              <path d="M125 48L109 22L95 26L108 65L123 66Z" fill="#678b77" stroke="#b9cbad" stroke-width="2"/>
+              <!-- Interlocked clasp, one joined stone mass overhead -->
+              <path d="M71 21L80 9L94 13L100 25L90 37L76 33Z" fill="#d6dbbd" stroke="#fff1c8" stroke-width="2"/>
+              <path d="M89 13L102 8L114 22L109 33L96 37L87 28Z" fill="#93b29b" stroke="#d8e1c2" stroke-width="2"/>
+              <path d="M85 18L93 28L99 22" fill="none" stroke="#3c6951" stroke-width="2"/>
+              <!-- Hard faceted face -->
+              <path d="M69 68L67 42L81 33L105 36L115 55L108 78L83 84Z" fill="#879f8b" stroke="#d4dcbf" stroke-width="2"/>
+              <path d="M69 45L81 34L89 58L73 65Z" fill="#c1cdb5"/>
+              <path d="M105 38L115 55L107 76L95 59Z" fill="#486a59"/>
+              <path d="M72 56L88 58L87 64L73 62ZM94 59L109 57L109 64L95 64Z" fill="#baf6a9"/>
+              <path d="M81 75L101 75L99 79L82 79Z" fill="#395646"/>
             </svg>
             <span class="earth-spark earth-spark-left"></span><span class="earth-spark earth-spark-right"></span>
           </span>
           <span class="card-name">STONE<br>GOLEM</span>
           <span class="card-type">SUMMON · EARTH</span>
-          <span class="card-description">Summon a golem that <em>lifts a massive boulder</em> in both hands and hurls it at the enemy.</span>
+          <span class="card-description">Summon a golem that <em>claps its fists overhead</em> and slams the earth, launching spikes toward the enemy.</span>
           <span class="card-damage">⚔ <strong>900</strong> EARTH DAMAGE</span>
         </button>
         </div>

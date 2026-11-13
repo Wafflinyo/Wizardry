@@ -1,8 +1,12 @@
-# Wizardry — 2.5D Battle Test v0.26.0
+# Wizardry — 2.5D Battle Test v0.26.1
 
 **Play:** https://wafflinyo.github.io/Wizardry/arena.html?v=0.26.0
 
 The original 1v1 duel and both existing approved 16-frame summon sprite assets are preserved.
+
+## Per-round selection (v0.26.1)
+
+Player-controlled wizards **must choose a new spell and target in every round**. No card or enemy is automatically selected for a new round or the next caster. After the action queue resolves, all queued player orders and the previous initiative sequence are cleared. Choose fresh cards and targets, or optionally use **Auto-fill this round** for any remaining allies. Auto-fill never carries over to the next round. The CPU team still plans its actions separately. Local PvP restarts at Team A's fresh planning phase after each completed round.
 
 ## Camera
 

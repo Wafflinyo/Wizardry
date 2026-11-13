@@ -373,9 +373,12 @@
         if(!action.targetId)continue;
       }
       c.mana-=card.cost;
-      state.animation={action,card,elapsed:0,duration:card.duration,applied:false,
-        source:c.id,target:action.targetId,particles:[]};
-      ui.hint.textContent=c.name+" casts "+card.name+(action.targetId?" on "+getUnit(action.targetId)?.name:"");
+      c.armRaise=0;
+      state.animation={action,card,stage:"raising",elapsed:0,duration:ARM_RAISE_MS,
+        applied:false,source:c.id,target:action.targetId,
+        automatic:!!action.auto||(state.mode==="story"&&c.team===1),
+        runeResult:null,runeScore:null};
+      ui.hint.textContent=c.name+" raises their staff toward the center...";
       paintUI();
       return;
     }
@@ -995,12 +998,8 @@
     if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
     updateFacing(dt);
-    if(state.phase==="resolving"&&state.animation){
-      const a=state.animation;
-      a.elapsed=Math.min(a.duration,a.elapsed+dt);
-      if(!a.applied&&a.elapsed>=a.duration*a.card.hit)applySpell(a);
-      if(a.elapsed>=a.duration){state.animation=null;startNextAction();}
-    }
+    if(state.phase==="resolving"&&state.animation)
+      updateCastSequence(dt);
     for(const f of state.flashes)f.age+=dt/1000;
     state.flashes=state.flashes.filter(f=>f.age<.96);
     render(now);
@@ -1009,14 +1008,21 @@
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
-    cards:CARDS,desiredYaw,updateFacing,
+    cards:CARDS,desiredYaw,updateFacing,runePath,validateRune,submitRune,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,
-    advanceAction:(ms)=>{if(!state.animation)return;state.animation.elapsed+=ms;
-      const a=state.animation;if(!a.applied&&a.elapsed>=a.duration*a.card.hit)applySpell(a);
-      if(a.elapsed>=a.duration){state.animation=null;startNextAction();}},
+    advanceAction:(ms)=>{
+      // Headless test helper advances in 40ms steps without bypassing
+      // the exact same stage machine used by real 60fps rendering.
+      let remaining=Math.max(0,ms),guard=0;
+      while(remaining>0&&state.animation&&guard++<1000){
+        if(state.animation.stage==="tracing-manual")break;
+        const slice=Math.min(40,remaining);updateCastSequence(slice);
+        remaining-=slice;
+      }
+    },
     getSummonAvailable:kind=>!!spriteCache[kind]?.every(im=>im.complete&&im.naturalWidth)
   };
-  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);
+  setupControlHandlers();setupRuneEvents();createBackground();setupSprites();setBattle("story",4);
   requestAnimationFrame(tick);
 })();

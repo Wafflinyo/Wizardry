@@ -16,9 +16,9 @@
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"1,200 Water damage · trident",short:"70% ACCURACY",accuracy:.70,duration:2100,hit:.60},
+      icon:"♆",description:"Recharge 1 round · Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2100,hit:.60,artFrame:8},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
-      icon:"◆",description:"900 Earth damage · fissure",short:"85% ACCURACY",accuracy:.85,duration:2360,hit:.62}
+      icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2360,hit:.62,artFrame:10}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -58,7 +58,7 @@
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
-      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],x:0,y:0,
+      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,x:0,y:0,
       hat:["pointed","wide","hood","scholar"][index],
       robe:["classic","split","armored","classic"][index],
       robeColor:["#267eab","#6f4ab4","#bc503d","#367d59"][index],
@@ -132,7 +132,7 @@
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
-    if(caster().mana<BY_ID[id].cost)return;
+    if(requiresRest(caster())||caster().mana<BY_ID[id].cost)return;
     state.selectedCard=id;
     state.selectedTarget=null;
     paintUI();
@@ -143,7 +143,7 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    if(state.phase!=="planning"||!c||!card||state.plans[c.id]||
+    if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
        c.mana<card.cost||!target)return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
       targetId:target.id,team:c.team,auto:false};
@@ -153,7 +153,16 @@
     paintUI();
     return true;
   }
+  function isRecharging(u){
+    return !!u&&u.hp>0&&Number.isInteger(u.rechargeRound)&&
+      state.round===u.rechargeRound;
+  }
+  function requiresRest(u){
+    return !!u&&u.hp>0&&(isRecharging(u)||
+      !CARDS.some(card=>card.cost<=u.mana));
+  }
   function autoPlan(u){
+    if(requiresRest(u))return null;
     const opponents=alive(1-u.team);
     if(!opponents.length)return null;
     const affordable=CARDS.filter(card=>card.cost<=u.mana);
@@ -177,12 +186,14 @@
     if(state.phase!=="planning")return;
     const humanId=state.humanByTeam[state.planningSide];
     // The player's own wizard must have queued their one explicit choice.
-    if(humanId&&getUnit(humanId)?.hp>0&&!state.plans[humanId])return;
+    if(humanId&&getUnit(humanId)?.hp>0&&!requiresRest(getUnit(humanId))&&
+       !state.plans[humanId])return;
     if(state.mode==="pvp"&&state.planningSide===0&&
        state.humanByTeam[1]&&getUnit(state.humanByTeam[1])?.hp>0){
       state.planningSide=1;
       nearestAvailableCaster();
       paintUI();
+      if(!caster()||requiresRest(caster()))resolvePressed();
       return;
     }
     autoFill(0);autoFill(1);
@@ -282,6 +293,20 @@
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
     }else if(a.stage==="summon"||a.stage==="fizzle"){
+      if(a.card.id==="poseidon"&&!a.postCastEffectsApplied){
+        // A Poseidon attempt, hit OR miss, requires the next entire round
+        // to recharge, and grants a single non-stacking 30% Water buff.
+        const u=getUnit(a.source);
+        if(u&&u.hp>0){
+          u.rechargeRound=state.round+1;
+          addStatus(u,"recharge","⧖",1);
+          addStatus(u,"tidal_echo","≈",.30);
+          flash(u,"TIDAL ECHO","#87f2fa");
+          state.log=[u.name+" gains Tidal Echo (+30% next Water hit) and must recharge next round.",
+            ...state.log].slice(0,5);
+        }
+        a.postCastEffectsApplied=true;
+      }
       startStage(a,"lowering",ARM_LOWER_MS);
       paintUI();
     }else if(a.stage==="lowering"){
@@ -294,7 +319,7 @@
     if(!state||state.phase!=="resolving")return;
     while(state.queueAt<state.sequence.length){
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
-      if(!c||c.hp<=0||!card||c.mana<card.cost)continue;
+      if(!c||c.hp<=0||!card||c.mana<card.cost||isRecharging(c))continue;
       if(card.target!=="team"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0){action.targetId=valid[0]?.id||null;}
@@ -327,8 +352,14 @@
     const at=u.statuses.findIndex(s=>s.kind===kind);
     return at<0?null:u.statuses.splice(at,1)[0];
   }
-  function damage(source,target,base){
+  function damage(source,target,base,card){
     let raw=base,notes=[];
+    // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
+    // spell, a fizzle, or a spell without a living target cannot consume it.
+    if(card?.school==="water"){
+      const echo=consumeStatus(source,"tidal_echo");
+      if(echo){raw*=1+echo.value;notes.push("TIDAL ECHO +30%");}
+    }
     const blade=consumeStatus(source,"blade");
     if(blade){raw*=1+blade.value;notes.push("BLADE");}
     const aura=state.auras[source.team];
@@ -350,7 +381,7 @@
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
     if(card.kind==="damage"||card.kind==="summon"){
-      if(t&&t.hp>0)damage(c,t,card.damage);
+      if(t&&t.hp>0)damage(c,t,card.damage,card);
     } else if(card.kind==="heal"&&t&&t.hp>0){
       const n=Math.min(card.heal,t.maxHp-t.hp);t.hp+=n;flash(t,"+"+n,"#9bffc0");
       state.log=[c.name+" healed "+t.name+" for "+n,...state.log].slice(0,5);
@@ -381,6 +412,14 @@
         (state.winner===0?"Allies":"Enemy team")+" wins!";
       paintUI();return;
     }
+    // Consume the REST round at its end, not at the end of the casting
+    // round: cast R1 -> skip R2 -> available R3.
+    for(const u of state.units){
+      if(u.rechargeRound!==null&&u.rechargeRound<=state.round){
+        consumeStatus(u,"recharge");
+        u.rechargeRound=null;
+      }
+    }
     for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
     state.round++;
     // Complete old round teardown: no queued player actions, target, card,
@@ -393,7 +432,7 @@
     paintUI();
     // If the controlled wizard was knocked out, teammates remain autonomous.
     // Do not ask the player to control another wizard.
-    if(!caster())resolvePressed();
+    if(!caster()||requiresRest(caster()))resolvePressed();
   }
   function paintUI(){
     if(!state)return;

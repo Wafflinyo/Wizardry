@@ -1,6 +1,6 @@
 ## NEW — 2.5D level arena and automatic spell accuracy test (v0.26)
 
-**[Play the updated 2.5D Wizardry test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.26.0)**
+**[Play the updated 2.5D Wizardry test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.26.1)**
 
 The battlefield remains a three-quarter **side view** but the circular fighting surface is now **level instead of diagonally slanted**. Allies stand on the left arc and enemies on the right.
 
@@ -10,6 +10,8 @@ No finger tracing is required. Every caster automatically draws their element's 
 - **Stone Golem — 85% accuracy, 900 damage.**
 
 A successful cast summons the approved creature, hits its selected enemy and disappears. A miss fizzles without damage; the caster lowers their arm and the next turn begins. **Only these two spell cards** are selectable. The approved 16-frame sprites and original 1v1 duel were not changed.
+
+**v0.26.1:** At the start of each round, players must select a fresh spell and target for every wizard. Previous card, target and order selections never carry forward. Auto-fill applies to the current round only.
 
 The local CPU and hot-seat PvP test supports 1v1–4v4, plus wizard hats, robe styles and color choices. It is not yet real online multiplayer. See [ARENA_TEST.md](ARENA_TEST.md) for gameplay and test notes.
 

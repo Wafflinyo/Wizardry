@@ -1,10 +1,12 @@
-## NEW — Play the 2.5D 4v4 battle test
+## NEW — Play the 2.5D side-angle battle + trace-to-cast test (v0.25)
 
-**[Open the new 2.5D Battle Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.24.0)**
+**[Open the new 2.5D Wizardry Test](https://wafflinyo.github.io/Wizardry/arena.html?v=0.25.0)**
 
-Choose 1v1, 2v2, 3v3 or 4v4 in an angled, depth-sorted Canvas 2D arena. Plan targets and spells for up to four wizards, fight CPU enemies in Story Test, or test the same team turn flow in a **local hot-seat PvP simulation**. Shields, boosts, traps and auras persist; Poseidon and Stone Golem summon only to attack, then disappear. The approved original character sprite art is unchanged.
+Play 1v1–4v4 from a three-quarter **SIDE VIEW**. Allies stand on the left arc, enemies on the right. Choose only **Poseidon's Wrath** or **Stone Golem**, target a fighter, then **trace the glowing Water or Earth rune** while your wizard points a staff toward the arena center. A correct trace summons the approved creature, applies damage, and unsummons it; a wrong trace fizzles and moves to the next fighter after the arm lowers.
 
-**This is a local combat prototype, not online multiplayer yet.** Friends, lobbies, campaign saving, accounts and ranked matchmaking are future work. Read [ARENA_TEST.md](ARENA_TEST.md) for the playable rules and controls.
+Standing wizards and monsters do **not** rotate toward targets. Only temporary summoned creatures turn toward the selected target. Dress your low-poly wizard with **four hats, three robe silhouettes and six colors**.
+
+The test includes CPU battles and local hot-seat PvP planning, **not yet networked friends, story progression or ranked matches**. The previously approved 16-frame summon sprites and the original 1v1 duel remain unchanged. See [ARENA_TEST.md](ARENA_TEST.md) for the full test instructions.
 
 ---
 

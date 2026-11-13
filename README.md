@@ -1,52 +1,46 @@
-# Wizardry — Spellcasting Battle Prototype v0.12.0
+# Wizardry — Elemental Battle Prototype v0.13.0
 
-**Play:** https://wafflinyo.github.io/Wizardry/
+**Play the game:** https://wafflinyo.github.io/Wizardry/
 
-Wizardry is a mobile-friendly card spellcasting prototype with two selectable spells, an enemy Stone Sentinel (3,000 HP), and a single-screen battle UI.
+Wizardry is a mobile-friendly spell-card battle prototype. Choose Poseidon's Wrath or Stone Golem and fight the 3,000-HP Stone Sentinel.
 
-## Playable spells
+## Separation of rendering and interface
 
-| Card | Element | Mana | Damage | Effect |
+**Everything visible inside the battlefield is now drawn with HTML5 Canvas 2D:** the Wizard and Sentinel, Poseidon, the Stone Golem, spell effects and projectiles, **HP bars, mana crystals, round/stage labels, spell caption, status messages and victory graphic**.
+
+HTML and CSS remain responsible only for the surrounding spell cards, menu controls, buttons, and responsive page layout. An offscreen accessible text mirror announces combat information for screen readers. The Fight Again button is outside Canvas, below the battle, to keep it keyboard- and touch-accessible.
+
+The arena itself is one canvas with a permanent **1000×560 drawing buffer**, styled with the **1000:560 aspect ratio**. It does not have JavaScript resize observers or handlers. The page is allowed to scroll on small screens rather than clipping the cards. The disappearing/reappearing battle overlay elements and stage-specific HTML label reflows that could shift the screen have been removed.
+
+## Spells
+
+| Card | Element | Cost | Damage | Animation |
 | --- | --- | ---: | ---: | --- |
-| Poseidon's Wrath | Water | 8 | 1,200 | Summon Poseidon, launch his trident, then unsummon |
-| Stone Golem | Earth | 6 | 900 | Rise, clasp rocky fists, lift overhead, slam, and send stone spikes toward the target |
+| Poseidon's Wrath | Water | 8 mana | 1,200 | Water summon → aim → trident strike → sink |
+| Stone Golem | Earth | 6 mana | 900 | Rise → clasp → overhead windup → ground slam → advancing spikes → sink |
 
-Mana refills after each round. Both spells can be used in one duel.
+Each projectile/stone-spike attack applies damage precisely at its impact point. The test arena replenishes mana between turns. Victory and reset are supported.
 
-## Stone Golem: actual image contour tracing (v0.10)
+## Stone Golem frame-performance comparison
 
-Previous versions substituted an original polygon rig for the approved twelve-frame illustration. This version does not.
+The Golem's **12 poses and 269 original traced contour paths** still come from the approved illustrated low-poly sprite sheet in `assets/stone-golem-true-trace-v1.js`.
 
-The **actual twelve approved image cells** have been individually processed into contour paths, retaining their real silhouettes, fist/arm poses, rubble, and spike shapes. A shared source-derived 23-color palette preserves the sharp faceted rock appearance. These paths are included as **native vector data** in assets/stone-golem-true-trace-v1.js (roughly 262 KB of path data).
+At startup, the game:
 
-**v0.12 renders the contours directly as Canvas Path2D vectors.** On startup the game compiles 269 source-traced paths from the twelve original frames. On each animation frame, it fills the selected color-layer paths directly onto the battle canvas. It does **not** render the Golem to offscreen bitmaps or replay image-frame assets. CSS controls layout only; it is not responsible for drawing the character. The Earth spell card uses the same traced third pose as inline SVG. The old approximate Golem rig and duplicate procedural spike system are no longer present.
+1. Compiles the contour data into Canvas `Path2D` objects.
+2. Creates **12 high-resolution cached frames at 1.7× the original 362×362 vector coordinates** (615×615 pixels per frame). These are rendered from the paths once, not taken from the small compressed sprite sheet.
+3. Benchmarks painting sampled frames directly from vectors versus drawing their cached high-resolution equivalents.
+4. Uses the measured faster option, with a fallback to direct `Path2D` rendering when caching fails.
 
-### Frame order
+During gameplay **Canvas 2D** draws either the cached frame with `drawImage`, or fills the original vector paths. **CSS does not animate or draw the characters.** The original double-rendered spike effect is absent.
 
-0. Golem starts emerging from the ground.
-1. Golem rises further.
-2. Golem stands, hands approaching.
-3. Hands clasp.
-4. Joined hands rise near his face.
-5. Hands lift overhead.
-6. Charge pose overhead.
-7. Fists smash into the ground.
-8. First stone spikes emerge.
-9. Spikes advance outward.
-10. Larger spikes extend toward the enemy.
-11. Golem returns underground.
+The optional in-browser diagnostic `window.WIZARDRY_RENDER_DIAGNOSTICS` reports the selected mode, cached frame dimensions and measured time per sample frame.
 
-At animation-clock time **3.67 seconds**, the Earth spell's advancing spike wave registers a 900 HP hit on the Sentinel; the target receives a small hit ring and damage label. It is not a second stone-spike overlay.
+## Files
 
-## Performance and mobile layout
+- `index.html` — selectable spell cards, accessible status mirror, outer controls.
+- `style.css` — responsive card and page layout with aspect-locked arena.
+- `game.js` — all Canvas battle visuals, animations, damage, sound, performance test.
+- `assets/stone-golem-true-trace-v1.js` — the approved twelve-frame vector contours.
 
-The battle canvas has a permanent 1000×560 backing buffer initialized once. CSS preserves its aspect ratio in portrait and puts cards beside the arena in landscape. The page can scroll when necessary, rather than clipping the hand. **Version 0.12 locks the battle-header height** so changing Earth casting labels cannot move the arena, and the Cast button retains focus during a spell instead of becoming disabled mid-tap (repeat casts are still blocked by game state). This addresses two potential causes of Safari scrolling/jumping. Offscreen caching is used for the *static scenery*, not for the Golem; high-refresh devices cap gameplay rendering near 60 fps.
-
-## Source
-
-- index.html — UI, card selection, script loading
-- style.css — responsive layout, stable battle header, mobile interface styling
-- game.js — battle/combat logic, Golem frame mapping, vector caching, Poseidon
-- assets/stone-golem-true-trace-v1.js — real vector contour data for all twelve approved images
-
-The 60 Hz and 120 Hz simulated Canvas tests verified all twelve actual traced frame selections, 269 traced color layers rendered and cached once, 900 Earth damage, 1,200 Water damage, and **exactly two backing-buffer assignments (width and height) to the visible battle canvas at startup**. The offscreen cache canvases have their own independent buffers. Physical iPhone visual performance still requires on-device testing.
+Automated simulations at 60 Hz and 120 Hz verified both Golem rendering modes, HUD messages drawn by Canvas, spell damage, victory, reset and the canvas buffer remaining unchanged after initialization. Mobile Safari behavior still needs checking on a physical device.

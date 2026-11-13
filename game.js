@@ -64,6 +64,7 @@
   // One cast now takes ~3.25s at displayed 1×, preserving every keyframe.
   const DEFAULT_SPELL_RATE = 1.5;
   let health = MAX_HP, mana = 8, round = 1;
+  let hudHealth=MAX_HP; // Animated Canvas health bar, decoupled from DOM.
   const SPELLS = Object.freeze({
     poseidon: {
       name: "Poseidon's Wrath", school: "Water", cost: 8, damage: 1200,
@@ -809,12 +810,99 @@
   function initSceneCache() {
     try {
       sceneCache=cachedLayer(()=>{drawSky(0);drawRuinsAccents();drawArena(0);});
-      foregroundCache=cachedLayer(()=>drawForeground(0));
+      foregroundCache=cachedLayer(()=>{drawForeground(0);drawSceneVignette();});
     } catch(error) {
       // Older browser fallback still renders a complete interactive arena.
       sceneCache=null;foregroundCache=null;
     }
   }
+  // Canvas owns every visible battle HUD: health, mana, round, stage,
+  // summon caption, impact feedback, and victory. HTML mirrors are offscreen
+  // for accessibility and cannot affect the battle surface's dimensions.
+  function hudRoundRect(x,y,w,h,r,fill,stroke=null,lineWidth=1.5) {
+    const z=Math.min(r,w/2,h/2);
+    g.beginPath();g.moveTo(x+z,y);g.lineTo(x+w-z,y);
+    g.quadraticCurveTo(x+w,y,x+w,y+z);
+    g.lineTo(x+w,y+h-z);g.quadraticCurveTo(x+w,y+h,x+w-z,y+h);
+    g.lineTo(x+z,y+h);g.quadraticCurveTo(x,y+h,x,y+h-z);
+    g.lineTo(x,y+z);g.quadraticCurveTo(x,y,x+z,y);g.closePath();
+    if(fill){g.fillStyle=fill;g.fill();}
+    if(stroke){g.strokeStyle=stroke;g.lineWidth=lineWidth;g.stroke();}
+  }
+  function hudText(value,x,y,size,color,align="left",width=1000,weight=700) {
+    g.textAlign=align;g.textBaseline="middle";
+    g.font=weight+" "+size+"px system-ui,-apple-system,Arial,sans-serif";
+    g.fillStyle=color;
+    g.fillText(String(value),x,y,width);
+  }
+  function drawBattleHud() {
+    g.save();
+    const water=selectedSpell!=="stone";
+    const accent=water?"#72e7f0":"#b4ee94";
+    const edge=water?"#416c7b":"#64826c";
+    const surface="#061626dc";
+    // Player + mana panel.
+    hudRoundRect(16,13,252,103,12,surface,edge,1.7);
+    hudText("YOUR WIZARD",31,32,15,"#a3c7cb");
+    hudText("Tidecaller",31,61,26,"#f7e7bd");
+    for(let i=0;i<8;i++){
+      const x=39+i*27,y=93,full=i<mana;
+      g.beginPath();g.moveTo(x,y-9);g.lineTo(x+8,y);
+      g.lineTo(x,y+9);g.lineTo(x-8,y);g.closePath();
+      g.fillStyle=full?"#5bdbed":"#273d4b";g.fill();
+      g.strokeStyle=full?"#ceffff":"#61727c";g.lineWidth=1.3;g.stroke();
+    }
+    // Enemy health is not part of the DOM layout.
+    hudRoundRect(727,13,257,113,12,surface,"#836960",1.7);
+    hudText("ENEMY · TARGET SELECTED",744,31,13,"#d2c99f", "left",230);
+    hudText("Stone Sentinel",744,59,25,"#fff0d7","left",224);
+    hudRoundRect(742,80,224,14,6,"#272331","#8d7261",1.1);
+    if(hudHealth>0){
+      const hp=Math.max(0,Math.min(1,hudHealth/MAX_HP));
+      const width=220*hp;
+      if(width>2){
+        const gradient=g.createLinearGradient(744,0,964,0);
+        gradient.addColorStop(0,"#c9495c");gradient.addColorStop(1,"#f6a56b");
+        hudRoundRect(744,82,width,10,Math.min(4,width/2),gradient);
+      }
+    }
+    hudText(health.toLocaleString()+" / "+MAX_HP.toLocaleString()+" HP",
+      964,110,17,"#f5c9af","right",230,650);
+    // Fixed top-center banner replaces the former resizing HTML state label.
+    hudRoundRect(284,13,428,58,12,"#071c2bbd",edge,1.3);
+    hudText("ROUND "+round,500,32,16,"#bdd6d8","center",380,700);
+    hudText(UI.state.textContent||"READY TO CAST",500,54,20,accent,
+      "center",400,800);
+    hudText(UI.caption.textContent||"CHOOSE YOUR SPELL",500,98,15,
+      "#dbf0ee","center",420,650);
+    // Status is always on the same fixed baseline; long messages compress
+    // within the bar, never creating new layout lines.
+    hudRoundRect(183,493,634,46,23,"#061525d7",edge,1.4);
+    hudText(UI.status.textContent||"Select a spell, then Cast.",500,515,21,
+      "#e1f1f0","center",594,600);
+    g.restore();
+  }
+  function drawCanvasVictory() {
+    g.save();
+    g.fillStyle="#031322d7";g.fillRect(0,0,W,H);
+    glow(500,247,192,"#77e7d62e");
+    hudText("✦",500,161,82,"#f1d797","center");
+    hudText("BATTLE COMPLETE",500,230,21,"#9fe3e1","center",760);
+    hudText("SENTINEL VANQUISHED",500,292,46,"#ffe8b6","center",900);
+    hudText(UI.winFlavor.textContent||"The elements answer your call.",
+      500,350,22,"#e0eff0","center",850,500);
+    hudText("Select Fight Again below the arena.",500,407,18,
+      "#b1cccd","center",850,500);
+    g.restore();
+  }
+  function drawSceneVignette(){
+    const shade=g.createRadialGradient(500,240,115,500,268,624);
+    shade.addColorStop(0,"#05112200");
+    shade.addColorStop(.67,"#0616290d");
+    shade.addColorStop(1,"#020817a5");
+    g.fillStyle=shade;g.fillRect(0,0,W,H);
+  }
+
   function render(t) {
     const sx=canvas.width/W,sy=canvas.height/H;
     g.setTransform(sx,0,0,sy,0,0);
@@ -839,8 +927,10 @@
     }
     drawParticles();
     if(foregroundCache)g.drawImage(foregroundCache,0,0,W,H);
-    else drawForeground(0);
-    g.restore();
+    else {drawForeground(0);drawSceneVignette();}
+    g.restore(); // HUD must NOT move during Poseidon's impact shake.
+    drawBattleHud();
+    if(defeated)drawCanvasVictory();
   }
 
   function tone(frequency,durationSecs,type="sine",volume=.13,to=undefined){
@@ -938,7 +1028,7 @@
 
   function reset() {
     cast=null;particles.length=0;sprayCarry=0;goldCarry=0;earthCarry=0;
-    health=MAX_HP;mana=8;round=1;targeted=true;selectedSpell="poseidon";
+    health=MAX_HP;hudHealth=MAX_HP;mana=8;round=1;targeted=true;selectedSpell="poseidon";
     defeated=false;targetPulse=0;
     UI.win.hidden=true;
     UI.winFlavor.textContent="The elements answer your call.";
@@ -1054,6 +1144,9 @@
   }
 
   function update(dt) {
+    // Health bar eases to damage without moving any DOM element.
+    hudHealth+=(health-hudHealth)*Math.min(1,dt*9);
+    if(Math.abs(hudHealth-health)<.3)hudHealth=health;
     targetPulse=Math.max(0,targetPulse-dt*1.4);
     if(!cast){updateParticles(dt);return;}
     const type=cast.type,earth=type==="stone",timing=earth?EARTH:SPELL;

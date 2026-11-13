@@ -651,21 +651,77 @@
     polygon([[.37*r,-.54*r],[.52*r,-.31*r],[.32*r,-.20*r],[.20*r,-.40*r]],"#bde6a1","#d9edb7",1.1);
     g.restore();
   }
+  // Fixed-length stone skeleton. Both elbow and knee positions are solved
+  // geometrically: hands/feet can move, but the stone segments NEVER stretch.
+  function stoneIK(start,end,upper,lower,bend) {
+    const dx=end[0]-start[0],dy=end[1]-start[1],actual=Math.max(.0001,Math.hypot(dx,dy));
+    const d=clamp(actual,Math.abs(upper-lower)+.001,upper+lower-.001);
+    const ux=dx/actual,uy=dy/actual;
+    const forward=(upper*upper-lower*lower+d*d)/(2*d);
+    const offset=Math.sqrt(Math.max(0,upper*upper-forward*forward));
+    return [start[0]+ux*forward-uy*offset*bend,start[1]+uy*forward+ux*offset*bend];
+  }
+  function stoneRotate(point,pivot,angle) {
+    const dx=point[0]-pivot[0],dy=point[1]-pivot[1];
+    return [pivot[0]+dx*Math.cos(angle)-dy*Math.sin(angle),
+      pivot[1]+dx*Math.sin(angle)+dy*Math.cos(angle)];
+  }
   function earthPose(elapsed,t=0) {
-    const emerging=out(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
+    // Smoothstep starts and ends with ZERO velocity to prevent the "snap"
+    // during emergence and retreat. No random camera movement in these phases.
+    const emerging=ease(phase(elapsed,EARTH.emergeStart,EARTH.emergeEnd));
     const descent=ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
     const lift=ease(phase(elapsed,EARTH.liftStart,EARTH.liftEnd));
-    const throwPower=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
-    const base=411+(1-emerging)*159+descent*66;
+    const charge=ease(phase(elapsed,EARTH.liftEnd-.19,EARTH.releaseStart));
+    const release=ease(phase(elapsed,EARTH.releaseStart,EARTH.launch));
+    const follow=ease(phase(elapsed,EARTH.launch,EARTH.launch+.45));
+    // The left leg comes OFF the floor as he leans back, then plants on release.
+    const legRaise=ease(phase(elapsed,EARTH.liftEnd-.18,EARTH.releaseStart))*
+      (1-ease(phase(elapsed,EARTH.releaseStart,EARTH.launch+.12)));
+    const lean=-.23*charge*(1-release)+.16*release*(1-follow*.40);
+    const base=411+(1-emerging)*157+descent*140;
     const x=502;
-    const crouch=Math.sin(t*2.3)*1.2*(1-descent);
-    const rockX=x+throwPower*91;
-    // Lift high enough that the bottom of the 52px boulder CLEARLY
-    // passes above the golem's tallest head facet at base-271.
-    const rockY=base-84-lift*245+throwPower*16+crouch;
-    return {x,base,emerging,descent,lift,throwPower,rockX,rockY,
-      hands:[[rockX-43,rockY+17],[rockX+43,rockY+17]]};
+    const pivot=[x,base-71];
+    const shoulders=[
+      stoneRotate([x-69,base-154],pivot,lean),
+      stoneRotate([x+69,base-154],pivot,lean)
+    ];
+    // One stone boulder is lifted close to the body, then loaded over and
+    // slightly behind his head. During the throw the whole torso snaps forward.
+    const rockX=x-30*charge*(1-release)+58*release;
+    const rockY=base-116-221*lift+36*release;
+    const hands=[
+      [rockX-40,rockY+31],
+      [rockX+40,rockY+31]
+    ];
+    // Post-release both hands continue their follow-through, never telegraphing
+    // an invisible boulder. The final wrist targets remain in reach.
+    if(elapsed>=EARTH.launch) {
+      hands[0][0]=mix(hands[0][0],x+56,follow);
+      hands[0][1]=mix(hands[0][1],base-182,follow);
+      hands[1][0]=mix(hands[1][0],x+112,follow);
+      hands[1][1]=mix(hands[1][1],base-181,follow);
+    }
+    const elbows=[
+      stoneIK(shoulders[0],hands[0],97,92,-1),
+      stoneIK(shoulders[1],hands[1],97,92,1)
+    ];
+    const hips=[
+      stoneRotate([x-35,base-69],pivot,lean),
+      stoneRotate([x+35,base-69],pivot,lean)
+    ];
+    const feet=[
+      [x-68-39*legRaise,base-3-69*legRaise],
+      [x+52,base-3]
+    ];
+    const knees=[
+      stoneIK(hips[0],feet[0],54,52,1),
+      stoneIK(hips[1],feet[1],54,52,-1)
+    ];
+    return {x,base,pivot,emerging,descent,lift,charge,release,follow,
+      lean,legRaise,rockX,rockY,hands,shoulders,elbows,hips,feet,knees};
   }
+
   function stoneLimb(a,b,thickA,thickB,light,shadow) {
     const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.max(1,Math.hypot(dx,dy));
     const nx=-dy/length,ny=dx/length;
@@ -680,19 +736,41 @@
   }
   function drawStoneGolem(elapsed,t) {
     const p=earthPose(elapsed,t);
-    if(p.emerging<.01 || p.descent>.998)return;
+    if(p.emerging<.001||p.descent>.999)return;
     const x=p.x,y=p.base;
     g.save();
-    // Sink underground: feet and debris never show past the arena surface.
-    g.beginPath();g.rect(290,36,420,375);g.clip();
-    g.globalAlpha*=1-ease(phase(p.descent,.72,1));
-    glow(x,y-84,116,"#abd56a1f");
+    // Keep ground at y=411 even during smooth upward/downward motion.
+    // The top is NOT clipped, so an overhead boulder remains entirely visible.
+    g.beginPath();g.rect(270,-110,470,521);g.clip();
+    g.globalAlpha*=1-ease(phase(p.descent,.55,1));
+    glow(x,y-95,105,"#a5ca7130");
     oval(x,y+1,91,21,"#252e29a8");
-    // Moss-encrusted foot stones
-    polygon([[x-62,y-59],[x-21,y-63],[x-14,y-2],[x-70,y+4]],"#565d4d","#9b9e7b",2);
-    triangleFacet(x-62,y-57,x-21,y-63,x-44,y-4,"#91977a");
-    polygon([[x+20,y-65],[x+61,y-63],[x+73,y+2],[x+12,y-3]],"#4e574a","#a1a488",2);
-    triangleFacet(x+21,y-63,x+61,y-62,x+28,y-7,"#77836a");
+    // Articulated stone LEGS — one planted, the LEFT one lifted in the charge.
+    for(let side=0;side<2;side++) {
+      const hip=p.hips[side],knee=p.knees[side],foot=p.feet[side];
+      stoneLimb(hip,knee,24,20,side===0?"#78866a":"#6f7b63","#485e4e");
+      stoneLimb(knee,foot,20,17,side===0?"#a0a587":"#7f8f72","#4c5d49");
+      g.save();g.translate(foot[0],foot[1]);g.rotate(side===0?-.24*p.legRaise:0);
+      polygon([[-28,-7],[8,-12],[27,1],[12,8],[-28,7]],
+        side===0?"#8c9b7e":"#6d806c","#c5c09c",2);
+      triangleFacet(-28,-7,8,-12,5,3,"#b2b597");
+      g.restore();
+    }
+    // Arms are two rigid stone blocks joined at genuine elbow pivots.
+    // IK guarantees identical upper/forearm lengths during EVERY in-between.
+    for(let side=0;side<2;side++) {
+      const shoulder=p.shoulders[side],elbow=p.elbows[side],hand=p.hands[side];
+      stoneLimb(shoulder,elbow,22,19,side===0?"#7f866f":"#72836d","#4d624e");
+      stoneLimb(elbow,hand,18,13,side===0?"#a2a68b":"#98a188","#566a54");
+      polygon([[elbow[0]-11,elbow[1]-7],[elbow[0]+9,elbow[1]-12],
+        [elbow[0]+16,elbow[1]+7],[elbow[0]-4,elbow[1]+13]],
+        "#86947b","#c8c6a1",1.5);
+    }
+    // Head, shoulders and torso ROTATE TOGETHER ABOUT THE HIPS.
+    // This is a real backwards lean, not a stretch of the hands.
+    g.save();
+    g.translate(p.pivot[0],p.pivot[1]);g.rotate(p.lean);
+    g.translate(-p.pivot[0],-p.pivot[1]);
     // Golem's chest: broad squat sandstone slabs with green mineral seams
     polygon([[x-74,y-154],[x-33,y-176],[x+36,y-174],[x+79,y-153],[x+69,y-78],[x+28,y-52],[x-36,y-49],[x-74,y-88]],
       "#687360","#b9b38f",3);
@@ -720,32 +798,21 @@
     polygon([[x-26,y-223],[x-11,y-225],[x-10,y-218],[x-25,y-215]],"#c3f49b");
     polygon([[x+12,y-224],[x+28,y-223],[x+27,y-216],[x+11,y-217]],"#c3f49b");
     line(x-10,y-202,x+8,y-202,"#435447",4);
-    // Two independent arms supporting the same boulder.
-    const leftShoulder=[x-69,y-154],rightShoulder=[x+69,y-154];
-    const hands=p.hands;
-    const leftElbow=[mix(x-107,x-83,p.lift)+p.throwPower*18,
-                     mix(y-125,y-222,p.lift)-p.throwPower*8];
-    const rightElbow=[mix(x+107,x+82,p.lift)+p.throwPower*32,
-                      mix(y-125,y-223,p.lift)-p.throwPower*5];
-    const leftHand=hands[0],rightHand=hands[1];
-    stoneLimb(leftShoulder,leftElbow,23,19,"#777f68","#4e5e4b");
-    stoneLimb(leftElbow,leftHand,19,13,"#9a9c7e","#55634d");
-    stoneLimb(rightShoulder,rightElbow,24,19,"#7a8870","#4e6554");
-    stoneLimb(rightElbow,rightHand,19,13,"#a1a488","#63745b");
-    // The rock stays between BOTH hands as it is raised above his head.
-    if(elapsed<EARTH.launch)
-      drawBoulder(p.rockX,p.rockY,52,Math.sin(t*1.4)*.045);
-    // Knuckles are in front of the boulder for a two-handed grip.
+    g.restore();
+    if(elapsed<EARTH.launch)drawBoulder(p.rockX,p.rockY,52,0);
+    // Each stone fist grips opposite sides of the SAME rock, stays attached
+    // through the lift, and drives forward during the throw.
     for(let side=0;side<2;side++){
-      const hand=hands[side];
-      polygon([[hand[0]-13,hand[1]-11],[hand[0]+12,hand[1]-8],
-        [hand[0]+14,hand[1]+13],[hand[0]-10,hand[1]+13]],
-        side===0?"#a5a68a":"#878e74","#d6c9a2",1.7);
+      const hand=p.hands[side];
+      polygon([[hand[0]-14,hand[1]-12],[hand[0]+13,hand[1]-10],
+        [hand[0]+15,hand[1]+13],[hand[0]-10,hand[1]+15]],
+        side===0?"#b2b39a":"#909a83","#d6c9a2",1.7);
       triangleFacet(hand[0]-12,hand[1]-10,hand[0]+10,hand[1]-9,
-        hand[0]+1,hand[1]+5,side===0?"#c0bc9b":"#a9ac8a");
+        hand[0]+1,hand[1]+5,side===0?"#d2c6a2":"#b3b89a");
     }
     g.restore();
   }
+
   function drawEarthPortal(elapsed,t) {
     const emerge=ease(phase(elapsed,.05,EARTH.emergeEnd));
     const fade=1-ease(phase(elapsed,EARTH.crumbleStart,EARTH.crumbleEnd));
@@ -766,20 +833,22 @@
   }
   function drawEarthProjectile(elapsed,t) {
     if(elapsed<EARTH.launch||elapsed>=EARTH.hit)return;
-    const p=phase(elapsed,EARTH.launch,EARTH.hit);
-    const start=earthPose(EARTH.launch,t-(elapsed-EARTH.launch));
+    const p=ease(phase(elapsed,EARTH.launch,EARTH.hit));
+    // Sample the exact release point so the boulder does not teleport out
+    // of either hand when the game switches to projectile animation.
+    const start=earthPose(EARTH.launch,t);
     const x=mix(start.rockX,783,p);
-    const y=mix(start.rockY,285,p)-Math.sin(Math.PI*p)*47;
-    g.save();
-    g.globalCompositeOperation="lighter";
-    const dustX=mix(start.rockX,783,Math.max(0,p-.14));
-    const dustY=mix(start.rockY,285,Math.max(0,p-.14))-
-      Math.sin(Math.PI*Math.max(0,p-.14))*47;
-    line(dustX,dustY,x,y,"#d1bf7d5c",17);
-    glow(x,y,58,"#cfe0a12c");
+    const y=mix(start.rockY,285,p)-Math.sin(Math.PI*p)*31;
+    g.save();g.globalCompositeOperation="lighter";
+    const prev=Math.max(0,p-.18);
+    const dustX=mix(start.rockX,783,prev);
+    const dustY=mix(start.rockY,285,prev)-Math.sin(Math.PI*prev)*31;
+    line(dustX,dustY,x,y,"#d1bf7d5c",19);
+    glow(x,y,43,"#cfe0a125");
     g.restore();
-    drawBoulder(x,y,52,p*5.8);
+    drawBoulder(x,y,52,p*7);
   }
+
   function drawEarthImpact(elapsed) {
     if(elapsed<EARTH.hit||elapsed>EARTH.hit+1.03)return;
     const p=phase(elapsed,EARTH.hit,EARTH.hit+1.03);
@@ -832,7 +901,8 @@
     const strikeTime=cast&&cast.type==="stone"?EARTH.hit:SPELL.hit;
     if(elapsed<strikeTime||elapsed>strikeTime+.4)return;
     const strength=12*(1-phase(elapsed,strikeTime,strikeTime+.4));
-    g.translate(rand(-strength,strength),rand(-strength,strength));
+    // Deterministic easing prevents random full-scene teleporting/flicker.
+    g.translate(Math.sin(elapsed*98)*strength*.57,Math.sin(elapsed*112)*strength*.32);
   }
 
   function render(t){
@@ -1098,9 +1168,14 @@
 
   function resize(){
     const rect=canvas.getBoundingClientRect();
-    const dpr=Math.min(window.devicePixelRatio||1,2);
-    canvas.width=Math.max(1,Math.round(rect.width*dpr));
-    canvas.height=Math.max(1,Math.round(rect.height*dpr));
+    // Avoid expensive 4x pixel redraws on high-DPI phones.
+    const dpr=Math.min(window.devicePixelRatio||1,rect.width<720?1.5:2);
+    const width=Math.max(1,Math.round(rect.width*dpr));
+    const height=Math.max(1,Math.round(rect.height*dpr));
+    // Reassigning canvas.width/height clears its drawing surface and can
+    // retrigger layout/ResizeObserver even when dimensions are identical.
+    if(canvas.width!==width)canvas.width=width;
+    if(canvas.height!==height)canvas.height=height;
   }
   function selectEnemy(event){
     if(defeated||cast)return;
@@ -1129,7 +1204,8 @@
   });
   canvas.addEventListener("pointerdown",selectEnemy);
   window.addEventListener("resize",resize);
-  if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
+  // Observe the stable arena parent, never the canvas we resize inside it.
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(document.getElementById("arena"));
   resize();reset();
   function frame(now){
     // Render a fresh interpolated pose every display refresh, including 120 Hz.

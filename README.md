@@ -1,3 +1,11 @@
+## POLISH — Professor Volt keeps his feet on the arena floor (v0.49.1)
+
+**[Play Wizardry with Professor Volt](https://wafflinyo.github.io/Wizardry/arena.html?v=0.49.1)**
+
+Professor Volt's eight transparent animation frames are now aligned using **frame-specific visible-boot / magic-portal baselines** so he stays grounded while bringing the two antennas together and firing his electric beam. The previously published v0.49.0 card and combat implementation remain: 450 damage, 80% accuracy by default, 20% stun chance on a successful hit, 5 mana, and exactly one skipped target action. The two existing spells, current battle colosseum, and Tidal Echo mechanics remain untouched.
+
+---
+
 ## NEW — Professor Volt, Lightning summon (v0.49.0)
 
 **[Play Wizardry with Professor Volt](https://wafflinyo.github.io/Wizardry/arena.html?v=0.49.0)**

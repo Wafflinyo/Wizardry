@@ -1,4 +1,4 @@
-/* Wizardry v0.49.0 — Professor Volt, low-poly lightning summon.
+/* Wizardry v0.49.1 — Professor Volt, low-poly lightning summon.
    Eight transparent frames from the actual spell animation, 4x2 WebP.
    Beam is rendered independently so it reaches the enemy's real position. */
 (function(root){
@@ -103,7 +103,12 @@ function draw(ctx,options){
   ctx.save();ctx.globalAlpha=alpha;
   ctx.translate(cx,0);ctx.scale(direction,1);
   const idx=frameFor(p);
-  if(!drawFrame(ctx,idx,-163,174,326,293)){
+  // The approved transparent sprite frames have different empty margins
+  // BELOW the boots. Align each source frame's feet (or lightning portal)
+  // against the same world ground line to prevent floating/jumping.
+  const footY=[244,213,233,233,234,235,235,246][idx];
+  const frameHeight=293,drawY=cy-footY*frameHeight/256;
+  if(!drawFrame(ctx,idx,-163,drawY,326,frameHeight)){
     // Low-poly silhouette fallback if the downloaded art isn't ready.
     ctx.fillStyle="#4d4266";ctx.beginPath();
     ctx.moveTo(-58,430);ctx.lineTo(-51,308);ctx.lineTo(0,272);

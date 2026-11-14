@@ -1,4 +1,4 @@
-/* Wizardry v0.58.0 — Centered coffin, 16-frame vampire and shadow-mist flight.
+/* Wizardry v0.59.0 — Centered coffin, 16-frame vampire and shadow-mist flight.
    The approved vampire now leaves the coffin COMPLETELY, siphons the enemy,
    returns to face the caster, then offers a separate blood-red healing orb. */
 (function(root){
@@ -7,7 +7,11 @@ const clamp=(n,lo=0,hi=1)=>Math.max(lo,Math.min(hi,n));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const ease=t=>{t=clamp(t);return t*t*(3-2*t)};
 const TAU=Math.PI*2;
-const COFFIN={x:500,y:341,size:262}; // Middle of center arena circle, not near front lip.
+// Center medallion floor contact: the entire coffin must rise UP through
+// groundY instead of fading in above the stage. Sprite center is above the
+// ground; anything below groundY is occluded during the rise.
+const COFFIN={x:500,y:311,groundY:417,size:207};
+const VAMPIRE_SIZE=187; // ~71% of the previous 264px flying vampire.
 const art=new Image();
 art.decoding="async";
 const listeners=[];
@@ -105,11 +109,11 @@ function anchors(o){
  const d=foe.x>=500?1:-1,b=caster.x>=500?1:-1;
  // The crypt rises ON the middle arena crest, then the vampire flies
  // wholly clear of it toward the victim and back beside its summoner.
- const origin={x:COFFIN.x,y:COFFIN.y-25};
- const victim={x:foe.x-d*84,y:foe.y-118};
- const presenter={x:caster.x-b*135,y:caster.y-135};
+ const origin={x:COFFIN.x,y:COFFIN.y-28};
+ const victim={x:foe.x-d*71,y:foe.y-110};
+ const presenter={x:caster.x-b*116,y:caster.y-120};
  const handDirection=-b; // Left caster: image's unmirrored LEFT-facing offering pose.
- const orbFrom={x:presenter.x-handDirection*70,y:presenter.y+2};
+ const orbFrom={x:presenter.x-handDirection*51,y:presenter.y+2};
  const orbTo={x:caster.x,y:caster.y-106};
  return{foe,caster,d,b,origin,victim,presenter,handDirection,orbFrom,orbTo};
 }
@@ -140,64 +144,97 @@ function drain(c,o){
  }
  c.restore();
 }
+// The coffin begins buried below the circular arena floor, not sitting
+// fully formed on top of it. Closed art is translated upward and MASKED
+// at the floor plane. One continuous physical rise gives every frame a
+// different visible amount, so the object does not pop into existence.
 function centerCoffin(c,stage,p,time){
- const cx=COFFIN.x,cy=COFFIN.y;
+ const cx=COFFIN.x,cy=COFFIN.y,ground=COFFIN.groundY;
  if(stage==="vamp-rise"){
-   const y=cy+135*(1-ease(p));
-   const index=poseAt(stage,p);
-   pose(c,stage,p,cx,y,COFFIN.size,ease(p/.18),1);
-   c.save();c.globalAlpha=1-ease(p);
-   oval(c,cx,cy+COFFIN.size*.40,85+22*p,19,"#433050c9");
+   const lift=ease(p),y=cy+205*(1-lift);
+   c.save();
+   // A thin ground fissure stays ON the floor and sells the emergence.
+   c.globalAlpha=.18+.52*Math.sin(Math.PI*lift);
+   oval(c,cx,ground+1,72+11*lift,12+4*lift,"#151020");
+   c.restore();
+   c.save();
+   c.beginPath();
+   c.rect(0,0,1000,ground);
+   c.clip();
+   // Use a whole fully closed coffin sprite with the base concealed
+   // underground, NOT frame-by-frame scaling or alpha revealing.
+   frame(c,2,cx,y,COFFIN.size,1,1);
+   c.restore();
+   c.save();c.globalAlpha=.48*(1-lift);
+   oval(c,cx,ground-3,79,13,"#4a2b5d");
    c.restore();
  }else if(stage==="vamp-open"){
+   // The closed coffin has reached its correct final depth plane.
+   // The following poses open the door; no sudden positional snap.
    pose(c,stage,p,cx,cy,COFFIN.size,1,1);
  }else if(stage==="vamp-lunge"&&p<.54){
-   // Fade the vacated crypt into smoke as the vampire leaves, rather
-   // than snapping a duplicate figure into a closed coffin.
-   frame(c,2,cx,cy,COFFIN.size,.46*(1-ease(p/.54)),1);
+   frame(c,2,cx,cy,COFFIN.size,.52*(1-ease(p/.54)),1);
  }
+}
+function orbPosition(o){
+ const a=anchors(o),p=ease(clamp(o.progress||0));
+ return {x:lerp(a.orbFrom.x,a.orbTo.x,p),
+   y:lerp(a.orbFrom.y,a.orbTo.y,p)-25*Math.sin(Math.PI*p)};
+}
+// A Y depth is the projected floor contact, not the sprite's floating
+// screen center. A projectile above the foreground can therefore still
+// pass in front of back-row wizards and behind closer wizards.
+function depthFor(o,layer="actor"){
+ const a=anchors(o),s=o.stage,p=ease(clamp(o.progress||0));
+ if(layer==="coffin")return COFFIN.groundY;
+ if(layer==="orb"){
+   return lerp(a.caster.y+26,a.caster.y+8,p);
+ }
+ if(s==="vamp-lunge")return lerp(COFFIN.groundY,a.foe.y+19,p);
+ if(s==="vamp-drain")return a.foe.y+19;
+ if(s==="vamp-return")return lerp(a.foe.y+19,a.caster.y+26,p);
+ return a.caster.y+26;
 }
 function draw(c,o){
  if(!c||!o||!STAGE_POSES[o.stage])return false;
  const p=clamp(o.progress||0),time=Number(o.time)||0;
- const stage=o.stage,a=anchors(o),at=position(o);
+ const stage=o.stage,a=anchors(o),at=position(o),layer=o.layer||"all";
+ const coffin=(layer==="all"||layer==="coffin");
+ const actor=(layer==="all"||layer==="actor");
+ const orb=(layer==="all"||layer==="orb");
  c.save();
- centerCoffin(c,stage,p,time);
+ if(coffin)centerCoffin(c,stage,p,time);
  if(!["vamp-rise","vamp-open"].includes(stage)){
    const outbound=["vamp-lunge","vamp-drain"].includes(stage);
    const returning=stage==="vamp-return";
-   // Source poses 6–10 face RIGHT. Mirror them for travel back LEFT.
-   // Source offering poses 11–14 face LEFT already: do NOT mirror for
-   // a caster on the left, otherwise he looks away from that caster.
+   // The approved offering frames already face left. Do not flip
+   // them for a player on the left; mirror them ONLY for a right caster.
    const face=outbound?a.d:returning?a.b:a.handDirection;
    const vanishAlpha=stage==="vamp-vanish"?1-ease(p):1;
-   shadowMist(c,at.x,at.y,264,time,face,vanishAlpha*
-     (stage==="vamp-lunge"?ease(p/.13):1));
-   pose(c,stage,p,at.x,at.y,264,vanishAlpha,face);
-   if(stage==="vamp-drain"){
-     drain(c,o);
-     if(p>.35)bloodOrb(c,at.x+a.d*55,at.y+6,8+10*ease((p-.35)/.65),time,
-       ease((p-.35)/.32)*.8);
+   if(actor){
+     shadowMist(c,at.x,at.y,VAMPIRE_SIZE,time,face,vanishAlpha*
+       (stage==="vamp-lunge"?ease(p/.13):1));
+     pose(c,stage,p,at.x,at.y,VAMPIRE_SIZE,vanishAlpha,face);
+     if(stage==="vamp-drain")drain(c,o);
    }
-   if(stage==="vamp-present"){
-     // A soft magical pulse in the offered hand; main red orb is painted
-     // in the actual approved frame facing the wizard.
-     c.save();c.globalAlpha=.27*(.5+.5*Math.sin(time*.009));
-     oval(c,a.orbFrom.x,a.orbFrom.y,25,25,"#fc365c");
-     c.restore();
-   }
-   if(stage==="vamp-orb"){
-     // The source pose no longer contains the held orb: it genuinely
-     // detaches, flies to the player, and heals on arrival in arena.js.
-     const t=ease(p),x=lerp(a.orbFrom.x,a.orbTo.x,t);
-     const y=lerp(a.orbFrom.y,a.orbTo.y,t)-25*Math.sin(Math.PI*t);
-     for(let i=1;i<6;i++){
-       const u=ease(clamp(p-i*.036));
-       if(u>0)bloodOrb(c,lerp(a.orbFrom.x,a.orbTo.x,u),
-        lerp(a.orbFrom.y,a.orbTo.y,u)-25*Math.sin(Math.PI*u),
-        4.2,time,.22*(1-i/7));
+   if(orb){
+     if(stage==="vamp-drain"&&p>.35){
+       bloodOrb(c,at.x+a.d*40,at.y+6,7+8*ease((p-.35)/.65),
+         time,ease((p-.35)/.32)*.8);
      }
-     bloodOrb(c,x,y,18,time,1);
+     if(stage==="vamp-present"){
+       c.save();c.globalAlpha=.27*(.5+.5*Math.sin(time*.009));
+       oval(c,a.orbFrom.x,a.orbFrom.y,20,20,"#fc365c");c.restore();
+     }
+     if(stage==="vamp-orb"){
+       const pos=orbPosition(o);
+       for(let i=1;i<6;i++){
+         const prior={...o,progress:clamp(p-i*.036)};
+         const q=orbPosition(prior);
+         if(p>i*.036)bloodOrb(c,q.x,q.y,3.7,time,.22*(1-i/7));
+       }
+       bloodOrb(c,pos.x,pos.y,16,time,1);
+     }
    }
  }
  c.restore();return true;
@@ -218,7 +255,8 @@ function drawCardArt(c,w,h){
  c.textAlign="center";c.fillText("☠",500,470)}
  c.restore();return true;
 }
-root.WIZARDRY_VAMPIRE_V57={draw,drawForeground,drawCardArt,anchors,position,poseAt,
+root.WIZARDRY_VAMPIRE_V57={draw,drawForeground,drawCardArt,anchors,
+ position,poseAt,orbPosition,depthFor,
  onReady,imageReady:ready,stages:Object.keys(STAGE_POSES),frames:16,
- coffinAnchor:COFFIN};
+ coffinAnchor:COFFIN,vampireSize:VAMPIRE_SIZE};
 })(window);

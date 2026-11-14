@@ -1,3 +1,15 @@
+## FIX — Smaller Crimson Siphon, buried coffin, world-space depth (v0.59.0)
+
+**[Play the corrected vampire and trident layers](https://wafflinyo.github.io/Wizardry/arena.html?v=0.59.0)**
+
+**Vampire scale and coffin rise:** Vampire now renders at **187px rather than 264px (~71%)**; coffin is **207px rather than 262px**. The closed coffin begins buried under the **center medallion**, at the ground plane around (500,417). Each animation frame moves the whole coffin upward from below that plane, progressively revealing it through an explicit Canvas clipping mask. A shadow fissure marks the opening; the lid only opens after the coffin has fully emerged. The approved sixteen-frame artwork remains in use, with existing flowing shadow-mist lower body. Life drain and red orb still work normally.
+
+**Correct layer sorting:** The arena now creates one depth-ordered list for all battle wizards, the emerging coffin, flying vampire, blood orb, and **Poseidon's flying trident**. Objects render according to their *projected floor depth*, not an arbitrary "draw all spells before all wizards" pass. The vampire's depth progresses from the center medallion to the opponent's ground plane, then to the caster's side as it returns. Its coffin remains correctly grounded in the center. The trident is extracted from the static Poseidon summoning render and inserted once as an independent moving renderable; its depth follows its path from center floor to the targeted opponent. Static ground effects remain behind units, and HP/status sideplates remain readable above all sprites.
+
+**All combat rules preserved:** Crimson Siphon still deals up to 550 actual damage on contact and heals for 50% of actual HP drained only when the blood orb arrives, capped by missing HP. Poseidon's projectile timing, damage, accuracy, 30% Water buff and hit-only recharge remain unchanged. Wind, Nature, Lightning, Earth and the card hand are unchanged.
+
+---
+
 ## UPDATE — Centered vampire coffin, 16 new frames and full shadow-body flight (v0.58.0)
 
 **[Play the corrected Crimson Siphon](https://wafflinyo.github.io/Wizardry/arena.html?v=0.58.0)**

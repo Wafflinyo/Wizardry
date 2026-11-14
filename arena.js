@@ -1,4 +1,4 @@
-/* Wizardry 0.58 — interactive 2.5D battle test.
+/* Wizardry 0.59 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -1809,17 +1809,7 @@
         g.font="bold 22px system-ui";g.fillStyle=col;g.textAlign="center";
         g.fillText(card.name,500,337);
       }
-      const release=POSEIDON_KEY_TIMES[10];
-      if(card.id==="poseidon"&&p>=release&&p<card.hit&&target){
-        const t=ease((p-release)/(card.hit-release));
-        const originX=target.x>=500?550:450,originY=284;
-        const x=lerp(originX,target.x,t);
-        const y=lerp(originY,target.y-105,t)-38*Math.sin(Math.PI*t);
-        const direction=target.x>=500?1:-1;
-        line(g,x-direction*70,y+15,x,y,"#3acfe3",18);
-        line(g,x-direction*38,y+7,x,y,"#d3fdff",5);
-        drawFlyingTrident(x,y,Math.atan2(target.y-105-originY,target.x-originX));
-      }
+      // Poseidon's flying trident is now a separate depth-sorted object.
     }else{
       if(target&&card.target!=="team"){
         const x=lerp(caster.x,target.x,ease(p)),y=lerp(caster.y-105,target.y-100,ease(p));
@@ -1840,6 +1830,34 @@
       ellipse(g,target.x,target.y-112,radius,radius*.42,null,
         card.school==="earth"?"#caff9f":"#b9f9ff",Math.max(.5,4*(1-pp)));
     }
+    g.restore();
+  }
+  function poseidonProjectileAt(anim){
+    if(!anim||anim.card?.id!=="poseidon"||anim.stage!=="summon")return null;
+    const target=getUnit(anim.target);
+    if(!target||target.hp<=0)return null;
+    const p=clamp(anim.elapsed/anim.duration,0,1);
+    const release=POSEIDON_KEY_TIMES[10];
+    if(p<release||p>=anim.card.hit)return null;
+    const t=ease((p-release)/(anim.card.hit-release));
+    const originX=target.x>=500?550:450,originY=284;
+    const direction=target.x>=500?1:-1;
+    return {
+      x:lerp(originX,target.x,t),
+      y:lerp(originY,target.y-105,t)-38*Math.sin(Math.PI*t),
+      angle:Math.atan2(target.y-105-originY,target.x-originX),
+      direction,
+      // Follow the projectile's projected arena floor depth, not a
+      // permanent background layer or its elevated screen Y coordinate.
+      depthY:lerp(471,target.y+12,t)
+    };
+  }
+  function drawPoseidonProjectile(p){
+    if(!p)return;
+    g.save();
+    line(g,p.x-p.direction*70,p.y+15,p.x,p.y,"#3acfe3",18);
+    line(g,p.x-p.direction*38,p.y+7,p.x,p.y,"#d3fdff",5);
+    drawFlyingTrident(p.x,p.y,p.angle);
     g.restore();
   }
   function drawFlyingTrident(x,y,angle){
@@ -1886,33 +1904,63 @@
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
-    // Spell passes are BELOW ALL fighter models, regardless of action
-    // caster, depth or target. Approved sprites are left completely intact.
-    if(state.animation){
-      const a=state.animation,effects=window.WIZARDRY_GOLEM_EFFECTS_V42;
+    // Render environmental VFX first. Movable summons and airborne
+    // projectiles share a depth-sorted pass with the actual fighters.
+    const action=state.animation;
+    const vampStages=["vamp-rise","vamp-open","vamp-lunge","vamp-drain",
+      "vamp-return","vamp-present","vamp-orb","vamp-vanish"];
+    if(action){
+      const a=action,effects=window.WIZARDRY_GOLEM_EFFECTS_V42;
       if(["golem-slam","golem-travel","golem-impact"].includes(a.stage)){
-        // Original 16-frame Golem character and the rock attack have
-        // INDEPENDENT animation clips, paths, clocks and source textures.
         effects?.drawGolem(g,a,spriteCache.golem,time);
         if(a.stage==="golem-travel")effects?.drawTravel(g,a);
         if(a.stage==="golem-impact")effects?.drawImpact(g,a);
+      }else if(a.card.id==="vampire"&&vampStages.includes(a.stage)){
+        // Vampire layers are inserted among wizard bodies below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
             ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage)||
           a.card.id==="wind"&&
-            ["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(a.stage)||
-          a.card.id==="vampire"&&
-            ["vamp-rise","vamp-open","vamp-lunge","vamp-drain","vamp-return",
-              "vamp-present","vamp-orb","vamp-vanish"].includes(a.stage))
+            ["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(a.stage))
         drawAction(a,time);
-      else {
+      else{
         drawAirborneRune(a);
         drawRuneOutcome(a);
         drawFizzle(a);
       }
     }
     const sorted=[...state.units].sort((a,b)=>a.y-b.y);
-    for(const u of sorted)drawUnit(u,time);
+    const renderables=sorted.map(u=>({
+      type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
+    }));
+    if(action?.card?.id==="vampire"&&vampStages.includes(action.stage)){
+      const vampire=window.WIZARDRY_VAMPIRE_V57;
+      if(vampire){
+        const options={
+          stage:action.stage,
+          progress:clamp(action.elapsed/action.duration,0,1),
+          time,caster:getUnit(action.source),target:getUnit(action.target)
+        };
+        for(const layer of ["coffin","actor","orb"]){
+          if(layer==="coffin"&&!["vamp-rise","vamp-open","vamp-lunge"].includes(action.stage))continue;
+          if(layer==="actor"&&["vamp-rise","vamp-open"].includes(action.stage))continue;
+          if(layer==="orb"&&!["vamp-drain","vamp-present","vamp-orb"].includes(action.stage))continue;
+          renderables.push({
+            type:"vampire-"+layer,
+            depthY:vampire.depthFor(options,layer),
+            priority:layer==="coffin"?0:2,
+            draw:()=>vampire.draw(g,{...options,layer})
+          });
+        }
+      }
+    }
+    const trident=poseidonProjectileAt(action);
+    if(trident)renderables.push({
+      type:"poseidon-trident",depthY:trident.depthY,priority:2,
+      draw:()=>drawPoseidonProjectile(trident)
+    });
+    renderables.sort((a,b)=>a.depthY-b.depthY||a.priority-b.priority);
+    for(const entry of renderables)entry.draw();
     // Only the bottom portion of the 8-frame impact atlas overlays the
     // target's boots. The full effect stays behind the wizard model.
     if(state.animation?.stage==="golem-impact")
@@ -1985,6 +2033,22 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
+    getSceneDepths:()=>[
+      ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),
+      ...(state.animation?.card?.id==="vampire"?
+        ["coffin","actor","orb"].map(layer=>({
+          type:"vampire-"+layer,
+          depthY:window.WIZARDRY_VAMPIRE_V57?.depthFor({
+            stage:state.animation.stage,
+            progress:clamp(state.animation.elapsed/state.animation.duration,0,1),
+            target:getUnit(state.animation.target),caster:getUnit(state.animation.source)
+          },layer)
+        })):[]),
+      ...(poseidonProjectileAt(state.animation)?[{
+        type:"poseidon-trident",depthY:poseidonProjectileAt(state.animation).depthY
+      }]:[])
+    ],
     getVampireInfo:()=>state?.animation?.card?.id==="vampire"?{
       stage:state.animation.stage,drained:state.animation.vampDrained||0,
       pendingHeal:state.animation.vampPotentialHeal||0,

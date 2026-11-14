@@ -1,0 +1,175 @@
+/* Wizardry v0.44 — portrait collectible spell cards.
+   One coherent override replaces floating crests and oversized mana tiles.
+   Loaded AFTER arena.css; no older spell-card theme stylesheet is loaded. */
+.cards{
+  display:flex;flex-direction:row;justify-content:center;align-items:flex-start;
+  gap:clamp(9px,2.8vw,16px);width:100%;
+  padding:8px 2px 6px;margin:0;
+  overflow:visible;scroll-snap-type:none;
+}
+.spell.card-ornate{
+  --trim:#d8bb7f;
+  position:relative;isolation:isolate;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+  flex:0 1 clamp(112px,32vw,144px);width:clamp(112px,32vw,144px);
+  min-width:0;max-width:144px;
+  height:clamp(198px,26svh,222px);min-height:198px;
+  padding:5px 5px 7px;gap:2px;
+  border:2px solid var(--trim);border-radius:9px 9px 12px 12px;
+  overflow:hidden;text-align:center;color:#f5e8cf;
+  background:
+    linear-gradient(140deg,transparent 12%,#74d8f017 12.5%,transparent 14%) left top/50% 45% no-repeat,
+    linear-gradient(220deg,transparent 12%,#74d8f01b 12.5%,transparent 14%) right top/50% 45% no-repeat,
+    linear-gradient(163deg,#17485d 0%,#0c3045 49%,#081a2c 100%);
+  box-shadow:inset 0 0 0 2px #082234,inset 0 0 0 4px #d1b47864,
+    0 4px 13px #0009;
+  transition:transform .12s,border-color .12s;
+}
+.spell.card-ornate.school-earth{
+  --trim:#d1b17d;
+  border-color:var(--trim);
+  background:
+    linear-gradient(143deg,transparent 12%,#d7b37120 12.5%,transparent 14%) left top/50% 45% no-repeat,
+    linear-gradient(220deg,transparent 12%,#d7b37120 12.5%,transparent 14%) right top/50% 45% no-repeat,
+    linear-gradient(160deg,#4a3c3e,#2d2831 51%,#171b27);
+  box-shadow:inset 0 0 0 2px #2b252b,inset 0 0 0 4px #d1b47860,
+    0 4px 13px #0009;
+}
+.spell.card-ornate::after{
+  content:"";position:absolute;z-index:0;inset:4px;pointer-events:none;
+  border:1px solid #e0c88f70;border-radius:5px 5px 9px 9px;
+}
+.spell.card-ornate>*{position:relative;z-index:1}
+/* The crest is an inset part of the TOP CAP, not a floating ornament.
+   Its last pixel ends before the rarity row begins. */
+.cards > button.spell.card-ornate::before{
+  content:"♆";position:absolute;z-index:3;pointer-events:none;
+  top:3px!important;left:50%;transform:translateX(-50%);
+  display:grid;place-items:center;
+  width:27px;height:19px;
+  color:#c4f6fc;background:linear-gradient(155deg,#1e7891,#0e3448);
+  border:1px solid #e2c688;border-radius:0 0 8px 8px;
+  clip-path:none;filter:none;
+  font:800 12px/1 Georgia,serif;
+}
+.cards > button.spell.card-ornate.school-earth::before{
+  content:"◆";color:#f6dfa9;
+  background:linear-gradient(155deg,#91714c,#392a32);font-size:10px;
+}
+.spell-tier{
+  flex:0 0 auto;display:block;position:relative;
+  margin:22px 0 0;min-height:10px;max-height:10px;
+  font:800 7px/10px system-ui,sans-serif;letter-spacing:.04em;
+  color:#b9f3fa;white-space:nowrap;overflow:visible;
+}
+.school-earth .spell-tier{color:#ead4a8}
+/* Small mana counter inside the upper RIGHT corner, never over the art. */
+.cards > button.spell.card-ornate .spell-mana-cost{
+  position:absolute!important;z-index:4!important;
+  top:4px!important;left:auto!important;right:5px!important;
+  width:22px;height:22px;min-width:22px;
+  border:1.5px solid #e5c787;border-radius:6px;
+  color:#fcf1d6;background:linear-gradient(145deg,#1a6883,#113247);
+  font:800 12px/1 Cinzel,Georgia,serif;
+  display:grid;place-items:center;
+  clip-path:none;filter:none;
+  box-shadow:0 1px 3px #010b1499;
+}
+.cards > button.spell.card-ornate.school-earth .spell-mana-cost{
+  background:linear-gradient(145deg,#91744d,#3d3036);
+}
+.spell-art-shell{
+  position:relative;display:block;
+  flex:1 1 auto;min-height:52px;height:auto;width:100%;
+  border:1px solid #d4bd947a;border-radius:5px 5px 2px 2px;
+  overflow:hidden;background:#0b3040;
+  box-shadow:0 1px 4px #0006;
+}
+.spell-art-canvas{display:block;width:100%;height:100%;object-fit:cover}
+.spell.card-ornate .spell-name{
+  flex:0 0 19px;min-height:19px;
+  display:grid;place-items:center;margin:-3px -3px 0;padding:2px 1px;
+  border:1px solid #e1c285;border-radius:3px;
+  background:linear-gradient(#2b4455,#091d2f);
+  font:700 10px/1.06 Cinzel,Georgia,serif;
+  letter-spacing:-.015em;color:#fce7c0;text-shadow:0 1px 1px #000c;
+  white-space:nowrap;overflow:hidden;text-overflow:clip;
+}
+.spell.card-ornate.school-earth .spell-name{
+  background:linear-gradient(#4b3940,#1c1d28);
+}
+.spell-combat{
+  flex:0 0 21px;min-height:21px;display:grid;
+  grid-template-columns:1fr 1fr;gap:0;align-items:center;
+  width:100%;padding:2px 0;margin:0;
+  border-top:0;border-bottom:1px solid #c4ae7a73;
+  color:#bedde4;font-size:7px;white-space:nowrap;
+}
+.spell-combat>span{
+  min-width:0;display:flex;align-items:center;justify-content:center;gap:2px;
+}
+.spell-combat>span+span{border-left:1px solid #c4ae7a73}
+.spell-combat b{font-size:10px;color:#f6faff;white-space:nowrap}
+.school-earth .spell-combat b{color:#f5e0b1}
+.spell-effect{
+  flex:0 0 27px;min-height:27px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:0;
+  font:700 7px/1.12 system-ui,sans-serif;letter-spacing:0;
+  color:#b7dfe7;white-space:nowrap;
+}
+.spell-effect b{font-size:7px;color:#ead18f;letter-spacing:0}
+.school-earth .spell-effect{color:#ddcdb5}
+.school-earth .spell-effect b{color:#e5c492}
+.spell.card-ornate:hover{transform:none}
+.spell.card-ornate.chosen{
+  transform:translateY(-2px);border-color:#8df3ed;
+  box-shadow:0 0 0 2px #68dfe1,0 0 14px #6acfe978,
+    inset 0 0 0 3px #c7ab75;
+}
+.spell.card-ornate.school-earth.chosen{
+  border-color:#e7d3a5;
+  box-shadow:0 0 0 2px #c5abef,0 0 14px #bd9fe577,
+    inset 0 0 0 3px #c7ab75;
+}
+.spell.card-ornate:disabled{opacity:.72;filter:saturate(.6) brightness(.77)}
+@media(max-width:700px){
+  .cards{gap:10px;padding:8px 1px 5px}
+  .spell.card-ornate{
+    flex:0 1 clamp(108px,32vw,132px);width:clamp(108px,32vw,132px);
+    max-width:132px;height:clamp(198px,26svh,218px);min-height:198px;
+    padding:5px 4px 6px;gap:2px;
+  }
+  .spell-tier{font-size:7px;letter-spacing:.02em}
+  .spell.card-ornate .spell-name{font-size:10px;min-height:19px}
+  .spell-combat b{font-size:10px}
+  .spell-effect,.spell-effect b{font-size:7px}
+}
+@media(max-height:710px) and (orientation:portrait){
+  .spell.card-ornate{height:190px;min-height:190px}
+  .spell-art-shell{min-height:41px}
+  .spell-effect{flex-basis:24px;min-height:24px;gap:1px}
+  .hand{padding:5px 7px 4px}
+}
+@media(orientation:landscape) and (max-height:620px){
+  .cards{gap:8px;padding:5px 0 3px}
+  .spell.card-ornate{
+    flex:0 1 clamp(96px,15vw,116px);width:clamp(96px,15vw,116px);
+    max-width:116px;height:clamp(146px,42svh,164px);min-height:146px;
+    padding:3px 4px 4px;gap:1px;
+  }
+  .cards > button.spell.card-ornate::before{
+    top:2px!important;width:21px;height:14px;font-size:9px;
+  }
+  .cards > button.spell.card-ornate .spell-mana-cost{
+    top:2px!important;right:3px!important;width:17px;height:17px;
+    min-width:17px;font-size:10px;
+  }
+  .spell-tier{margin-top:15px;min-height:8px;max-height:8px;font-size:6px;line-height:8px}
+  .spell-art-shell{min-height:29px}
+  .spell.card-ornate .spell-name{flex-basis:16px;min-height:16px;font-size:9px}
+  .spell-combat{flex-basis:17px;min-height:17px;font-size:6px;padding:1px 0}
+  .spell-combat b{font-size:9px}
+  .spell-effect{flex-basis:20px;min-height:20px;gap:1px;font-size:6px}
+  .spell-effect b{font-size:6px}
+}

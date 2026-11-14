@@ -1,3 +1,15 @@
+## NEW — Proper slim playing-card layout (v0.44.0)
+
+**[Play the latest Wizardry arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.44.0)**
+
+Both approved spell cards have been rebuilt as distinctly narrower, taller portrait playing cards. The blue trident and earth diamond crests are **integrated inside the upper border**, with the rarity label in a separate row below so neither overlaps. Mana costs are **small badges in the top-right corner of each card**, rather than large hexagons overlapping the summon illustration. The spell-art panels preserve their original in-game animation frames: Poseidon is gripping his raised trident and Stone Golem is the approved low-poly sprite.
+
+The damage row is simplified to damage and hit accuracy (the spell element is already visible in the rarity header) so labels fit on narrow phones. Portrait and compact landscape sizes are explicitly adjusted; both cards remain fully visible without scrolling sideways. The styles use a **new stylesheet filename** to invalidate the previous mobile CSS and remove its floating-symbol rules.
+
+**Spell mechanics unchanged:** Poseidon's Wrath still grants **Tidal Echo +30% and one-round recharge only on successful casts**; misses grant neither. Damage, accuracy, targeting, and animation timing unchanged.
+
+---
+
 ## FIX — Element crest icons raised above card rarity text (v0.43.3)
 
 **[Play with raised card symbols](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.3)**

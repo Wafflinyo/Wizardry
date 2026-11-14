@@ -1,4 +1,4 @@
-/* Wizardry 0.43 — interactive 2.5D battle test.
+/* Wizardry 0.44 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -688,8 +688,8 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>✹ '+k.damage.toLocaleString()+'</b> '+k.school.toUpperCase()+
-          '</span><span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
+          '<span class="spell-combat"><span><b>✹ '+k.damage.toLocaleString()+'</b></span>'+
+          '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+

@@ -1,4 +1,4 @@
-/* Wizardry 0.39 — interactive 2.5D battle test.
+/* Wizardry 0.40 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -1333,7 +1333,8 @@
   function golemFissurePoint(target,t){
     t=clamp(t,0,1);
     const sx=500+(target.x>=500?18:-18),sy=457;
-    const ex=target.x,ey=target.y+4,dx=ex-sx,dy=ey-sy;
+    // The same ground anchor used by the character's foot shadow.
+    const ex=target.x,ey=target.y+9,dx=ex-sx,dy=ey-sy;
     const len=Math.hypot(dx,dy)||1;
     const drift=Math.sin(Math.PI*t)*(Math.sin(t*18.4)*9+Math.sin(t*43)*3);
     return {x:sx+dx*t-dy/len*drift,y:sy+dy*t+dx/len*drift};
@@ -1357,63 +1358,114 @@
       [x+w*.53,y]],"#71845d");
     g.restore();
   }
+  // The rock wall moves as a discrete leading projectile, much like
+  // Poseidon's trident. Its path is complete at the SAME exact hit instant
+  // used by applySpell(); the trailing stones follow and then settle.
   function drawGolemFissure(anim,target,p){
-    if(!target||p<.365)return;
-    const hit=anim.card.hit;
-    const advance=ease(clamp((p-.365)/(hit-.365),0,1));
-    const trailFade=clamp((.90-p)/.21,0,1);
-    if(trailFade<=0)return;
-    g.save();g.globalAlpha=trailFade;
-    const steps=36;
-    // Draw jagged DARK seam + molten-green interior exactly under the
-    // traversing rocks. End point is target.x, target.y + 4: never short.
+    if(!target)return;
+    const hit=anim.card.hit,begin=.325;
+    if(p<begin||p>.89)return;
+    const travel=ease(clamp((p-begin)/(hit-begin),0,1));
+    const postHit=Math.max(0,p-hit);
+    const fade=p<hit?1:clamp((.89-p)/(.89-hit),0,1);
+    g.save();g.globalAlpha*=fade;
+    // The crack is physically connected from golem to advancing tip,
+    // including the near/far corners of every 1v1–4v4 battle arrangement.
+    const count=64;
     g.beginPath();
-    for(let i=0;i<=steps;i++){
-      const pt=golemFissurePoint(target,advance*i/steps);
-      if(!i)g.moveTo(pt.x,pt.y);else g.lineTo(pt.x,pt.y);
+    for(let i=0;i<=count;i++){
+      const pt=golemFissurePoint(target,travel*i/count);
+      if(i===0)g.moveTo(pt.x,pt.y);else g.lineTo(pt.x,pt.y);
     }
-    g.strokeStyle="#223029";g.lineWidth=15;g.lineJoin="round";g.lineCap="round";g.stroke();
-    g.strokeStyle="#657052";g.lineWidth=7;g.stroke();
-    g.strokeStyle="#bee18c";g.lineWidth=2.5;g.stroke();
-    // The stone ridge advances section-by-section instead of remaining a
-    // stationary stripe; consecutive peaks grow into view as it approaches.
-    for(let i=0;i<16;i++){
-      const t=(i+.5)/16;
-      if(t>advance)break;
+    g.lineCap="round";g.lineJoin="round";
+    g.strokeStyle="#162522";g.lineWidth=19;g.stroke();
+    g.strokeStyle="#607654";g.lineWidth=8;g.stroke();
+    g.strokeStyle="#b5e48d";g.lineWidth=3.5;g.stroke();
+
+    // Fixed stepping stones grow up behind the MOVING tip.
+    const segments=22;
+    for(let i=0;i<segments;i++){
+      const t=(i+.35)/segments;
+      if(t>travel)break;
       const q=golemFissurePoint(target,t);
-      const arrival=clamp((advance-t)*16,0,1);
-      const w=10+(i%3)*3+(i>12?4:0);
-      const h=(14+(i*7%13)+(i>12?5:0))*ease(arrival);
-      golemRock(q.x+(i%2?7:-7),q.y+2,w,h,i+3,.93);
-      if(i%3===0)golemRock(q.x+(i%2?-17:18),q.y+7,w*.60,h*.54,i+17,.82);
+      const growth=ease(clamp((travel-t)*14,0,1));
+      const w=12+(i%3)*3;
+      const h=(16+((i*7)%16))*growth;
+      const settle=p>=hit?clamp(1-postHit/.25,0,1):1;
+      golemRock(q.x+(i%2?7:-6),q.y+3,w,h,i+3,settle*.94);
+      if(i%3===0)
+        golemRock(q.x+(i%2?-16:17),q.y+8,w*.63,h*.57,i+17,settle*.83);
     }
-    // Impact is simultaneous with the existing hit check and damage tick.
-    // A crater and tall shards erupt AROUND the model's feet, not through
-    // its torso; the fighters still render over every spell layer.
+
+    // A distinct moving leading edge, ALWAYS at path(progress), not
+    // restricted to stationary samples that stop just before the target.
+    // Its three sharp peaks are large enough to read on a phone.
+    if(travel>.006){
+      const lead=golemFissurePoint(target,travel);
+      const lift=ease(clamp(travel*12,0,1));
+      const settle=clamp(1-postHit/.20,0,1);
+      const tall=46*lift*settle;
+      ellipse(g,lead.x,lead.y+2,32,10,"#1b302fae","#c8eba3",2.5);
+      golemRock(lead.x,lead.y+1,30,tall,101,1);
+      golemRock(lead.x-22,lead.y+5,19,tall*.65,103,.94);
+      golemRock(lead.x+23,lead.y+5,20,tall*.72,104,.94);
+      // Earth dust follows the tip rather than spawning in the middle.
+      for(let i=0;i<6;i++){
+        const theta=Math.PI*(.15+i/6);
+        const x=lead.x+Math.cos(theta)*(19+i%2*8);
+        const y=lead.y-8-Math.sin(theta)*(10+i%3*3)*lift;
+        pathPoly(g,[[x-4,y+4],[x+4,y+2],[x+2,y-4],[x-3,y-3]],
+          i%2?"#aebc86":"#718c63");
+      }
+    }
+
+    // Keep the hit point tangible while the leading stones slam into the
+    // target's foot anchor. This lasts after damage, not before the arrival.
     if(p>=hit){
-      const since=p-hit,eruption=ease(clamp(since/.045,0,1));
-      const decay=clamp((.84-p)/.14,0,1);
-      const amount=eruption*decay;
+      const burst=ease(clamp(postHit/.035,0,1));
+      const hold=clamp((.86-p)/(.86-hit),0,1);
+      const amount=burst*hold;
       if(amount>0){
-        ellipse(g,target.x,target.y+5,43*amount+12,15*amount+3,
-          "#3b4e3799","#c5e29c",2.5);
-        for(let i=0;i<6;i++){
-          const side=i%2?-1:1,rank=Math.floor(i/2);
-          const x=target.x+side*(20+rank*14);
-          const y=target.y+3+rank*4;
-          const h=(40-rank*9)*amount;
-          golemRock(x,y,17-rank*2,h,28+i,Math.max(.15,decay));
+        ellipse(g,target.x,target.y+9,22+48*amount,5+15*amount,
+          "#3d523ca8","#dcf1b4",3);
+        for(let i=0;i<8;i++){
+          const side=i%2?-1:1,ring=Math.floor(i/2);
+          const ex=target.x+side*(14+ring*14);
+          const ey=target.y+9+ring*2;
+          const h=(52-ring*9)*amount;
+          golemRock(ex,ey,22-ring*3,h,i+35,.94);
         }
-        // Small faceted fragments shoot outward then settle at the feet.
-        for(let i=0;i<9;i++){
-          const a=-Math.PI+Math.PI*i/8;
-          const r=18+amount*(14+i%3*8);
-          const x=target.x+Math.cos(a)*r;
-          const y=target.y-8-Math.abs(Math.sin(a))*21*amount;
-          pathPoly(g,[[x-3,y+2],[x+3,y],[x+2,y-5],[x-2,y-4]],
-            i%2?"#bacc91":"#7c9774");
+        for(let i=0;i<12;i++){
+          const angle=Math.PI*i/11;
+          const rr=22+amount*(21+i%3*9);
+          const x=target.x+Math.cos(angle)*rr;
+          const y=target.y+4-Math.sin(angle)*33*amount;
+          pathPoly(g,[[x-4,y+3],[x+4,y+2],[x+1,y-6],[x-2,y-4]],
+            i%2?"#c5d99a":"#7c9d77");
         }
       }
+    }
+    g.restore();
+  }
+  // Small front-layer contact burst so the stones unmistakably hit the
+  // visible boots. This stays below the HP/status plates and never covers
+  // the wizard's face or robe. Works for both mirrored teams.
+  function drawGolemImpactForeground(anim){
+    if(!anim||anim.stage!=="summon"||anim.card.id!=="golem"||
+       !anim.target)return;
+    const target=getUnit(anim.target),p=anim.elapsed/anim.duration;
+    if(!target||p<anim.card.hit-.018||p>anim.card.hit+.17)return;
+    const d=p-anim.card.hit;
+    const strength=d<0?ease(clamp((d+.018)/.018,0,1))*.42:
+      clamp(1-d/.17,0,1);
+    if(strength<=0)return;
+    g.save();
+    g.globalAlpha=strength;
+    ellipse(g,target.x,target.y+10,48,13,null,"#d7f5ae",3);
+    for(let i=0;i<5;i++){
+      const side=i%2?-1:1,rank=Math.floor(i/2);
+      const x=target.x+side*(21+rank*13),y=target.y+10;
+      golemRock(x,y,16,26-rank*5,56+i,.90);
     }
     g.restore();
   }
@@ -1539,6 +1591,9 @@
     }
     const sorted=[...state.units].sort((a,b)=>a.y-b.y);
     for(const u of sorted)drawUnit(u,time);
+    // A few stones and the shock ring sit over the target's boots, so the
+    // hit is visible even if the target's robe obscures the fissure behind.
+    if(state.animation)drawGolemImpactForeground(state.animation);
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
@@ -1590,6 +1645,7 @@
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,
     getGolemFissurePoint:golemFissurePoint,
     getGolemContactOffset:golemContactOffset,
+    getGolemImpactForeground:drawGolemImpactForeground,
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

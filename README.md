@@ -1,3 +1,13 @@
+## FIX — Stone Golem traveling rock-front reaches target (v0.40.0)
+
+**[Play Wizardry v0.40.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.40.0)**
+
+Stone Golem now sends a clearly visible **three-stone advancing head** along the full fissure rather than showing only stationary spikes that stop short. The tip follows the same continuous world-space path all the way to the chosen wizard's **foot anchor** at the 62% damage moment, comparable to Poseidon's moving trident. A 22-segment rocky trail grows behind it. At contact, tall rock shards, debris and an earth shock ring burst out around the target. A small foreground layer puts rocks above the **boots**, while preserving fighter body/face readability and keeping health/status plates in front. Stone fragments persist briefly after contact, making the hit readable on mobile.
+
+No changes to card hit chance (85%), base damage (900), total Golem spell duration (2850 ms), rune tracing (850 ms), character costumes, knockout logic or battlefield size.
+
+---
+
 ## FIX — Stone Golem fissure visibly reaches the enemy (v0.39.0)
 
 **[Play updated battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.39.0)**

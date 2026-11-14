@@ -1,0 +1,125 @@
+/* Wizardry v0.60 — Fire card + seven-card hand; no internal scroll. */
+#cardHand.cards {
+  display:flex;flex-flow:row nowrap;justify-content:center;
+  align-items:stretch;gap:clamp(2px,.75vw,7px);overflow:visible;
+  scroll-snap-type:none;padding:7px 1px 5px;max-width:100%;
+}
+#cardHand.cards>button.spell.card-ornate{
+  box-sizing:border-box;
+  flex:0 1 min(13.65%,114px);width:min(13.65%,114px);
+  max-width:114px;min-width:0;margin:0;
+  height:clamp(156px,22svh,199px);min-height:156px;
+  padding:3px 2px 5px;gap:1px;
+}
+#cardHand.cards>button.spell.card-ornate.school-fire{
+  --trim:#ffd39a;border-color:#ffbf7e;
+  background:
+  linear-gradient(138deg,#ffae4650,transparent 45%) top left/60% 48% no-repeat,
+  linear-gradient(230deg,#f665292f,transparent 42%) top right/58% 42% no-repeat,
+  linear-gradient(165deg,#693224,#3f2229 58%,#221a25);
+  box-shadow:inset 0 0 0 2px #543024,
+    inset 0 0 0 4px #e9a47b76,0 4px 12px #0009;
+}
+#cardHand.cards>button.spell.card-ornate.school-fire::before{
+  background-image:url("./card-elements/fire.svg"),
+    linear-gradient(150deg,#f8893c,#702723);
+}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-tier{color:#ffe0b9}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-name{
+  background:linear-gradient(#a54e2b,#5c2d28);color:#fff2d5;border-color:#f5b978;
+}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-mana-cost{
+  background:linear-gradient(145deg,#e27135,#723121);border-color:#ffcd85;
+}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-combat b{color:#ffd294}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-effect{color:#f6cbad}
+#cardHand.cards>button.spell.card-ornate.school-fire .spell-effect b{color:#ffe4b7}
+#cardHand.cards>button.spell.card-ornate.school-fire.chosen{
+  border-color:#ffe0a1;
+  box-shadow:0 0 0 2px #f6a74d,0 0 18px #ff81277a,
+  inset 0 0 0 3px #e8b380;
+}
+#cardHand.cards>button.spell.card-ornate .spell-name{
+  flex:0 0 28px;min-height:28px;max-height:28px;
+  font-size:clamp(7px,.88vw,8.7px);line-height:1.01;
+  padding:2px 1px;letter-spacing:-.027em;
+  white-space:normal;overflow:hidden;text-wrap:balance;
+}
+#cardHand.cards>button.spell.card-ornate .spell-tier{
+  font-size:clamp(5px,.66vw,6.8px);letter-spacing:-.024em;
+  white-space:nowrap;overflow:hidden;
+}
+#cardHand.cards>button.spell.card-ornate .spell-combat{
+  min-height:16px;flex-basis:16px;font-size:5px;letter-spacing:-.03em;
+}
+#cardHand.cards>button.spell.card-ornate .spell-combat b{font-size:clamp(7px,.86vw,9px)}
+#cardHand.cards>button.spell.card-ornate .spell-effect{
+  min-height:24px;flex-basis:24px;max-height:24px;
+  font-size:clamp(4.7px,.57vw,6.1px);gap:1px;line-height:1.02;
+  white-space:nowrap;overflow:hidden;
+}
+#cardHand.cards>button.spell.card-ornate .spell-effect b{font-size:inherit}
+#cardHand.cards>button.spell.card-ornate .spell-art-shell{
+  min-height:35px;flex:1 1 auto;
+}
+@media(max-width:700px){
+  #cardHand.cards{gap:2px;padding:6px 0 4px}
+  #cardHand.cards>button.spell.card-ornate{
+    flex:0 1 calc((100% - 12px)/7);
+    width:calc((100% - 12px)/7);max-width:none;min-width:0;
+    height:clamp(145px,21svh,183px);min-height:145px;
+    padding:3px 1px 4px;
+  }
+  #cardHand.cards>button.spell.card-ornate::before{
+    width:17px;height:15px;background-size:10px 11px,100% 100%;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-tier{
+    font-size:clamp(3.7px,1.04vw,5px);
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-name{
+    font-size:clamp(5.75px,1.6vw,7.3px);
+    flex-basis:25px;min-height:25px;max-height:25px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-mana-cost{
+    top:3px!important;right:2px!important;
+    width:14px;height:14px;min-width:14px;font-size:7.5px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-combat{
+    flex-basis:15px;min-height:15px;font-size:4.2px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-combat b{
+    font-size:clamp(6.1px,1.6vw,7.6px);
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-effect{
+    font-size:clamp(3.7px,1.03vw,4.9px);
+    flex-basis:21px;min-height:21px;max-height:21px;
+  }
+}
+@media(max-width:355px){
+  #cardHand.cards{gap:1px}
+  #cardHand.cards>button.spell.card-ornate{
+    flex-basis:calc((100% - 6px)/7);width:calc((100% - 6px)/7);
+    height:141px;min-height:141px;padding:2px 1px 3px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-tier{font-size:3.8px}
+  #cardHand.cards>button.spell.card-ornate .spell-name{font-size:5.5px}
+  #cardHand.cards>button.spell.card-ornate .spell-effect{font-size:3.6px}
+}
+@media(orientation:landscape) and (max-height:620px){
+  #cardHand.cards{gap:3px;padding:4px 0 3px}
+  #cardHand.cards>button.spell.card-ornate{
+    flex:0 1 calc((100% - 18px)/7);width:calc((100% - 18px)/7);
+    max-width:none;height:clamp(130px,38svh,158px);min-height:130px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-tier{
+    margin-top:15px;min-height:8px;max-height:8px;
+    font-size:5px;line-height:8px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-name{
+    min-height:20px;flex-basis:20px;max-height:20px;font-size:7px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-effect{
+    flex-basis:20px;min-height:20px;font-size:4.6px;
+  }
+  #cardHand.cards>button.spell.card-ornate .spell-art-shell{min-height:24px}
+}

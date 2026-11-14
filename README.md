@@ -1,3 +1,17 @@
+## NEW — Dragonfire Descent, Fire spell (v0.60.0)
+
+**[Play Dragonfire Descent](https://wafflinyo.github.io/Wizardry/arena.html?v=0.60.0)**
+
+The seventh collectible card **Dragonfire Descent (Legendary · Fire)** summons an approved low-poly baby dragon. The dragon falls from the sky into the arena center, **lands in a rolling smoke cloud**, charges a large fireball in its mouth, **launches the glowing fireball directly to a chosen enemy**, then the fireball explodes at the target and creates secondary fire bursts on its **immediate left and right formation neighbors**. Finally the baby dragon takes off and flies out of the arena. The original 4×4 16-frame approved sprite artwork is deployed as **assets/baby-dragon-fire-v60.webp** with the same art used by the card portrait and the in-game animated summon. Dragon and fireball are individually depth sorted with the fighters, preserving the earlier vampire and trident layering corrections.
+
+**Gameplay:** A successful Fire rune (80% base accuracy) and a 7-mana cast deliver **650 base damage to the selected enemy** and **150 base splash damage to each living immediate neighboring enemy** (only index −1 and +1, never skipping across an empty/defeated slot). A secondary **25% burn roll** applies only to the surviving main target after the fireball hits. Burn is a tappable 🔥 rune, inflicting exactly **50 direct damage at the start of each of the NEXT THREE rounds** (150 total if the target survives) and then expiring. It cannot affect allies or other splash targets. A new burn refreshes the three ticks rather than stacking; the round-start tick happens only once per target per round and can defeat a wizard, correctly ending the battle if a side is eliminated. On a missed Fire rune there is no dragon, fireball, splash or burn. Accuracy rolls remain automatic with no manual tracing difficulty.
+
+**Animation state:** drop (880 ms) → landing smoke (600 ms) → fireball charge (1,280 ms) → fireball flight (850 ms) → simultaneous main/splash contact (650 ms) → fly away (970 ms). Damage is applied once **when the fireball reaches the selected enemy**, not when the spell is queued, dragon lands or orb charges. Ordinary target selection and explicit confirmation are unchanged. The seventh card remains alongside all earlier spells in a single compact visible mobile hand, without a horizontal card scroller.
+
+**Balance:** 80% base accuracy and 7 mana are initial defaults. All existing six spells and their mechanics remain unchanged.
+
+---
+
 ## FIX — Smaller Crimson Siphon, buried coffin, world-space depth (v0.59.0)
 
 **[Play the corrected vampire and trident layers](https://wafflinyo.github.io/Wizardry/arena.html?v=0.59.0)**

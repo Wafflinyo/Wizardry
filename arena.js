@@ -1,4 +1,4 @@
-/* Wizardry 0.59 — interactive 2.5D battle test.
+/* Wizardry 0.60 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -34,7 +34,12 @@
     {id:"vampire",name:"Crimson Siphon",school:"dark",cost:7,target:"enemy",
       kind:"drain",damage:550,leech:.5,icon:"☠",
       description:"Vampire steals up to 550 HP, returns and offers a red orb healing 50% of HP actually drained",
-      short:"85% ACCURACY",accuracy:.85,duration:4500,hit:.68,artFrame:4}
+      short:"85% ACCURACY",accuracy:.85,duration:4500,hit:.68,artFrame:4},
+    {id:"dragon",name:"Dragonfire Descent",school:"fire",cost:7,target:"enemy",
+      kind:"dragon",damage:650,splash:150,burnChance:.25,
+      burnDamage:50,burnTurns:3,icon:"♨",
+      description:"Baby dragon drops in, charges a giant fireball and hits 650 + 150 to each adjacent enemy. 25% burn: 50 for 3 turns",
+      short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -171,6 +176,10 @@
   const VAMP_RISE_MS=1250,VAMP_OPEN_MS=830,VAMP_LUNGE_MS=1080;
   const VAMP_DRAIN_MS=700,VAMP_RETURN_MS=1330,VAMP_PRESENT_MS=900;
   const VAMP_ORB_MS=920,VAMP_VANISH_MS=650;
+  // Fire dragon lands, charges its own fireball, shoots at one enemy
+  // and splashes only their immediate formation neighbors, then flies off.
+  const DRAGON_DROP_MS=880,DRAGON_LAND_MS=600,DRAGON_CHARGE_MS=1280;
+  const DRAGON_SHOT_MS=850,DRAGON_IMPACT_MS=650,DRAGON_EXIT_MS=970;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -440,7 +449,8 @@
         "estel-impact","estel-exit","wind-summon","wind-volley",
         "wind-impact","wind-dissolve","vamp-rise","vamp-open",
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
-        "vamp-orb","vamp-vanish"]
+        "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
+        "dragon-charge","dragon-shot","dragon-impact","dragon-exit"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -488,6 +498,7 @@
       if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
       else if(a.card.id==="vampire")startStage(a,"vamp-rise",VAMP_RISE_MS);
+      else if(a.card.id==="dragon")startStage(a,"dragon-drop",DRAGON_DROP_MS);
       else startStage(a,a.card.id==="golem"?"golem-slam":"summon",
         a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
       ui.hint.textContent=caster.name+" invokes "+a.card.name+"!";
@@ -536,6 +547,26 @@
     }else if(a.stage==="wind-impact"){
       startStage(a,"wind-dissolve",WIND_DISSOLVE_MS);
     }else if(a.stage==="wind-dissolve"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
+    }else if(a.stage==="dragon-drop"){
+      startStage(a,"dragon-land",DRAGON_LAND_MS);
+      ui.hint.textContent="The baby dragon crashes onto the arena floor in a cloud of smoke!";
+    }else if(a.stage==="dragon-land"){
+      startStage(a,"dragon-charge",DRAGON_CHARGE_MS);
+      ui.hint.textContent="The dragon charges an enormous fireball in its mouth!";
+    }else if(a.stage==="dragon-charge"){
+      startStage(a,"dragon-shot",DRAGON_SHOT_MS);
+      ui.hint.textContent="The dragon launches its fireball toward "+
+        (getUnit(a.target)?.name||"the enemy")+"!";
+    }else if(a.stage==="dragon-shot"){
+      applyDragonImpact(a);
+      startStage(a,"dragon-impact",DRAGON_IMPACT_MS);
+      ui.hint.textContent="Dragonfire bursts onto the target and adjacent enemies!";
+      paintUI();
+    }else if(a.stage==="dragon-impact"){
+      startStage(a,"dragon-exit",DRAGON_EXIT_MS);
+      ui.hint.textContent="The baby dragon takes flight and leaves the arena.";
+    }else if(a.stage==="dragon-exit"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="vamp-rise"){
       startStage(a,"vamp-open",VAMP_OPEN_MS);
@@ -724,6 +755,59 @@
     }
     a.applied=true;
   }
+  function dragonSplashTargets(main,caster){
+    if(!main||!caster||main.team===caster.team)return [];
+    // "Left and right" means immediate formation neighbors: index ±1,
+    // never the next available living combatant beyond an empty slot.
+    return sideUnits(main.team).filter(u=>
+      u.hp>0&&Math.abs(u.index-main.index)===1);
+  }
+  function applyDragonImpact(a,roll=Math.random()){
+    if(!a||a.dragonImpactResolved||a.runeResult!=="success")return false;
+    a.dragonImpactResolved=true;a.applied=true;
+    const c=getUnit(a.source),target=getUnit(a.target);
+    if(!c||c.hp<=0||!target||target.hp<=0||c.team===target.team)return false;
+    // Lock the adjacent victims BEFORE primary damage (which may KO).
+    const neighbors=dragonSplashTargets(target,c);
+    a.dragonSplashIds=neighbors.map(u=>u.id);
+    damage(c,target,a.card.damage,a.card);
+    for(const u of neighbors)if(u.hp>0)damage(c,u,a.card.splash,a.card);
+    // Only primary target can burn; fireball must have hit successfully.
+    // Burns refresh to three future round ticks and never stack.
+    if(target.hp>0&&a.runeResult==="success"&&roll<a.card.burnChance){
+      addStatus(target,"burn","🔥",a.card.burnDamage);
+      const burn=target.statuses.find(st=>st.kind==="burn");
+      burn.remaining=a.card.burnTurns;
+      burn.appliedRound=state.round;
+      burn.lastTickRound=state.round;
+      flash(target,"BURNED (3 TURNS)","#ffb178");
+      state.log=[target.name+" is burned: 50 damage at the start of the next 3 rounds.",
+        ...state.log].slice(0,5);
+      a.dragonBurned=true;
+    }
+    paintUI();return true;
+  }
+  function tickBurnsForRound(){
+    // Called once after advancing the round number. Burn is direct fixed
+    // damage, bypasses one-hit shields and never deals damage to KO units.
+    for(const u of state.units){
+      const burn=u.statuses.find(st=>st.kind==="burn");
+      if(!burn)continue;
+      if(u.hp<=0){consumeStatus(u,"burn");continue;}
+      if(burn.lastTickRound===state.round||burn.appliedRound>=state.round)continue;
+      burn.lastTickRound=state.round;
+      const amount=Math.min(u.hp,burn.value||50);
+      u.hp-=amount;burn.remaining=Math.max(0,(burn.remaining||1)-1);
+      flash(u,"🔥 -"+amount,"#ffa56a");
+      state.log=[u.name+" takes "+amount+" burn damage ("+
+        burn.remaining+" ticks remaining).",...state.log].slice(0,5);
+      if(u.hp===0){
+        u.defeatElapsedMs=0;
+        flash(u,"DEFEATED","#ffdb9c");
+      }
+      if(!burn.remaining||u.hp===0)consumeStatus(u,"burn");
+    }
+  }
   function applySpell(anim){
     if(anim.applied)return;
     anim.applied=true;
@@ -805,6 +889,18 @@
     }
     for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
     state.round++;
+    tickBurnsForRound();
+    // A burn that KOs the last enemy ends the match before asking for
+    // another target; burn never carries on past the game-over screen.
+    if(!alive(0).length||!alive(1).length){
+      state.phase="finished";
+      state.animation=null;state.plans={};state.sequence=[];state.queueAt=0;
+      state.winner=alive(0).length&&!alive(1).length?0:
+        !alive(0).length&&alive(1).length?1:"draw";
+      ui.hint.textContent=state.winner==="draw"?"Draw!":
+        (state.winner===0?"Allies":"Enemy team")+" wins!";
+      paintUI();return;
+    }
     // Complete old round teardown: no queued player actions, target, card,
     // or combat animation may carry into the next planning phase.
     state.plans={};state.sequence=[];state.queueAt=0;state.animation=null;
@@ -847,7 +943,7 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Tap one of your six spells below."):
+        "Tap one of your seven spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
       (planning?" · "+(card?(card.target==="all_enemies"?"Cast on all enemies":
@@ -951,10 +1047,12 @@
           '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>':
           k.id==="wind"?
           '<span class="spell-effect"><b>≋ 200 TO ALL ENEMIES</b><span>HIT: NEXT SPELL +10% ACC</span></span>':
-          '<span class="spell-effect"><b>☠ SIPHON 550 HP</b><span>RETURN ORB HEALS 50%</span></span>';
+          k.id==="vampire"?
+          '<span class="spell-effect"><b>☠ SIPHON 550 HP</b><span>RETURN ORB HEALS 50%</span></span>':
+          '<span class="spell-effect"><b>♨ 650 + 150 SPLASH</b><span>25% BURN · 50 × 3 TURNS</span></span>';
         const rarity=water?"LEGENDARY":
           k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":
-          k.id==="vampire"?"LEGENDARY":"RARE";
+          k.id==="vampire"||k.id==="dragon"?"LEGENDARY":"RARE";
         b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
@@ -966,7 +1064,9 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="vampire"?
+          "% accuracy. "+(k.id==="dragon"?
+            "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
+            k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
             k.id==="wind"?
             "A tornado hurls rocks at ALL living enemies for 200 damage each. Successful cast grants +10 percentage points of accuracy on the next spell of any element; consumed on next attempt.":
@@ -1484,7 +1584,9 @@
         "golem-travel","golem-impact","estel-summon","estel-travel",
         "estel-impact","estel-exit","wind-summon","wind-volley",
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
-        "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish"].includes(visualStage)){
+        "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
+        "dragon-drop","dragon-land","dragon-charge","dragon-shot",
+        "dragon-impact","dragon-exit"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1545,6 +1647,10 @@
           detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
+      case "burn":
+        return {title:"🔥 Burning · Fire damage over time",
+          detail:u.name+" takes "+(st.value||50)+" damage at the start of each round for "+
+            (st.remaining||0)+" more ticks. Maximum 150 damage over 3 rounds. Does not stack; being burned again refreshes three ticks."};
       case "tailwind":
          return {title:"≋ Tailwind · Accuracy buff",
            detail:u.name+"'s next spell of ANY element gets +10 percentage points of accuracy (70% becomes 80%). Consumed on the next cast attempt, even on a miss. Does not stack."};
@@ -1612,7 +1718,8 @@
       const r=statusRuneRect(u,i);
       const glow=st.kind==="tidal_echo"?"#44dbee":
         st.kind==="stun"?"#98dfff":
-        st.kind==="recharge"?"#e6b75b":"#b4eac2";
+        st.kind==="recharge"?"#e6b75b":
+        st.kind==="burn"?"#ff9258":"#b4eac2";
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
@@ -1666,10 +1773,10 @@
         nature=card.school==="nature";
       c.clearRect(0,0,width,height);
       const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind",
-        dark=card.school==="dark";
-      sky.addColorStop(0,dark?"#5a243a":wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
-      sky.addColorStop(.55,dark?"#342039":wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
-      sky.addColorStop(1,dark?"#170e28":wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
+        dark=card.school==="dark",fire=card.school==="fire";
+      sky.addColorStop(0,fire?"#983c2a":dark?"#5a243a":wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
+      sky.addColorStop(.55,fire?"#583024":dark?"#342039":wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,fire?"#2a1a1a":dark?"#170e28":wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
       c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
       c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
@@ -1679,7 +1786,9 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(card.id==="vampire"){
+      if(card.id==="dragon"){
+        window.WIZARDRY_BABY_DRAGON_V60?.drawCardArt(c,width,height);
+      }else if(card.id==="vampire"){
         window.WIZARDRY_VAMPIRE_V57?.drawCardArt(c,width,height);
       }else if(card.id==="wind"){
         // Same faceted tornado and spiraling stones as the live cast.
@@ -1729,6 +1838,7 @@
     // from the same art asset used for the battlefield animation.
     window.WIZARDRY_TORNADO_V54?.onReady(drawCardArts);
     window.WIZARDRY_VAMPIRE_V57?.onReady(drawCardArts);
+    window.WIZARDRY_BABY_DRAGON_V60?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1774,6 +1884,13 @@
     const baseX=lerp(caster.x,target?.x||500,.48);
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
+    if(card.id==="dragon"){
+      window.WIZARDRY_BABY_DRAGON_V60?.draw(g,{
+        stage:anim.stage,progress:p,time,caster,target,
+        splashTargets:(anim.dragonSplashIds||[]).map(getUnit).filter(Boolean)
+      });
+      g.restore();return;
+    }
     if(card.id==="vampire"){
       window.WIZARDRY_VAMPIRE_V57?.draw(g,{
         stage:anim.stage,progress:p,time,caster,target
@@ -1917,6 +2034,10 @@
         if(a.stage==="golem-impact")effects?.drawImpact(g,a);
       }else if(a.card.id==="vampire"&&vampStages.includes(a.stage)){
         // Vampire layers are inserted among wizard bodies below.
+      }else if(a.card.id==="dragon"&&
+        ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
+         "dragon-impact","dragon-exit"].includes(a.stage)){
+        // Dragon and its projectile use the shared world depth sorter.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
             ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage)||
@@ -1954,6 +2075,27 @@
         }
       }
     }
+    if(action?.card?.id==="dragon"&&
+      ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
+       "dragon-impact","dragon-exit"].includes(action.stage)){
+      const dragon=window.WIZARDRY_BABY_DRAGON_V60;
+      if(dragon){
+        const opts={stage:action.stage,
+          progress:clamp(action.elapsed/action.duration,0,1),time,
+          caster:getUnit(action.source),target:getUnit(action.target),
+          splashTargets:(action.dragonSplashIds||[]).map(getUnit).filter(Boolean)};
+        renderables.push({
+          type:"baby-dragon",depthY:dragon.depthFor(opts,"actor"),priority:1,
+          draw:()=>dragon.draw(g,{...opts,layer:"actor"})
+        });
+        if(["dragon-shot","dragon-impact"].includes(action.stage)){
+          renderables.push({
+            type:"dragon-fireball",depthY:dragon.depthFor(opts,"projectile"),
+            priority:2,draw:()=>dragon.draw(g,{...opts,layer:"projectile"})
+          });
+        }
+      }
+    }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({
       type:"poseidon-trident",depthY:trident.depthY,priority:2,
@@ -1971,6 +2113,14 @@
       window.WIZARDRY_TORNADO_V54?.drawForeground(g,{
         stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
         time,targets:a.windImpactTargets||[]
+      });
+    }
+    if(state.animation?.stage==="dragon-impact"){
+      const a=state.animation;
+      window.WIZARDRY_BABY_DRAGON_V60?.drawForeground(g,{
+        stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
+        time,target:getUnit(a.target),
+        splashTargets:(a.dragonSplashIds||[]).map(getUnit).filter(Boolean)
       });
     }
     if(["vamp-drain","vamp-orb"].includes(state.animation?.stage)){
@@ -2033,6 +2183,14 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
+      stage:state.animation.stage,
+      burned:!!state.animation.dragonBurned,
+      impactResolved:!!state.animation.dragonImpactResolved,
+      splashIds:state.animation.dragonSplashIds||[],
+      progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
+    }:null,
+    dragonSplashTargets,applyDragonImpact,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

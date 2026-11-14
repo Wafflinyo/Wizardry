@@ -1,4 +1,4 @@
-/* Wizardry 0.30 — interactive 2.5D battle test.
+/* Wizardry 0.32 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -288,6 +288,10 @@
     const caster=getUnit(a.source);
     a.elapsed=Math.min(a.duration,a.elapsed+Math.max(0,deltaMs));
     const p=clamp(a.elapsed/a.duration,0,1);
+    // Keep a continuous motion clock while tracing and awaiting the outcome.
+    // It never resets at the tracing -> summon/fizzle boundary.
+    if(["tracing-auto","summon","fizzle"].includes(a.stage))
+      a.traceMs=(a.traceMs||0)+Math.max(0,deltaMs);
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -338,7 +342,7 @@
       c.mana-=card.cost;
       c.armRaise=0;
       state.animation={action,card,stage:"raising",elapsed:0,duration:ARM_RAISE_MS,
-        applied:false,source:c.id,target:action.targetId,
+        applied:false,traceMs:0,source:c.id,target:action.targetId,
         automatic:!!action.auto||(state.mode==="story"&&c.team===1),
         runeResult:null,runeScore:null};
       ui.hint.textContent=c.name+" raises their staff toward the center...";
@@ -984,7 +988,8 @@
         time,
         stage:state.animation?.source===u.id?state.animation.stage:null,
         progress:state.animation?.source===u.id&&state.animation.duration?
-          state.animation.elapsed/state.animation.duration:0
+          state.animation.elapsed/state.animation.duration:0,
+        traceMs:state.animation?.source===u.id?(state.animation.traceMs||0):0
     })){
       // The rig is drawn within this fighter's Canvas depth transform.
     }else{

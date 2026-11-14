@@ -1,3 +1,13 @@
+## FIXED — One staff, two skeletal rig animations (v0.32.0)
+
+**[Test the rigged idle and casting motions](https://wafflinyo.github.io/Wizardry/rig-preview.html?v=0.32.0)** · **[Open updated battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.32.0)**
+
+Previously, the artist's original staff remained baked into the body image while another was attached by code, producing two. The old staff and forearm are now removed from the original image layer and the hidden robe panels are reconstructed. A single staff prop, at one mathematically fixed length, is attached to the animated hand. An articulated shoulder, elbow and wrist are used for the entire clip. **Idle** gently bobs while facing down-right; **casting** extends the arm, continuously waves the rigid staff while the magic rune traces and the spell resolves, then lowers naturally on either success or failure. Feet remain planted. No effect particles are added to the character rig.
+
+The new demo has independent Idle, Casting and Cycle buttons. Only the top ally's default amethyst, classic robe, pointed-hat appearance uses this rig; other outfits and units retain their previous customization/fallback. Existing spell damage, accuracy, cards and rendering order are unchanged.
+
+---
+
 ## NEW — Rigged top-slot wizard casting (v0.31.0)
 
 **[Play 2.5D battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.31.0)** · **[Open standalone rig test](https://wafflinyo.github.io/Wizardry/rig-preview.html?v=0.31.0)**

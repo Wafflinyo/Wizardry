@@ -1,3 +1,11 @@
+## UPDATE — Staff waving stops at rune outcome (v0.35.0)
+
+**[Play Wizardry battle v0.35.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.35.0)**
+
+The top allied wizard waves the staff **only during the 850 ms rune tracing phase**. When the rune accuracy check succeeds or fails, the staff immediately begins a 520 ms lowering/recovery animation, concurrent with the summon or fizzle. Once lowered, the wizard stays in the 12-frame breathing idle even if the spell's full 2550/2850 ms summon animation is still playing. The combat stage machine, damage, accuracy, recharge, spell effects, HUD and fixed arena dimensions remain unchanged. Failed casts finish their lowering across the short 360 ms fizzle and early post-fizzle stage so the arm does not snap back.
+
+---
+
 ## NEW — Stable battlefield layout + slower spell effects (v0.34.0)
 
 **[Play updated Wizardry battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.34.0)**

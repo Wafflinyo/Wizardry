@@ -1,4 +1,4 @@
-/* Wizardry 0.34 — interactive 2.5D battle test.
+/* Wizardry 0.35 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -65,7 +65,7 @@
   function wizardFrame(stage,p,ms,time,lowerFrom){
     const progress=clamp(p,0,1);
     if(stage==="raising")return 12+Math.min(3,Math.floor(ease(progress)*4));
-    if(stage==="tracing-auto"||stage==="summon"||stage==="fizzle")return waveFrame(ms);
+    if(stage==="tracing-auto")return waveFrame(ms);
     if(stage==="lowering"){
       const from=Number.isInteger(lowerFrom)?clamp(lowerFrom,16,23):23;
       if(progress<.38)return Math.min(23,from+Math.floor(ease(progress/.38)*(24-from)));
@@ -81,6 +81,7 @@
     ctx.restore();return true;
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=850,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
@@ -284,6 +285,10 @@
     if(!a||a.stage!=="tracing-auto")return false;
     const success=spellHitCheck(a.card);
     a.runeResult=success?"success":"failed";
+    // Rune outcome ends the staff wave immediately, irrespective of the
+    // subsequent summon/fizzle animation's length.
+    a.lowerFromFrame=waveFrame(a.traceMs||0);
+    a.visualRecoveryMs=0;
     const c=getUnit(a.source);
     const label=Math.round(a.card.accuracy*100)+"% accuracy";
     if(success){
@@ -305,10 +310,14 @@
     const caster=getUnit(a.source);
     a.elapsed=Math.min(a.duration,a.elapsed+Math.max(0,deltaMs));
     const p=clamp(a.elapsed/a.duration,0,1);
-    // Keep a continuous motion clock while tracing and awaiting the outcome.
-    // It never resets at the tracing -> summon/fizzle boundary.
-    if(["tracing-auto","summon","fizzle"].includes(a.stage))
+    // Trace only while checking the rune. The spell effect remains active
+    // independently while the caster lowers their staff and resumes idle.
+    if(a.stage==="tracing-auto")
       a.traceMs=(a.traceMs||0)+Math.max(0,deltaMs);
+    if(["summon","fizzle","lowering"].includes(a.stage)&&
+       Number.isFinite(a.visualRecoveryMs))
+      a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
+        a.visualRecoveryMs+Math.max(0,deltaMs));
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -338,7 +347,8 @@
         }
         a.postCastEffectsApplied=true;
       }
-      a.lowerFromFrame=waveFrame(a.traceMs||0);
+      // The top-slot sprite has normally returned to idle during the spell.
+      // Legacy lowering remains for the other procedural fighters.
       startStage(a,"lowering",caster?.team===0&&caster.index===0?520:ARM_LOWER_MS);
       paintUI();
     }else if(a.stage==="lowering"){
@@ -1000,9 +1010,16 @@
     const approvedTopSlot=u.team===0&&u.index===0&&
       u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4";
     const action=state.animation?.source===u.id?state.animation:null;
+    let visualStage=action?.stage||"idle";
+    let visualProgress=action?.duration?action.elapsed/action.duration:0;
+    if(action&&["summon","fizzle","lowering"].includes(visualStage)){
+      // Stop waving the instant rune accuracy resolves. Smoothly lower the
+      // staff while the summon/failure effect plays, then breathe at idle.
+      visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
+      visualStage=visualProgress>=1?"idle":"lowering";
+    }
     if(approvedTopSlot&&drawWizardSprite(g,
-        action?.stage||"idle",
-        action?.duration?action.elapsed/action.duration:0,
+        visualStage,visualProgress,
         action?.traceMs||0,time,action?.lowerFromFrame)){
       // This draw remains within the depth-sorted unit layer.
     }else{

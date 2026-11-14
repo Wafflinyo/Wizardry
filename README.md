@@ -1,3 +1,11 @@
+## NEW — One-shot kneeling defeat animation (v0.37.0)
+
+**[Play battle with defeat animation](https://wafflinyo.github.io/Wizardry/arena.html?v=0.37.0)**
+
+All 1v1–4v4 wizard slots now use the approved eight-frame transparent defeat sequence at a lethal hit (HP falls to zero). The single-staff wizard raises his hands/staff, lowers them, drops to his knees, folds forward with head down, and **holds the final kneeling-ball pose until the battle resets**. The 745ms sequence plays once per character, not on every render. Idle breathing and casting are suspended for defeated units. The enemy side is automatically mirrored to face inward, and the original position/depth order remains unchanged. Defeated wizards stay visible even beneath the victory announcement. All player/CPU action rules, damage, accuracy, rune timing, summoned spell art, and fixed canvas dimensions stay unchanged.
+
+---
+
 ## NEW — Approved wizard in every battle slot (v0.36.0)
 
 **[Open Wizardry 1v1–4v4 battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.36.0)**

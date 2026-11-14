@@ -1,4 +1,4 @@
-/* Wizardry 0.36 — interactive 2.5D battle test.
+/* Wizardry 0.37 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -61,6 +61,27 @@
   wizardAtlas.decoding="async";
   wizardAtlas.src="./assets/wizard-approved-animations-v33.png";
   const wizardAtlasReady=()=>wizardAtlas.complete&&wizardAtlas.naturalWidth===512&&wizardAtlas.naturalHeight===896;
+  // Eight approved full-body defeat poses, bottom-aligned in a 4×2 atlas.
+  // They belong to the same one-staff model and face with the team mirror.
+  const defeatAtlas=new Image();
+  defeatAtlas.decoding="async";
+  defeatAtlas.src="./assets/wizard-defeat-v37.png";
+  const defeatAtlasReady=()=>defeatAtlas.complete&&defeatAtlas.naturalWidth===512&&defeatAtlas.naturalHeight===256;
+  const DEFEAT_FRAME_STARTS=[0,95,185,285,385,510,625,745];
+  const DEFEAT_HOLD_MS=DEFEAT_FRAME_STARTS.at(-1);
+  function defeatFrame(ms){
+    const t=Math.max(0,ms||0);
+    for(let i=DEFEAT_FRAME_STARTS.length-1;i>=0;i--)
+      if(t>=DEFEAT_FRAME_STARTS[i])return i;
+    return 0;
+  }
+  function drawDefeatSprite(ctx,elapsedMs){
+    if(!defeatAtlasReady())return false;
+    const i=defeatFrame(elapsedMs);
+    ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    ctx.drawImage(defeatAtlas,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    ctx.restore();return true;
+  }
   const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
   function wizardFrame(stage,p,ms,time,lowerFrom){
     const progress=clamp(p,0,1);
@@ -89,7 +110,7 @@
       // Every fighter starts with the same approved wizard visual.
       // A human may still pick a custom outfit via the existing controls.
       hat:"pointed",robe:"classic",robeColor:"#6f4ab4",
-      armRaise:0,facing:team?-.74:.74};
+      armRaise:0,facing:team?-.74:.74,defeatElapsedMs:null};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
@@ -411,7 +432,13 @@
     const shield=consumeStatus(target,"shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
     const amount=Math.max(1,Math.round(raw));
+    const wasAlive=target.hp>0;
     target.hp=Math.max(0,target.hp-amount);
+    if(wasAlive&&target.hp===0){
+      // Start the one-shot defeat animation at the exact lethal hit.
+      // This remains independent of the attacker's ongoing summon/trace.
+      target.defeatElapsedMs=0;
+    }
     flash(target,"-"+amount,shield?"#8df2f5":"#f8c49c");
     state.log=[source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
@@ -993,7 +1020,8 @@
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
     g.save();g.translate(u.x,u.y);
     ellipse(g,0,8,66*scale,17*scale,"#010910a8");
-    if(u.hp<=0)g.globalAlpha=.28;
+    // Keep the collapsed pose readable instead of fading it nearly away.
+    if(u.hp<=0)g.globalAlpha=.85;
     if(state.auras[u.team]){
       ellipse(g,0,3,72*scale,23*scale,"#5edbd41b","#76f1d39b",2);
     }
@@ -1026,9 +1054,11 @@
     const idleTime=time+u.index*235+u.team*437;
     g.save();
     if(u.team===1)g.scale(-1,1);
-    const spriteDrawn=approvedWizard&&drawWizardSprite(g,
-      visualStage,visualProgress,
-      action?.traceMs||0,idleTime,action?.lowerFromFrame);
+    const spriteDrawn=u.hp<=0
+      ? drawDefeatSprite(g,u.defeatElapsedMs||0)
+      : approvedWizard&&drawWizardSprite(g,
+          visualStage,visualProgress,
+          action?.traceMs||0,idleTime,action?.lowerFromFrame);
     g.restore();
     if(spriteDrawn){
       // All sprites stay in the same depth-sorted scene and use the
@@ -1382,7 +1412,8 @@
       g.fillStyle=f.color;g.fillText(f.text,f.x,f.y-f.age*67);g.restore();
     }
     if(state.phase==="finished"){
-      g.fillStyle="#03121ecb";g.fillRect(0,0,W,H);
+      // The defeated wizards remain visible in their held kneeling pose.
+      g.fillStyle="#03121e88";g.fillRect(0,0,W,H);
       g.fillStyle="#f4e2aa";g.font="700 52px Georgia,serif";g.textAlign="center";
       g.fillText(state.winner==="draw"?"DRAW":state.winner===0?"ALLIES VICTORIOUS":"ENEMIES VICTORIOUS",500,292);
       g.font="20px system-ui";g.fillStyle="#bbdbdc";
@@ -1398,6 +1429,14 @@
     updateFacing(dt);
     if(state.phase==="resolving"&&state.animation)
       updateCastSequence(dt);
+    // Each fallen wizard gets its own timeline: play the sequence once,
+    // then freeze on frame 7 through the rest of the battle and victory.
+    for(const u of state.units){
+      if(u.hp<=0){
+        if(!Number.isFinite(u.defeatElapsedMs))u.defeatElapsedMs=0;
+        else u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,u.defeatElapsedMs+dt);
+      }
+    }
     for(const f of state.flashes)f.age+=dt/1000;
     state.flashes=state.flashes.filter(f=>f.age<.96);
     render(now);
@@ -1421,7 +1460,10 @@
     },
     getSummonAvailable:kind=>!!spriteCache[kind]?.every(im=>im.complete&&im.naturalWidth),
     getTopWizardIdleAvailable:wizardAtlasReady,
-    getApprovedWizardFrame:wizardFrame
+    getApprovedWizardFrame:wizardFrame,
+    getDefeatAvailable:defeatAtlasReady,
+    getDefeatFrame:defeatFrame,
+    defeatHoldMs:DEFEAT_HOLD_MS
   };
   setupControlHandlers();createBackground();setupSprites();setBattle("story",4);
   requestAnimationFrame(tick);

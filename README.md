@@ -1,3 +1,15 @@
+## RESTORED — Approved Stone Golem slam + independent fissure (v0.42.0)
+
+**[Battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.42.0)** · **[Animation preview](https://wafflinyo.github.io/Wizardry/golem-preview.html?v=0.42.0)**
+
+The Stone Golem is back to the **exact original 16-frame approved sprites**, in their real sequence: rises from the ground (frames 0–3), **clasps both fists** (4–5), **winds up overhead** (6–7), **smashes the ground** (8–11), stands back up (12–13), briefly idles, then sinks into the earth (14–15). The golem is never used as a moving projectile.
+
+Two new **separate, transparent animations** replace all v0.40 synthetic rock overlays: an eight-frame repeating lime-green, faceted stone fissure that moves on the ground from the slam to the selected enemy at a distance-aware speed; and an eight-frame growing/dissolving impact burst at the target's feet. The golem's idle/unsummon timeline runs **independently while the fissure travels**. Damage is still applied only when the travel animation arrives. Only a thin section of the actual impact sprite is rendered over the target's boots; HP/status plates stay unobscured.
+
+Unchanged: Golem 85% accuracy and 900 base damage; Poseidon's Wrath; wizard outfits, spell tracing, defeated kneeling pose, and fixed arena dimensions. The separate golem animation now takes its own stage timings so rock travel can reach targets naturally in every lane.
+
+---
+
 ## REBUILT — Stone Golem's three-part spell animation (v0.41.0)
 
 **[Play battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.41.0)** · **[Test animation alone](https://wafflinyo.github.io/Wizardry/golem-preview.html?v=0.41.0)**

@@ -1,46 +1,143 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Wizardry — Stone Golem animation preview</title>
-<style>*{box-sizing:border-box}body{margin:0;padding:12px;background:#071b26;color:#e1ece6;font:14px system-ui}main{max-width:1040px;margin:auto;background:#102736;border:1px solid #aab38b;border-radius:12px;overflow:hidden}header,footer{padding:14px}h1{font:700 26px Georgia,serif;color:#ddebc0;margin:0}p{color:#b2cbbf;line-height:1.4}canvas{display:block;width:100%;aspect-ratio:1000/620;background:#1b323a}section{padding:14px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}button{background:#264b43;color:#eaf4d5;border:1px solid #8fb78b;border-radius:8px;padding:9px 13px;font-weight:700}#phase{color:#a0e6ac;font-weight:800}footer{color:#a7c0b6}</style></head><body><main><header><h1>Stone Golem — Rebuilt Spell Animation</h1><p>Separate slam, looping traveling fissure, and impact clips. Damage occurs when travel reaches the target, not on an unrelated timer.</p></header><canvas id="scene" width="1000" height="620"></canvas><section><button data-preset="near">Near target</button><button data-preset="far">Far target</button><button data-preset="left">Opposite side</button><button id="replay">Replay cast</button><span id="phase">Loading textures...</span></section><footer>Sprite art uses the approved low-poly golem textures. The traveling fissure has its own looping frame animation.</footer></main>
-<script src="./assets/stone-golem-approved-v23-row0.js" defer></script><script src="./assets/stone-golem-approved-v23-row1.js" defer></script><script src="./assets/stone-golem-approved-v23-row2.js" defer></script><script src="./assets/stone-golem-approved-v23-row3.js" defer></script><script src="./assets/golem-effects-v41.js?v=0.41.0" defer></script>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wizardry — Original Stone Golem animation v0.42</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#081b25;color:#e7f1ec;font:14px system-ui,sans-serif}
+main{max-width:1040px;margin:12px auto;background:#122e3a;border:1px solid #71948b;border-radius:14px;overflow:hidden}
+header,footer{padding:12px 16px}h1{font:700 26px Georgia,serif;color:#e6ecc8;margin:0 0 5px}
+p{margin:0;color:#b3d0c8;line-height:1.45}
+canvas{display:block;width:100%;aspect-ratio:1000/620}
+.controls{padding:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{cursor:pointer;background:#225b57;color:#f6fbe9;border:1px solid #8fbda1;border-radius:9px;padding:10px;font-weight:750}
+button:focus-visible{outline:3px solid #a8f9d3}button.active{background:#3f7c5d}
+#phase{font-weight:800;color:#c0f29f}#progress{color:#9bc6c3}
+footer{color:#a9c4b9}
+</style></head>
+<body><main><header><h1>Stone Golem — Original Summon &amp; Separate Fissure</h1>
+<p>The original approved golem rises, clasps its hands, winds up, slams, returns to idle and unsummons.
+A separate eight-frame stone fissure travels to the target and plays its own impact clip.</p></header>
+<canvas id="scene" width="1000" height="620"></canvas>
+<section class="controls">
+<button type="button" data-pos="near" class="active">Near target</button>
+<button type="button" data-pos="far">Far target</button>
+<button type="button" data-pos="left">Opposite side</button>
+<button type="button" id="replay">Replay</button>
+<button type="button" id="slow" aria-pressed="false">½ speed</button>
+<span id="phase" aria-live="polite">Loading frames…</span><span id="progress"></span>
+</section><footer>Golem: original approved 16-frame sprite atlas · fissure: independent 8-frame loop · impact: separate 8-frame clip. Damage triggers when travel reaches the target.</footer></main>
+<script src="./assets/stone-golem-approved-v23-row0.js" defer></script>
+<script src="./assets/stone-golem-approved-v23-row1.js" defer></script>
+<script src="./assets/stone-golem-approved-v23-row2.js" defer></script>
+<script src="./assets/stone-golem-approved-v23-row3.js" defer></script>
+<script src="./assets/golem-effects-v42.js?v=0.42.0" defer></script>
 <script>
 window.addEventListener("DOMContentLoaded",()=>{
-const canvas=document.getElementById("scene"),g=canvas.getContext("2d");
-const frames=window.WIZARDRY_GOLEM_V23_ROWS||[];
-const rows=frames.map(src=>{const im=new Image();im.src=src;return im;});
-const effect=window.WIZARDRY_GOLEM_EFFECTS_V41;
-const wizard=new Image();wizard.src="./assets/wizard-approved-animations-v33.png";
-let selected={x:831,y:488},origin=performance.now();
-const SLAM=950,IMPACT=520,MIN=700,MAX=1280,SPEED=.34;
-document.querySelectorAll("[data-preset]").forEach(btn=>btn.onclick=()=>{
-  selected=btn.dataset.preset==="near"?{x:667,y:315}:btn.dataset.preset==="left"?{x:175,y:340}:{x:831,y:488};
-  origin=performance.now();
-});
-document.getElementById("replay").onclick=()=>{origin=performance.now()};
-function draw(now){
-  const start={x:500,y:463},end={x:selected.x,y:selected.y+8};
-  const travel=Math.max(MIN,Math.min(MAX,Math.hypot(end.x-start.x,end.y-start.y)/SPEED));
-  const duration=SLAM+travel+IMPACT+700,elapsed=(now-origin)%duration;
-  let stage="golem-slam",t=elapsed,span=SLAM;
-  if(elapsed>=SLAM+travel){stage="golem-impact";t=elapsed-SLAM-travel;span=IMPACT}
-  else if(elapsed>=SLAM){stage="golem-travel";t=elapsed-SLAM;span=travel}
-  const anim={elapsed:Math.min(t,span),duration:span,travelStart:start,travelEnd:end};
-  g.fillStyle="#102a35";g.fillRect(0,0,1000,620);
-  g.strokeStyle="#4c6b665a";
-  for(let i=0;i<7;i++){g.beginPath();g.ellipse(500,470,90+i*78,17+i*18,0,0,Math.PI*2);g.stroke();}
-  g.fillStyle="#638a71";g.fillRect(0,530,1000,90);
-  if(stage==="golem-slam")effect.drawSlam(g,t,SLAM);
-  if(stage==="golem-travel"){effect.drawSlam(g,SLAM,SLAM);effect.drawTravel(g,anim,rows)}
-  if(stage==="golem-impact"){effect.drawSlam(g,SLAM,SLAM)}
-  g.save();g.translate(selected.x,selected.y);
-  if(selected.x<500)g.scale(-1,1);
-  if(wizard.complete&&wizard.naturalWidth)g.drawImage(wizard,0,0,128,128,-62,-194,124,194);
-  else{g.fillStyle="#815ec3";g.fillRect(-35,-160,70,160)}
-  g.restore();
-  if(stage==="golem-impact")effect.drawImpact(g,anim,rows);
-  g.fillStyle="#d9ebc2";g.font="bold 16px system-ui";g.fillText(stage.replace("golem-","").toUpperCase(),14,28);
-  document.getElementById("phase").textContent=stage==="golem-slam"?"Golem winds up and slams":
-    stage==="golem-travel"?"Fissure loops and travels to the wizard":"Impact at target — damage lands";
-  requestAnimationFrame(draw);
-}
-requestAnimationFrame(draw)
+  "use strict";
+  const canvas=document.getElementById("scene"),g=canvas.getContext("2d");
+  const sources=window.WIZARDRY_GOLEM_V23_ROWS||[];
+  const rows=sources.map(s=>{const im=new Image();im.src=s;return im;});
+  const fx=window.WIZARDRY_GOLEM_EFFECTS_V42;
+  const wizard=new Image();wizard.src="./assets/wizard-approved-animations-v33.png";
+  const targets={near:{x:667,y:315},far:{x:831,y:488},left:{x:175,y:340}};
+  const SLAM=1520,IMPACT=540,SPEED=.31;
+  const phase=document.getElementById("phase"),progress=document.getElementById("progress");
+  let key="near",slow=false,last=0,anim=null,done=false;
+  function restart(){
+    const point=targets[key];
+    anim={stage:"golem-slam",elapsed:0,duration:SLAM,
+      golemPostSlamMs:0,targetPoint:{x:point.x,y:point.y+8}};
+    done=false;last=0;
+    for(const b of document.querySelectorAll("button[data-pos]"))
+      b.classList.toggle("active",b.dataset.pos===key);
+  }
+  function next(){
+    const t=targets[key];
+    if(anim.stage==="golem-slam"){
+      const dir=t.x>=500?1:-1;
+      const from={x:500+dir*112,y:462},to={x:t.x,y:t.y+8};
+      const distance=Math.hypot(to.x-from.x,to.y-from.y);
+      anim.travelStart=from;anim.travelEnd=to;
+      anim.golemPostSlamMs=0;anim.stage="golem-travel";
+      anim.duration=Math.max(650,Math.min(1480,distance/SPEED));
+    }else if(anim.stage==="golem-travel"){
+      anim.stage="golem-impact";anim.duration=IMPACT;
+    }else if(anim.stage==="golem-impact"){
+      done=true;anim.stage="done";anim.duration=1;
+    }
+    anim.elapsed=0;
+  }
+  function update(ms){
+    if(done)return;
+    let remainder=Math.max(0,ms);
+    let iterations=0;
+    while(remainder>0&&iterations++<9&&!done){
+      const take=Math.min(remainder,anim.duration-anim.elapsed);
+      anim.elapsed+=take;remainder-=take;
+      if(["golem-travel","golem-impact"].includes(anim.stage))
+        anim.golemPostSlamMs+=take;
+      if(anim.elapsed>=anim.duration)next();
+    }
+  }
+  function paintFloor(){
+    const sky=g.createLinearGradient(0,0,0,620);
+    sky.addColorStop(0,"#102f40");sky.addColorStop(.52,"#1a3839");
+    sky.addColorStop(1,"#46513f");
+    g.fillStyle=sky;g.fillRect(0,0,1000,620);
+    for(let y=340;y<620;y+=44){
+      g.beginPath();g.moveTo(0,y);g.lineTo(1000,y+Math.sin(y*.02)*10);
+      g.strokeStyle="#a4bb8c1c";g.lineWidth=2;g.stroke();
+    }
+    for(let x=0;x<1000;x+=75){
+      g.beginPath();g.moveTo(x,350);g.lineTo(x+(x-500)*.32,620);
+      g.strokeStyle="#b0c79714";g.lineWidth=2;g.stroke();
+    }
+    g.fillStyle="#060c1199";
+    g.beginPath();g.ellipse(500,466,123,20,0,0,Math.PI*2);g.fill();
+    const t=targets[key];
+    g.beginPath();g.ellipse(t.x,t.y+8,55,13,0,0,Math.PI*2);g.fill();
+  }
+  function targetWizard(){
+    const t=targets[key];
+    if(!wizard.complete||wizard.naturalWidth!==512)return;
+    const scale=.72;
+    g.save();g.translate(t.x,t.y);g.scale(-scale,scale);
+    g.drawImage(wizard,0,0,128,128,-74,-220,148,220);
+    g.restore();
+  }
+  function render(now){
+    paintFloor();
+    if(!fx){phase.textContent="Animation scripts failed to load";return;}
+    if(anim&&anim.stage!=="done"){
+      fx.drawGolem(g,anim,rows,now);
+      if(anim.stage==="golem-travel")fx.drawTravel(g,anim);
+      if(anim.stage==="golem-impact")fx.drawImpact(g,anim);
+    }
+    targetWizard();
+    if(anim?.stage==="golem-impact")fx.drawImpactForeground(g,anim);
+    const labels={"golem-slam":"ORIGINAL GOLEM: emerge → clasp → wind-up → SLAM",
+       "golem-travel":"FISSURE TRAVEL: looping rock-front; golem idles then unsummons",
+       "golem-impact":"TARGET IMPACT: separate burst at the wizard's feet",
+       done:"COMPLETE — Replay or select another target"};
+    phase.textContent=labels[anim?.stage]||"Loading frames…";
+    const info=fx.getAtlasInfo();
+    progress.textContent=(info.travelReady&&info.impactReady?"Textures ready":"Loading effects…")+
+      (anim?.stage==="golem-travel"?" · "+Math.round(anim.elapsed/anim.duration*100)+"% traveled":"");
+  }
+  function loop(now){
+    const dt=last?Math.min(60,now-last):0;last=now;
+    if(anim)update(dt*(slow?.5:1));
+    render(now);requestAnimationFrame(loop);
+  }
+  for(const b of document.querySelectorAll("button[data-pos]")){
+    b.addEventListener("click",()=>{key=b.dataset.pos;restart();});
+  }
+  document.getElementById("replay").addEventListener("click",restart);
+  document.getElementById("slow").addEventListener("click",e=>{
+    slow=!slow;e.currentTarget.setAttribute("aria-pressed",String(slow));
+    e.currentTarget.classList.toggle("active",slow);
+    e.currentTarget.textContent=slow?"1× speed":"½ speed";
+  });
+  restart();requestAnimationFrame(loop);
 });
 </script></body></html>

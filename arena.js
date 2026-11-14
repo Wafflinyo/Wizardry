@@ -1,4 +1,4 @@
-/* Wizardry 0.41 — interactive 2.5D battle test.
+/* Wizardry 0.42 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -106,8 +106,10 @@
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=850,ARM_LOWER_MS=340,FIZZLE_MS=360;
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
-  const GOLEM_SLAM_MS=950,GOLEM_IMPACT_MS=520;
-  const GOLEM_SPEED_PX_PER_MS=.34,GOLEM_MIN_TRAVEL_MS=700,GOLEM_MAX_TRAVEL_MS=1280;
+  // Original full Golem animation: emerge, clasp, wind up, slam,
+  // stand/idle, then dissolve while the independent fissure is still moving.
+  const GOLEM_SLAM_MS=1520,GOLEM_IMPACT_MS=540;
+  const GOLEM_SPEED_PX_PER_MS=.31,GOLEM_MIN_TRAVEL_MS=650,GOLEM_MAX_TRAVEL_MS=1480;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -345,8 +347,14 @@
     const c=getUnit(a.source);
     const label=Math.round(a.card.accuracy*100)+"% accuracy";
     if(success){
-      // Golem uses its own chained, animated stages. The spell's hit
-      // check is STILL determined here; damage waits for actual arrival.
+      // Freeze actual target coordinates before the Golem starts winding up,
+      // including targets on the left side of PvP local test.
+      if(a.card.id==="golem"){
+        const goal=getUnit(a.target);
+        a.targetPoint=goal?{x:goal.x,y:goal.y+8}:null;
+        a.golemPostSlamMs=0;
+      }
+      // Stone Golem gets distinct original slam and independent fissure stages.
       startStage(a,a.card.id==="golem"?"golem-slam":"summon",
         a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
       ui.hint.textContent=c.name+" completes the "+a.card.school+
@@ -374,6 +382,10 @@
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
+    // Golem can return to idle and unsummon independently of the moving
+    // fissure; its animation clock is never reset at a combat stage boundary.
+    if(["golem-travel","golem-impact"].includes(a.stage))
+      a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -389,6 +401,8 @@
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
     }else if(a.stage==="golem-slam"){
+      // The original approved frame 11 is the moment the clasped-fist
+      // ground slam finishes. Spawn the separate fissure ONLY after it.
       beginGolemTravel(a);
       ui.hint.textContent="Stone Golem slams the ground! The fissure races toward its target.";
     }else if(a.stage==="golem-travel"){
@@ -1101,7 +1115,8 @@
     const action=state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
-    if(action&&["summon","fizzle","lowering"].includes(visualStage)){
+    if(action&&["summon","fizzle","lowering","golem-slam",
+        "golem-travel","golem-impact"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1341,17 +1356,18 @@
     return i;
   }
 
-  // v0.41: start a dedicated world-space traveling animation after the
-  // golem slam. Speed is constant; travel duration varies with distance.
-  // Rendering is delegated to THREE INDEPENDENT sprite animations.
+  // The source is exactly where the original Golem slams the arena;
+  // the 8-frame rock wave has its own world-space travel clock.
   function beginGolemTravel(anim){
     const target=getUnit(anim.target);
-    const start={x:500,y:463};
-    const end=target?{x:target.x,y:target.y+8}:{x:500,y:463};
-    const pixels=Math.hypot(end.x-start.x,end.y-start.y);
-    const duration=clamp(pixels/GOLEM_SPEED_PX_PER_MS,
+    const direction=(target?.x??700)>=500?1:-1;
+    const start={x:500+direction*112,y:462};
+    const end=target?{x:target.x,y:target.y+8}:start;
+    const distance=Math.hypot(end.x-start.x,end.y-start.y);
+    const duration=clamp(distance/GOLEM_SPEED_PX_PER_MS,
       GOLEM_MIN_TRAVEL_MS,GOLEM_MAX_TRAVEL_MS);
     anim.travelStart=start;anim.travelEnd=end;
+    anim.golemPostSlamMs=0;
     startStage(anim,"golem-travel",duration);
   }
   function drawAction(anim,time){
@@ -1454,14 +1470,13 @@
     // Spell passes are BELOW ALL fighter models, regardless of action
     // caster, depth or target. Approved sprites are left completely intact.
     if(state.animation){
-      const a=state.animation,effects=window.WIZARDRY_GOLEM_EFFECTS_V41;
-      if(a.stage==="golem-slam"){
-        effects?.drawSlam(g,a.elapsed,a.duration);
-      }else if(a.stage==="golem-travel"){
-        effects?.drawSlam(g,GOLEM_SLAM_MS,GOLEM_SLAM_MS);
-        effects?.drawTravel(g,a,spriteCache.golem);
-      }else if(a.stage==="golem-impact"){
-        effects?.drawSlam(g,GOLEM_SLAM_MS,GOLEM_SLAM_MS);
+      const a=state.animation,effects=window.WIZARDRY_GOLEM_EFFECTS_V42;
+      if(["golem-slam","golem-travel","golem-impact"].includes(a.stage)){
+        // Original 16-frame Golem character and the rock attack have
+        // INDEPENDENT animation clips, paths, clocks and source textures.
+        effects?.drawGolem(g,a,spriteCache.golem,time);
+        if(a.stage==="golem-travel")effects?.drawTravel(g,a);
+        if(a.stage==="golem-impact")effects?.drawImpact(g,a);
       }else if(a.stage==="summon")drawAction(a,time);
       else {
         drawAirborneRune(a);
@@ -1470,11 +1485,11 @@
     }
     const sorted=[...state.units].sort((a,b)=>a.y-b.y);
     for(const u of sorted)drawUnit(u,time);
-    // The separate IMPACT sprite plays over the target's feet, not over
-    // the wizard's HP/status plates, and never uses procedural rock shapes.
+    // Only the bottom portion of the 8-frame impact atlas overlays the
+    // target's boots. The full effect stays behind the wizard model.
     if(state.animation?.stage==="golem-impact")
-      window.WIZARDRY_GOLEM_EFFECTS_V41?.drawImpact(
-        g,state.animation,spriteCache.golem);
+      window.WIZARDRY_GOLEM_EFFECTS_V42?.drawImpactForeground(
+        g,state.animation);
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
@@ -1527,7 +1542,7 @@
     getGolemTravelInfo:()=>state?.animation?.stage==="golem-travel"?
       {start:state.animation.travelStart,end:state.animation.travelEnd,
        duration:state.animation.duration,progress:state.animation.elapsed/state.animation.duration}:null,
-    getGolemSpriteInfo:()=>window.WIZARDRY_GOLEM_EFFECTS_V41?.getAtlasInfo(),
+    getGolemSpriteInfo:()=>window.WIZARDRY_GOLEM_EFFECTS_V42?.getAtlasInfo(),
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

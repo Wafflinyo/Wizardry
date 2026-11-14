@@ -1,4 +1,4 @@
-/* Wizardry v0.55.0 — Faster approved tornado, direct high-velocity rocks.
+/* Wizardry v0.56.0 — Faster approved tornado, direct high-velocity rocks.
    Source artwork: user's approved generated twelve-frame GIF, extracted as
    a transparent 4x3 WebP atlas for the existing Wizardry battlefield.
    Each enemy receives its own launched stones and timed rock impact. */
@@ -46,10 +46,12 @@ function rock(c,x,y,r,rot,seed){
 // cycling rapidly while stones leave it and during the impact aftermath.
 const SPIN_FRAME_MS=55; // ~18 fps, more than 3x the former attack speed.
 function frameFor(stage,p,time){
- if(stage==="wind-summon")return p<.22?0:p<.52?1:2;
- if(stage==="wind-volley"||stage==="wind-impact")
+ // The approved tornado must ALREADY be spinning as soon as it appears.
+ // Previously summon froze frame 0/1/2 for ~210/290/460 ms, making the
+ // whole cyclone visibly pause before the first stone was fired.
+ // A shared clock keeps rotation continuous across every battle stage.
+ if(["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(stage))
    return 2+(Math.floor(Math.max(0,time)/SPIN_FRAME_MS)%10);
- if(stage==="wind-dissolve")return 2+(Math.floor(Math.max(0,time)/SPIN_FRAME_MS)%10);
  return 2;
 }
 function fallbackFunnel(c,cx,base,p,time){

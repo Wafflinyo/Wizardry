@@ -1,3 +1,11 @@
+## FIX — Tornado spins from the instant it is summoned (v0.56.0)
+
+**[Play Tornado Barrage with continuous spinning](https://wafflinyo.github.io/Wizardry/arena.html?v=0.56.0)**
+
+The previously approved twelve-frame full teal tornado had a summon-stage freeze: frame 0 was held for 22% of the 960ms summon, frame 1 until 52%, and frame 2 for the remainder. It visibly stalled before launching rocks. The summon now cycles the SAME fast rotating frames (2–11) every 55 milliseconds immediately from the start, sharing the attack animation's continuous real-time frame clock. The funnel still fades in and grows to full size, but it **never pauses its rotation** during summoning, rock volley, impact, or disappearance. The approved original model/texture, direct 152ms rock shots, staggered 200-damage impacts, 6-mana cost, 80% accuracy, and successful-cast +10-point Tailwind effect are unchanged.
+
+---
+
 ## UPDATED — Faster spinning tornado and straight-line rock shots (v0.55.0)
 
 **[Play Tornado Barrage with fast rocks](https://wafflinyo.github.io/Wizardry/arena.html?v=0.55.0)**

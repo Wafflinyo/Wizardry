@@ -1,3 +1,13 @@
+## FIX — Element crest icons raised above card rarity text (v0.43.3)
+
+**[Play with raised card symbols](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.3)**
+
+The decorative blue trident and gold earth-diamond crests have been moved **further up relative to each card** (13 additional CSS pixels, with 12 pixels on compact landscape), and the card row now has extra reserved space above the borders. Neither crest should cover **LEGENDARY · WATER** or **EPIC · EARTH**. The card portrait proportions, existing summon artwork, mana shields, spell names, damage/accuracy and Tidal Echo rules remain unchanged.
+
+The stylesheet now has a **new filename**, `assets/spell-cards-v44.css`, to ensure browsers do not keep loading an older cached card layout.
+
+---
+
 ## FIX — Card crest symbols no longer cover rarity labels (v0.43.2)
 
 **[Play Wizardry with corrected spell cards](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.2)**

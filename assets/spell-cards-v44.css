@@ -1,0 +1,161 @@
+/* v0.43.3 — Slim, centered low-poly playing cards.
+   Loaded after arena.css so the 1:1-ish legacy cards cannot override it. */
+.cards{
+  display:flex;justify-content:center;align-items:stretch;
+  gap:clamp(10px,3vw,18px);width:100%;padding:27px 0 0;
+  margin:0;overflow:visible;scroll-snap-type:none
+}
+.spell.card-ornate{
+  --card-gold:#d9be81;
+  position:relative;isolation:isolate;
+  flex:0 1 clamp(130px,37vw,178px);width:clamp(130px,37vw,178px);
+  max-width:178px;height:clamp(190px,25svh,232px);min-height:190px;
+  display:flex;flex-direction:column;align-items:stretch;
+  gap:3px;padding:8px 6px 7px;overflow:visible;
+  border:2px solid var(--card-gold);border-radius:9px 9px 13px 13px;
+  background:
+    linear-gradient(135deg,transparent 10%,#4fa5be29 11%,transparent 12%) top left/50% 35% no-repeat,
+    linear-gradient(225deg,transparent 10%,#4fa5be25 11%,transparent 12%) top right/50% 35% no-repeat,
+    linear-gradient(155deg,#144457,#0c2b40 61%,#061b2e);
+  box-shadow:inset 0 0 0 2px #0c2635,inset 0 0 0 4px #cfb47a66,0 6px 15px #000a;
+  color:#f6e8c8;text-align:center;
+  transition:border-color .12s,transform .12s
+}
+.spell.card-ornate.school-earth{
+  background:
+    linear-gradient(135deg,transparent 10%,#bb9c6630 11%,transparent 12%) top left/50% 35% no-repeat,
+    linear-gradient(225deg,transparent 10%,#bb9c6629 11%,transparent 12%) top right/50% 35% no-repeat,
+    linear-gradient(155deg,#443b3d,#28272f 61%,#141d27);
+  border-color:#cfb080;box-shadow:inset 0 0 0 2px #27202b,
+    inset 0 0 0 4px #c7ac7d6c,0 6px 15px #000a
+}
+.spell.card-ornate:before{
+  content:"♆";position:absolute;left:50%;top:-32px!important;z-index:5;
+  transform:translateX(-50%);pointer-events:none;
+  width:22px;height:21px;display:grid;place-items:center;
+  color:#bff8ff;background:linear-gradient(150deg,#176480,#0b283d);
+  border:1.4px solid #d5b879;
+  clip-path:polygon(50% 0,100% 37%,82% 100%,18% 100%,0 37%);
+  font:800 14px Georgia,serif;
+  filter:drop-shadow(0 2px 3px #00111c)
+}
+.spell.card-ornate.school-earth:before{
+  content:"◆";font-size:11px;color:#ffdfa6;
+  background:linear-gradient(140deg,#856445,#30242d)
+}
+.spell.card-ornate:after{
+  content:"";position:absolute;inset:4px;z-index:0;
+  pointer-events:none;border:1px solid #d9c08b80;
+  border-radius:5px 5px 10px 10px
+}
+.spell.card-ornate>*{position:relative;z-index:1}
+.spell-tier{
+  display:block;flex:0 0 auto;min-height:11px;
+  color:#b6f2f6;font:800 8px/1.15 system-ui,sans-serif;
+  letter-spacing:.07em;overflow:visible;white-space:nowrap
+}
+.school-earth .spell-tier{color:#ead1a0}
+.spell-mana-cost{
+  position:absolute!important;top:29px;left:6px;z-index:4!important;
+  width:29px;height:29px;display:grid;place-items:center;
+  border:2px solid #e5c783;font:800 16px Cinzel,Georgia,serif;
+  color:#fff7df;background:linear-gradient(145deg,#115e7a,#102637);
+  clip-path:polygon(50% 0,91% 19%,100% 60%,62% 100%,18% 100%,0 48%,18% 18%);
+  filter:drop-shadow(0 2px 2px #00101bcc)
+}
+.school-earth .spell-mana-cost{background:linear-gradient(145deg,#896d48,#302730)}
+.spell-art-shell{
+  display:block;flex:1 1 auto;min-height:60px;width:100%;
+  position:relative;overflow:hidden;border-radius:5px 5px 2px 2px;
+  border:1px solid #c1b78d87;box-shadow:0 1px 5px #0006
+}
+.spell-art-canvas{
+  display:block;width:100%;height:100%;object-fit:cover
+}
+.spell.card-ornate .spell-name{
+  display:grid;place-items:center;flex:0 0 auto;
+  min-height:20px;margin:-3px -3px 0;padding:2px 0;
+  border:1px solid #d8bd82;border-radius:3px;
+  background:linear-gradient(#244050,#091f30);
+  font:700 clamp(10px,2.4vw,13px)/1.09 Cinzel,Georgia,serif;
+  color:#ffe7bc;text-shadow:0 1px 1px #000c;
+  white-space:nowrap;overflow:visible;letter-spacing:-.012em
+}
+.spell.card-ornate.school-earth .spell-name{background:linear-gradient(#43343b,#1a202a)}
+.spell-combat{
+  display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:center;
+  width:100%;min-height:22px;margin:0;padding:3px 0;
+  border-top:0;border-bottom:1px solid #b99b6e80;
+  font-size:8px;white-space:nowrap
+}
+.spell-combat>span{min-width:0;display:flex;align-items:center;justify-content:center;gap:2px}
+.spell-combat>span+span{border-left:1px solid #b99b6e80}
+.spell-combat b{color:#f0faff;font-size:clamp(10px,2.5vw,13px)}
+.spell-combat .school-earth b,.school-earth .spell-combat b{color:#f0ddb0}
+.spell-effect{
+  display:flex;flex:0 0 auto;align-items:center;justify-content:center;
+  flex-direction:column;gap:2px;min-height:29px;
+  font:700 8px/1.08 system-ui,sans-serif;letter-spacing:0;
+  color:#addde7;white-space:nowrap
+}
+.spell-effect b{font-size:8px;color:#e8ca85}
+.school-earth .spell-effect{color:#d8c6b2}
+.spell.card-ornate.chosen{
+  transform:translateY(-2px);
+  border-color:#9cf8f2;
+  box-shadow:0 0 0 2px #66dce6,0 0 16px #67dcea78,inset 0 0 0 3px #ccb57d
+}
+.spell.card-ornate.school-earth.chosen{
+  border-color:#e5d7b5;
+  box-shadow:0 0 0 2px #bca9ed,0 0 16px #c3a5e275,inset 0 0 0 3px #ccb57d
+}
+@media(max-width:700px){
+  .cards{gap:10px;padding:27px 1px 0}
+  .spell.card-ornate{
+    flex:0 1 clamp(130px,37vw,165px);
+    width:clamp(130px,37vw,165px);max-width:165px;
+    height:clamp(190px,25svh,218px);min-height:190px;
+    gap:2px;padding:7px 5px 6px
+  }
+  .spell-tier{font-size:7px;letter-spacing:.035em;min-height:10px}
+  .spell.card-ornate .spell-name{min-height:18px;font-size:clamp(10px,2.7vw,12px)}
+  .spell-mana-cost{top:26px;left:5px;width:27px;height:27px;font-size:14px}
+  .spell-combat{min-height:20px;padding:2px 0}
+  .spell-combat b{font-size:clamp(10px,2.5vw,12px)}
+  .spell-effect{min-height:27px;font-size:7.5px}
+  .spell-effect b{font-size:7.5px}
+}
+@media(max-height:710px) and (orientation:portrait){
+  .spell.card-ornate{height:173px;min-height:173px}
+  .spell-art-shell{min-height:48px}
+  .spell-effect{min-height:24px;gap:1px}
+  .hand{padding:5px 7px 4px}
+  .arena{max-width:min(100%,calc((100svh - 390px)*1.6129))}
+}
+@media(orientation:landscape) and (max-height:620px){
+  .cards{gap:8px;padding:21px 0 0}
+  .spell.card-ornate{
+    flex:0 1 clamp(105px,15vw,138px);
+    width:clamp(105px,15vw,138px);max-width:138px;
+    height:clamp(132px,41svh,166px);min-height:132px;gap:1px;padding:4px
+  }
+  .spell-art-shell{min-height:33px}
+  .spell.card-ornate:before{top:-26px!important;width:19px;height:15px;font-size:10px}
+  .spell-tier{font-size:7px;min-height:8px}
+  .spell.card-ornate .spell-name{min-height:15px;font-size:10px}
+  .spell-combat{min-height:17px;padding:1px 0 2px}
+  .spell-combat b{font-size:9px}
+  .spell-effect{min-height:21px;gap:0;font-size:7px}
+  .spell-effect b{font-size:7px}
+  .spell-mana-cost{top:18px;left:4px;width:23px;height:23px;font-size:12px}
+}
+
+/* Both crests finish above the top gold border. Rarity labels and
+   spell names remain unobstructed at phone and landscape widths. */
+
+/* Versioned v0.43.3 crest clearance. The element icon ends *above* the
+   card's top edge; rarity labels remain centered in their own clear row. */
+.cards > button.spell.card-ornate::before{top:-32px!important;}
+@media(orientation:landscape) and (max-height:620px){
+  .cards > button.spell.card-ornate::before{top:-26px!important;}
+}

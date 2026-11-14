@@ -1,3 +1,13 @@
+## REBUILT — Stone Golem's three-part spell animation (v0.41.0)
+
+**[Play battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.41.0)** · **[Test animation alone](https://wafflinyo.github.io/Wizardry/golem-preview.html?v=0.41.0)**
+
+Stone Golem is now a three-stage, sprite-based animation with independent clocks. The golem appears and **slams** (950 ms), then an **eight-frame looping rocky fissure** moves toward the selected enemy at a consistent speed (~0.34 arena pixels/ms, clamped to 700–1280 ms depending on distance). Its moving position is calculated in world coordinates from arena center to the target's actual ground anchor. The fissure is a separate textured sprite animation, baked from approved Golem fissure art, **not** the previous procedural crack/ridge code. On contact, damage is applied exactly once, and a separate **eight-frame impact burst** plays for 520 ms. The golem remains present during travel/impact. Everything is drawn in proper arena layers, with the impact visible over boots and below HP labels.
+
+The previous hand-drawn fissure, rock-front, and extra foreground-overlay functions are removed entirely. Stone Golem still has 85% accuracy and 900 base damage; failed runes still fizzle without creating a golem or hitting anyone. Poseidon's Wrath, the wizard's animations and customization, and the fixed battle frame are unchanged. The Stone Golem's total animation time now scales slightly with target distance so the travel never stops early. A separate interactive preview includes near, far, and opposite-side targets.
+
+---
+
 ## FIX — Stone Golem traveling rock-front reaches target (v0.40.0)
 
 **[Play Wizardry v0.40.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.40.0)**

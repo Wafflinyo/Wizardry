@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Wizardry — Stone Golem animation preview</title>
+<style>*{box-sizing:border-box}body{margin:0;padding:12px;background:#071b26;color:#e1ece6;font:14px system-ui}main{max-width:1040px;margin:auto;background:#102736;border:1px solid #aab38b;border-radius:12px;overflow:hidden}header,footer{padding:14px}h1{font:700 26px Georgia,serif;color:#ddebc0;margin:0}p{color:#b2cbbf;line-height:1.4}canvas{display:block;width:100%;aspect-ratio:1000/620;background:#1b323a}section{padding:14px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}button{background:#264b43;color:#eaf4d5;border:1px solid #8fb78b;border-radius:8px;padding:9px 13px;font-weight:700}#phase{color:#a0e6ac;font-weight:800}footer{color:#a7c0b6}</style></head><body><main><header><h1>Stone Golem — Rebuilt Spell Animation</h1><p>Separate slam, looping traveling fissure, and impact clips. Damage occurs when travel reaches the target, not on an unrelated timer.</p></header><canvas id="scene" width="1000" height="620"></canvas><section><button data-preset="near">Near target</button><button data-preset="far">Far target</button><button data-preset="left">Opposite side</button><button id="replay">Replay cast</button><span id="phase">Loading textures...</span></section><footer>Sprite art uses the approved low-poly golem textures. The traveling fissure has its own looping frame animation.</footer></main>
+<script src="./assets/stone-golem-approved-v23-row0.js" defer></script><script src="./assets/stone-golem-approved-v23-row1.js" defer></script><script src="./assets/stone-golem-approved-v23-row2.js" defer></script><script src="./assets/stone-golem-approved-v23-row3.js" defer></script><script src="./assets/golem-effects-v41.js?v=0.41.0" defer></script>
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+const canvas=document.getElementById("scene"),g=canvas.getContext("2d");
+const frames=window.WIZARDRY_GOLEM_V23_ROWS||[];
+const rows=frames.map(src=>{const im=new Image();im.src=src;return im;});
+const effect=window.WIZARDRY_GOLEM_EFFECTS_V41;
+const wizard=new Image();wizard.src="./assets/wizard-approved-animations-v33.png";
+let selected={x:831,y:488},origin=performance.now();
+const SLAM=950,IMPACT=520,MIN=700,MAX=1280,SPEED=.34;
+document.querySelectorAll("[data-preset]").forEach(btn=>btn.onclick=()=>{
+  selected=btn.dataset.preset==="near"?{x:667,y:315}:btn.dataset.preset==="left"?{x:175,y:340}:{x:831,y:488};
+  origin=performance.now();
+});
+document.getElementById("replay").onclick=()=>{origin=performance.now()};
+function draw(now){
+  const start={x:500,y:463},end={x:selected.x,y:selected.y+8};
+  const travel=Math.max(MIN,Math.min(MAX,Math.hypot(end.x-start.x,end.y-start.y)/SPEED));
+  const duration=SLAM+travel+IMPACT+700,elapsed=(now-origin)%duration;
+  let stage="golem-slam",t=elapsed,span=SLAM;
+  if(elapsed>=SLAM+travel){stage="golem-impact";t=elapsed-SLAM-travel;span=IMPACT}
+  else if(elapsed>=SLAM){stage="golem-travel";t=elapsed-SLAM;span=travel}
+  const anim={elapsed:Math.min(t,span),duration:span,travelStart:start,travelEnd:end};
+  g.fillStyle="#102a35";g.fillRect(0,0,1000,620);
+  g.strokeStyle="#4c6b665a";
+  for(let i=0;i<7;i++){g.beginPath();g.ellipse(500,470,90+i*78,17+i*18,0,0,Math.PI*2);g.stroke();}
+  g.fillStyle="#638a71";g.fillRect(0,530,1000,90);
+  if(stage==="golem-slam")effect.drawSlam(g,t,SLAM);
+  if(stage==="golem-travel"){effect.drawSlam(g,SLAM,SLAM);effect.drawTravel(g,anim,rows)}
+  if(stage==="golem-impact"){effect.drawSlam(g,SLAM,SLAM)}
+  g.save();g.translate(selected.x,selected.y);
+  if(selected.x<500)g.scale(-1,1);
+  if(wizard.complete&&wizard.naturalWidth)g.drawImage(wizard,0,0,128,128,-62,-194,124,194);
+  else{g.fillStyle="#815ec3";g.fillRect(-35,-160,70,160)}
+  g.restore();
+  if(stage==="golem-impact")effect.drawImpact(g,anim,rows);
+  g.fillStyle="#d9ebc2";g.font="bold 16px system-ui";g.fillText(stage.replace("golem-","").toUpperCase(),14,28);
+  document.getElementById("phase").textContent=stage==="golem-slam"?"Golem winds up and slams":
+    stage==="golem-travel"?"Fissure loops and travels to the wizard":"Impact at target — damage lands";
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw)
+});
+</script></body></html>

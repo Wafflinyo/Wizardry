@@ -1,3 +1,19 @@
+## UPDATE — Centered vampire coffin, 16 new frames and full shadow-body flight (v0.58.0)
+
+**[Play the corrected Crimson Siphon](https://wafflinyo.github.io/Wizardry/arena.html?v=0.58.0)**
+
+The vampire now uses a freshly illustrated, **16-frame 4×4 transparent sprite atlas**, replacing the original 12-frame artwork. The new frames show the character fully emerging, flying entirely clear of the coffin, siphoning, gliding back and presenting the glowing blood orb. The airborne vampire has a **complete tapering purple shadow-mist lower body**, augmented with animated procedural mist streamers so the torso no longer ends abruptly.
+
+The coffin has moved from y=467 to the **center floor circle** (x=500, y=341 in the 1000×620 game canvas), and rises from that position instead of covering the arena's near foreground. It fades into mystical smoke when the vampire fully departs, without duplicating a static vampire at the coffin's location.
+
+**Direction fixed:** Distinct outward, return, and offering orientations. The original right-facing launch poses are mirrored for returns toward a left-side caster; the new offering frames already face LEFT, so they are *not* mirrored for a left-side caster. A right-side caster gets the opposite orientation. The blood orb now originates at the actual offered hand, travels toward the summoning wizard, and restores HP only upon reaching them.
+
+**Smoother presentation:** Sixteen unique source frames plus short in-between pose blends and per-frame positional interpolation. Stage durations increase modestly to make the entire coffin-to-enemy-to-caster trip readable on phone: Rise 1250ms, Open 830ms, Lunge 1080ms, Drain 700ms, Return 1330ms, Present 900ms, Orb 920ms, Vanish 650ms.
+
+**Mechanics preserved:** 550 Dark damage up to actual remaining enemy HP, 50% of actual HP drained restores to caster on orb arrival (max HP capped), 85% accuracy, 7 mana, Dark skull trace, failed-cast behavior, CPU and PvP sides all unchanged. Other five spells untouched.
+
+---
+
 ## NEW — Crimson Siphon (Dark vampire spell), v0.57.0
 
 **[Play Crimson Siphon in Wizardry](https://wafflinyo.github.io/Wizardry/arena.html?v=0.57.0)**

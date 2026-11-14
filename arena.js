@@ -1,4 +1,4 @@
-/* Wizardry 0.57 — interactive 2.5D battle test.
+/* Wizardry 0.58 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -165,8 +165,11 @@
   // the former 620ms arcing hops. One damage event per target still lands
   // precisely at the renderer's own hitAt() milestone.
   const WIND_FORM_MS=960,WIND_VOLLEY_MS=1520,WIND_IMPACT_MS=420,WIND_DISSOLVE_MS=620;
-  const VAMP_RISE_MS=1100,VAMP_OPEN_MS=670,VAMP_LUNGE_MS=880;
-  const VAMP_DRAIN_MS=700,VAMP_RETURN_MS=1100,VAMP_PRESENT_MS=760;
+  // Smooth sixteen-frame vampire: rise and open at the center floor ring,
+  // fully leave the coffin, travel to the target, then return and turn
+  // toward its own caster BEFORE presenting the free-floating blood orb.
+  const VAMP_RISE_MS=1250,VAMP_OPEN_MS=830,VAMP_LUNGE_MS=1080;
+  const VAMP_DRAIN_MS=700,VAMP_RETURN_MS=1330,VAMP_PRESENT_MS=900;
   const VAMP_ORB_MS=920,VAMP_VANISH_MS=650;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
@@ -539,7 +542,7 @@
       ui.hint.textContent="The coffin opens to reveal the vampire!";
     }else if(a.stage==="vamp-open"){
       startStage(a,"vamp-lunge",VAMP_LUNGE_MS);
-      ui.hint.textContent="The vampire launches out of the coffin toward its enemy!";
+      ui.hint.textContent="The vampire fully emerges in shadowy mist and lunges at its enemy!";
     }else if(a.stage==="vamp-lunge"){
       applyVampDamage(a);
       startStage(a,"vamp-drain",VAMP_DRAIN_MS);
@@ -550,7 +553,7 @@
       ui.hint.textContent="The vampire flies back to "+caster.name+".";
     }else if(a.stage==="vamp-return"){
       startStage(a,"vamp-present",VAMP_PRESENT_MS);
-      ui.hint.textContent="The vampire presents a red blood orb to "+caster.name+".";
+      ui.hint.textContent="Facing "+caster.name+", the vampire offers the stolen life as a blood orb.";
     }else if(a.stage==="vamp-present"){
       startStage(a,"vamp-orb",VAMP_ORB_MS);
       ui.hint.textContent="The crimson orb floats into "+caster.name+".";
@@ -1986,7 +1989,15 @@
       stage:state.animation.stage,drained:state.animation.vampDrained||0,
       pendingHeal:state.animation.vampPotentialHeal||0,
       healed:!!state.animation.vampHealingResolved,
-      progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
+      progress:clamp(state.animation.elapsed/state.animation.duration,0,1),
+      artworkFrames:window.WIZARDRY_VAMPIRE_V57?.frames||null,
+      coffin:window.WIZARDRY_VAMPIRE_V57?.coffinAnchor||null,
+      position:window.WIZARDRY_VAMPIRE_V57?.position({
+        stage:state.animation.stage,
+        progress:clamp(state.animation.elapsed/state.animation.duration,0,1),
+        caster:getUnit(state.animation.source),
+        target:getUnit(state.animation.target)
+      })||null
     }:null,
     getWindVolleyInfo:()=>state?.animation?.card?.id==="wind"?{
       stage:state.animation.stage,

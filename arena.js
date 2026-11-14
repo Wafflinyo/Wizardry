@@ -19,7 +19,7 @@
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"Recharge 1 round · On success, Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
+      icon:"♆",description:"On success: recharge 1 round & Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
       icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10}
   ];
@@ -415,19 +415,19 @@
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="summon"||a.stage==="fizzle"){
       if(a.card.id==="poseidon"&&!a.postCastEffectsApplied){
-        // Every attempt costs one recharge round. Only successful rune
-        // casts can grant/refresh Tidal Echo; fizzles grant no new buff.
+        // A successful rune earns BOTH the one-round recharge and
+        // Tidal Echo. A fizzle grants neither; any earlier Echo remains.
         const u=getUnit(a.source);
         if(u&&u.hp>0){
-          u.rechargeRound=state.round+1;
-          addStatus(u,"recharge","⧖",1);
           if(a.runeResult==="success"){
+            u.rechargeRound=state.round+1;
+            addStatus(u,"recharge","⧖",1);
             addStatus(u,"tidal_echo","≈",.30);
             flash(u,"TIDAL ECHO","#87f2fa");
             state.log=[u.name+" gains Tidal Echo (+30% next successful Water hit) and must recharge next round.",
               ...state.log].slice(0,5);
           }else{
-            state.log=[u.name+"'s Poseidon's Wrath fizzled: no new Tidal Echo; recharge still required.",
+            state.log=[u.name+"'s Poseidon's Wrath fizzled: no recharge and no new Tidal Echo.",
               ...state.log].slice(0,5);
           }
         }
@@ -682,7 +682,7 @@
         b.dataset.card=k.id;
         const water=k.id==="poseidon";
         const effect=water?
-          '<span class="spell-effect"><b>⧖ RECHARGE · 1 ROUND</b><span>≈ ON HIT: NEXT WATER +30%</span></span>':
+          '<span class="spell-effect"><b>⧖ HIT: RECHARGE 1 ROUND</b><span>≈ HIT: NEXT WATER +30%</span></span>':
           '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>';
         b.innerHTML='<span class="spell-tier">'+(water?'LEGENDARY · WATER':'EPIC · EARTH')+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
@@ -693,7 +693,7 @@
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(water?"Recharge one round; successful casts grant Tidal Echo +30% next Water hit, misses do not.":"Seismic fissure attack."));
+          "% accuracy. "+(water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":"Seismic fissure attack."));
         b.onclick=()=>chooseCard(k.id);
         ui.hand.appendChild(b);
       }

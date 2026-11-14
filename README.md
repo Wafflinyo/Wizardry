@@ -1,3 +1,13 @@
+## RULE UPDATE — Poseidon's Wrath has no penalties or rewards on miss (v0.43.1)
+
+**[Play Wizardry with portrait spell cards](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.1)**
+
+After a **successful** Poseidon's Wrath cast, the caster must **recharge one round** and gains **Tidal Echo** (+30% damage on the next successful Water hit). If the rune **fails/misses**, **neither recharge nor Tidal Echo is granted**, and the caster can attempt another spell next round as normal. Existing previously earned Tidal Echo remains if it was not consumed. The updated Poseidon card explicitly labels both effects as on-hit.
+
+The v0.43.0 slimmer portrait low-poly spell cards remain, with real in-game animation artwork. Poseidon uses the authentic raised-trident frame 7 and Stone Golem its approved animation frame 10. No other spell mechanics or card sizing changed.
+
+---
+
 ## NEW — Portrait spell cards and corrected Tidal Echo (v0.43.0)
 
 **[Play updated Wizardry](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.0)**

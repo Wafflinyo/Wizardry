@@ -1,4 +1,4 @@
-/* Wizardry 0.44 — interactive 2.5D battle test.
+/* Wizardry 0.44.1 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -680,6 +680,7 @@
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;
+        b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=water?
           '<span class="spell-effect"><b>⧖ HIT: RECHARGE 1 ROUND</b><span>≈ HIT: NEXT WATER +30%</span></span>':

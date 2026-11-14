@@ -1,3 +1,13 @@
+## NEW — Element icons on spell cards (v0.44.1)
+
+**[Play with element-specific card crests](https://wafflinyo.github.io/Wizardry/arena.html?v=0.44.1)**
+
+Card crests now display **meaningful low-poly element emblems** rather than a decorative trident or diamond. Water shows a **faceted water droplet**, Earth a **double mountain**, and future spell schools automatically have distinct icons for **fire (flame), air (wind), light (sun/star), shadow (crescent), nature (leaf), arcane (crystal), ice (snowflake), and lightning/storm (bolt)**. These are separate local vector assets, not font glyphs, so they display consistently on iPhone and desktop. The crest sits inside the same gold-bordered top cap, above the rarity labels, and is sized down for landscape.
+
+The slimmer, taller card frames, top-right mana counter, spell frame artwork, and all combat mechanics remain intact. Poseidon's Wrath still grants both recharge and Tidal Echo only on a successful cast.
+
+---
+
 ## NEW — Proper slim playing-card layout (v0.44.0)
 
 **[Play the latest Wizardry arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.44.0)**

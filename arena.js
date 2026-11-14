@@ -1,4 +1,4 @@
-/* Wizardry 0.38 — interactive 2.5D battle test.
+/* Wizardry 0.39 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -1061,7 +1061,8 @@
     // Physical depth scale from the same arena floor, not separate
     // front/back teams. Lower Y sits nearer the 3/4 camera.
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
-    g.save();g.translate(u.x,u.y);
+    const contact=golemContactOffset(u);
+    g.save();g.translate(u.x+contact.x,u.y+contact.y);
     ellipse(g,0,8,66*scale,17*scale,"#010910a8");
     // Keep the collapsed pose readable instead of fading it nearly away.
     if(u.hp<=0)g.globalAlpha=.85;
@@ -1324,6 +1325,110 @@
     while(i<15&&progress>=POSEIDON_KEY_TIMES[i+1])i++;
     return i;
   }
+
+  // v0.39 — The approved Golem summon emerges in the middle of the arena,
+  // but the original fissure is drawn inside that fixed-size sprite. Extend
+  // the crack with actual raised, faceted stones to the SELECTED unit's feet.
+  // The chain arrives on the same frame that the existing damage is applied.
+  function golemFissurePoint(target,t){
+    t=clamp(t,0,1);
+    const sx=500+(target.x>=500?18:-18),sy=457;
+    const ex=target.x,ey=target.y+4,dx=ex-sx,dy=ey-sy;
+    const len=Math.hypot(dx,dy)||1;
+    const drift=Math.sin(Math.PI*t)*(Math.sin(t*18.4)*9+Math.sin(t*43)*3);
+    return {x:sx+dx*t-dy/len*drift,y:sy+dy*t+dx/len*drift};
+  }
+  function golemRock(x,y,width,height,variant,opacity=1){
+    if(height<=.1||opacity<=0)return;
+    g.save();g.globalAlpha*=opacity;
+    const w=width,h=height,slant=Math.sin(variant*7.1)*w*.35;
+    // Dark crack at the stone's base; gold/olive highlights recall the
+    // already-approved earth spell instead of using a new unrelated style.
+    ellipse(g,x,y+1,w*.83,Math.max(2,w*.24),"#101d1c99");
+    pathPoly(g,[[x-w*.56,y],[x-w*.68+slant,y-h*.39],
+      [x-w*.13+slant,y-h],[x+w*.34+slant,y-h*.77],
+      [x+w*.62,y-h*.20],[x+w*.53,y]],"#5e6b55","#34463c",1.4);
+    pathPoly(g,[[x-w*.68+slant,y-h*.39],
+      [x-w*.13+slant,y-h],[x+w*.13+slant,y-h*.65],[x-w*.23,y-h*.2]],
+      "#9aab7b");
+    pathPoly(g,[[x+w*.13+slant,y-h*.65],[x+w*.34+slant,y-h*.77],
+      [x+w*.62,y-h*.20],[x+w*.53,y]],"#3c5144");
+    pathPoly(g,[[x-w*.23,y-h*.2],[x+w*.13+slant,y-h*.65],
+      [x+w*.53,y]],"#71845d");
+    g.restore();
+  }
+  function drawGolemFissure(anim,target,p){
+    if(!target||p<.365)return;
+    const hit=anim.card.hit;
+    const advance=ease(clamp((p-.365)/(hit-.365),0,1));
+    const trailFade=clamp((.90-p)/.21,0,1);
+    if(trailFade<=0)return;
+    g.save();g.globalAlpha=trailFade;
+    const steps=36;
+    // Draw jagged DARK seam + molten-green interior exactly under the
+    // traversing rocks. End point is target.x, target.y + 4: never short.
+    g.beginPath();
+    for(let i=0;i<=steps;i++){
+      const pt=golemFissurePoint(target,advance*i/steps);
+      if(!i)g.moveTo(pt.x,pt.y);else g.lineTo(pt.x,pt.y);
+    }
+    g.strokeStyle="#223029";g.lineWidth=15;g.lineJoin="round";g.lineCap="round";g.stroke();
+    g.strokeStyle="#657052";g.lineWidth=7;g.stroke();
+    g.strokeStyle="#bee18c";g.lineWidth=2.5;g.stroke();
+    // The stone ridge advances section-by-section instead of remaining a
+    // stationary stripe; consecutive peaks grow into view as it approaches.
+    for(let i=0;i<16;i++){
+      const t=(i+.5)/16;
+      if(t>advance)break;
+      const q=golemFissurePoint(target,t);
+      const arrival=clamp((advance-t)*16,0,1);
+      const w=10+(i%3)*3+(i>12?4:0);
+      const h=(14+(i*7%13)+(i>12?5:0))*ease(arrival);
+      golemRock(q.x+(i%2?7:-7),q.y+2,w,h,i+3,.93);
+      if(i%3===0)golemRock(q.x+(i%2?-17:18),q.y+7,w*.60,h*.54,i+17,.82);
+    }
+    // Impact is simultaneous with the existing hit check and damage tick.
+    // A crater and tall shards erupt AROUND the model's feet, not through
+    // its torso; the fighters still render over every spell layer.
+    if(p>=hit){
+      const since=p-hit,eruption=ease(clamp(since/.045,0,1));
+      const decay=clamp((.84-p)/.14,0,1);
+      const amount=eruption*decay;
+      if(amount>0){
+        ellipse(g,target.x,target.y+5,43*amount+12,15*amount+3,
+          "#3b4e3799","#c5e29c",2.5);
+        for(let i=0;i<6;i++){
+          const side=i%2?-1:1,rank=Math.floor(i/2);
+          const x=target.x+side*(20+rank*14);
+          const y=target.y+3+rank*4;
+          const h=(40-rank*9)*amount;
+          golemRock(x,y,17-rank*2,h,28+i,Math.max(.15,decay));
+        }
+        // Small faceted fragments shoot outward then settle at the feet.
+        for(let i=0;i<9;i++){
+          const a=-Math.PI+Math.PI*i/8;
+          const r=18+amount*(14+i%3*8);
+          const x=target.x+Math.cos(a)*r;
+          const y=target.y-8-Math.abs(Math.sin(a))*21*amount;
+          pathPoly(g,[[x-3,y+2],[x+3,y],[x+2,y-5],[x-2,y-4]],
+            i%2?"#bacc91":"#7c9774");
+        }
+      }
+    }
+    g.restore();
+  }
+  // A short contact reaction reinforces the exact moment the stone ridge
+  // reaches its target. It never alters HP, targeting or the defeat motion.
+  function golemContactOffset(u){
+    const a=state?.animation;
+    if(!a||a.stage!=="summon"||a.card.id!=="golem"||
+       a.target!==u.id||!a.applied||u.hp<=0)return {x:0,y:0};
+    const dt=a.elapsed/a.duration-a.card.hit;
+    if(dt<0||dt>.15)return {x:0,y:0};
+    const fade=Math.pow(1-dt/.15,2);
+    return {x:Math.sin(dt*135)*4*fade,
+      y:-Math.sin(Math.PI*clamp(dt/.13,0,1))*5*fade};
+  }
   function drawAction(anim,time){
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
@@ -1351,17 +1456,8 @@
         line(g,x-direction*38,y+7,x,y,"#d3fdff",5);
         drawFlyingTrident(x,y,Math.atan2(target.y-105-originY,target.x-originX));
       }
-      if(card.id==="golem"&&p>.45&&p<card.hit&&target){
-        // A subdued ground fissure links the *integrated* sprite's impact
-        // to the selected target; no duplicate procedural rock spikes.
-        const t=ease((p-.45)/(card.hit-.45));
-        const fromX=500+(target.x>=500?18:-18),fromY=409;
-        const ex=lerp(fromX,target.x,t),ey=lerp(fromY,target.y-8,t);
-        g.beginPath();g.moveTo(fromX,fromY);
-        g.quadraticCurveTo(lerp(fromX,ex,.52),lerp(fromY,ey,.54)-9,ex,ey);
-        g.strokeStyle="#a6ea7988";g.lineWidth=3;g.shadowBlur=7;
-        g.shadowColor="#9df58c";g.stroke();g.shadowBlur=0;
-      }
+      if(card.id==="golem"&&target)
+        drawGolemFissure(anim,target,p);
     }else{
       if(target&&card.target!=="team"){
         const x=lerp(caster.x,target.x,ease(p)),y=lerp(caster.y-105,target.y-100,ease(p));
@@ -1492,6 +1588,8 @@
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,
+    getGolemFissurePoint:golemFissurePoint,
+    getGolemContactOffset:golemContactOffset,
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

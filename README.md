@@ -1,3 +1,13 @@
+## FIX — Stone Golem fissure visibly reaches the enemy (v0.39.0)
+
+**[Play updated battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.39.0)**
+
+The Stone Golem's old thin green crack ended before the selected target and disappeared at the damage moment. It has been replaced by a deterministic, low-poly **traveling ridge of jagged earth and rock spikes** extending from the summoned golem's location all the way to **the target's feet** in world coordinates (including enemies in every lane and either PvP side). A crater, rising stones and flying stone chips appear at the exact 62%-through-spell damage timing. A subtle momentary target flinch makes contact clear. The effects stay behind the characters so they don't obscure the wizard models or HP plates. The old approved golem sprite artwork remains intact.
+
+Unchanged: 85% hit chance, 900 base damage, 2850ms summon, 850ms tracing, wizard animation timings, kneeling defeat animation, and arena dimensions.
+
+---
+
 ## NEW — Wizard appearance palettes (v0.38.0)
 
 **[Customize the wizard in-game](https://wafflinyo.github.io/Wizardry/arena.html?v=0.38.0)**

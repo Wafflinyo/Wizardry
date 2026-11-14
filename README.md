@@ -1,3 +1,11 @@
+## FIX — Card crest symbols no longer cover rarity labels (v0.43.2)
+
+**[Play Wizardry with corrected spell cards](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.2)**
+
+The water trident and earth diamond badges now sit completely **above the top gold borders** of the two low-poly playing cards, instead of overlapping the **LEGENDARY · WATER** and **EPIC · EARTH** labels. Reserved padding keeps both crests within the card row without making the hand taller. In compact landscape mode the crests scale down slightly to preserve text space. Mana cost badges, card illustration frames, card names, selected-state highlights, damage, accuracy, and successful-cast-only Poseidon's Tidal Echo and recharge rules remain unchanged.
+
+---
+
 ## RULE UPDATE — Poseidon's Wrath has no penalties or rewards on miss (v0.43.1)
 
 **[Play Wizardry with portrait spell cards](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.1)**

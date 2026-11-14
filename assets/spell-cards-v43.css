@@ -1,8 +1,8 @@
-/* v0.43 — Slim, centered low-poly playing cards.
+/* v0.43.2 — Slim, centered low-poly playing cards.
    Loaded after arena.css so the 1:1-ish legacy cards cannot override it. */
 .cards{
   display:flex;justify-content:center;align-items:stretch;
-  gap:clamp(10px,3vw,18px);width:100%;padding:11px 0 8px;
+  gap:clamp(10px,3vw,18px);width:100%;padding:20px 0 0;
   margin:0;overflow:visible;scroll-snap-type:none
 }
 .spell.card-ornate{
@@ -30,7 +30,7 @@
     inset 0 0 0 4px #c7ac7d6c,0 6px 15px #000a
 }
 .spell.card-ornate:before{
-  content:"♆";position:absolute;left:50%;top:-9px;z-index:5;
+  content:"♆";position:absolute;left:50%;top:-19px;z-index:5;
   transform:translateX(-50%);pointer-events:none;
   width:22px;height:21px;display:grid;place-items:center;
   color:#bff8ff;background:linear-gradient(150deg,#176480,#0b283d);
@@ -110,7 +110,7 @@
   box-shadow:0 0 0 2px #bca9ed,0 0 16px #c3a5e275,inset 0 0 0 3px #ccb57d
 }
 @media(max-width:700px){
-  .cards{gap:10px;padding:11px 1px 7px}
+  .cards{gap:10px;padding:20px 1px 0}
   .spell.card-ornate{
     flex:0 1 clamp(130px,37vw,165px);
     width:clamp(130px,37vw,165px);max-width:165px;
@@ -133,13 +133,14 @@
   .arena{max-width:min(100%,calc((100svh - 390px)*1.6129))}
 }
 @media(orientation:landscape) and (max-height:620px){
-  .cards{gap:8px;padding:8px 0 3px}
+  .cards{gap:8px;padding:15px 0 0}
   .spell.card-ornate{
     flex:0 1 clamp(105px,15vw,138px);
     width:clamp(105px,15vw,138px);max-width:138px;
     height:clamp(132px,41svh,166px);min-height:132px;gap:1px;padding:4px
   }
   .spell-art-shell{min-height:33px}
+  .spell.card-ornate:before{top:-14px;width:19px;height:15px;font-size:10px}
   .spell-tier{font-size:7px;min-height:8px}
   .spell.card-ornate .spell-name{min-height:15px;font-size:10px}
   .spell-combat{min-height:17px;padding:1px 0 2px}
@@ -148,3 +149,6 @@
   .spell-effect b{font-size:7px}
   .spell-mana-cost{top:18px;left:4px;width:23px;height:23px;font-size:12px}
 }
+
+/* Both crests finish above the top gold border. Rarity labels and
+   spell names remain unobstructed at phone and landscape widths. */

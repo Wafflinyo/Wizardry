@@ -1,4 +1,4 @@
-/* Wizardry 0.47 — interactive 2.5D battle test.
+/* Wizardry 0.48 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -905,11 +905,44 @@
   function createBackground(){
     background=document.createElement("canvas");background.width=W;background.height=H;
     const bg=background.getContext("2d");
-    // Identical 1000×620 shallow side/three-quarter camera and slots.
-    // Old backdrop remains a safe fallback if the module is unavailable.
-    if(window.WIZARDRY_LOW_POLY_ARENA_V47)
-      window.WIZARDRY_LOW_POLY_ARENA_V47.draw(bg);
-    else drawBackground(bg);
+    // Always render a safe frame immediately. Static art loads separately,
+    // so a slow image fetch cannot leave the fighting canvas blank.
+    const fallback=()=>{
+      try{
+        bg.clearRect(0,0,W,H);
+        if(window.WIZARDRY_LOW_POLY_ARENA_V47)
+          window.WIZARDRY_LOW_POLY_ARENA_V47.draw(bg);
+        else drawBackground(bg);
+      }catch(err){
+        bg.setTransform(1,0,0,1,0,0);
+        bg.fillStyle="#132a40";bg.fillRect(0,0,W,H);
+        console.warn("Wizardry arena fallback renderer:",err);
+      }
+    };
+    fallback();
+    // This image is constructed from the ACTUAL approved arena concept:
+    // same stone arcade, crystals, banners, statue and golden floor rim.
+    // The eight painted placeholder wizards are removed; the live sprite
+    // renderer draws real animation frames/HP plates on top of it.
+    const concept=new Image();
+    concept.decoding="async";
+    concept.onload=()=>{
+      if(concept.naturalWidth!==W||concept.naturalHeight!==H){
+        console.warn("Wizardry: approved arena image has incorrect dimensions");
+        return;
+      }
+      try{
+        bg.save();bg.setTransform(1,0,0,1,0,0);
+        bg.clearRect(0,0,W,H);
+        bg.drawImage(concept,0,0,W,H);
+        bg.restore();
+      }catch(err){
+        console.warn("Wizardry: concept image draw failed, retaining fallback",err);
+        fallback();
+      }
+    };
+    concept.onerror=()=>console.warn("Wizardry: approved arena image failed to load; retaining fallback");
+    concept.src="./assets/arena-concept-approved-v48.webp?v=0.48.0";
   }
   function rounded(ctx,x,y,w,h,r,fill,stroke=null,sw=1){
     ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -1130,8 +1163,10 @@
     ctx.fillStyle=shade;
     ctx.beginPath();ctx.ellipse(0,y,78*scale,23*scale,0,0,Math.PI*2);
     ctx.fill();
-    ellipse(ctx,0,y+1,rx,ry,"#0c243280","#bba37179",1.6);
-    ellipse(ctx,0,y+1,rx-8*scale,ry-4*scale,null,"#8baaa45f",1.25);
+    // Warm, engraved gold rings match the approved reference artwork
+    // without adding a raised podium under the feet.
+    ellipse(ctx,0,y+1,rx,ry,"#142738b0","#d5ae75de",2.4);
+    ellipse(ctx,0,y+1,rx-6*scale,ry-3*scale,null,"#ddc18788",1.4);
     // Four tiny faceted inlaid stones, not elevated podiums.
     for(let k=0;k<4;k++){
       const a=Math.PI*(k+.5)/2;

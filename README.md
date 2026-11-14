@@ -1,3 +1,15 @@
+## NEW — Approved visual colosseum artwork in the live arena (v0.48.0)
+
+**[Play Wizardry with the actual reference-inspired arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.48.0)**
+
+The previous v0.47.0 procedural polygon approximation did not match the approved colosseum concept. This version uses a **1000×620 game-ready WebP constructed directly from the approved concept artwork**, preserving its real background: blue-gray arches and columns, draped purple-gold banners, glowing cyan crystals, flaming braziers, central glowing crystal statue, carved turquoise compass, raised stone ring and golden front lip. The pictured placeholder fighters have been cleared and the floor reconstructed with faceted tile textures from the source artwork; **only the game's live animated wizard sprites are shown**. The source canvas, camera, team positions, HP bars, targeting and physics remain unchanged.
+
+The background loads asynchronously **over a safe initial rendered frame**, and stays as a static pre-rendered canvas asset, so a failed/delayed art download cannot crash the battle or create a permanently empty screen. The live characters continue to be drawn separately, with their original idle/defeat/casting sprites, foot alignment and brighter gold contact-floor rings.
+
+No changes to gameplay, 70%/85% accuracy, spell damage, Tidal Echo, rune timing, or summon/fissure effects.
+
+---
+
 ## NEW — Low-poly crystal colosseum and grounded wizard feet (v0.47.0)
 
 **[Play Wizardry with the low-poly arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.47.0)**

@@ -1,4 +1,4 @@
-/* Wizardry 0.51.1 — interactive 2.5D battle test.
+/* Wizardry 0.52 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -149,6 +149,11 @@
   // stand/idle, then dissolve while the independent fissure is still moving.
   const GOLEM_SLAM_MS=1520,GOLEM_IMPACT_MS=540;
   const GOLEM_SPEED_PX_PER_MS=.31,GOLEM_MIN_TRAVEL_MS=650,GOLEM_MAX_TRAVEL_MS=1480;
+  // Lady Estel's Nature healing is staged separately. Health changes
+  // ONLY when the independent floating orb physically reaches its ally.
+  const ESTEL_RISE_MS=1050,ESTEL_ORB_SPEED_PX_PER_MS=.39;
+  const ESTEL_TRAVEL_MIN_MS=540,ESTEL_TRAVEL_MAX_MS=1100;
+  const ESTEL_IMPACT_MS=720,ESTEL_EXIT_MS=840;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -400,7 +405,9 @@
     // independently while the caster lowers their staff and resumes idle.
     if(a.stage==="tracing-auto")
       a.traceMs=(a.traceMs||0)+Math.max(0,deltaMs);
-    if(["rune-success","rune-fail","summon","fizzle","lowering","golem-slam","golem-travel","golem-impact"]
+    if(["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
+        "golem-travel","golem-impact","estel-summon","estel-travel",
+        "estel-impact","estel-exit"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -423,9 +430,11 @@
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
     }else if(a.stage==="rune-success"){
-      // Begin the ORIGINAL summon only AFTER the bright completed rune
-      // has held for its entire glow sequence.
-      startStage(a,a.card.id==="golem"?"golem-slam":"summon",
+      // Only begin a summon after the completed rune has glowed.
+      // Estel then materializes BEFORE releasing the floating orb;
+      // the HP change is delayed until the orb reaches the ally.
+      if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
+      else startStage(a,a.card.id==="golem"?"golem-slam":"summon",
         a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
       ui.hint.textContent=caster.name+" invokes "+a.card.name+"!";
       paintUI();
@@ -435,6 +444,26 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="estel-summon"){
+      // Lady Estel's wings open and the glowing orb forms in her hand.
+      // No healing occurs until its independent travel animation ends.
+      beginEstelTravel(a);
+      ui.hint.textContent="Lady Estel sends a glowing Nature orb toward "+
+        (getUnit(a.target)?.name||"the chosen ally")+".";
+    }else if(a.stage==="estel-travel"){
+      // Orb and the selected ally now meet at the exact arrival point.
+      // Apply 750 HP ONCE here, not while summoning or mid-flight.
+      if(!a.applied)applySpell(a);
+      startStage(a,"estel-impact",ESTEL_IMPACT_MS);
+      ui.hint.textContent="Lady Estel's blessing blooms on "+
+        (getUnit(a.target)?.name||"the chosen ally")+"!";
+      paintUI();
+    }else if(a.stage==="estel-impact"){
+      // Allow the green-gold healing bloom and leaves to finish before
+      // Estel flies upward and disappears from the battlefield.
+      startStage(a,"estel-exit",ESTEL_EXIT_MS);
+    }else if(a.stage==="estel-exit"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="golem-slam"){
       // The original approved frame 11 is the moment the clasped-fist
       // ground slam finishes. Spawn the separate fissure ONLY after it.
@@ -1290,7 +1319,8 @@
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
     if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
-        "golem-travel","golem-impact"].includes(visualStage)){
+        "golem-travel","golem-impact","estel-summon","estel-travel",
+        "estel-impact","estel-exit"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1548,6 +1578,18 @@
     anim.golemPostSlamMs=0;
     startStage(anim,"golem-travel",duration);
   }
+  function beginEstelTravel(anim){
+    const target=getUnit(anim.target);
+    const direction=(target?.x??320)>=500?1:-1;
+    // The orb forms beside Lady Estel's extended hand.
+    const start={x:500+direction*88,y:204};
+    const end=target?{x:target.x,y:target.y-82}:start;
+    const pixels=Math.hypot(end.x-start.x,end.y-start.y);
+    anim.estelOrbStart=start;anim.estelOrbEnd=end;
+    const duration=clamp(pixels/ESTEL_ORB_SPEED_PX_PER_MS,
+      ESTEL_TRAVEL_MIN_MS,ESTEL_TRAVEL_MAX_MS);
+    startStage(anim,"estel-travel",duration);
+  }
   function drawAction(anim,time){
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
@@ -1560,8 +1602,12 @@
       g.restore();return;
     }
     if(card.id==="estel"){
-      // Real eight-frame goddess rises, blesses an ally, then flies off.
-      window.WIZARDRY_LADY_ESTEL_V51?.draw(g,{progress:p,time,target});
+      // The goddess, floating orb and contact impact use independent
+      // stages. Never use the old beam animation or heal early.
+      window.WIZARDRY_LADY_ESTEL_V51?.draw(g,{
+        stage:anim.stage,progress:p,time,target,
+        start:anim.estelOrbStart,end:anim.estelOrbEnd
+      });
       g.restore();return;
     }
     if(card.kind==="summon"){
@@ -1660,7 +1706,9 @@
         effects?.drawGolem(g,a,spriteCache.golem,time);
         if(a.stage==="golem-travel")effects?.drawTravel(g,a);
         if(a.stage==="golem-impact")effects?.drawImpact(g,a);
-      }else if(a.stage==="summon")drawAction(a,time);
+      }else if(a.stage==="summon"||a.card.id==="estel"&&
+          ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage))
+        drawAction(a,time);
       else {
         drawAirborneRune(a);
         drawRuneOutcome(a);
@@ -1674,6 +1722,13 @@
     if(state.animation?.stage==="golem-impact")
       window.WIZARDRY_GOLEM_EFFECTS_V42?.drawImpactForeground(
         g,state.animation);
+    if(state.animation?.stage==="estel-impact"){
+      const a=state.animation;
+      window.WIZARDRY_LADY_ESTEL_V51?.drawForeground(g,{
+        stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
+        time,target:getUnit(a.target),end:a.estelOrbEnd
+      });
+    }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
@@ -1730,6 +1785,11 @@
       {start:state.animation.travelStart,end:state.animation.travelEnd,
        duration:state.animation.duration,progress:state.animation.elapsed/state.animation.duration}:null,
     getGolemSpriteInfo:()=>window.WIZARDRY_GOLEM_EFFECTS_V42?.getAtlasInfo(),
+    getEstelOrbInfo:()=>state?.animation?.stage==="estel-travel"?
+      {start:state.animation.estelOrbStart,
+       end:state.animation.estelOrbEnd,
+       duration:state.animation.duration,
+       progress:state.animation.elapsed/state.animation.duration}:null,
     advanceAction:(ms)=>{
       // Headless test helper advances in 40ms steps without bypassing
       // the exact same stage machine used by real 60fps rendering.

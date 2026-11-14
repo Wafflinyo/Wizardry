@@ -1,3 +1,13 @@
+## UPDATED — Lady Estel floating healing orb and impact (v0.52.0)
+
+**[Play the new Lady Estel healing animation](https://wafflinyo.github.io/Wizardry/arena.html?v=0.52.0)**
+
+Lady Estel no longer shoots a continuous green beam. She **rises and creates a luminous green-gold orb**, which **detaches and floats along a curved path** with a short trail of separated light motes and Nature leaves toward the chosen allied wizard. The target receives a **large restorative green/gold bloom, expanding impact circle and drifting healing leaves**, with some small glints crossing over the wizard's torso; the entire blast does not conceal the HP bar. Lady Estel then **ascends and flies away**. The original approved white-robed winged goddess is unchanged; her atlas's beam-bearing frames are deliberately skipped so no beam appears.
+
+**Gameplay synchronized to animation:** The spell uses explicit sequential states `estel-summon` (1,050ms), `estel-travel` (540–1,100ms based on actual target distance), `estel-impact` (720ms), and `estel-exit` (840ms). On successful 90% Nature rune, **750 HP is applied exactly once when the orb arrives** and not when Lady Estel begins the summon; a missed rune crumbles without an orb or heal. The healing amount remains capped by missing HP, does not revive defeated fighters, and targets allies only. The existing 5-mana cost and CPU healer choices remain unchanged. The independent sprite idle/recovery and every other spell are preserved.
+
+---
+
 ## FIX — Lady Estel selectable ally targets (v0.51.1)
 
 **[Test Lady Estel on the battlefield](https://wafflinyo.github.io/Wizardry/arena.html?v=0.51.1)**

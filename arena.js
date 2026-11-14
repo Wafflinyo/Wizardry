@@ -1,4 +1,4 @@
-/* Wizardry 0.68 — interactive 2.5D battle test.
+/* Wizardry 0.69 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -14,7 +14,9 @@
     robeColor:$("wizardColor"),hatColor:$("wizardHatColor"),
     skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
     statusPopup:$("statusPopup"),statusName:$("statusName"),
-    statusText:$("statusText"),statusClose:$("statusClose")};
+    statusText:$("statusText"),statusClose:$("statusClose"),
+    preview:$("cardPreview"),previewTitle:$("previewTitle"),previewArt:$("previewArtwork"),
+    previewDescription:$("previewDescription"),previewSelect:$("selectPreview")};
   // Cards use accuracy rolls, never manual tracing. The lightning summon
   // adds a real one-action stun only AFTER a successful damaging cast.
   const CARDS=[
@@ -276,6 +278,7 @@
       selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
+    closeCardPreview();
     ui.statusPopup.hidden=true;
     ui.status.textContent=mode==="story"?
       "You control Tidecaller only. All other allies and enemies are CPU-controlled.":
@@ -308,6 +311,7 @@
     return selected;
   }
   function clearSelection(){
+    closeCardPreview();
     state.selectedCard=null;
     state.selectedTarget=null;
   }
@@ -329,6 +333,52 @@
     // No spell queues until the explicit confirmation is pressed.
     state.selectedTarget=id;
     paintUI();
+  }
+  function closeCardPreview(){
+    if(ui.preview?.open)ui.preview.close();
+    if(state)state.previewCard=null;
+  }
+  function inspectCard(id){
+    const u=caster(),card=BY_ID[id];
+    if(state.phase!=="planning"||!u?.hand.includes(id)||!card)return;
+    state.previewCard=id;
+    ui.previewTitle.textContent=card.name;
+    ui.previewDescription.textContent=card.description+". "+card.cost+
+      " mana · "+Math.round(card.accuracy*100)+"% accuracy.";
+    ui.previewArt.replaceChildren();
+    const original=[...ui.hand.children].find(b=>b.dataset.card===id);
+    if(original){
+      const copy=original.cloneNode(true);
+      copy.disabled=false;copy.hidden=false;copy.tabIndex=-1;
+      copy.removeAttribute("aria-pressed");copy.removeAttribute("aria-haspopup");
+      copy.classList.remove("chosen");copy.style.cssText="";
+      // Preserve each element's paint while the inspection card uses its
+      // own larger typography and dimensions outside the hand container.
+      for(const selector of [null,".spell-name",".spell-tier",".spell-mana-cost",".spell-effect"]){
+        const from=selector?original.querySelector(selector):original;
+        const to=selector?copy.querySelector(selector):copy;
+        if(!from||!to)continue;
+        const style=getComputedStyle(from);
+        for(const prop of ["background","border-color","color","--trim"])
+          to.style.setProperty(prop,style.getPropertyValue(prop));
+      }
+      ui.previewArt.appendChild(copy);
+      const from=original.querySelector("canvas"),to=copy.querySelector("canvas");
+      if(from&&to)to.getContext("2d").drawImage(from,0,0);
+    }
+    const canSelect=!requiresRest(u)&&u.mana>=card.cost&&!state.plans[u.id];
+    ui.previewSelect.disabled=!canSelect;
+    ui.previewSelect.textContent=canSelect?"Select Spell":
+      u.mana<card.cost?"Not enough mana":"Cannot cast this round";
+    if(!ui.preview.open)ui.preview.showModal();
+  }
+  function selectInspectedCard(){
+    const id=state.previewCard,u=caster(),card=BY_ID[id];
+    if(state.phase!=="planning"||!card||!u?.hand.includes(id)||
+      requiresRest(u)||u.mana<card.cost||state.plans[u.id])return;
+    closeCardPreview();chooseCard(id);
+    ui.hint.textContent=card.target==="all_enemies"?"Confirm to cast on all enemies.":
+      "Now tap "+(card.target==="ally"?"an ally":"an enemy")+", then confirm your target.";
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
@@ -1049,12 +1099,9 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Choose one of your five hand cards; draw one each round."):
+        "Tap a card to enlarge it, then select your spell."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
-    ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
-      " · "+(c?.hand?.length||0)+"/"+MAX_HAND_SIZE+" CARDS"+
-      (planning?" · "+(card?(card.target==="all_enemies"?"Cast on all enemies":
-         "Tap "+(card.target==="ally"?"an ally":"an enemy")):"Choose a spell"):" · Casting");
+    ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
@@ -1068,12 +1115,13 @@
           [ui.hatColor,c.hatColor],[ui.skinColor,c.skinColor]])
         input.style.setProperty("--swatch",color);
     }
-    ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
+    ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies";
     ui.chosenTarget.textContent=allEnemies?
       "All living enemies · next spell +10 accuracy points":
       target?"Target: "+target.name:
-      "Tap "+(card?.target==="ally"?"an ally":"an enemy")+" on the battlefield";
+      !card?"Tap a card to inspect":
+      "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
     const canConfirm=planning&&!!c&&!!card&&
       (!!target||(allEnemies&&alive(1-c.team).length>0))&&
       c.mana>=card.cost&&!state.plans[c.id];
@@ -1172,7 +1220,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="dragon"?
+          "% accuracy. "+(k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1183,7 +1231,8 @@
             water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
             k.id==="golem"?"Seismic fissure attack.":
             "Summons Professor Volt: 450 Lightning damage and 20% stun chance on a successful hit; target skips one action."));
-        b.onclick=()=>chooseCard(k.id);
+        b.onclick=()=>inspectCard(k.id);
+        b.setAttribute("aria-haspopup","dialog");
         ui.hand.appendChild(b);
       }
       drawCardArts();
@@ -1192,8 +1241,17 @@
       const inHand=!!c?.hand?.includes(b.dataset.card);
       b.hidden=!inHand;
       b.classList.toggle("chosen",inHand&&b.dataset.card===card?.id);
-      b.disabled=!planning||!c||!inHand||requiresRest(c)||
-        BY_ID[b.dataset.card].cost>c.mana;
+      // Every held card remains inspectable, even when mana is insufficient.
+      b.disabled=!planning||!c||!inHand;
+      b.classList.toggle("unaffordable",!!c&&BY_ID[b.dataset.card].cost>c.mana);
+      if(inHand){
+        const index=c.hand.indexOf(b.dataset.card),offset=index-(c.hand.length-1)/2;
+        b.style.setProperty("--fan-index",offset);
+        b.style.setProperty("--fan-angle",offset*5+"deg");
+        b.style.setProperty("--fan-drop",Math.abs(offset)*9+"px");
+        b.style.setProperty("--fan-z",index+1);
+        b.style.order=index;
+      }
       b.setAttribute("aria-pressed",String(b.dataset.card===card?.id));
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
@@ -1218,6 +1276,16 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    $("closePreview").onclick=closeCardPreview;
+    $("backToHand").onclick=closeCardPreview;
+    ui.previewSelect.onclick=selectInspectedCard;
+    ui.preview.addEventListener("close",()=>{if(state)state.previewCard=null;});
+    ui.preview.addEventListener("click",event=>{
+      if(event.target!==ui.preview)return;
+      const r=ui.preview.getBoundingClientRect();
+      if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)
+        closeCardPreview();
+    });
     for(const b of ui.mode.querySelectorAll("button[data-mode]"))b.onclick=()=>{
       for(const x of ui.mode.querySelectorAll("button")){const on=x===b;x.classList.toggle("active",on);x.setAttribute("aria-pressed",String(on));}
       setBattle(b.dataset.mode,state.size);

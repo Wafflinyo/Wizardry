@@ -1,3 +1,11 @@
+## Faceted HUD and five-card fan (v0.69.0)
+
+Redesigned the HUD with angular slate panels, turquoise crystal accents, antique-gold corners and compact battle controls. Five wider portrait cards overlap in a curved fan; card positions follow actual hand order and recenter as the hand changes. Tap any card to open an enlarged inspection dialog with matching spell artwork, damage, accuracy, mana and full ability text. Select Spell closes inspection and enables battlefield targeting; the existing separate target confirmation still locks the action. Back, close, Escape and outside-tap dismiss inspection without changing the selected spell or spending a card/mana. Insufficient-mana cards remain inspectable with selection disabled.
+
+Phone portrait (390 and 320 px), landscape (844×390), preview/select/target confirmation and five visible held cards were checked in-browser. Existing round-lock, bear damage and depth regression checks pass.
+
+---
+
 ## Polar bear depth and charge timing (v0.68.0)
 
 The bear body now sorts behind its target, its shadow stays on the arena floor, and claw contact marks use a separate target-depth layer. Nearby wizards retain correct front/back occlusion. Charge travel takes 800 ms (previously 650 ms); roar, claw timing, damage and other spells are unchanged.

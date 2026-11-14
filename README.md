@@ -1,3 +1,15 @@
+## NEW — Portrait spell cards and corrected Tidal Echo (v0.43.0)
+
+**[Play updated Wizardry](https://wafflinyo.github.io/Wizardry/arena.html?v=0.43.0)**
+
+The two cards use narrow portrait proportions, independent low-poly element framing, gold-trimmed rarity labels, hexagonal mana badges, original summon-animation artwork, spell nameplates and separate damage/accuracy information. Both cards remain visible in portrait and landscape without horizontal scrolling. Poseidon's Wrath displays the real **frame 7** in which Poseidon is physically **holding his raised trident**; Stone Golem uses its approved original summon animation artwork.
+
+**Tidal Echo correction:** Poseidon's Wrath only grants/refreshes Tidal Echo (+30% on next successful Water hit) if its rune successfully completes. A miss grants no new bonus. The usual one-round recharge still applies whether the spell hits or misses. An earlier existing Echo is not consumed by a failed Water spell.
+
+No combat damage, accuracy, canvas dimensions, or summon/defeat animations were changed.
+
+---
+
 ## RESTORED — Approved Stone Golem slam + independent fissure (v0.42.0)
 
 **[Battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.42.0)** · **[Animation preview](https://wafflinyo.github.io/Wizardry/golem-preview.html?v=0.42.0)**

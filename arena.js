@@ -1,4 +1,4 @@
-/* Wizardry 0.42 — interactive 2.5D battle test.
+/* Wizardry 0.43 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -19,7 +19,7 @@
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"Recharge 1 round · Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:8},
+      icon:"♆",description:"Recharge 1 round · On success, Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
       icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10}
   ];
@@ -415,16 +415,21 @@
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="summon"||a.stage==="fizzle"){
       if(a.card.id==="poseidon"&&!a.postCastEffectsApplied){
-        // A Poseidon attempt, hit OR miss, requires the next entire round
-        // to recharge, and grants a single non-stacking 30% Water buff.
+        // Every attempt costs one recharge round. Only successful rune
+        // casts can grant/refresh Tidal Echo; fizzles grant no new buff.
         const u=getUnit(a.source);
         if(u&&u.hp>0){
           u.rechargeRound=state.round+1;
           addStatus(u,"recharge","⧖",1);
-          addStatus(u,"tidal_echo","≈",.30);
-          flash(u,"TIDAL ECHO","#87f2fa");
-          state.log=[u.name+" gains Tidal Echo (+30% next Water hit) and must recharge next round.",
-            ...state.log].slice(0,5);
+          if(a.runeResult==="success"){
+            addStatus(u,"tidal_echo","≈",.30);
+            flash(u,"TIDAL ECHO","#87f2fa");
+            state.log=[u.name+" gains Tidal Echo (+30% next successful Water hit) and must recharge next round.",
+              ...state.log].slice(0,5);
+          }else{
+            state.log=[u.name+"'s Poseidon's Wrath fizzled: no new Tidal Echo; recharge still required.",
+              ...state.log].slice(0,5);
+          }
         }
         a.postCastEffectsApplied=true;
       }
@@ -677,18 +682,18 @@
         b.dataset.card=k.id;
         const water=k.id==="poseidon";
         const effect=water?
-          '<span class="spell-effect"><b>⧖ RECHARGE · 1 ROUND</b><span>≈ NEXT WATER HIT +30%</span></span>':
+          '<span class="spell-effect"><b>⧖ RECHARGE · 1 ROUND</b><span>≈ ON HIT: NEXT WATER +30%</span></span>':
           '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>';
         b.innerHTML='<span class="spell-tier">'+(water?'LEGENDARY · WATER':'EPIC · EARTH')+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
-          '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="145" aria-hidden="true"></canvas></span>'+
+          '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+k.damage.toLocaleString()+'</b> '+k.school.toUpperCase()+
-          '</span><span><b>'+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
+          '<span class="spell-combat"><span><b>✹ '+k.damage.toLocaleString()+'</b> '+k.school.toUpperCase()+
+          '</span><span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(water?"Recharge one round; next successful Water hit +30%.":"Seismic fissure attack."));
+          "% accuracy. "+(water?"Recharge one round; successful casts grant Tidal Echo +30% next Water hit, misses do not.":"Seismic fissure attack."));
         b.onclick=()=>chooseCard(k.id);
         ui.hand.appendChild(b);
       }
@@ -1277,58 +1282,44 @@
       -size/2,base-size,size,size);
     g.restore();return true;
   }
-  // Draw the SAME approved 16-frame source poses used by live summons.
-  // These are pixel-exact crops from the existing atlas, not generative
-  // replacement art; decorative water/earth background stays behind them.
+  // Both artworks are literal frames from the approved summon animation.
+  // Poseidon frame 7 shows him gripping the raised trident.
   function drawCardArts(){
     for(const b of ui.hand.children){
       const card=BY_ID[b.dataset.card];
       const canvas=b.querySelector?.(".spell-art-canvas");
       if(!card||!canvas)continue;
-      const c=canvas.getContext("2d");
-      if(!c)continue;
-      const width=240,height=145,water=card.school==="water";
+      const c=canvas.getContext("2d");if(!c)continue;
+      const width=canvas.width,height=canvas.height,water=card.school==="water";
       c.clearRect(0,0,width,height);
       const sky=c.createLinearGradient(0,0,0,height);
-      sky.addColorStop(0,water?"#164c69":"#4d4c52");
-      sky.addColorStop(.52,water?"#0a3352":"#2a3543");
-      sky.addColorStop(1,water?"#062b42":"#272016");
+      sky.addColorStop(0,water?"#155473":"#5e5143");
+      sky.addColorStop(.55,water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
-      c.save();
-      // Quiet environmental energy, drawn only BEHIND original creature.
-      c.globalAlpha=.40;
-      for(let i=0;i<5;i++){
-        const y=85+i*13;
-        c.beginPath();
-        c.moveTo(-10,y);
-        if(water)c.bezierCurveTo(45,y-16,87,y+9,126,y-3),
-          c.bezierCurveTo(171,y-14,205,y+7,250,y-7);
-        else c.lineTo(42,y+5),c.lineTo(74,y-11),c.lineTo(115,y+4),
-          c.lineTo(161,y-8),c.lineTo(240,y+3);
-        c.strokeStyle=water?"#37aaca":"#cbaa67";
-        c.lineWidth=2.3;c.stroke();
-      }
+      c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
+      c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
+      c.lineTo(width*.11,height*.64);c.lineTo(0,height*.82);c.closePath();c.fill();
+      c.beginPath();c.moveTo(width*.76,0);c.lineTo(width,0);
+      c.lineTo(width,height*.68);c.lineTo(width*.82,height*.44);c.closePath();c.fill();
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
       if(image?.complete&&image.naturalWidth>0){
-        const edges=[0,314,627,940,1254];
+        const edges=[0,314,627,940,1254],size=water?212:210;
         c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
-        // Art source stays untouched: select one dramatic approved cell,
-        // preserving pose, colours, trident, crystals and silhouette.
-        const size=water?174:169;
         c.drawImage(image,edges[col],0,edges[col+1]-edges[col],
-          row===0||row===3?314:313,120-size/2,water?-21:-18,size,size);
+          row===0||row===3?314:313,(width-size)/2,water?-9:-6,size,size);
         c.restore();
       }else{
-        c.font="bold 65px Georgia,serif";c.textAlign="center";
+        c.font="bold 70px Georgia,serif";c.textAlign="center";
         c.fillStyle=water?"#96eefa":"#dbcc92";
-        c.fillText(water?"♆":"◆",120,90);
+        c.fillText(water?"♆":"◆",width/2,height*.55);
       }
-      const vignette=c.createLinearGradient(0,103,0,145);
-      vignette.addColorStop(0,"#06121a00");
-      vignette.addColorStop(1,water?"#06263de8":"#221b20ec");
-      c.fillStyle=vignette;c.fillRect(0,103,width,42);
+      const v=c.createLinearGradient(0,height*.61,0,height);
+      v.addColorStop(0,"#07172600");
+      v.addColorStop(1,water?"#061b32e9":"#171d29eb");
+      c.fillStyle=v;c.fillRect(0,height*.61,width,height*.39);
     }
   }
   function setupSprites(){

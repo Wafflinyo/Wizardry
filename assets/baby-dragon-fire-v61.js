@@ -1,4 +1,4 @@
-/* Wizardry 0.63 — single mouth-anchored fireball and delayed branched splash.
+/* Wizardry 0.64 — single mouth-anchored fireball and delayed branched splash.
    The new 16-frame dragon atlas contains NO painted projectile.
    Main fireball, split fireballs and impact blooms are independently drawn
    and depth-sorted alongside fighters. */
@@ -28,7 +28,17 @@ function sprite(c,index,x,y,size=HOME.size,alpha=1,direction=1){
  if(!ready()||alpha<=0)return false;
  c.save();c.globalAlpha*=C(alpha);c.translate(x,y);c.scale(direction<0?-1:1,1);
  c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
- c.drawImage(img,(index%4)*256,Math.floor(index/4)*256,256,256,-size/2,-size/2,size,size);
+ // The source atlas has stray ground-strip pixels from neighboring frames
+ // across the TOP of frames 7–11 (local y≈36–47). Those pixels look like
+ // a second dragon frame floating above the actual dragon in battle.
+ // Crop ONLY the transparent/stray upper 84px, retaining the actual
+ // dragon body, which starts at least 98px down in these five cells.
+ // Preserve destination scaling and foot placement (don't stretch art).
+ const trimTop=index>=7&&index<=11?84:0;
+ const sourceX=(index%4)*256,sourceY=Math.floor(index/4)*256+trimTop;
+ const visibleH=256-trimTop;
+ c.drawImage(img,sourceX,sourceY,256,visibleH,
+   -size/2,-size/2+size*trimTop/256,size,size*visibleH/256);
  c.restore();return true;
 }
 function circle(c,x,y,r,fill){
@@ -132,10 +142,10 @@ function drawCharge(c,o){
 }
 function drawShot(c,o){
  const at=fireballAt(o),p=C(o.progress||0),time=o.time||0;
- // Fast 260ms straight blast: a high-energy streak points back toward the
+ // Fast 110ms straight blast: a high-energy streak points back toward the
  // SAME dragon mouth coordinate used in the charge stage.
  const dx=at.x-at.start.x,dy=at.y-at.start.y;
- const dist=Math.hypot(dx,dy),length=Math.min(88,dist*.84);
+ const dist=Math.hypot(dx,dy),length=Math.min(116,dist*.93);
  if(dist>1){
    const ox=at.x-dx/dist*length,oy=at.y-dy/dist*length;
    c.save();c.lineCap="round";
@@ -336,6 +346,7 @@ root.WIZARDRY_BABY_DRAGON_V61={
  fireballAt,miniAt,mouthAt,splashHitAt,splashLaunchAt,
  explosionFrameAt,explosionReady,explosionAsset:"assets/dragonfire-explosion-v63.webp",
  depthFor,actorPose:pose,actorPosition:position,home:HOME,frameCount:16,
- groundedFootPixel:248,attackProfile:true
+ groundedFootPixel:248,attackProfile:true,
+ cleanFrameTop:index=>index>=7&&index<=11?84:0
 };
 })(window);

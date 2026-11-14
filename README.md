@@ -1,3 +1,15 @@
+## FIX — Dragon sprite-sheet overlap and much faster fireballs (v0.64.0)
+
+**[Play Wizardry v0.64.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.64.0)**
+
+**Dragon sprite artifact:** The current approved 4×4 side-profile dragon atlas contained detached thin ground-line pixels around local y=36–47 of frames 7–11 (the idle/roar/charge/shot cells). These were inherited from neighboring sprites and rendered above the intended frame, making it look as though a second frame was showing. The sprite renderer now crops only the top 84 px of those five affected source cells, leaving the actual dragon (which starts below local y=98) and feet unchanged. This also fixes card art because it calls the same sprite drawing function. The source texture and all its correct dragon poses remain approved.
+
+**Projectile speed:** Main Dragonfire blast now takes **110ms**, formerly 260ms; its long bright streak is extended for a convincing near-instant launch. The two branching mini fireballs also accelerate: the splash phase is **460ms**, formerly 780ms, with impact schedules still tied to each fireball's arrival. The approved explosive impact remains and fires on main-target contact. Main damage is still 650 and each existing left/right neighbor takes 150 once. Main-target burn is still 25%, 50 per round for three rounds.
+
+**No balance changes:** Dragonfire's mana/accuracy, five-card hand, card draw rules, and all other spells remain intact. Character depth sorting and existing arena artwork are preserved.
+
+---
+
 ## Dragonfire Descent — fast fireball + explosive impact (v0.63.0)
 
 **[Play Wizardry v0.63.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.63.0)**

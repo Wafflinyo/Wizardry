@@ -1,4 +1,4 @@
-/* Wizardry 0.46 — interactive 2.5D battle test.
+/* Wizardry 0.47 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -68,6 +68,38 @@
   defeatAtlas.decoding="async";
   defeatAtlas.src="./assets/wizard-defeat-v37.png";
   const defeatAtlasReady=()=>defeatAtlas.complete&&defeatAtlas.naturalWidth===512&&defeatAtlas.naturalHeight===256;
+  // Transparent padding below the boots varies by animation frame.
+  // Measure once per atlas and anchor the lowest visible foot pixel to
+  // each unit's original ground coordinate, avoiding apparent hovering.
+  const footPadCache=new WeakMap();
+  function footPadding(atlas,frame){
+    if(!atlas?.complete||!atlas.naturalWidth)return 0;
+    let data=footPadCache.get(atlas);
+    if(!data){
+      data=[];
+      try{
+        const sample=document.createElement("canvas");
+        sample.width=atlas.naturalWidth;sample.height=atlas.naturalHeight;
+        const c=sample.getContext("2d",{willReadFrequently:true});
+        c.drawImage(atlas,0,0);
+        const pixels=c.getImageData(0,0,sample.width,sample.height).data;
+        const cols=Math.floor(sample.width/128),rows=Math.floor(sample.height/128);
+        for(let index=0;index<cols*rows;index++){
+          const ox=(index%cols)*128,oy=Math.floor(index/cols)*128;
+          let lastOpaque=127,found=false;
+          for(let y=127;y>=45&&!found;y--){
+            for(let x=24;x<=103;x+=2){
+              const a=pixels[4*((oy+y)*sample.width+(ox+x))+3];
+              if(a>=112){lastOpaque=y;found=true;break;}
+            }
+          }
+          data.push(found?Math.min(42,Math.max(0,(127-lastOpaque)*220/128)):0);
+        }
+      }catch(e){data=[];}
+      footPadCache.set(atlas,data);
+    }
+    return data[frame]||0;
+  }
   const DEFEAT_FRAME_STARTS=[0,95,185,285,385,510,625,745];
   const DEFEAT_HOLD_MS=DEFEAT_FRAME_STARTS.at(-1);
   function defeatFrame(ms){
@@ -81,7 +113,7 @@
     const i=defeatFrame(elapsedMs);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=window.WizardryPalettes?.getAtlas(defeatAtlas,"defeat",look)||defeatAtlas;
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220+footPadding(defeatAtlas,i)+7,148,220);
     ctx.restore();return true;
   }
   const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
@@ -101,7 +133,7 @@
     const i=wizardFrame(stage,p,ms,time,lowerFrom);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=window.WizardryPalettes?.getAtlas(wizardAtlas,"wizard",look)||wizardAtlas;
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220+footPadding(wizardAtlas,i)+7,148,220);
     ctx.restore();return true;
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=1600,ARM_LOWER_MS=340,FIZZLE_MS=360;
@@ -872,7 +904,12 @@
   }
   function createBackground(){
     background=document.createElement("canvas");background.width=W;background.height=H;
-    drawBackground(background.getContext("2d"));
+    const bg=background.getContext("2d");
+    // Identical 1000×620 shallow side/three-quarter camera and slots.
+    // Old backdrop remains a safe fallback if the module is unavailable.
+    if(window.WIZARDRY_LOW_POLY_ARENA_V47)
+      window.WIZARDRY_LOW_POLY_ARENA_V47.draw(bg);
+    else drawBackground(bg);
   }
   function rounded(ctx,x,y,w,h,r,fill,stroke=null,sw=1){
     ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -1081,12 +1118,37 @@
   // facing. Only summoned spell creatures turn to face their targets.
   function desiredYaw(u){return u.team?-.74:.74;}
   function updateFacing(dt){} // No target-based combatant rotation.
+  // Inlaid floor medallion and concentrated shadows anchor every
+  // character on the original depth plane instead of a hovering oval.
+  function drawGroundMarker(ctx,u,scale){
+    const y=7*scale,rx=57*scale,ry=17*scale;
+    ctx.save();
+    const shade=ctx.createRadialGradient(0,y,3*scale,0,y,73*scale);
+    shade.addColorStop(0,"#010914d9");
+    shade.addColorStop(.48,"#010b17a0");
+    shade.addColorStop(1,"#010b1700");
+    ctx.fillStyle=shade;
+    ctx.beginPath();ctx.ellipse(0,y,78*scale,23*scale,0,0,Math.PI*2);
+    ctx.fill();
+    ellipse(ctx,0,y+1,rx,ry,"#0c243280","#bba37179",1.6);
+    ellipse(ctx,0,y+1,rx-8*scale,ry-4*scale,null,"#8baaa45f",1.25);
+    // Four tiny faceted inlaid stones, not elevated podiums.
+    for(let k=0;k<4;k++){
+      const a=Math.PI*(k+.5)/2;
+      const x=rx*Math.cos(a),py=y+ry*Math.sin(a);
+      pathPoly(ctx,[[x-5*scale,py],[x,py-4*scale],
+        [x+5*scale,py],[x,py+4*scale]],
+        k%2?"#cbaa6bb5":"#6db5b7a3");
+    }
+    ellipse(ctx,0,y,31*scale,8*scale,"#020911cf");
+    ctx.restore();
+  }
   function drawUnit(u,time){
     // Physical depth scale from the same arena floor, not separate
     // front/back teams. Lower Y sits nearer the 3/4 camera.
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
     g.save();g.translate(u.x,u.y);
-    ellipse(g,0,8,66*scale,17*scale,"#010910a8");
+    drawGroundMarker(g,u,scale);
     // Keep the collapsed pose readable instead of fading it nearly away.
     if(u.hp<=0)g.globalAlpha=.85;
     if(state.auras[u.team]){

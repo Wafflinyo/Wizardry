@@ -1,3 +1,15 @@
+## NEW — Low-poly crystal colosseum and grounded wizard feet (v0.47.0)
+
+**[Play Wizardry with the low-poly arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.47.0)**
+
+The **battle scene itself** now matches the approved low-poly colosseum direction, while retaining the **original shallow three-quarter side view**, exact 1000×620 canvas, left allies and right enemies, all 1v1–4v4 seat positions, and screen target hit boxes. The new offscreen-rendered arena background has faceted polygon paving, raised stone platform thickness with a gold near rim, angular masonry and archways, gold-trimmed banners, tall crystal clusters, burning braziers, and a low-poly cyan/gold magic compass in the middle. It is **not** the concept art image pasted over the game or an illustration with noninteractive fake fighters: the real approved sprites remain independently animated and fully interactive.
+
+**No more floating:** Each wizard's animation-frame alpha is inspected **once per atlas** to find the bottom of its visible feet. Transparent image padding beneath the shoes is compensated when drawing the approved idle, casting, and kneeling/defeated poses, preserving the actual world-space ground position for each of 8 units. Under each set of feet is a low stone floor inlay with a concentrated boot-contact shadow and subtle gold/cyan faceted segments; the markers are engraved into the floor, not raised pedestals. The 3/4 visual depth scaling and combatant draw-order are preserved.
+
+All spell and rune animations, card art, statuses, damage, targeting, 1.6-second trace and glow/crumble outcomes, and Poseidon's **success-only** recharge/Tidal Echo are unchanged.
+
+---
+
 ## NEW — Slower rune tracing, successful glow, failed crumble (v0.46.0)
 
 **[Play the updated arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.46.0)** · **[Preview successful and failed runes](https://wafflinyo.github.io/Wizardry/rune-preview.html?v=0.46.0)**

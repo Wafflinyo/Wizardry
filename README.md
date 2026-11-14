@@ -1,3 +1,13 @@
+## NEW — Approved wizard in every battle slot (v0.36.0)
+
+**[Open Wizardry 1v1–4v4 battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.36.0)**
+
+Every ally and opponent in **Story / CPU** and **PvP local test** now starts with the same approved purple-and-gold low-poly wizard from the existing 12-frame idle and 16-frame casting atlas. All four positions on both sides render the exact same character art with the enemy team mirrored to face inward; depth scaling, target arrows, HP/status plates and painter's order remain unchanged. Idle breathing is slightly desynchronized between characters so the eight wizards don't bob together. Each individual caster runs the same raise → trace → immediate recovery/idle on rune success or failure, with its own action timing. Spell summons and failure effects play independently behind all models.
+
+The wizard appearance is intentionally the same in every slot for this design test; team identity, stats, AI decisions, targeting and cards are unchanged. Existing Customize controls still let a human choose a different costume (falling back to the prior procedural model). The 850 ms trace, Poseidon 2550 ms and Golem 2850 ms timings and the fixed battle-canvas sizing remain intact.
+
+---
+
 ## UPDATE — Staff waving stops at rune outcome (v0.35.0)
 
 **[Play Wizardry battle v0.35.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.35.0)**

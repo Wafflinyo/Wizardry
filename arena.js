@@ -1,4 +1,4 @@
-/* Wizardry 0.35 — interactive 2.5D battle test.
+/* Wizardry 0.36 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -86,9 +86,9 @@
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
       hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,x:0,y:0,
-      hat:["pointed","wide","hood","scholar"][index],
-      robe:["classic","split","armored","classic"][index],
-      robeColor:["#6f4ab4","#6f4ab4","#bc503d","#367d59"][index],
+      // Every fighter starts with the same approved wizard visual.
+      // A human may still pick a custom outfit via the existing controls.
+      hat:"pointed",robe:"classic",robeColor:"#6f4ab4",
       armRaise:0,facing:team?-.74:.74};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
@@ -347,9 +347,9 @@
         }
         a.postCastEffectsApplied=true;
       }
-      // The top-slot sprite has normally returned to idle during the spell.
-      // Legacy lowering remains for the other procedural fighters.
-      startStage(a,"lowering",caster?.team===0&&caster.index===0?520:ARM_LOWER_MS);
+      // Every wizard uses the same recovery timing; the visible sprite
+      // lowers immediately at rune outcome, then idles during the summon.
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
     }else if(a.stage==="lowering"){
       caster.armRaise=0;
@@ -1006,9 +1006,11 @@
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
     }
     g.scale(scale,scale);
-    // Approved full-body frames: only one wizard and one staff are drawn.
-    const approvedTopSlot=u.team===0&&u.index===0&&
-      u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4";
+    // The approved low-poly wizard now occupies ALL 1v1–4v4 slots,
+    // on both teams. Mirror the enemy team so they face the allies.
+    // Customized outfits retain their functional procedural fallback.
+    const approvedWizard=u.hat==="pointed"&&u.robe==="classic"&&
+      u.robeColor==="#6f4ab4";
     const action=state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
@@ -1018,10 +1020,19 @@
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
       visualStage=visualProgress>=1?"idle":"lowering";
     }
-    if(approvedTopSlot&&drawWizardSprite(g,
-        visualStage,visualProgress,
-        action?.traceMs||0,time,action?.lowerFromFrame)){
-      // This draw remains within the depth-sorted unit layer.
+    // Stagger each unit's breathing loop so eight identical wizards
+    // don't bob in perfect synchronization. Casting uses each unit's
+    // own action state and returns to idle after rune success/failure.
+    const idleTime=time+u.index*235+u.team*437;
+    g.save();
+    if(u.team===1)g.scale(-1,1);
+    const spriteDrawn=approvedWizard&&drawWizardSprite(g,
+      visualStage,visualProgress,
+      action?.traceMs||0,idleTime,action?.lowerFromFrame);
+    g.restore();
+    if(spriteDrawn){
+      // All sprites stay in the same depth-sorted scene and use the
+      // original world-space HP/status plates and target hit testing.
     }else{
       const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
       g.translate(0,bob);
@@ -1131,7 +1142,7 @@
   function drawTargetArrow(u,time){
     if(!u||u.hp<=0)return;
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
-    const modelHeight=(u.team===1&&state.mode==="story")?204:218;
+    const modelHeight=218;
     const tipY=clamp(u.y-modelHeight*scale-12,45,H-55)+
       Math.sin(time*.006)*3;
     g.save();g.translate(u.x,tipY);

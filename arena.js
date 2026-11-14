@@ -1,4 +1,4 @@
-/* Wizardry 0.54 — interactive 2.5D battle test.
+/* Wizardry 0.55 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -157,7 +157,10 @@
   const ESTEL_RISE_MS=1050,ESTEL_ORB_SPEED_PX_PER_MS=.39;
   const ESTEL_TRAVEL_MIN_MS=540,ESTEL_TRAVEL_MAX_MS=1100;
   const ESTEL_IMPACT_MS=720,ESTEL_EXIT_MS=840;
-  const WIND_FORM_MS=960,WIND_VOLLEY_MS=2000,WIND_IMPACT_MS=420,WIND_DISSOLVE_MS=620;
+  // A full vortex stays on screen; 152ms high-speed rock flights replace
+  // the former 620ms arcing hops. One damage event per target still lands
+  // precisely at the renderer's own hitAt() milestone.
+  const WIND_FORM_MS=960,WIND_VOLLEY_MS=1520,WIND_IMPACT_MS=420,WIND_DISSOLVE_MS=620;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -509,7 +512,7 @@
         id:u.id,x:u.x,y:u.y,hit:false
       }));
       startStage(a,"wind-volley",WIND_VOLLEY_MS);
-      ui.hint.textContent="The full-force tornado is firing rocks at each enemy!";
+      ui.hint.textContent="The whirlwind launches high-speed rocks directly at each enemy!";
     }else if(a.stage==="wind-volley"){
       // All individual rock impacts have completed by this boundary.
       // This call grants Tailwind once and cannot replay previous damage.

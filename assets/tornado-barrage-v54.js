@@ -1,4 +1,4 @@
-/* Wizardry v0.54.0 — Approved twelve-frame full-wind Tornado Barrage.
+/* Wizardry v0.55.0 — Faster approved tornado, direct high-velocity rocks.
    Source artwork: user's approved generated twelve-frame GIF, extracted as
    a transparent 4x3 WebP atlas for the existing Wizardry battlefield.
    Each enemy receives its own launched stones and timed rock impact. */
@@ -41,17 +41,22 @@ function rock(c,x,y,r,rot,seed){
 // One user-approved wind frame is displayed at a time, without its
 // original colosseum backdrop. The stage determines the frame timing.
 // The atlas includes the source animation's dense turquoise wind bands.
+// Play approved wind poses at a real frame-clock rate rather than tying
+// one 10-frame revolution to the whole 2-second attack. The funnel keeps
+// cycling rapidly while stones leave it and during the impact aftermath.
+const SPIN_FRAME_MS=55; // ~18 fps, more than 3x the former attack speed.
 function frameFor(stage,p,time){
  if(stage==="wind-summon")return p<.22?0:p<.52?1:2;
- if(stage==="wind-volley")return Math.min(11,2+Math.floor(p*10));
- if(stage==="wind-impact")return p<.45?10:11;
- return p<.35?11:10;
+ if(stage==="wind-volley"||stage==="wind-impact")
+   return 2+(Math.floor(Math.max(0,time)/SPIN_FRAME_MS)%10);
+ if(stage==="wind-dissolve")return 2+(Math.floor(Math.max(0,time)/SPIN_FRAME_MS)%10);
+ return 2;
 }
 function fallbackFunnel(c,cx,base,p,time){
  c.save();c.globalAlpha=smooth(p/.15);
  for(let z=0;z<18;z++){
    const height=z/17,cy=base-height*310;
-   const width=(22+height*133),phase=time*.0025+z*.8;
+   const width=(22+height*133),phase=time*.012+z*.8;
    const dx=Math.sin(phase)*7;
    path(c,[[cx+dx-width,cy],[cx+dx-width*.28,cy-25],
     [cx+dx+width*.68,cy-19],[cx+dx+width,cy+9],
@@ -80,38 +85,56 @@ function funnel(c,stage,p,time,targets){
  c.restore();
 }
 function hitAt(i,count){
- // Targets take their own 200 damage as the rock volley reaches them.
- // 1v1 impact at 45%; 4v4 impacts at ~34%, 50%, 66%, and 82%.
- if(count<=1)return .45;
+ // Evenly stagger contacts to avoid simultaneous damage to every enemy.
+ if(count<=1)return .48;
  return .34+i*(.48/(count-1));
 }
-function launchAt(i,count){return Math.max(.02,hitAt(i,count)-.31)}
+const ROCK_FLIGHT_WINDOW=.10; // 152ms at the new 1520ms volley duration.
+const ROCK_FAN_INTERVAL=.011; // a tight, rapid burst of additional stones.
+function launchAt(i,count){
+ return Math.max(.02,hitAt(i,count)-ROCK_FLIGHT_WINDOW);
+}
+// Independent rock projectiles fire DIRECTLY out of the funnel in
+// high-speed straight trajectories toward the actual enemy hitbox.
+// No parabola, vertical bounce, sin-wave height, or cubic ease-in.
+function rockPosition(start,end,t){
+ const progress=clamp(t);
+ return {x:lerp(start.x,end.x,progress),
+         y:lerp(start.y,end.y,progress)};
+}
+function rockTrajectory(i,k,target,count,progress){
+ const begin=launchAt(i,count)+k*ROCK_FAN_INTERVAL;
+ const finish=hitAt(i,count)+k*ROCK_FAN_INTERVAL;
+ const t=clamp((progress-begin)/(finish-begin));
+ const dir=target.x>=500?1:-1;
+ const start={x:500+dir*(35+k*7),y:468-168-(i%3)*13-k*7};
+ const end={x:target.x+(k-1.5)*8,
+            y:target.y-82+(k%3-1)*11};
+ return {t,start,end,point:rockPosition(start,end,t),
+   trail:rockPosition(start,end,Math.max(0,t-.18))};
+}
 function volley(c,targets,p,time){
- const cx=500,base=468,count=targets.length;
+ const count=targets.length;
  for(let i=0;i<count;i++){
-  const target=targets[i],impact=hitAt(i,count),begin=launchAt(i,count);
-  const dir=target.x>=cx?1:-1;
-  // A first large stone is the hit that changes HP. Additional stones
-  // follow it visibly, instead of an instantaneous team-wide explosion.
+  const target=targets[i];
+  // All fragments accelerate out of the CYCLONE, not upward. The first
+  // is the gameplay hit; other stones follow within ~50 milliseconds.
   for(let k=0;k<4;k++){
-   const delay=k*.018;
-   const t=clamp((p-begin-delay)/(impact-begin+delay*.5));
-   if(t<=0||t>=1)continue;
-   const ox=cx+dir*(66+k*9),oy=base-155-(i%3)*21-k*11;
-   const tx=target.x+(k-1.5)*9,ty=target.y-82+(k%3-1)*12;
-   const at=smooth(t);
-   const x=lerp(ox,tx,at),y=lerp(oy,ty,at)-85*Math.sin(Math.PI*t);
-   const back=.055;
-   const old=clamp(t-back,0,1);
-   const tailX=lerp(ox,tx,smooth(old)),tailY=lerp(oy,ty,smooth(old))-85*Math.sin(Math.PI*old);
-   c.save();c.globalAlpha=.70;
-   c.strokeStyle="#aae5d7";c.lineWidth=2.3;c.lineCap="round";
-   c.beginPath();c.moveTo(tailX,tailY);c.lineTo(x,y);c.stroke();
+   const shot=rockTrajectory(i,k,target,count,p);
+   if(shot.t<=0||shot.t>=1)continue;
+   const {point,trail,t}=shot;
+   c.save();c.lineCap="round";
+   // The bright tapered wind streak visually sells direct high velocity.
+   c.strokeStyle="#64d7e6a9";c.lineWidth=k===0?8:5;
+   c.beginPath();c.moveTo(trail.x,trail.y);c.lineTo(point.x,point.y);c.stroke();
+   c.strokeStyle="#d8fefacc";c.lineWidth=k===0?2.8:1.7;
+   c.beginPath();c.moveTo(trail.x,trail.y);c.lineTo(point.x,point.y);c.stroke();
    c.restore();
-   rock(c,x,y,(k===0?12:7)+rnd(i*71+k*7)*5,at*TAU*3+k,i*10+k);
+   rock(c,point.x,point.y,(k===0?13:7)+rnd(i*71+k*7)*4,
+     time*.016+k*.9,i*10+k);
   }
-  // Draw a brief separate impact at EACH scheduled contact time.
-  const local=(p-impact)/.15;
+  // Each target's own stone impact remains synchronized with damage.
+  const local=(p-hitAt(i,count))/.15;
   if(local>=0&&local<1)impactBurst(c,target,local,time,false);
  }
 }
@@ -171,6 +194,7 @@ function drawCardArt(c,w,h){
  funnel(c,"wind-volley",.17,900,[{x:750,y:352}]);
  c.restore();return true;
 }
-root.WIZARDRY_TORNADO_V54={draw,drawForeground,drawCardArt,onReady,imageReady,frameFor,hitAt,launchAt,
-  atlas:"assets/tornado-approved-v54.webp",frameCount:12};
+root.WIZARDRY_TORNADO_V54={draw,drawForeground,drawCardArt,onReady,imageReady,
+  frameFor,hitAt,launchAt,rockTrajectory,rockPosition,
+  atlas:"assets/tornado-approved-v54.webp",frameCount:12,spinFrameMs:SPIN_FRAME_MS};
 })(window);

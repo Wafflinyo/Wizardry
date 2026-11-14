@@ -1,3 +1,15 @@
+## UPDATED — Faster spinning tornado and straight-line rock shots (v0.55.0)
+
+**[Play Tornado Barrage with fast rocks](https://wafflinyo.github.io/Wizardry/arena.html?v=0.55.0)**
+
+The tornado still uses the previously **approved transparent 12-frame fuller teal wind artwork**, unmodified in shape, proportions and palette. During the rock volley its original wind frames now cycle every **55 ms (~18 fps)** instead of playing just 10 frames across the former 2-second attack. This creates more rapid apparent spin without replacing the approved model.
+
+**Rocks no longer hop or arc.** Each rock starts INSIDE the funnel, then shoots out rapidly in a **direct straight line** toward its enemy. A short cyan-white wind streak appears behind the fast rock. Every targeted enemy receives a tight burst of four stones with the primary rock arriving in **152 ms**, instead of the former ~620 ms arcing trip. Enemy volleys remain **staggered** rather than simultaneous.
+
+**Gameplay remains intact:** Wind still uses its existing one-roll accuracy. The first rock's hitAt timing deals **200 base damage to that living enemy once**, with no friendly fire. Damage is applied precisely when the stone visually arrives; impact effects remain individual. A successful tornado still gives the caster **+10 accuracy percentage points on their next cast of any element**, consumed on the next attempt. Other spells and mobile card layout are untouched.
+
+---
+
 ## UPDATED — Approved full-wind tornado with staggered rock impacts (v0.54.0)
 
 **[Play Wizardry with the new tornado](https://wafflinyo.github.io/Wizardry/arena.html?v=0.54.0)**

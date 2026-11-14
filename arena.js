@@ -1,4 +1,4 @@
-/* Wizardry 0.48 — interactive 2.5D battle test.
+/* Wizardry 0.49 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -15,13 +15,16 @@
     skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
     statusPopup:$("statusPopup"),statusName:$("statusName"),
     statusText:$("statusText"),statusClose:$("statusClose")};
-  // Two approved summons only. Future shields, traps and support cards
-  // remain a possible game-system extension, but are not in this test hand.
+  // Cards use accuracy rolls, never manual tracing. The lightning summon
+  // adds a real one-action stun only AFTER a successful damaging cast.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
       icon:"♆",description:"On success: recharge 1 round & Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
-      icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10}
+      icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10},
+    {id:"volt",name:"Professor Volt",school:"lightning",cost:5,target:"enemy",kind:"summon",damage:450,
+      icon:"⚡",description:"20% stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
+      stunChance:.20,duration:2950,hit:.66,artFrame:2}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -171,7 +174,7 @@
     const colors=window.WizardryPalettes;
     const pick=(value,allowed,defaultValue)=>allowed&&Object.hasOwn(allowed,value)?value:defaultValue;
     return {id,team,index,name:d.name,style:d.style,color:d.color,
-      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,x:0,y:0,
+      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
       hat:["pointed","wide","hood","scholar"].includes(custom.hat)?custom.hat:"pointed",
       robe:["classic","split","armored"].includes(custom.robe)?custom.robe:"classic",
       robeColor:pick(custom.robeColor,colors?.robeColors,preset.robeColor),
@@ -273,8 +276,12 @@
     return !!u&&u.hp>0&&Number.isInteger(u.rechargeRound)&&
       state.round===u.rechargeRound;
   }
+  function isStunned(u){
+    return !!u&&u.hp>0&&Number.isInteger(u.stunRound)&&
+      state.round===u.stunRound&&u.statuses.some(st=>st.kind==="stun");
+  }
   function requiresRest(u){
-    return !!u&&u.hp>0&&(isRecharging(u)||
+    return !!u&&u.hp>0&&(isStunned(u)||isRecharging(u)||
       !CARDS.some(card=>card.cost<=u.mana));
   }
   function autoPlan(u){
@@ -467,7 +474,17 @@
     if(!state||state.phase!=="resolving")return;
     while(state.queueAt<state.sequence.length){
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
-      if(!c||c.hp<=0||!card||c.mana<card.cost||isRecharging(c))continue;
+      if(!c||c.hp<=0||!card)continue;
+      // Exactly ONE eligible action is lost, whether the spell struck
+      // before this wizard's planned cast or during a prior round.
+      if(isStunned(c)){
+        consumeStatus(c,"stun");c.stunRound=null;
+        flash(c,"STUNNED · SKIPPED","#88e8ff");
+        state.log=[c.name+" loses their action to Professor Volt's stun.",
+          ...state.log].slice(0,5);
+        continue;
+      }
+      if(c.mana<card.cost||isRecharging(c))continue;
       if(card.target!=="team"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0){action.targetId=valid[0]?.id||null;}
@@ -499,6 +516,20 @@
   function consumeStatus(u,kind){
     const at=u.statuses.findIndex(s=>s.kind===kind);
     return at<0?null:u.statuses.splice(at,1)[0];
+  }
+  function attemptVoltStun(source,target,card,roll=Math.random()){
+    if(card?.id!=="volt"||!target||target.hp<=0||roll>=card.stunChance)
+      return false;
+    // If the target is still due to act this round, cancel that cast;
+    // otherwise reserve the stun for their next round. Never double-skip.
+    const pending=state.phase==="resolving"&&state.sequence
+      .slice(state.queueAt).some(a=>a.casterId===target.id);
+    target.stunRound=pending?state.round:state.round+1;
+    addStatus(target,"stun","⚡",1);
+    flash(target,"STUNNED","#96f3ff");
+    state.log=[source.name+"'s Professor Volt stuns "+target.name+
+      " for one action!",...state.log].slice(0,5);
+    return true;
   }
   function damage(source,target,base,card){
     let raw=base,notes=[];
@@ -535,7 +566,13 @@
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
     if(card.kind==="damage"||card.kind==="summon"){
-      if(t&&t.hp>0)damage(c,t,card.damage,card);
+      if(t&&t.hp>0){
+        damage(c,t,card.damage,card);
+        // The independent 20% stun roll happens ONLY after a successful
+        // lightning rune and beam impact against a surviving target.
+        if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0)
+          attemptVoltStun(c,t,card);
+      }
     } else if(card.kind==="heal"&&t&&t.hp>0){
       const n=Math.min(card.heal,t.maxHp-t.hp);t.hp+=n;flash(t,"+"+n,"#9bffc0");
       state.log=[c.name+" healed "+t.name+" for "+n,...state.log].slice(0,5);
@@ -573,6 +610,11 @@
         consumeStatus(u,"recharge");
         u.rechargeRound=null;
       }
+      // If a stunned wizard couldn't queue at all (because it was
+      // stunned during planning), that round itself consumes the skip.
+      if(u.stunRound!==null&&u.stunRound<=state.round){
+        consumeStatus(u,"stun");u.stunRound=null;
+      }
     }
     for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
     state.round++;
@@ -583,8 +625,9 @@
     nearestAvailableCaster();
     state.log=["Round "+state.round+" begins: your spell and target choice.",...state.log].slice(0,5);
     ui.status.textContent="Round "+state.round+": "+
-      (isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
-      "Choose a new spell, tap an enemy, and confirm.");
+      (isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
+       isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
+       "Choose a spell, tap an enemy, and confirm.");
     paintUI();
     // If the controlled wizard was knocked out, teammates remain autonomous.
     // Do not ask the player to control another wizard.
@@ -611,9 +654,10 @@
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
     if(planning)ui.hint.textContent=c?
-      (isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
+      (isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
+       isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
        card?(target?"Confirm "+card.name+" on "+target.name+".":"Tap an enemy to target "+card.name+"."):
-        "Tap one of your two spells below."):
+        "Tap one of your three spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
       (planning?" · "+(card?"Tap an enemy":"Choose a spell"):" · Casting");
@@ -704,8 +748,11 @@
         const water=k.id==="poseidon";
         const effect=water?
           '<span class="spell-effect"><b>⧖ HIT: RECHARGE 1 ROUND</b><span>≈ HIT: NEXT WATER +30%</span></span>':
-          '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>';
-        b.innerHTML='<span class="spell-tier">'+(water?'LEGENDARY · WATER':'EPIC · EARTH')+'</span>'+
+          k.id==="golem"?
+          '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>':
+          '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>';
+        const rarity=water?"LEGENDARY":k.id==="golem"?"EPIC":"RARE";
+        b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
@@ -714,7 +761,8 @@
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":"Seismic fissure attack."));
+          "% accuracy. "+(water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
+            k.id==="golem"?"Seismic fissure attack.":"Summons Professor Volt: 450 Lightning damage and 20% stun chance on a successful hit; target skips one action."));
         b.onclick=()=>chooseCard(k.id);
         ui.hand.appendChild(b);
       }
@@ -1263,6 +1311,11 @@
         return {title:"⧖ Recharge · Debuff",
           detail:u.name+" must skip Round "+u.rechargeRound+
           " after using Poseidon's Wrath. The status expires once that round has passed."};
+      case "stun":
+        return {title:"⚡ Stunned · 1 action",
+          detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
+            (u.stunRound===state.round?" this round.":" next round.")+
+            " A stun does not alter spell accuracy or deal additional damage."};
       case "tidal_echo":
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
@@ -1326,6 +1379,7 @@
     symbols.forEach((st,i)=>{
       const r=statusRuneRect(u,i);
       const glow=st.kind==="tidal_echo"?"#44dbee":
+        st.kind==="stun"?"#98dfff":
         st.kind==="recharge"?"#e6b75b":"#b4eac2";
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
@@ -1391,7 +1445,13 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(image?.complete&&image.naturalWidth>0){
+      if(card.id==="volt"){
+        const rendered=window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height);
+        if(!rendered){
+          c.font="bold 71px Georgia,serif";c.textAlign="center";
+          c.fillStyle="#a7f4fc";c.fillText("ϟ",width/2,height*.57);
+        }
+      }else if(image?.complete&&image.naturalWidth>0){
         const edges=[0,314,627,940,1254],size=water?212:210;
         c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
         c.drawImage(image,edges[col],0,edges[col+1]-edges[col],
@@ -1421,6 +1481,7 @@
     }
     // Redraw once after all atlas references are installed, including
     // browsers that fire a cached data-image load event synchronously.
+    window.WIZARDRY_PROFESSOR_V49?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1454,6 +1515,12 @@
     const baseX=lerp(caster.x,target?.x||500,.48);
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
+    if(card.id==="volt"){
+      // An actual eight-pose inventor animal aims both electrodes at the
+      // current target. The independently animated beam runs to their body.
+      window.WIZARDRY_PROFESSOR_V49?.draw(g,{progress:p,time,target});
+      g.restore();return;
+    }
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
       const done=renderSprite(card.id,idx,500,470,310,target,p);
@@ -1610,6 +1677,7 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

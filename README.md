@@ -1,3 +1,19 @@
+## NEW — Professor Volt, Lightning summon (v0.49.0)
+
+**[Play Wizardry with Professor Volt](https://wafflinyo.github.io/Wizardry/arena.html?v=0.49.0)**
+
+New third spell card **Professor Volt** summons an original wild-haired animal inventor with an oversized white shock of hair, blue goggles, gold-trimmed purple lab coat, striped tail and **two handheld electric antennas**. The spell uses an authentic **eight-frame 4×2 transparent low-poly sprite sheet**; the professor materializes in electric energy, raises and brings his two rods together toward the chosen enemy, fires a branching cyan-white electric beam at the enemy's actual battlefield position, recoils, and magically vanishes. The card illustration is a genuine frame from that same animation, not placeholder artwork. The battlefield angle, current low-poly arena background and existing wizard sprites are unchanged.
+
+**Card stats:** 450 base Lightning damage, **80% accuracy**, **20% stun chance on a successful hit**, **5 mana**. The accuracy/cost are provisional defaults since only damage and stun chance were specified. Accuracy is determined by the existing automatic rune roll; no manual tracing. Lightning uses the already-established bolt symbol, automatic sparkling trace, successful glow and failed crumble.
+
+**Stun is functional:** An enemy hit by a successful beam has a separate one-in-five chance to become **STUNNED**. If its turn hasn't happened yet in the current resolution, that action gets cancelled; otherwise the stun blocks its next round's action. Each proc skips at most one action and displays a tappable ⚡ stun-status icon and an event message. A miss, a dead target, or an ordinary hit without the stun proc causes no stun. The stun wears off after the skipped action, including if the victim cannot queue in the affected round.
+
+**Three cards on mobile:** The playing-card hand is reflowed into three narrow portrait cards visible simultaneously, with element crests inside their top borders, upper-right mana badges, full spell-art panels and stat/effect rows.
+
+Existing Poseidon and Golem stats, art, elemental runes, Tidal Echo/recharge logic, AI choices and targeting rules are preserved.
+
+---
+
 ## NEW — Approved visual colosseum artwork in the live arena (v0.48.0)
 
 **[Play Wizardry with the actual reference-inspired arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.48.0)**

@@ -1,3 +1,13 @@
+## NEW — Wizard appearance palettes (v0.38.0)
+
+**[Customize the wizard in-game](https://wafflinyo.github.io/Wizardry/arena.html?v=0.38.0)**
+
+Choose from 10 separate **robe colors**, 10 **hat colors**, and nine **skin tones**. Customizing only colors does not replace the low-poly art with the old procedural model: it recolors the approved animated 12-frame idle, 16-frame casting, and eight-frame defeat atlases, preserving depth shading, gold trim, staff and beard. Each of the eight combatant slots starts in a different coordinated look, but all still use the same character and casting/death sequences. The controllable wizard's look updates immediately and is saved locally across battles and reloads. Older alternate hat shapes and robe cuts remain selectable, using the prior geometry model when chosen.
+
+Stats, HP, CPU control, rune success odds, damage, spell animation timing, and stable canvas dimensions are unchanged.
+
+---
+
 ## NEW — One-shot kneeling defeat animation (v0.37.0)
 
 **[Play battle with defeat animation](https://wafflinyo.github.io/Wizardry/arena.html?v=0.37.0)**

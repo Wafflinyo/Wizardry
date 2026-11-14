@@ -418,3 +418,11 @@ body{height:100svh}
   .turnbar{flex-basis:27px;height:27px;min-height:27px;max-height:27px}
   .hand-assist{height:29px;min-height:29px;max-height:29px}
 }
+
+/* v0.38: Independent live palette controls; keeps battle dimensions fixed. */
+.wizard-style .palette-select{border-left:7px solid var(--swatch,#6f4ab4);padding-left:8px;min-width:132px}
+.customize-menu[open] .wizard-style{gap:9px 12px;align-items:flex-end}
+@media(max-width:700px){
+  .wizard-style .palette-select{width:100%;min-width:0}
+  .customize-menu[open] .wizard-style{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+}

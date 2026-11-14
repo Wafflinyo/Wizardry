@@ -1,4 +1,4 @@
-/* Wizardry 0.37 — interactive 2.5D battle test.
+/* Wizardry 0.38 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -11,7 +11,8 @@
     chosenSpell:$("chosenSpell"),chosenTarget:$("chosenTarget"),targetPicker:$("targetPicker"),
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
     status:$("status"),reset:$("resetButton"),hat:$("wizardHat"),robe:$("wizardRobe"),
-    robeColor:$("wizardColor"),confirm:$("confirmTarget"),
+    robeColor:$("wizardColor"),hatColor:$("wizardHatColor"),
+    skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
     statusPopup:$("statusPopup"),statusName:$("statusName"),
     statusText:$("statusText"),statusClose:$("statusClose")};
   // Two approved summons only. Future shields, traps and support cards
@@ -75,11 +76,12 @@
       if(t>=DEFEAT_FRAME_STARTS[i])return i;
     return 0;
   }
-  function drawDefeatSprite(ctx,elapsedMs){
+  function drawDefeatSprite(ctx,elapsedMs,look){
     if(!defeatAtlasReady())return false;
     const i=defeatFrame(elapsedMs);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-    ctx.drawImage(defeatAtlas,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    const art=window.WizardryPalettes?.getAtlas(defeatAtlas,"defeat",look)||defeatAtlas;
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
     ctx.restore();return true;
   }
   const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
@@ -94,22 +96,50 @@
     }
     return Math.floor((Math.max(0,time)%1440)/120)%12;
   }
-  function drawWizardSprite(ctx,stage,p,ms,time,lowerFrom){
+  function drawWizardSprite(ctx,stage,p,ms,time,lowerFrom,look){
     if(!wizardAtlasReady())return false;
     const i=wizardFrame(stage,p,ms,time,lowerFrom);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-    ctx.drawImage(wizardAtlas,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    const art=window.WizardryPalettes?.getAtlas(wizardAtlas,"wizard",look)||wizardAtlas;
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
     ctx.restore();return true;
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=850,ARM_LOWER_MS=340,FIZZLE_MS=360;
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
+  // Same approved wizard mesh in every battle slot, with different palettes.
+  const LOOK_PRESETS=[
+    [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
+     {robeColor:"#3269c1",hatColor:"#128e9e",skinColor:"#e7b081"},
+     {robeColor:"#b83a55",hatColor:"#30293c",skinColor:"#c7885b"},
+     {robeColor:"#2c8a64",hatColor:"#d08a34",skinColor:"#805036"}],
+    [{robeColor:"#44526b",hatColor:"#b83a55",skinColor:"#f1cfad"},
+     {robeColor:"#d08a34",hatColor:"#3269c1",skinColor:"#a96b4a"},
+     {robeColor:"#ad5c9d",hatColor:"#30293c",skinColor:"#b197c5"},
+     {robeColor:"#dfd8c7",hatColor:"#128e9e",skinColor:"#58382f"}]
+  ];
+  const LOOK_STORAGE_KEY="wizardry.appearance.v38";
+  let savedLooks={};
+  try{const saved=JSON.parse(localStorage.getItem(LOOK_STORAGE_KEY)||"{}");
+    if(saved&&typeof saved==="object"&&!Array.isArray(saved))savedLooks=saved;}catch{}
+  function saveLook(u){
+    savedLooks[u.id]={hat:u.hat,robe:u.robe,robeColor:u.robeColor,
+      hatColor:u.hatColor,skinColor:u.skinColor};
+    try{localStorage.setItem(LOOK_STORAGE_KEY,JSON.stringify(savedLooks));}catch{}
+  }
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
-    return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,
+    const id=(team?"e":"a")+index;
+    const preset=LOOK_PRESETS[team][index];
+    const custom=savedLooks[id]||{};
+    const colors=window.WizardryPalettes;
+    const pick=(value,allowed,defaultValue)=>allowed&&Object.hasOwn(allowed,value)?value:defaultValue;
+    return {id,team,index,name:d.name,style:d.style,color:d.color,
       hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,x:0,y:0,
-      // Every fighter starts with the same approved wizard visual.
-      // A human may still pick a custom outfit via the existing controls.
-      hat:"pointed",robe:"classic",robeColor:"#6f4ab4",
+      hat:["pointed","wide","hood","scholar"].includes(custom.hat)?custom.hat:"pointed",
+      robe:["classic","split","armored"].includes(custom.robe)?custom.robe:"classic",
+      robeColor:pick(custom.robeColor,colors?.robeColors,preset.robeColor),
+      hatColor:pick(custom.hatColor,colors?.hatColors,preset.hatColor),
+      skinColor:pick(custom.skinColor,colors?.skinColors,preset.skinColor),
       armRaise:0,facing:team?-.74:.74,defeatElapsedMs:null};
   }
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
@@ -535,8 +565,16 @@
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
-    ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=!canDress;
-    if(c){ui.hat.value=c.hat;ui.robe.value=c.robe;ui.robeColor.value=c.robeColor;}
+    ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=
+      ui.hatColor.disabled=ui.skinColor.disabled=!canDress;
+    if(c){
+      ui.hat.value=c.hat;ui.robe.value=c.robe;
+      ui.robeColor.value=c.robeColor;
+      ui.hatColor.value=c.hatColor;ui.skinColor.value=c.skinColor;
+      for(const [input,color] of [[ui.robeColor,c.robeColor],
+          [ui.hatColor,c.hatColor],[ui.skinColor,c.skinColor]])
+        input.style.setProperty("--swatch",color);
+    }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
     ui.chosenTarget.textContent=target?"Target: "+target.name:
       "Tap an enemy on the battlefield";
@@ -666,11 +704,13 @@
     ui.queue.onclick=()=>{};
     ui.auto.onclick=()=>{};
     ui.resolve.onclick=()=>{};
-    for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"]]){
+    for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"],
+        [ui.hatColor,"hatColor"],[ui.skinColor,"skinColor"]]){
       input.onchange=()=>{
         const u=caster();
         if(state.phase!=="planning"||!u||(u.team===1&&state.mode!=="pvp"))return;
         u[field]=input.value;
+        saveLook(u);
         paintUI();
       };
     }
@@ -831,7 +871,7 @@
     const primary=u.robeColor||"#267eab";
     const dark=shadeColor(primary,-61),deeper=shadeColor(primary,-93);
     const light=shadeColor(primary,39),shine=shadeColor(primary,65);
-    const trim="#d8bd88",skin="#cca084";
+    const trim="#d8bd88",skin=u.skinColor||"#cca084";
     const sway=Math.sin(time*1.18+u.index*1.61)*1.3;
     const raised=clamp(u.armRaise||0,0,1);
     // Rear cape: faceted panels overlap the robe at the shoulders.
@@ -888,36 +928,39 @@
     line(ctx,side*7,-126,side*15,-124,shadeColor(skin,-72),1.3);
     // Hat style can change independently of robe silhouette/colors.
     const hat=u.hat||"pointed";
+    const hatPrimary=u.hatColor||primary;
+    const hatDark=shadeColor(hatPrimary,-61),hatDeeper=shadeColor(hatPrimary,-93);
+    const hatLight=shadeColor(hatPrimary,39);
     if(hat==="wide"){
       pathPoly(ctx,[[-44,-159+sway],[46,-159+sway],
-        [37,-150+sway],[-42,-149+sway]],deeper,trim,1.8);
+        [37,-150+sway],[-42,-149+sway]],hatDeeper,trim,1.8);
       pathPoly(ctx,[[-24,-159+sway],[-13,-193+sway],[12,-195+sway],
-        [27,-159+sway]],primary,light,1.6);
+        [27,-159+sway]],hatPrimary,hatLight,1.6);
       pathPoly(ctx,[[-13,-193+sway],[13,-195+sway],[25,-159+sway],
-        [3,-166+sway]],dark);
+        [3,-166+sway]],hatDark);
     }else if(hat==="hood"){
       pathPoly(ctx,[[-25,-117],[-31,-156+sway],[-14,-179+sway],
         [14,-179+sway],[33,-151+sway],[25,-111]],
-        dark,light,2);
+        hatDark,hatLight,2);
       pathPoly(ctx,[[-29,-156+sway],[-14,-179+sway],[0,-170+sway],
-        [-9,-132]],light);
+        [-9,-132]],hatLight);
       pathPoly(ctx,[[-21,-154+sway],[-12,-165+sway],[18,-164+sway],
-        [25,-151+sway],[20,-131],[-20,-133]],deeper,trim,1.6);
+        [25,-151+sway],[20,-131],[-20,-133]],hatDeeper,trim,1.6);
     }else if(hat==="scholar"){
       pathPoly(ctx,[[-32,-158+sway],[-20,-184+sway],[22,-184+sway],
         [33,-158+sway],[24,-150+sway],[-26,-149+sway]],
-        primary,trim,2);
+        hatPrimary,trim,2);
       pathPoly(ctx,[[-20,-184+sway],[22,-184+sway],[27,-160+sway],
-        [3,-166+sway]],dark);
+        [3,-166+sway]],hatDark);
       pathPoly(ctx,[[-43,-152+sway],[40,-152+sway],[33,-143+sway],
-        [-38,-143+sway]],deeper,trim,1.6);
+        [-38,-143+sway]],hatDeeper,trim,1.6);
     }else{
       pathPoly(ctx,[[-30,-156+sway],[-9,-206+sway],
-        [8,-218+sway],[27,-157+sway]],primary,trim,2.2);
+        [8,-218+sway],[27,-157+sway]],hatPrimary,trim,2.2);
       pathPoly(ctx,[[-9,-206+sway],[8,-218+sway],[20,-159+sway],
-        [0,-177+sway]],dark);
+        [0,-177+sway]],hatDark);
       pathPoly(ctx,[[-37,-161+sway],[36,-161+sway],[30,-150+sway],
-        [-34,-150+sway]],deeper,trim,1.7);
+        [-34,-150+sway]],hatDeeper,trim,1.7);
     }
     // Adjustable staff arm: all poses point toward arena CENTER, never
     // rotate the standing wizard or enemy. Wrist moves from hip to extended.
@@ -1036,9 +1079,9 @@
     g.scale(scale,scale);
     // The approved low-poly wizard now occupies ALL 1v1–4v4 slots,
     // on both teams. Mirror the enemy team so they face the allies.
-    // Customized outfits retain their functional procedural fallback.
-    const approvedWizard=u.hat==="pointed"&&u.robe==="classic"&&
-      u.robeColor==="#6f4ab4";
+    // Palette swaps use the approved full-body frames; only changing
+    // silhouettes uses the existing geometry-based model fallback.
+    const approvedWizard=u.hat==="pointed"&&u.robe==="classic";
     const action=state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
@@ -1055,10 +1098,10 @@
     g.save();
     if(u.team===1)g.scale(-1,1);
     const spriteDrawn=u.hp<=0
-      ? drawDefeatSprite(g,u.defeatElapsedMs||0)
+      ? drawDefeatSprite(g,u.defeatElapsedMs||0,u)
       : approvedWizard&&drawWizardSprite(g,
           visualStage,visualProgress,
-          action?.traceMs||0,idleTime,action?.lowerFromFrame);
+          action?.traceMs||0,idleTime,action?.lowerFromFrame,u);
     g.restore();
     if(spriteDrawn){
       // All sprites stay in the same depth-sorted scene and use the

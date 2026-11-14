@@ -1,4 +1,4 @@
-/* Wizardry 0.49 — interactive 2.5D battle test.
+/* Wizardry 0.51 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -24,7 +24,10 @@
       icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10},
     {id:"volt",name:"Professor Volt",school:"lightning",cost:5,target:"enemy",kind:"summon",damage:450,
       icon:"⚡",description:"20% stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
-      stunChance:.20,duration:2950,hit:.66,artFrame:2}
+      stunChance:.20,duration:2950,hit:.66,artFrame:2},
+    {id:"estel",name:"Lady Estel",school:"nature",cost:5,target:"ally",
+      kind:"heal",heal:750,icon:"❀",description:"Blesses one ally: up to 750 HP",
+      short:"90% ACCURACY",accuracy:.90,duration:3200,hit:.66,artFrame:3}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -243,9 +246,10 @@
   function selectTarget(id){
     if(state.phase!=="planning")return;
     const u=getUnit(id),c=caster(),card=currentCard();
-    if(!c||!card||!u||u.hp<=0||u.team!==1-c.team)return;
-    // Selecting or changing an enemy only previews the target; no spell is
-    // queued or mana spent until the visible Confirm Target is pressed.
+    if(!c||!card||!u||u.hp<=0||
+       !targetsFor(card,c).some(v=>v.id===u.id))return;
+    // Allies can be targeted for healing; enemies for damaging spells.
+    // No spell queues until the explicit confirmation is pressed.
     state.selectedTarget=id;
     paintUI();
   }
@@ -287,13 +291,17 @@
   function autoPlan(u){
     if(requiresRest(u))return null;
     const opponents=alive(1-u.team);
+    const wounded=alive(u.team).filter(a=>a.hp<a.maxHp);
     if(!opponents.length)return null;
-    const affordable=CARDS.filter(card=>card.cost<=u.mana);
+    // CPU healing prioritizes a real injury and never targets an enemy.
+    const affordable=CARDS.filter(card=>card.cost<=u.mana&&
+      (card.kind!=="heal"||wounded.length>0));
     if(!affordable.length)return null;
-    // CPU teammates and opponents pick independently each turn, including
-    // independently selecting a living target; no repeated saved orders.
     const card=affordable[Math.floor(Math.random()*affordable.length)];
-    const target=opponents[Math.floor(Math.random()*opponents.length)];
+    const target=card.kind==="heal"?
+      [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
+      opponents[Math.floor(Math.random()*opponents.length)];
+    if(!target)return null;
     return {casterId:u.id,cardId:card.id,targetId:target.id,
       team:u.team,auto:true};
   }
@@ -487,7 +495,11 @@
       if(c.mana<card.cost||isRecharging(c))continue;
       if(card.target!=="team"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
-        if(!t||t.hp<=0){action.targetId=valid[0]?.id||null;}
+        if(!t||t.hp<=0||!valid.some(v=>v.id===t.id)){
+          const replacement=card.kind==="heal"?
+            [...valid].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:valid[0];
+          action.targetId=replacement?.id||null;
+        }
         if(!action.targetId)continue;
       }
       c.mana-=card.cost;
@@ -573,9 +585,12 @@
         if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0)
           attemptVoltStun(c,t,card);
       }
-    } else if(card.kind==="heal"&&t&&t.hp>0){
-      const n=Math.min(card.heal,t.maxHp-t.hp);t.hp+=n;flash(t,"+"+n,"#9bffc0");
-      state.log=[c.name+" healed "+t.name+" for "+n,...state.log].slice(0,5);
+    } else if(card.kind==="heal"&&t&&t.hp>0&&t.team===c.team){
+      // The heal cannot damage an enemy, resurrect a KO, or exceed max HP.
+      const n=Math.min(card.heal,Math.max(0,t.maxHp-t.hp));
+      t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
+      state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
+        ...state.log].slice(0,5);
     } else if(card.kind==="shield"&&t&&t.hp>0){
       addStatus(t,"shield","⬡",.55);flash(t,"SHIELD","#a3efff");
       state.log=["Shield attached to "+t.name,...state.log].slice(0,5);
@@ -656,11 +671,12 @@
     if(planning)ui.hint.textContent=c?
       (isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(target?"Confirm "+card.name+" on "+target.name+".":"Tap an enemy to target "+card.name+"."):
-        "Tap one of your three spells below."):
+       card?(target?"Confirm "+card.name+" on "+target.name+".":
+         "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
+        "Tap one of your four spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
-      (planning?" · "+(card?"Tap an enemy":"Choose a spell"):" · Casting");
+      (planning?" · "+(card?"Tap "+(card.target==="ally"?"an ally":"an enemy"):"Choose a spell"):" · Casting");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
@@ -676,7 +692,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
     ui.chosenTarget.textContent=target?"Target: "+target.name:
-      "Tap an enemy on the battlefield";
+      "Tap "+(card?.target==="ally"?"an ally":"an enemy")+" on the battlefield";
     const canConfirm=planning&&!!c&&!!card&&!!target&&
       c.mana>=card.cost&&!state.plans[c.id];
     ui.confirm.hidden=!canConfirm;
@@ -725,8 +741,8 @@
       placeholder.textContent="Choose target";
       ui.targetPicker.appendChild(placeholder);
       if(c){
-        // Both approved summons target enemies. Permit explicit enemy
-        // selection before choosing a card if the player prefers.
+        // When Lady Estel is selected, show allies (including the caster).
+        // Without a selected card, show opponents as before.
         const choices=card?targetsFor(card,c):alive(1-c.team);
         for(const u of choices){
           const option=document.createElement("option");
@@ -750,19 +766,26 @@
           '<span class="spell-effect"><b>⧖ HIT: RECHARGE 1 ROUND</b><span>≈ HIT: NEXT WATER +30%</span></span>':
           k.id==="golem"?
           '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>':
-          '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>';
-        const rarity=water?"LEGENDARY":k.id==="golem"?"EPIC":"RARE";
+          k.id==="volt"?
+          '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>':
+          '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>';
+        const rarity=water?"LEGENDARY":k.id==="golem"||k.id==="estel"?"EPIC":"RARE";
         b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>✹ '+k.damage.toLocaleString()+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="heal"?"✚ ":"✹ ")+
+          (k.kind==="heal"?k.heal:k.damage).toLocaleString()+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          k.damage+" "+k.school+" damage, "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
-            k.id==="golem"?"Seismic fissure attack.":"Summons Professor Volt: 450 Lightning damage and 20% stun chance on a successful hit; target skips one action."));
+          (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
+            k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
+          "% accuracy. "+(k.id==="estel"?
+            "Summons an angel-winged goddess who rises, blesses a chosen living ally, then flies away.":
+            water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
+            k.id==="golem"?"Seismic fissure attack.":
+            "Summons Professor Volt: 450 Lightning damage and 20% stun chance on a successful hit; target skips one action."));
         b.onclick=()=>chooseCard(k.id);
         ui.hand.appendChild(b);
       }
@@ -1430,12 +1453,13 @@
       const canvas=b.querySelector?.(".spell-art-canvas");
       if(!card||!canvas)continue;
       const c=canvas.getContext("2d");if(!c)continue;
-      const width=canvas.width,height=canvas.height,water=card.school==="water";
+      const width=canvas.width,height=canvas.height,water=card.school==="water",
+        nature=card.school==="nature";
       c.clearRect(0,0,width,height);
       const sky=c.createLinearGradient(0,0,0,height);
-      sky.addColorStop(0,water?"#155473":"#5e5143");
-      sky.addColorStop(.55,water?"#0b3049":"#2c3032");
-      sky.addColorStop(1,water?"#061c30":"#171d28");
+      sky.addColorStop(0,nature?"#486d4d":water?"#155473":"#5e5143");
+      sky.addColorStop(.55,nature?"#203c37":water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,nature?"#10292c":water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
       c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
       c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
@@ -1445,11 +1469,14 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(card.id==="volt"){
-        const rendered=window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height);
+      if(card.id==="volt"||card.id==="estel"){
+        const rendered=card.id==="volt"?
+          window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height):
+          window.WIZARDRY_LADY_ESTEL_V51?.drawCardArt(c,width,height);
         if(!rendered){
           c.font="bold 71px Georgia,serif";c.textAlign="center";
-          c.fillStyle="#a7f4fc";c.fillText("ϟ",width/2,height*.57);
+          c.fillStyle=card.id==="estel"?"#d2ffbd":"#a7f4fc";
+          c.fillText(card.id==="estel"?"❀":"ϟ",width/2,height*.57);
         }
       }else if(image?.complete&&image.naturalWidth>0){
         const edges=[0,314,627,940,1254],size=water?212:210;
@@ -1464,7 +1491,7 @@
       }
       const v=c.createLinearGradient(0,height*.61,0,height);
       v.addColorStop(0,"#07172600");
-      v.addColorStop(1,water?"#061b32e9":"#171d29eb");
+      v.addColorStop(1,nature?"#0d3027e8":water?"#061b32e9":"#171d29eb");
       c.fillStyle=v;c.fillRect(0,height*.61,width,height*.39);
     }
   }
@@ -1482,6 +1509,7 @@
     // Redraw once after all atlas references are installed, including
     // browsers that fire a cached data-image load event synchronously.
     window.WIZARDRY_PROFESSOR_V49?.onReady(drawCardArts);
+    window.WIZARDRY_LADY_ESTEL_V51?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1516,9 +1544,12 @@
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
     if(card.id==="volt"){
-      // An actual eight-pose inventor animal aims both electrodes at the
-      // current target. The independently animated beam runs to their body.
       window.WIZARDRY_PROFESSOR_V49?.draw(g,{progress:p,time,target});
+      g.restore();return;
+    }
+    if(card.id==="estel"){
+      // Real eight-frame goddess rises, blesses an ally, then flies off.
+      window.WIZARDRY_LADY_ESTEL_V51?.draw(g,{progress:p,time,target});
       g.restore();return;
     }
     if(card.kind==="summon"){

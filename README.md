@@ -1,3 +1,19 @@
+## NEW — Lady Estel, Nature angel healing spell (v0.51.0)
+
+**[Play Wizardry with Lady Estel](https://wafflinyo.github.io/Wizardry/arena.html?v=0.51.0)**
+
+New fourth spell card **Lady Estel** summons an original angel-winged goddess in flowing white robes with a gold-and-emerald crown. In the eight-frame transparent animation she **rises from a green Nature sigil, spreads her feathered wings, sends green-gold light and leaves toward an allied wizard, then flies away**. The card uses her real animation artwork, rather than placeholder art.
+
+**Healing:** A successful automatic **Nature leaf rune** restores **up to 750 HP** to one selected living ally, including the caster. It never exceeds maximum HP and cannot revive a defeated wizard. The user did not prescribe the card's cost or accuracy, so these are initial balance defaults: **5 mana and 90% accuracy**. Failed accuracy rolls heal nothing and display the usual rune crumble. The healing applies once at the blessing's impact beat.
+
+**Ally targeting:** After choosing Lady Estel, players can tap a living teammate on the battlefield and must confirm the selection. Enemy spells still target opposing wizards. CPU wizards can choose the new heal card, target their most-injured living ally, and avoid using it on fully healthy teammates. If a target is defeated before a heal resolves, the action retargets to another living ally.
+
+**Mobile:** The four spell cards now fit in one compact visible row without horizontal scrolling; names, icons, mana, damage/healing, accuracy and effects remain. Lady Estel has a matching green-and-gold Nature frame and leaf crest.
+
+All other spell balance, Poseidon's success-only Tidal Echo/recharge, Volt's stun, colosseum art and wizard sprites are preserved.
+
+---
+
 ## New — Smaller raccoon Professor Volt (v0.50.0)
 
 **[Play Wizardry with the new small professor](https://wafflinyo.github.io/Wizardry/arena.html?v=0.50.0)**

@@ -1,4 +1,4 @@
-/* Wizardry 0.61 — single mouth-anchored fireball and delayed branched splash.
+/* Wizardry 0.62 — single mouth-anchored fireball and delayed branched splash.
    The new 16-frame dragon atlas contains NO painted projectile.
    Main fireball, split fireballs and impact blooms are independently drawn
    and depth-sorted alongside fighters. */
@@ -9,7 +9,7 @@ const L=(a,b,t)=>a+(b-a)*t,E=t=>{t=C(t);return t*t*(3-2*t)};
 const rand=n=>{const x=Math.sin(n*89.77+12.3)*45718.12;return x-Math.floor(x)};
 const img=new Image();img.decoding="async";const callbacks=[];
 img.onload=()=>callbacks.splice(0).forEach(fn=>{try{fn()}catch(e){}});
-img.src="./assets/baby-dragon-fire-v61.webp?v=0.61.0";
+img.src="./assets/baby-dragon-fire-v62.webp?v=0.62.0";
 function ready(){return img.complete&&img.naturalWidth===1024&&img.naturalHeight===1024}
 function onReady(fn){if(typeof fn==="function"){if(ready())fn();else callbacks.push(fn)}}
 const HOME={x:500,groundY:425,size:226};
@@ -32,7 +32,7 @@ function pose(o){
  const p=C(o.progress||0);
  if(o.stage==="dragon-drop")return p<.28?0:p<.61?1:2;
  if(o.stage==="dragon-land")return p<.54?3:4;
- if(o.stage==="dragon-charge")return p<.13?6:8;
+ if(o.stage==="dragon-charge")return p<.12?7:8;
  if(o.stage==="dragon-shot")return p<.34?8:9;
  if(o.stage==="dragon-splash")return p<.60?9:10;
  if(o.stage==="dragon-impact")return 10;
@@ -43,14 +43,24 @@ function position(o){
  const p=C(o.progress||0),base=HOME.groundY-HOME.size*.49;
  if(o.stage==="dragon-drop")return{x:500,y:L(-180,base,E(p))};
  if(o.stage==="dragon-exit")return{x:500+dir(o)*82*E(p),y:base-345*E(p)};
- return{x:500,y:base+Math.sin((o.time||0)*.004)*1.5};
+ // The grounded frames all have a consistent foot line at atlas y=248.
+ // Do not bob the dragon in place while charging or firing.
+ return{x:500,y:base};
 }
-// Atlas frame 8 has the OPEN mouth at local pixel ~ (176,125),
-// i.e. +42/-3 from sprite center at the 226px in-game size.
-// Use the same position function as the body to keep alignment precise.
-function mouthAt(o){const p=position(o);return{x:p.x+dir(o)*42,y:p.y-3};}
+// Measured open-mouth location on the NEW right-profile atlas.
+// The model and fireball share the identical size, translation and mirror.
+const MOUTH={7:[231,143],8:[229,141],9:[227,142],10:[225,145]};
+function mouthAt(o){
+ const pos=position(o),frame=pose(o);
+ const [mx,my]=MOUTH[frame]||MOUTH[8];
+ return {x:pos.x+dir(o)*(mx-128)*HOME.size/256,
+         y:pos.y+(my-128)*HOME.size/256};
+}
 function fireballAt(o){
- const start=mouthAt({...o,stage:"dragon-shot"}),target=o.target||{x:760,y:385};
+ // Start the shot where the FULLY-CHARGED mouth was, rather than
+ // remapping its origin to a different animation frame.
+ const start=mouthAt({...o,stage:"dragon-charge",progress:1}),
+   target=o.target||{x:760,y:385};
  const t=C(o.progress||0),end={x:target.x,y:target.y-100};
  return{x:L(start.x,end.x,t),y:L(start.y,end.y,t)-9*Math.sin(PI*t),start,end,t};
 }
@@ -221,6 +231,7 @@ function drawCardArt(c,w,h){
 root.WIZARDRY_BABY_DRAGON_V61={
  draw,drawForeground:foreground,drawCardArt,imageReady:ready,onReady,
  fireballAt,miniAt,mouthAt,splashHitAt,splashLaunchAt,
- depthFor,actorPose:pose,actorPosition:position,home:HOME,frameCount:16
+ depthFor,actorPose:pose,actorPosition:position,home:HOME,frameCount:16,
+ groundedFootPixel:248,attackProfile:true
 };
 })(window);

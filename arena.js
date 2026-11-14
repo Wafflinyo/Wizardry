@@ -1,4 +1,4 @@
-/* Wizardry 0.61 — interactive 2.5D battle test.
+/* Wizardry 0.62 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -42,6 +42,42 @@
       short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
+  const MAX_HAND_SIZE=5;
+  // The latest implemented card is always in a human player's opening hand.
+  // It is not necessary to edit this routine when more spells are appended.
+  const FEATURED_TEST_CARD=CARDS[CARDS.length-1].id;
+  function shuffleDeck(cards){
+    const result=[...cards];
+    for(let i=result.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [result[i],result[j]]=[result[j],result[i]];
+    }
+    return result;
+  }
+  function drawCard(u){
+    if(!u?.hand||u.hand.length>=MAX_HAND_SIZE)return null;
+    if(!u.drawPile.length&&u.discardPile.length)
+      u.drawPile=shuffleDeck(u.discardPile.splice(0));
+    const id=u.drawPile.shift();
+    if(id)u.hand.push(id);
+    return id||null;
+  }
+  function startHand(u,includeNewest=false){
+    u.hand=[];u.discardPile=[];
+    u.drawPile=shuffleDeck(CARDS.map(c=>c.id).filter(
+      id=>!includeNewest||id!==FEATURED_TEST_CARD));
+    if(includeNewest)u.hand.push(FEATURED_TEST_CARD);
+    while(u.hand.length<Math.min(MAX_HAND_SIZE,CARDS.length)&&u.drawPile.length)
+      drawCard(u);
+    return u.hand;
+  }
+  function playHandCard(u,id){
+    const i=u?.hand?.indexOf(id)??-1;
+    if(i<0)return false;
+    u.hand.splice(i,1);
+    u.discardPile.push(id);
+    return true;
+  }
   const ALLIES=[
     {name:"Tidecaller",style:"tide",color:"#68e8f1",hp:1260,speed:88},
     {name:"Storm Adept",style:"storm",color:"#a49dff",hp:1210,speed:76},
@@ -224,7 +260,10 @@
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i)),
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))];
-    for(const u of units){const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];}
+    for(const u of units){
+      const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];
+      startHand(u,u.id==="a0"||(mode==="pvp"&&u.id==="e0"));
+    }
     state={mode,size,units,round:1,phase:"planning",planningSide:0,
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
@@ -288,6 +327,7 @@
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
+    if(!caster().hand.includes(id))return;
     if(requiresRest(caster())||caster().mana<BY_ID[id].cost)return;
     state.selectedCard=id;
     state.selectedTarget=null;
@@ -302,11 +342,12 @@
     const c=caster(),card=currentCard(),target=correctTarget();
     const area=card?.target==="all_enemies";
     if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
-       c.mana<card.cost||(!target&&!area)||
+       c.mana<card.cost||!c.hand.includes(card.id)||(!target&&!area)||
        (area&&!alive(1-c.team).length))return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
       targetId:area?null:target.id,team:c.team,auto:false};
-    state.log=[c.name+" chose "+card.name+" against "+(area?"ALL ENEMIES":target.name),
+    playHandCard(c,card.id);
+    state.log=[c.name+" played "+card.name+" against "+(area?"ALL ENEMIES":target.name),
       ...state.log].slice(0,5);
     clearSelection();
     paintUI();
@@ -322,7 +363,7 @@
   }
   function requiresRest(u){
     return !!u&&u.hp>0&&(isStunned(u)||isRecharging(u)||
-      !CARDS.some(card=>card.cost<=u.mana));
+      !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   function autoPlan(u){
     if(requiresRest(u))return null;
@@ -330,8 +371,8 @@
     const wounded=alive(u.team).filter(a=>a.hp<a.maxHp);
     if(!opponents.length)return null;
     // CPU healing prioritizes a real injury and never targets an enemy.
-    const affordable=CARDS.filter(card=>card.cost<=u.mana&&
-      (card.kind!=="heal"||wounded.length>0));
+    const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
+      card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
     const target=card.target==="all_enemies"?null:
@@ -347,7 +388,7 @@
     for(const u of alive(team)){
       if(u.id===state.humanByTeam[team]||state.plans[u.id])continue;
       const p=autoPlan(u);
-      if(p)state.plans[u.id]=p;
+      if(p&&playHandCard(u,p.cardId))state.plans[u.id]=p;
     }
   }
   function resolvePressed(){
@@ -937,13 +978,16 @@
     // Complete old round teardown: no queued player actions, target, card,
     // or combat animation may carry into the next planning phase.
     state.plans={};state.sequence=[];state.queueAt=0;state.animation=null;
+    // Draw ONE new card per round for every living wizard (if room).
+    // Skipping a turn with five cards never causes a six-card hand.
+    for(const u of state.units)if(u.hp>0)drawCard(u);
     state.phase="planning";state.planningSide=0;
     nearestAvailableCaster();
     state.log=["Round "+state.round+" begins: your spell and target choice.",...state.log].slice(0,5);
     ui.status.textContent="Round "+state.round+": "+
       (isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
        isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
-       "Choose a spell, tap an enemy, and confirm.");
+       "Choose a card in hand, tap a target, and confirm.");
     paintUI();
     // If the controlled wizard was knocked out, teammates remain autonomous.
     // Do not ask the player to control another wizard.
@@ -976,9 +1020,10 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Tap one of your seven spells below."):
+        "Choose one of your five hand cards; draw one each round."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
+      " · "+(c?.hand?.length||0)+"/"+MAX_HAND_SIZE+" CARDS"+
       (planning?" · "+(card?(card.target==="all_enemies"?"Cast on all enemies":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")):"Choose a spell"):" · Casting");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
@@ -1071,18 +1116,18 @@
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=water?
-          '<span class="spell-effect"><b>⧖ HIT: RECHARGE 1 ROUND</b><span>≈ HIT: NEXT WATER +30%</span></span>':
+          '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
-          '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>':
+          '<span class="spell-effect"><b>SEISMIC FISSURE</b><span>1 ENEMY</span></span>':
           k.id==="volt"?
-          '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>':
+          '<span class="spell-effect"><b>20% STUN</b><span>SKIP 1 ACTION</span></span>':
           k.id==="estel"?
-          '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>':
+          '<span class="spell-effect"><b>NATURE BLESSING</b><span>HEAL 750 HP</span></span>':
           k.id==="wind"?
-          '<span class="spell-effect"><b>≋ 200 TO ALL ENEMIES</b><span>HIT: NEXT SPELL +10% ACC</span></span>':
+          '<span class="spell-effect"><b>200 TO ALL</b><span>NEXT ACC +10%</span></span>':
           k.id==="vampire"?
-          '<span class="spell-effect"><b>☠ SIPHON 550 HP</b><span>RETURN ORB HEALS 50%</span></span>':
-          '<span class="spell-effect"><b>♨ 650 + 150 SPLASH</b><span>25% BURN · 50 × 3 TURNS</span></span>';
+          '<span class="spell-effect"><b>DRAIN 550 HP</b><span>HEAL HALF</span></span>':
+          '<span class="spell-effect"><b>650 + 150 SPLASH</b><span>25% BURN · 50×3</span></span>';
         const rarity=water?"LEGENDARY":
           k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":
           k.id==="vampire"||k.id==="dragon"?"LEGENDARY":"RARE";
@@ -1114,8 +1159,11 @@
       drawCardArts();
     }
     for(const b of ui.hand.children){
-      b.classList.toggle("chosen",b.dataset.card===card?.id);
-      b.disabled=!planning||!c||requiresRest(c)||BY_ID[b.dataset.card].cost>c.mana;
+      const inHand=!!c?.hand?.includes(b.dataset.card);
+      b.hidden=!inHand;
+      b.classList.toggle("chosen",inHand&&b.dataset.card===card?.id);
+      b.disabled=!planning||!c||!inHand||requiresRest(c)||
+        BY_ID[b.dataset.card].cost>c.mana;
       b.setAttribute("aria-pressed",String(b.dataset.card===card?.id));
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
@@ -2226,6 +2274,9 @@
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
+    getHand:id=>[...(getUnit(id)?.hand||[])],
+    getDeck:id=>[...(getUnit(id)?.drawPile||[])],
+    featuredCard:FEATURED_TEST_CARD,drawCard,startHand,playHandCard,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,

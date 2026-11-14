@@ -1,3 +1,15 @@
+## FIX — Profiled grounded dragon, aligned fireball + five-card draw hand (v0.62.0)
+
+**[Play Wizardry v0.62.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.62.0)**
+
+**Dragonfire:** Replaced the original nearly front-facing dragon artwork with a NEW **16-frame right-facing profile atlas** (`assets/baby-dragon-fire-v62.webp`, 1024×1024, 4×4). The dragon faces toward the target, mirrors cleanly for opponents on the opposite side and has consistent feet along an actual arena-floor line. The grounded phases no longer include hovering/bobbing offsets. The Dragonfire projectile's start position now uses the **measured actual open-mouth pixel (229,141)** from the new artwork, transformed with the precise same scale, position and mirror as the dragon's body. The charge orb grows from that mouth and the launched fireball begins at that *identical position*, rather than visually dropping under the mouth between frames. Existing arrival timing, 650 primary damage, 150 fireball splash to adjacent left/right enemies, 25% three-turn 50 HP Burn, and exit sequence are unchanged.
+
+**Real draw/discard mechanics:** Every fighter has a shuffled card deck, a hand of **no more than five cards**, and a discard pile. At battle start each human player gets exactly five cards, with the **newest spell (the last entry in CARDS) automatically guaranteed in the opening hand**. A played card is discarded immediately when queued; a living wizard **draws one new card at the start of the next round** provided their hand has fewer than five. The exhausted deck reshuffles its discards without duplicating cards in hand. CPU wizards use only cards held in their own five-card hands, and automatic turns and local hotseat mode follow these rules. If a stunned/recharging wizard has five cards, no sixth card gets added.
+
+**Readable card text:** Only the five held cards are displayed and all other card buttons remain hidden. A new final-override CSS stylesheet (`spell-cards-v62.css`) expands each card's width, enlarges name/combat/ability text and permits the ability description to wrap naturally. Long ability callouts are shortened on-card (e.g., 650 + 150 SPLASH / 25% BURN · 50×3) with the complete explanation preserved in the card's accessibility label. Five cards stay visible on small iPhones and landscape with no internal horizontal scroll.
+
+---
+
 ## FIX — Dragonfire Descent: mouth-anchored charge and flying splash fireballs (v0.61.0)
 
 **[Play Dragonfire Descent with split fireballs](https://wafflinyo.github.io/Wizardry/arena.html?v=0.61.0)**

@@ -1,4 +1,4 @@
-/* Wizardry 0.46 — actual elemental sigils with portal-like spark tracing.
+/* Wizardry 0.65 — actual elemental sigils with portal-like spark tracing.
    The glyph geometry mirrors each card's SVG emblem. All sparks are visual
    only; hit chance and animation state are owned by arena.js. */
 (function(root){
@@ -40,10 +40,25 @@ const PATHS={
     [[9.3,5.1],[11,20]]
   ],
   fire:[
-    [[13.2,2.1],[14.4,5.2],[12.8,8],[12.8,11.3],
-      [16.9,5.9],[20.2,11.4],[20,17],[16.8,20.7],[12.2,21.4],
-      [8.2,20.5],[5,17],[5.7,11.5],[9.9,7.2],[9.9,13.1],[13.2,10.6],[13.2,2.1]],
-    [[12.2,12.2],[11.1,15.2],[10.7,18],[13.5,20.3],[16,18],[15.1,14.5],[12.2,12.2]]
+    // Smooth, recognizable flowing flame (not a jagged zigzag).
+    // These exact Bezier control points also define the card's SVG.
+    [
+      [12.9,1.6],
+      ...bez([12.9,1.6],[12.7,6],[17.8,8.9],[15.4,12.7],11).slice(1),
+      ...bez([15.4,12.7],[18.8,11.7],[19.8,8.3],[18.3,5.2],10).slice(1),
+      ...bez([18.3,5.2],[22.6,9.8],[23.7,16],[19.4,20],14).slice(1),
+      ...bez([19.4,20],[16.3,23.7],[9.2,23.9],[5.2,20.3],14).slice(1),
+      ...bez([5.2,20.3],[1.1,16.7],[3.6,11],[8.4,6.3],14).slice(1),
+      ...bez([8.4,6.3],[6.9,11],[10.3,13.2],[11.5,11.1],11).slice(1),
+      ...bez([11.5,11.1],[14,8.4],[9.7,6.4],[12.9,1.6],12).slice(1)
+    ],
+    // Small inner flame nested in the base; tracing stays automatic.
+    [
+      [12.2,12.4],
+      ...bez([12.2,12.4],[15.4,15.5],[15.6,18.4],[13.7,20.2],12).slice(1),
+      ...bez([13.7,20.2],[11.7,21],[9.4,19],[9.8,17],10).slice(1),
+      ...bez([9.8,17],[10.1,15.7],[11.9,14.2],[12.2,12.4],11).slice(1)
+    ]
   ],
   air:[
     [[3,8],[15.8,8],[18.6,6.3],[17.6,4.5],[15.3,4.7],[14.3,6.1]],
@@ -96,7 +111,7 @@ PATHS.dark=[
  [[13.5,18.6],[13.5,21]]
 ];
 PATHS.wind=PATHS.air; // Wind's trace is the card's wind swirls, not arcane.
-const COLORS={water:"#8cefff",earth:"#c9ee95",fire:"#ffc078",
+const COLORS={water:"#8cefff",earth:"#c9ee95",fire:"#ffb454",
   air:"#d7faff",wind:"#d7faff",light:"#fff0b2",shadow:"#ddc4ff",
   nature:"#a8f5b1",arcane:"#dabaff",ice:"#d4faff",
   lightning:"#fff098",storm:"#fff098",dark:"#f2b9cc"};
@@ -184,12 +199,33 @@ function draw(ctx,options){
   if(fraction>0){
     paintPath(ctx,geo,project,fraction);
     ctx.lineWidth=7.5;ctx.strokeStyle="#ad6525";
-    ctx.shadowColor="#ff9b31";ctx.shadowBlur=16;ctx.stroke();
-    ctx.lineWidth=4.2;ctx.strokeStyle="#ffc45b";ctx.shadowBlur=9;ctx.stroke();
-    ctx.shadowBlur=0;ctx.lineWidth=2.5;ctx.strokeStyle=color;ctx.stroke();
+    ctx.shadowColor=school==="fire"?"#ff5221":"#ff9b31";
+    ctx.shadowBlur=school==="fire"?23:16;ctx.stroke();
+    ctx.lineWidth=4.2;ctx.strokeStyle=school==="fire"?"#ff9839":"#ffc45b";
+    ctx.shadowBlur=school==="fire"?14:9;ctx.stroke();
+    ctx.shadowBlur=0;ctx.lineWidth=2.5;
+    ctx.strokeStyle=school==="fire"?"#ffd779":color;ctx.stroke();
     ctx.lineWidth=.9;ctx.strokeStyle="#fff9de";ctx.stroke();
   }
   const tip=project(pointAlong(geo,Math.max(.00001,fraction)));
+  if(school==="fire"&&fraction>0){
+    // A handful of rising embers follows the actual traced flame.
+    // This does not affect the automatic accuracy roll or trace time.
+    for(let i=0;i<13;i++){
+      const age=(ms+i*93)%650,born=ms-age;
+      if(born<0)continue;
+      const from=project(pointAlong(geo,ease(born/duration)));
+      const x=from[0]+(hash(i*17)-.5)*22*age/650;
+      const y=from[1]-(9+hash(i*7)*34)*age/650;
+      const life=1-age/650;
+      ctx.globalAlpha=.76*life;
+      ctx.shadowColor="#ff6a24";ctx.shadowBlur=5;
+      ctx.fillStyle=i%3===0?"#fff0a8":i%2?"#ff9e40":"#fa6230";
+      ctx.beginPath();ctx.arc(x,y,1.2+life*1.3,0,TAU);ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    ctx.globalAlpha=1;
+  }
   // Traveling sparks peel from traced strokes and disperse outward.
   for(let i=0;i<42;i++){
     const age=(ms+i*67)%490;

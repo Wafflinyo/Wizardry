@@ -1,4 +1,4 @@
-/* Wizardry 0.64 — single mouth-anchored fireball and delayed branched splash.
+/* Wizardry 0.65 — single mouth-anchored fireball and delayed branched splash.
    The new 16-frame dragon atlas contains NO painted projectile.
    Main fireball, split fireballs and impact blooms are independently drawn
    and depth-sorted alongside fighters. */
@@ -57,13 +57,22 @@ function pose(o){
  if(o.stage==="dragon-shot")return p<.34?8:9;
  if(o.stage==="dragon-splash")return p<.60?9:10;
  if(o.stage==="dragon-impact")return 10;
- if(o.stage==="dragon-exit")return 12+Math.min(3,Math.floor(p*4));
+ // Frames 12–13 contain a PAINTED-ON floor-dust cloud: those frames
+ // were being carried upward with the actor. Use the actual approved
+ // dust-free flight frames (14,15), and render floor dust separately.
+ if(o.stage==="dragon-exit")return p<.42?14:15;
  return 4;
 }
 function position(o){
  const p=C(o.progress||0),base=HOME.groundY-HOME.size*.49;
  if(o.stage==="dragon-drop")return{x:500,y:L(-180,base,E(p))};
- if(o.stage==="dragon-exit")return{x:500+dir(o)*82*E(p),y:base-345*E(p)};
+ if(o.stage==="dragon-exit"){
+   // Flight frame 14 has feet ~65px higher inside its cell than the
+   // grounded pose. Set its INITIAL feet on the same 425px arena floor;
+   // then actually lift the entire body away from that anchor.
+   const groundedCorrection=63*(1-E(p/.21));
+   return{x:500+dir(o)*82*E(p),y:base+groundedCorrection-345*E(p)};
+ }
  // The grounded frames all have a consistent foot line at atlas y=248.
  // Do not bob the dragon in place while charging or firing.
  return{x:500,y:base};
@@ -106,6 +115,24 @@ function smoke(c,p){
    const a=i*2.39996,r=(12+rand(i*8)*78)*E(p),size=11+i%4*5+15*E(p);
    circle(c,500+Math.cos(a)*r,417+Math.sin(a)*r*.24-18*E(p),size,
      i%3===0?"#b3aaa0a8":i%2?"#7d706fba":"#8b8181b0");
+ }
+ c.restore();
+}
+// A distinct puff on the ARENA FLOOR. The atlas's flight frames 14/15
+// contain no ground smoke; all the particles below stay at x=500,
+// y=425 regardless of the dragon's moving actor position.
+function takeoffGroundDust(c,p){
+ const time=C(p),fade=(1-E(time/.72))*.75;
+ if(fade<=.001)return;
+ c.save();c.globalAlpha*=fade;
+ for(let i=0;i<22;i++){
+   const ang=i*2.39996,spread=(10+rand(i*9)*68)*E(time/.78);
+   const x=HOME.x+Math.cos(ang)*spread;
+   const y=HOME.groundY-5+Math.sin(ang)*spread*.16-
+     (2+rand(i*13)*13)*E(time/.7);
+   const radius=7+i%4*3+11*E(time/.4);
+   circle(c,x,y,radius,i%3===0?"#bdb0aaab":
+     i%2?"#786e72bf":"#9e9290c6");
  }
  c.restore();
 }
@@ -286,6 +313,9 @@ function draw(c,o){
    shadow(c,s==="dragon-drop"?E(p):s==="dragon-exit"?1-E(p):1);
    if(s==="dragon-land")smoke(c,p);
    if(s==="dragon-drop"&&p>.70)smoke(c,C((p-.70)/.30)*.5);
+   // Dust remains at the fixed arena-ground anchor; it does NOT travel
+   // through the actor's translate/scale or follow its ascent.
+   if(s==="dragon-exit")takeoffGroundDust(c,p);
    const alpha=s==="dragon-exit"?1-E((p-.79)/.21):1;
    if(!sprite(c,pose(o),at.x,at.y,HOME.size,alpha,dir(o)))
      circle(c,at.x,at.y,47,"#d66b2c");

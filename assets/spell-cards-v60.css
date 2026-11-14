@@ -1,4 +1,4 @@
-/* Wizardry v0.60 — Fire card + seven-card hand; no internal scroll. */
+/* Wizardry v0.65 — Fire card + seven-card hand; no internal scroll. */
 #cardHand.cards {
   display:flex;flex-flow:row nowrap;justify-content:center;
   align-items:stretch;gap:clamp(2px,.75vw,7px);overflow:visible;
@@ -21,7 +21,7 @@
     inset 0 0 0 4px #e9a47b76,0 4px 12px #0009;
 }
 #cardHand.cards>button.spell.card-ornate.school-fire::before{
-  background-image:url("./card-elements/fire.svg"),
+  background-image:url("./card-elements/fire-v65.svg"),
     linear-gradient(150deg,#f8893c,#702723);
 }
 #cardHand.cards>button.spell.card-ornate.school-fire .spell-tier{color:#ffe0b9}

@@ -1,3 +1,15 @@
+## FIX — Grounded dragon takeoff dust and redesigned Fire rune (v0.65.0)
+
+**[Play Wizardry v0.65.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.65.0)**
+
+**Dragon takeoff dust:** The approved 16-frame dragon sprite atlas has floor dust actually *painted into frames 12 and 13*, causing it to rise with the dragon's body even though the game's procedural smoke was already ground-anchored. The exit now uses the **approved dust-free flight poses 14 and 15** and interpolates their initial height to land the feet against the same arena floor at the beginning of the launch. A new independent **takeoffGroundDust** effect draws a plume at the FIXED `HOME.x=500, HOME.groundY=425` world coordinates. It spreads horizontally just above the floor and fades in place, while only the dragon's sprite flies up. The existing landing smoke, ground shadow, mouth-aligned fast fireball, and all damage and splash mechanics remain unchanged.
+
+**Fire tracing rune:** Replaced the jagged old Fire geometry with an elegant flowing **outer flame silhouette drawn with seven continuous cubic Bezier arcs** and a clear nested inner flame; no self-crossing diagonals or random scribbles. Animated tracing has a warmer orange-hot glow, a yellow-white core, and restrained embers drifting upward from the drawn portion. The **successful glow** and **missed crumble** use the same smooth shape. The fire card icon has been redrawn using the **exact same Bezier curves** and served as a new cache-busted `fire-v65.svg` so it matches the actual automatically traced rune.
+
+**No rule changes:** The player still does **not** draw or trace anything manually. Success is entirely the card's accuracy roll, with original 1,600 ms automatic trace timing, success glow and failed rune collapse. Fireball 110 ms / splash 460 ms, 650 + 150 damage, burn chance and duration, five-card hand and one-card-per-turn draw remain unchanged.
+
+---
+
 ## FIX — Dragon sprite-sheet overlap and much faster fireballs (v0.64.0)
 
 **[Play Wizardry v0.64.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.64.0)**

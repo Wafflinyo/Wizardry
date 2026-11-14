@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#091928">
+  <title>Wizardry — Element Rune Tracing Preview</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(ellipse at 50% 12%,#214356,#071423 65%);color:#ebeee7;font:14px/1.5 system-ui,sans-serif}
+    main{max-width:980px;margin:0 auto;padding:clamp(8px,3vw,22px)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+    h1{margin:0;font:700 clamp(21px,4vw,30px) Georgia,serif;letter-spacing:.045em;color:#f7deb0}
+    a{color:#baf4fa;text-decoration:none;border:1px solid #4c7485;padding:7px 12px;border-radius:7px}
+    p{color:#b8d0d3;margin:6px 0 13px}
+    .panel{overflow:hidden;border:2px solid #7894a4;border-radius:12px;background:#102c3b;box-shadow:0 10px 32px #0007}
+    canvas{display:block;width:100%;height:auto;aspect-ratio:960/540;background:#091927}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:9px 13px;border-top:1px solid #355867;background:#0e2839}
+    #phase{font-weight:800;color:#ffe3a1;letter-spacing:.04em}
+    .bar small{color:#9fd5e0}
+    .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px;background:#0a1e2d;border:1px solid #355469;border-radius:10px;margin-top:11px}
+    button{border:1px solid #547988;background:#15394b;color:#e6f1e9;padding:8px 13px;border-radius:8px;cursor:pointer;font:700 12px system-ui}
+    button.active,button:hover{background:#287282;border-color:#a8f0dc;color:#fff}
+    button img{width:20px;height:20px;vertical-align:middle;object-fit:contain;margin-right:6px}
+    .note{font-size:12px;color:#a5bfc7;margin-top:12px}
+  </style>
+</head>
+<body>
+<main>
+  <header><h1>WIZARDRY · ELEMENT RUNES</h1>
+    <a href="./arena.html?v=0.45.0">Back to battle</a></header>
+  <p>Each spell traces the same symbol as the top of its card. Amber portal-like sparks follow the moving tip, then stop at rune resolution.</p>
+  <div class="panel">
+    <canvas id="visual" width="960" height="540" aria-label="Animated magical rune tracing"></canvas>
+    <div class="bar"><span id="phase">Water · Tracing</span><small>Actual game trace: 850 milliseconds</small></div>
+  </div>
+  <div id="controls" class="controls" aria-label="Choose element"><button type="button" id="replay">↻ Replay</button></div>
+  <p class="note">Preview only: sparks and glyphs are visual effects. Spell accuracy and battle mechanics are unchanged.</p>
+</main>
+<script src="./assets/element-tracing-v45.js?v=0.45.0" defer></script>
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+  const canvas=document.getElementById("visual"),ctx=canvas.getContext("2d");
+  const phase=document.getElementById("phase"),controls=document.getElementById("controls");
+  const tracer=window.WIZARDRY_ELEMENT_TRACE_V45;
+  const elements=["water","earth","fire","air","light","shadow","nature","arcane","ice","lightning"];
+  const labels={water:"Water",earth:"Earth",fire:"Fire",air:"Air",light:"Light",shadow:"Shadow",nature:"Nature",arcane:"Arcane",ice:"Ice",lightning:"Lightning"};
+  let school="water",start=performance.now();
+  for(const element of elements){
+    const b=document.createElement("button");
+    b.type="button";b.dataset.school=element;
+    const icon=document.createElement("img");
+    icon.src="./assets/card-elements/"+element+".svg";
+    icon.alt="";icon.setAttribute("aria-hidden","true");
+    b.append(icon,document.createTextNode(labels[element]));
+    b.onclick=()=>{school=element;start=performance.now();activate();};
+    controls.appendChild(b);
+  }
+  document.getElementById("replay").onclick=()=>{start=performance.now();};
+  function activate(){
+    for(const b of controls.querySelectorAll("[data-school]")){
+      b.classList.toggle("active",b.dataset.school===school);
+      b.setAttribute("aria-pressed",String(b.dataset.school===school));
+    }
+  }
+  activate();
+  function draw(time){
+    const w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const bg=ctx.createLinearGradient(0,0,0,h);
+    bg.addColorStop(0,"#123042");bg.addColorStop(1,"#091a2a");
+    ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+    // Quiet colosseum geometry keeps the animated sigil central.
+    ctx.strokeStyle="#34607066";ctx.lineWidth=3;
+    for(let i=0;i<6;i++){
+      ctx.beginPath();ctx.ellipse(w/2,415,135+i*65,24+i*17,0,0,Math.PI*2);ctx.stroke();
+    }
+    ctx.fillStyle="#d7bc7566";ctx.beginPath();
+    ctx.moveTo(480,425);ctx.lineTo(465,449);ctx.lineTo(480,474);
+    ctx.lineTo(495,449);ctx.closePath();ctx.fill();
+    ctx.textAlign="center";ctx.font="700 20px Georgia,serif";ctx.fillStyle="#f2e2c5";
+    ctx.fillText(labels[school].toUpperCase()+" RUNE",480,65);
+    let elapsed=(time-start)%1650;
+    if(elapsed<850){
+      tracer.draw(ctx,{school,elapsed,duration:850,centerX:480,centerY:245,scale:7});
+      phase.textContent=labels[school]+" · Tracing sparks";
+    }else{
+      phase.textContent=labels[school]+" · Rune resolved";
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+});
+</script>
+</body></html>

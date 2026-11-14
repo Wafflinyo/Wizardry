@@ -1,3 +1,15 @@
+## NEW — Element-symbol tracing with swirling magical sparks (v0.45.0)
+
+**[Play the updated Wizardry arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.45.0)** · **[Preview the elemental runes](https://wafflinyo.github.io/Wizardry/rune-preview.html?v=0.45.0)**
+
+The old random wavy Poseidon rune and generic jagged Stone Golem rune have been removed. Each cast now **traces the actual element emblem found at the top of its spell card**: the faceted **water droplet** or the distinctive **two-peak mountain silhouette**. The same 24×24 vector shapes are used so the tracing unmistakably matches the card.
+
+The drawing tip moves along each symbol, leaving a glowing elemental core surrounded by a golden molten rim and **animated sparks streaming off the drawing tip and completed lines**, while short arcs of an amber magical ring swirl around the symbol. The effect resembles a bright rotating portal of magical sparks, but the rune itself remains clearly the chosen element. The renderer supports fire, air, light, shadow, nature, arcane, ice, and lightning symbols as well, ready for future spells.
+
+**Combat and timing unchanged:** The original 850ms auto-tracing sequence still uses each card's independent accuracy roll. The spark effect is visual only and immediately ends at rune success/failure; the caster then lowers their staff. The approved idle/defeat character sprites, Poseidon trident and Golem fissure animations, card art, and conditional Tidal Echo/recharge rules are unchanged.
+
+---
+
 ## NEW — Element icons on spell cards (v0.44.1)
 
 **[Play with element-specific card crests](https://wafflinyo.github.io/Wizardry/arena.html?v=0.44.1)**

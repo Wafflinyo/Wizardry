@@ -1,4 +1,4 @@
-/* Wizardry 0.44.1 — interactive 2.5D battle test.
+/* Wizardry 0.45 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -293,38 +293,11 @@
     paintUI();
     startNextAction();
   }
-  // Each element has a deliberately distinct SINGLE-STROKE rune.
-  // The player traces the displayed symbol, not an arbitrary circle.
-  const RUNE_PATHS={
-    poseidon:[[23,116],[34,93],[47,72],[59,65],[72,75],[85,99],
-      [96,119],[107,125],[117,111],[128,85],[138,66],[150,69],
-      [161,88],[175,116]],
-    golem:[[25,149],[60,64],[95,122],[129,58],[174,149]]
-  };
-  function runePath(id){return RUNE_PATHS[id]||RUNE_PATHS.poseidon;}
-  function pathLength(points){
-    let l=0;
-    for(let i=1;i<points.length;i++)l+=Math.hypot(
-      points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);
-    return l;
-  }
-  function resampleStroke(points,count=32){
-    if(points.length<2)return Array.from({length:count},()=>points[0]||[0,0]);
-    const distances=[0];
-    for(let i=1;i<points.length;i++)distances.push(distances[i-1]+
-      Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]));
-    const length=distances[distances.length-1];
-    if(length<.001)return Array.from({length:count},()=>points[0]);
-    const result=[];let at=1;
-    for(let k=0;k<count;k++){
-      const d=length*k/(count-1);
-      while(at<distances.length-1&&distances[at]<d)at++;
-      const prev=at-1,denom=distances[at]-distances[prev];
-      const t=denom>.0001?(d-distances[prev])/denom:0;
-      result.push([lerp(points[prev][0],points[at][0],t),
-                   lerp(points[prev][1],points[at][1],t)]);
-    }
-    return result;
+  // Element tracing uses the SAME 24×24 glyph geometry as the low-poly
+  // emblem on each card. Never replace it with a generic squiggle.
+  function runePath(id){
+    const school=BY_ID[id]?.school||id;
+    return window.WIZARDRY_ELEMENT_TRACE_V45?.pathFor(school)||[];
   }
   function startStage(a,stage,duration){
     a.stage=stage;a.elapsed=0;a.duration=duration;
@@ -1421,26 +1394,13 @@
   }
   function drawAirborneRune(a){
     if(!a||a.stage!=="tracing-auto")return;
-    const points=runePath(a.card.id);
-    const color=a.card.id==="poseidon"?"#8cebf9":"#c2ed93";
-    const fraction=ease(clamp(a.elapsed/a.duration,0,1));
-    g.save();g.translate(425,224);g.scale(.78,.78);
-    ellipse(g,100,99,110,111,"#071c2b55",color+"55",2);
-    g.beginPath();g.moveTo(...points[0]);
-    for(let i=1;i<points.length;i++)g.lineTo(...points[i]);
-    g.strokeStyle=color+"77";g.lineWidth=7;g.lineCap="round";
-    g.lineJoin="round";g.stroke();
-    if(fraction>0){
-      const traced=resampleStroke(points,40);
-      const count=Math.max(2,Math.floor(fraction*traced.length));
-      g.beginPath();g.moveTo(...traced[0]);
-      for(let i=1;i<count;i++)g.lineTo(...traced[i]);
-      g.strokeStyle=color;g.lineWidth=9;
-      g.shadowBlur=14;g.shadowColor=color;g.stroke();g.shadowBlur=0;
-    }
-    ellipse(g,...points[0],7,7,"#8aeda0");
-    ellipse(g,...points.at(-1),7,7,"#edc585");
-    g.restore();
+    // The active element glyph is hand-traced by a bright magical tip:
+    // gold sparks shower from the traced line and swirl in circular arcs.
+    // All sparks stop IMMEDIATELY when rune success/failure resolves.
+    window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
+      school:a.card.school,elapsed:a.elapsed,duration:a.duration,
+      centerX:500,centerY:310,scale:5.55
+    });
   }
   function drawFizzle(a){
     if(!a||a.stage!=="fizzle")return;

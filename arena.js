@@ -1,4 +1,4 @@
-/* Wizardry 0.32 — interactive 2.5D battle test.
+/* Wizardry 0.33 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -56,13 +56,30 @@
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const rand=(seed)=>{let n=(seed*9301+49297)%233280;return n/233280};
   let state=null,background=null,frameLast=0,spriteCache={};
-  // Approved top-slot wizard artwork is a transparent, low-poly PNG.
-  // The Canvas drives its idle breathing smoothly instead of relying on the
-  // browser's animated-GIF timing; this keeps it in correct scene depth.
-  const topWizardIdle=new Image();
-  topWizardIdle.decoding="async";
-  topWizardIdle.src="./assets/wizard-top-idle-v30.png";
-  const topIdleReady=()=>topWizardIdle.complete&&topWizardIdle.naturalWidth>0;
+  // User-approved, transparent 12-frame idle + 16-frame casting atlas.
+  const wizardAtlas=new Image();
+  wizardAtlas.decoding="async";
+  wizardAtlas.src="./assets/wizard-approved-animations-v33.png";
+  const wizardAtlasReady=()=>wizardAtlas.complete&&wizardAtlas.naturalWidth===512&&wizardAtlas.naturalHeight===896;
+  const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/110)%8);
+  function wizardFrame(stage,p,ms,time,lowerFrom){
+    const progress=clamp(p,0,1);
+    if(stage==="raising")return 12+Math.min(3,Math.floor(ease(progress)*4));
+    if(stage==="tracing-auto"||stage==="summon"||stage==="fizzle")return waveFrame(ms);
+    if(stage==="lowering"){
+      const from=Number.isInteger(lowerFrom)?clamp(lowerFrom,16,23):23;
+      if(progress<.38)return Math.min(23,from+Math.floor(ease(progress/.38)*(24-from)));
+      return 24+Math.min(3,Math.floor(ease((progress-.38)/.62)*4));
+    }
+    return Math.floor((Math.max(0,time)%1440)/120)%12;
+  }
+  function drawWizardSprite(ctx,stage,p,ms,time,lowerFrom){
+    if(!wizardAtlasReady())return false;
+    const i=wizardFrame(stage,p,ms,time,lowerFrom);
+    ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    ctx.drawImage(wizardAtlas,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
+    ctx.restore();return true;
+  }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=570,ARM_LOWER_MS=340,FIZZLE_MS=360;
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
@@ -321,7 +338,8 @@
         }
         a.postCastEffectsApplied=true;
       }
-      startStage(a,"lowering",ARM_LOWER_MS);
+      a.lowerFromFrame=waveFrame(a.traceMs||0);
+      startStage(a,"lowering",caster?.team===0&&caster.index===0?520:ARM_LOWER_MS);
       paintUI();
     }else if(a.stage==="lowering"){
       caster.armRaise=0;
@@ -978,20 +996,15 @@
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
     }
     g.scale(scale,scale);
-    // One 2D skeletal rig drives both idle and casting. No resampled
-    // staff/character frames; staff and upper/lower arm remain fixed-length.
-    // Props are keyed to the game's real raise -> trace -> resolve -> lower stages.
+    // Approved full-body frames: only one wizard and one staff are drawn.
     const approvedTopSlot=u.team===0&&u.index===0&&
-      u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4"&&
-      window.WizardryRig?.ready();
-    if(approvedTopSlot&&window.WizardryRig.draw(g,{
-        time,
-        stage:state.animation?.source===u.id?state.animation.stage:null,
-        progress:state.animation?.source===u.id&&state.animation.duration?
-          state.animation.elapsed/state.animation.duration:0,
-        traceMs:state.animation?.source===u.id?(state.animation.traceMs||0):0
-    })){
-      // The rig is drawn within this fighter's Canvas depth transform.
+      u.hat==="pointed"&&u.robe==="classic"&&u.robeColor==="#6f4ab4";
+    const action=state.animation?.source===u.id?state.animation:null;
+    if(approvedTopSlot&&drawWizardSprite(g,
+        action?.stage||"idle",
+        action?.duration?action.elapsed/action.duration:0,
+        action?.traceMs||0,time,action?.lowerFromFrame)){
+      // This draw remains within the depth-sorted unit layer.
     }else{
       const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
       g.translate(0,bob);
@@ -1379,7 +1392,8 @@
       }
     },
     getSummonAvailable:kind=>!!spriteCache[kind]?.every(im=>im.complete&&im.naturalWidth),
-    getTopWizardIdleAvailable:topIdleReady
+    getTopWizardIdleAvailable:wizardAtlasReady,
+    getApprovedWizardFrame:wizardFrame
   };
   setupControlHandlers();createBackground();setupSprites();setBattle("story",4);
   requestAnimationFrame(tick);

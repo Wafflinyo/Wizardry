@@ -1,3 +1,11 @@
+## NEW — Smoother approved wizard animations in battle (v0.33.0)
+
+**[Battle test with approved animations](https://wafflinyo.github.io/Wizardry/arena.html?v=0.33.0)**
+
+The first allied wizard now uses the approved 12-frame idle and 16-frame casting sequence from the last visual previews, packaged into a single transparent 128px-cell sprite atlas. His complete body and sole staff are rendered together, replacing the old rig's additional staff. Casting progresses through extend → repeatedly wave staff during rune tracing and summon/failure → lower/recover → idle. The same animation is used in the top slot, with the existing arena position, depth ordering, spell effects, cards, and target selection unchanged. Changes to customization switch to the previous customizable procedural model.
+
+---
+
 ## FIXED — One staff, two skeletal rig animations (v0.32.0)
 
 **[Test the rigged idle and casting motions](https://wafflinyo.github.io/Wizardry/rig-preview.html?v=0.32.0)** · **[Open updated battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.32.0)**

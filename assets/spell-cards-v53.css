@@ -1,0 +1,137 @@
+/* Wizardry v0.53 — Five slim playing cards stay visible on iPhone.
+   This stylesheet loads LAST, preserving previous card artwork and badges. */
+#cardHand.cards{
+  display:flex;flex-flow:row nowrap;justify-content:center;align-items:stretch;
+  gap:clamp(4px,1.3vw,10px);overflow:visible;scroll-snap-type:none;
+  padding:8px 1px 5px;max-width:100%;
+}
+#cardHand.cards > button.spell.card-ornate{
+  box-sizing:border-box;flex:0 1 min(18.7%,130px);
+  width:min(18.7%,130px);max-width:130px;min-width:0;
+  height:clamp(169px,23svh,209px);min-height:169px;
+  margin:0;padding:5px 3px 5px;gap:2px;
+}
+#cardHand.cards > button.spell.card-ornate.school-wind{
+  --trim:#aad6ca;border-color:#c1d6b3;
+  background:
+    linear-gradient(142deg,#acdfdc1a 10%,transparent 11%) top left/48% 45% no-repeat,
+    linear-gradient(215deg,#d8eec41e 10%,transparent 12%) top right/48% 45% no-repeat,
+    linear-gradient(157deg,#375966,#264652 57%,#152936);
+  box-shadow:inset 0 0 0 2px #193746,
+    inset 0 0 0 4px #c3dbc16b,0 4px 12px #0009;
+}
+#cardHand.cards > button.spell.card-ornate.school-wind::before{
+  background-image:url("./card-elements/air.svg"),
+    linear-gradient(153deg,#6cb7ae,#2c5864);
+}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-tier{color:#e1fff2}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-name{
+  color:#f3ffef;border-color:#d1d6a8;
+  background:linear-gradient(#487984,#1c3d4c);
+}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-mana-cost{
+  background:linear-gradient(140deg,#518a8e,#24424b);
+  border-color:#d5e5c5;
+}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-combat b{color:#cafff3}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-effect{color:#b7e6dd}
+#cardHand.cards > button.spell.card-ornate.school-wind .spell-effect b{color:#e6efbb}
+#cardHand.cards > button.spell.card-ornate.school-wind.chosen{
+  border-color:#b7fff2;
+  box-shadow:0 0 0 2px #92ebd4,0 0 14px #77f7df6c,
+    inset 0 0 0 3px #d7ebc6;
+}
+#cardHand.cards > button.spell.card-ornate .spell-name{
+  flex:0 0 28px;min-height:28px;
+  font-size:clamp(8px,1.07vw,10px);
+  line-height:1.04;text-wrap:balance;white-space:normal;
+  padding:2px 1px;overflow:hidden;
+}
+#cardHand.cards > button.spell.card-ornate .spell-tier{
+  font-size:clamp(6px,.76vw,8px);letter-spacing:0;
+  white-space:nowrap;overflow:hidden;
+}
+#cardHand.cards > button.spell.card-ornate .spell-combat{
+  flex:0 0 18px;min-height:18px;padding:1px 0;
+  font-size:6px;letter-spacing:-.03em;
+}
+#cardHand.cards > button.spell.card-ornate .spell-combat b{
+  font-size:clamp(8px,.99vw,11px);
+}
+#cardHand.cards > button.spell.card-ornate .spell-effect{
+  flex:0 0 27px;min-height:27px;
+  font-size:clamp(5.7px,.71vw,7px);
+  gap:1px;line-height:1.07;overflow:hidden;
+}
+#cardHand.cards > button.spell.card-ornate .spell-effect b{font-size:inherit}
+#cardHand.cards > button.spell.card-ornate .spell-art-shell{
+  min-height:38px;flex:1 1 auto;
+}
+@media(max-width:700px){
+  #cardHand.cards{gap:4px;padding:7px 0 5px}
+  #cardHand.cards > button.spell.card-ornate{
+    flex:0 1 calc((100% - 16px)/5);
+    width:calc((100% - 16px)/5);max-width:none;
+    height:clamp(158px,22svh,194px);min-height:158px;
+    padding:4px 2px 5px;gap:1px;
+  }
+  #cardHand.cards > button.spell.card-ornate::before{
+    width:20px;height:16px;background-size:12px 12px,100% 100%;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-tier{
+    font-size:clamp(4.9px,1.4vw,6px);letter-spacing:-.017em;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-name{
+    min-height:25px;flex-basis:25px;
+    font-size:clamp(7.1px,1.9vw,8.7px);letter-spacing:-.025em;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-combat{
+    min-height:16px;flex-basis:16px;font-size:5px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-combat b{
+    font-size:clamp(7.4px,2vw,8.8px);
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-effect{
+    min-height:22px;flex-basis:22px;
+    font-size:clamp(4.7px,1.29vw,6.1px);
+    white-space:nowrap;gap:1px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-mana-cost{
+    right:2px!important;top:3px!important;
+    width:16px;height:16px;min-width:16px;font-size:9px;
+  }
+}
+@media(max-width:355px){
+  #cardHand.cards{gap:3px}
+  #cardHand.cards > button.spell.card-ornate{
+    flex-basis:calc((100% - 12px)/5);
+    width:calc((100% - 12px)/5);
+    padding:3px 1px;height:155px;min-height:155px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-tier{font-size:4.6px}
+  #cardHand.cards > button.spell.card-ornate .spell-name{font-size:7px}
+  #cardHand.cards > button.spell.card-ornate .spell-effect{font-size:4.6px}
+}
+@media(orientation:landscape) and (max-height:620px){
+  #cardHand.cards{gap:4px;padding:5px 0 3px}
+  #cardHand.cards > button.spell.card-ornate{
+    flex:0 1 calc((100% - 16px)/5);
+    width:calc((100% - 16px)/5);max-width:none;
+    height:clamp(138px,40svh,160px);min-height:138px;
+    padding:3px 2px 4px;gap:1px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-tier{
+    margin-top:15px;min-height:8px;max-height:8px;
+    line-height:8px;font-size:5.3px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-name{
+    flex-basis:20px;min-height:20px;font-size:7.4px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-effect{
+    flex-basis:21px;min-height:21px;font-size:5px;
+  }
+  #cardHand.cards > button.spell.card-ornate .spell-art-shell{min-height:28px}
+  #cardHand.cards > button.spell.card-ornate .spell-combat{
+    flex-basis:16px;min-height:16px;
+  }
+}

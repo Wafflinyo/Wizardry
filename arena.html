@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./arena.css?v=0.38.0">
   <link rel="stylesheet" href="./assets/spell-cards-v49.css?v=0.49.0">
   <link rel="stylesheet" href="./assets/spell-cards-v51.css?v=0.51.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v53.css?v=0.53.0">
 </head>
 <body>
 <main class="game" id="game">
@@ -40,7 +41,7 @@
       <div class="phase"><span id="roundLabel">ROUND 1</span><strong id="phaseLabel">YOUR MOVE</strong></div>
     </div>
     <div class="arena" id="arena">
-      <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Choose a spell below, tap an enemy for an attack or an ally for healing, then confirm the target."></canvas>
+      <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Choose a spell below, tap a target for individual attacks or healing, or cast Wind on all enemies, then confirm."></canvas>
       <div class="arena-bug" id="battleBadge">4 vs 4 · STORY / CPU</div>
       <aside id="statusPopup" class="status-popup" role="dialog" aria-modal="false" aria-labelledby="statusName" hidden>
         <button type="button" id="statusClose" class="status-close" aria-label="Close status details">×</button>
@@ -54,12 +55,12 @@
     </div>
     <div class="initiative" id="initiative" aria-label="Initiative order" hidden></div>
   </section>
-  <section class="hand" aria-label="Your wizard's two spell cards">
+  <section class="hand" aria-label="Your wizard's five spell cards">
     <div class="hand-head">
       <div><span class="eyebrow">YOUR WIZARD</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
       <span class="mana" id="selectedMana">10 / 10 MANA</span>
     </div>
-    <div class="cards" id="cardHand" role="group" aria-label="Choose Poseidon's Wrath or Stone Golem"></div>
+    <div class="cards" id="cardHand" role="group" aria-label="Choose one of five elemental spell cards"></div>
     <div class="hand-assist" aria-live="polite">
       <div class="spell-choice-info">
         <strong id="chosenSpell">SELECT A SPELL</strong>
@@ -112,10 +113,11 @@
 <script src="./assets/stone-golem-approved-v23-row3.js?v=0.23.0" defer></script>
 <script src="./assets/wizard-palettes-v38.js?v=0.38.0" defer></script>
 <script src="./assets/golem-effects-v42.js?v=0.42.0" defer></script>
-<script src="./assets/element-tracing-v45.js?v=0.46.0" defer></script>
+<script src="./assets/element-tracing-v45.js?v=0.53.0" defer></script>
 <script src="./assets/arena-lowpoly-v47.js?v=0.47.0" defer></script>
 <script src="./assets/professor-volt-v49.js?v=0.50.0" defer></script>
 <script src="./assets/lady-estel-v51.js?v=0.52.0" defer></script>
-<script src="./arena.js?v=0.52.0" defer></script>
+<script src="./assets/tornado-barrage-v53.js?v=0.53.0" defer></script>
+<script src="./arena.js?v=0.53.0" defer></script>
 </body>
 </html>

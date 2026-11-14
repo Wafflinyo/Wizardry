@@ -86,8 +86,9 @@ const PATHS={
 };
 PATHS.storm=PATHS.lightning;
 PATHS.dark=PATHS.shadow;
+PATHS.wind=PATHS.air; // Wind's trace is the card's wind swirls, not arcane.
 const COLORS={water:"#8cefff",earth:"#c9ee95",fire:"#ffc078",
-  air:"#d7faff",light:"#fff0b2",shadow:"#ddc4ff",
+  air:"#d7faff",wind:"#d7faff",light:"#fff0b2",shadow:"#ddc4ff",
   nature:"#a8f5b1",arcane:"#dabaff",ice:"#d4faff",
   lightning:"#fff098",storm:"#fff098",dark:"#ddc4ff"};
 function prepare(lines){

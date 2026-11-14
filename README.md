@@ -1,3 +1,19 @@
+## NEW — Tornado Barrage, Wind area attack (v0.53.0)
+
+**[Play Wizardry with Tornado Barrage](https://wafflinyo.github.io/Wizardry/arena.html?v=0.53.0)**
+
+A fifth card, **Tornado Barrage (Epic · Wind)**, summons a visibly rotating **low-poly, faceted tornado** from the center of the arena. Spiraling pebbles and broken stone are launched in independent rock volleys aimed at **every living opposing wizard** (1v1–4v4), each receiving **200 damage exactly once** when the rocks land. Rock impacts are small enough to leave animated wizard sprites and health plates visible. The tornado fades back into the arena floor after its attack. The card illustration is drawn using the **exact same tornado renderer**.
+
+**Wind rune:** Automatically traces the wind swirl icon used on the card, with the existing gold sparks, success glow, or failed crumble. One card accuracy roll decides the entire area-wide attack; no manual tracing or selecting opponents.
+
+**Tailwind buff:** On successful Wind impact the caster gains **≋ Tailwind**, a tappable, nonstacking one-use status granting **+10 percentage points to the accuracy of the next spell of ANY element** (70% → 80%; capped at 100%). Consumed by the next cast attempt even if it misses; it does not change damage and is earned only after successful Tornado Barrage. Tidal Echo is separate and unchanged.
+
+**Casting UI:** Select Tornado Barrage and tap **Cast on All Enemies**, with no individual target. All other spells retain their existing one-person confirmation flow. Five slim collectible cards remain visible without sideways scrolling in phone portrait and compact landscape. CPU fighters may select Wind and hit all of their opponents too.
+
+**Provisional balance:** Base 80% accuracy, 6 mana, 200 damage per opposing fighter. Existing spells and mechanics unchanged.
+
+---
+
 ## UPDATED — Lady Estel floating healing orb and impact (v0.52.0)
 
 **[Play the new Lady Estel healing animation](https://wafflinyo.github.io/Wizardry/arena.html?v=0.52.0)**

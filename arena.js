@@ -1,4 +1,4 @@
-/* Wizardry 0.52 — interactive 2.5D battle test.
+/* Wizardry 0.53 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -27,7 +27,10 @@
       stunChance:.20,duration:2950,hit:.66,artFrame:2},
     {id:"estel",name:"Lady Estel",school:"nature",cost:5,target:"ally",
       kind:"heal",heal:750,icon:"❀",description:"Blesses one ally: up to 750 HP",
-      short:"90% ACCURACY",accuracy:.90,duration:3200,hit:.66,artFrame:3}
+      short:"90% ACCURACY",accuracy:.90,duration:3200,hit:.66,artFrame:3},
+    {id:"wind",name:"Tornado Barrage",school:"wind",cost:6,target:"all_enemies",
+      kind:"aoe",damage:200,icon:"≋",description:"200 damage to each enemy; next cast gets +10 accuracy points on hit",
+      short:"80% ACCURACY",accuracy:.80,duration:3300,hit:.70,artFrame:0}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -154,6 +157,7 @@
   const ESTEL_RISE_MS=1050,ESTEL_ORB_SPEED_PX_PER_MS=.39;
   const ESTEL_TRAVEL_MIN_MS=540,ESTEL_TRAVEL_MAX_MS=1100;
   const ESTEL_IMPACT_MS=720,ESTEL_EXIT_MS=840;
+  const WIND_FORM_MS=960,WIND_VOLLEY_MS=1250,WIND_IMPACT_MS=550,WIND_DISSOLVE_MS=620;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -222,12 +226,13 @@
   function targetsFor(card,c){
     if(!card||!c)return[];
     if(card.target==="team")return[];
+    if(card.target==="all_enemies")return alive(1-c.team);
     return alive(card.target==="ally"?c.team:1-c.team);
   }
   function correctTarget(){
     const c=caster(),card=currentCard();
     if(!c||!card)return null;
-    if(card.target==="team"){state.selectedTarget=null;return null;}
+    if(card.target==="team"||card.target==="all_enemies"){state.selectedTarget=null;return null;}
     const selected=getUnit(state.selectedTarget);
     if(!selected||!targetsFor(card,c).some(u=>u.id===selected.id)){
       state.selectedTarget=null;
@@ -266,16 +271,19 @@
     paintUI();
   }
   function confirmTarget(){
-    if(state.phase!=="planning"||!caster()||!currentCard()||!correctTarget())return;
+    if(state.phase!=="planning"||!caster()||!currentCard())return;
+    if(currentCard().target!=="all_enemies"&&!correctTarget())return;
     if(queueSpell())resolvePressed();
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
+    const area=card?.target==="all_enemies";
     if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
-       c.mana<card.cost||!target)return false;
+       c.mana<card.cost||(!target&&!area)||
+       (area&&!alive(1-c.team).length))return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
-      targetId:target.id,team:c.team,auto:false};
-    state.log=[c.name+" chose "+card.name+" against "+target.name,
+      targetId:area?null:target.id,team:c.team,auto:false};
+    state.log=[c.name+" chose "+card.name+" against "+(area?"ALL ENEMIES":target.name),
       ...state.log].slice(0,5);
     clearSelection();
     paintUI();
@@ -303,11 +311,12 @@
       (card.kind!=="heal"||wounded.length>0));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
-    const target=card.kind==="heal"?
-      [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
-      opponents[Math.floor(Math.random()*opponents.length)];
-    if(!target)return null;
-    return {casterId:u.id,cardId:card.id,targetId:target.id,
+    const target=card.target==="all_enemies"?null:
+      card.kind==="heal"?
+        [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
+        opponents[Math.floor(Math.random()*opponents.length)];
+    if(!target&&card.target!=="all_enemies")return null;
+    return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
       team:u.team,auto:true};
   }
   function autoFill(team){
@@ -358,20 +367,28 @@
   // All wizards AND enemies automatically trace the same rune.
   // Accuracy is a separate per-cast random roll, independent of user input.
   // A uniform roll in [0,1) gives the card's exact percentage chance.
-  function spellHitCheck(card,roll=Math.random()){
-    return roll<card.accuracy;
+  function spellHitCheck(card,roll=Math.random(),bonus=0){
+    return roll<Math.min(1,card.accuracy+Math.max(0,bonus));
   }
   function resolveAutoRune(){
     const a=state?.animation;
     if(!a||a.stage!=="tracing-auto")return false;
-    const success=spellHitCheck(a.card);
+    const c=getUnit(a.source);
+    const used=consumeStatus(c,"tailwind"),bonus=used?.value||0;
+    a.accuracyBonusUsed=bonus;
+    a.effectiveAccuracy=Math.min(1,a.card.accuracy+bonus);
+    const success=spellHitCheck(a.card,Math.random(),bonus);
     a.runeResult=success?"success":"failed";
+    if(used){
+      flash(c,"TAILWIND +10% ACC","#cbf7e4");
+      state.log=[c.name+" uses Tailwind (+10 accuracy points) on "+a.card.name+".",
+        ...state.log].slice(0,5);
+    }
     // Rune outcome ends the staff wave immediately, irrespective of the
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const c=getUnit(a.source);
-    const label=Math.round(a.card.accuracy*100)+"% accuracy";
+    const label=Math.round(a.effectiveAccuracy*100)+"% accuracy";
     if(success){
       // The COMPLETED ELEMENT rune must brighten and hold before any
       // summon begins. Freeze the chosen Golem target for its later fissure.
@@ -407,7 +424,8 @@
       a.traceMs=(a.traceMs||0)+Math.max(0,deltaMs);
     if(["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
         "golem-travel","golem-impact","estel-summon","estel-travel",
-        "estel-impact","estel-exit"]
+        "estel-impact","estel-exit","wind-summon","wind-volley",
+        "wind-impact","wind-dissolve"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -424,8 +442,9 @@
     if(a.stage==="raising"){
       caster.armRaise=1;
       startStage(a,"tracing-auto",AUTO_TRACE_MS);
+      const nextBonus=caster.statuses.find(st=>st.kind==="tailwind")?.value||0;
       ui.hint.textContent=caster.name+" automatically traces the "+a.card.school+
-        " rune · "+Math.round(a.card.accuracy*100)+"% accuracy";
+        " rune · "+Math.round(Math.min(1,a.card.accuracy+nextBonus)*100)+"% accuracy";
       paintUI();
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
@@ -434,6 +453,7 @@
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
+      else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
       else startStage(a,a.card.id==="golem"?"golem-slam":"summon",
         a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
       ui.hint.textContent=caster.name+" invokes "+a.card.name+"!";
@@ -463,6 +483,19 @@
       // Estel flies upward and disappears from the battlefield.
       startStage(a,"estel-exit",ESTEL_EXIT_MS);
     }else if(a.stage==="estel-exit"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
+    }else if(a.stage==="wind-summon"){
+      startStage(a,"wind-volley",WIND_VOLLEY_MS);
+      ui.hint.textContent="A tornado hurls rocks at every enemy!";
+    }else if(a.stage==="wind-volley"){
+      a.windImpactTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y}));
+      if(!a.applied)applySpell(a);
+      startStage(a,"wind-impact",WIND_IMPACT_MS);
+      ui.hint.textContent="The rock storm impacts every opposing wizard!";
+      paintUI();
+    }else if(a.stage==="wind-impact"){
+      startStage(a,"wind-dissolve",WIND_DISSOLVE_MS);
+    }else if(a.stage==="wind-dissolve"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="golem-slam"){
       // The original approved frame 11 is the moment the clasped-fist
@@ -522,7 +555,7 @@
         continue;
       }
       if(c.mana<card.cost||isRecharging(c))continue;
-      if(card.target!=="team"){
+      if(card.target!=="team"&&card.target!=="all_enemies"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0||!valid.some(v=>v.id===t.id)){
           const replacement=card.kind==="heal"?
@@ -606,7 +639,15 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="damage"||card.kind==="summon"){
+    if(card.kind==="aoe"&&card.target==="all_enemies"){
+      for(const target of alive(1-c.team))damage(c,target,card.damage,card);
+      if(anim.runeResult==="success"){
+        addStatus(c,"tailwind","≋",.10);
+        flash(c,"TAILWIND +10% ACC","#b5f2dd");
+        state.log=[c.name+" gains Tailwind: +10 accuracy points on the next spell (any element).",
+          ...state.log].slice(0,5);
+      }
+    }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card);
         // The independent 20% stun roll happens ONLY after a successful
@@ -700,12 +741,15 @@
     if(planning)ui.hint.textContent=c?
       (isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(target?"Confirm "+card.name+" on "+target.name+".":
+       card?(card.target==="all_enemies"?
+         "Cast "+card.name+" on all enemies; no target selection.":
+         target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Tap one of your four spells below."):
+        "Tap one of your five spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
-      (planning?" · "+(card?"Tap "+(card.target==="ally"?"an ally":"an enemy"):"Choose a spell"):" · Casting");
+      (planning?" · "+(card?(card.target==="all_enemies"?"Cast on all enemies":
+         "Tap "+(card.target==="ally"?"an ally":"an enemy")):"Choose a spell"):" · Casting");
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
@@ -720,13 +764,17 @@
         input.style.setProperty("--swatch",color);
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"SELECT A SPELL";
-    ui.chosenTarget.textContent=target?"Target: "+target.name:
+    const allEnemies=card?.target==="all_enemies";
+    ui.chosenTarget.textContent=allEnemies?
+      "All living enemies · next spell +10 accuracy points":
+      target?"Target: "+target.name:
       "Tap "+(card?.target==="ally"?"an ally":"an enemy")+" on the battlefield";
-    const canConfirm=planning&&!!c&&!!card&&!!target&&
+    const canConfirm=planning&&!!c&&!!card&&
+      (!!target||(allEnemies&&alive(1-c.team).length>0))&&
       c.mana>=card.cost&&!state.plans[c.id];
     ui.confirm.hidden=!canConfirm;
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=target?"Confirm Target":"Confirm Target";
+    ui.confirm.textContent=allEnemies?"Cast on All Enemies":"Confirm Target";
     // Actual initiative preview, ordered by speed. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -769,7 +817,7 @@
       placeholder.value="";
       placeholder.textContent="Choose target";
       ui.targetPicker.appendChild(placeholder);
-      if(c){
+      if(c&&card?.target!=="all_enemies"){
         // When Lady Estel is selected, show allies (including the caster).
         // Without a selected card, show opponents as before.
         const choices=card?targetsFor(card,c):alive(1-c.team);
@@ -781,8 +829,8 @@
         }
       }
       ui.targetPicker.value=state.selectedTarget||"";
-      ui.targetPicker.disabled=!planning||!c;
-      ui.targetPicker.hidden=!planning;
+      ui.targetPicker.disabled=!planning||!c||card?.target==="all_enemies";
+      ui.targetPicker.hidden=!planning||card?.target==="all_enemies";
     }
     if(!ui.hand.childElementCount){
       for(const k of CARDS){
@@ -797,8 +845,11 @@
           '<span class="spell-effect"><b>◈ SEISMIC FISSURE</b><span>SINGLE ENEMY · GROUND SLAM</span></span>':
           k.id==="volt"?
           '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>':
-          '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>';
-        const rarity=water?"LEGENDARY":k.id==="golem"||k.id==="estel"?"EPIC":"RARE";
+          k.id==="estel"?
+          '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>':
+          '<span class="spell-effect"><b>≋ 200 TO ALL ENEMIES</b><span>HIT: NEXT SPELL +10% ACC</span></span>';
+        const rarity=water?"LEGENDARY":
+          k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":"RARE";
         b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
@@ -810,7 +861,9 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="estel"?
+          "% accuracy. "+(k.id==="wind"?
+            "A tornado hurls rocks at ALL living enemies for 200 damage each. Successful cast grants +10 percentage points of accuracy on the next spell of any element; consumed on next attempt.":
+            k.id==="estel"?
             "Summons an angel-winged goddess who rises, blesses a chosen living ally, then flies away.":
             water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
             k.id==="golem"?"Seismic fissure attack.":
@@ -826,7 +879,7 @@
       b.setAttribute("aria-pressed",String(b.dataset.card===card?.id));
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
-      c.mana<card.cost||(card.target!=="team"&&!target);
+      c.mana<card.cost||(card.target!=="team"&&card.target!=="all_enemies"&&!target);
     ui.auto.disabled=true;
     ui.resolve.disabled=true;
     ui.resolve.textContent=state.mode==="pvp"&&state.planningSide===0?
@@ -1303,8 +1356,10 @@
     if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&
        targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
       ellipse(g,0,5,87*scale,30*scale,
-        currentCard().target==="ally"?"#57ec9628":"#d4b64d20",
-        currentCard().target==="ally"?"#95ffad":"#f6d487",4);
+        currentCard().target==="ally"?"#57ec9628":
+        currentCard().target==="all_enemies"?"#9ed5d02c":"#d4b64d20",
+        currentCard().target==="ally"?"#95ffad":
+        currentCard().target==="all_enemies"?"#b9edf0":"#f6d487",4);
     if(state.animation&&(state.animation.source===u.id||state.animation.target===u.id)){
       ellipse(g,0,4,82*scale,29*scale,null,
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
@@ -1320,7 +1375,8 @@
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
     if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
         "golem-travel","golem-impact","estel-summon","estel-travel",
-        "estel-impact","estel-exit"].includes(visualStage)){
+        "estel-impact","estel-exit","wind-summon","wind-volley",
+        "wind-impact","wind-dissolve"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1381,7 +1437,10 @@
           detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
-      case "tidal_echo":
+      case "tailwind":
+         return {title:"≋ Tailwind · Accuracy buff",
+           detail:u.name+"'s next spell of ANY element gets +10 percentage points of accuracy (70% becomes 80%). Consumed on the next cast attempt, even on a miss. Does not stack."};
+       case "tidal_echo":
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
@@ -1498,10 +1557,10 @@
       const width=canvas.width,height=canvas.height,water=card.school==="water",
         nature=card.school==="nature";
       c.clearRect(0,0,width,height);
-      const sky=c.createLinearGradient(0,0,0,height);
-      sky.addColorStop(0,nature?"#486d4d":water?"#155473":"#5e5143");
-      sky.addColorStop(.55,nature?"#203c37":water?"#0b3049":"#2c3032");
-      sky.addColorStop(1,nature?"#10292c":water?"#061c30":"#171d28");
+      const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind";
+      sky.addColorStop(0,wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
+      sky.addColorStop(.55,wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
       c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
       c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
@@ -1511,7 +1570,10 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(card.id==="volt"||card.id==="estel"){
+      if(card.id==="wind"){
+        // Same faceted tornado and spiraling stones as the live cast.
+        window.WIZARDRY_TORNADO_V53?.drawCardArt(c,width,height);
+      }else if(card.id==="volt"||card.id==="estel"){
         const rendered=card.id==="volt"?
           window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height):
           window.WIZARDRY_LADY_ESTEL_V51?.drawCardArt(c,width,height);
@@ -1597,6 +1659,13 @@
     const baseX=lerp(caster.x,target?.x||500,.48);
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
+    if(card.id==="wind"){
+      window.WIZARDRY_TORNADO_V53?.draw(g,{
+        stage:anim.stage,progress:p,time,
+        targets:anim.windImpactTargets||alive(1-caster.team)
+      });
+      g.restore();return;
+    }
     if(card.id==="volt"){
       window.WIZARDRY_PROFESSOR_V49?.draw(g,{progress:p,time,target});
       g.restore();return;
@@ -1706,8 +1775,11 @@
         effects?.drawGolem(g,a,spriteCache.golem,time);
         if(a.stage==="golem-travel")effects?.drawTravel(g,a);
         if(a.stage==="golem-impact")effects?.drawImpact(g,a);
-      }else if(a.stage==="summon"||a.card.id==="estel"&&
-          ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage))
+      }else if(a.stage==="summon"||
+          a.card.id==="estel"&&
+            ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage)||
+          a.card.id==="wind"&&
+            ["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(a.stage))
         drawAction(a,time);
       else {
         drawAirborneRune(a);
@@ -1722,6 +1794,13 @@
     if(state.animation?.stage==="golem-impact")
       window.WIZARDRY_GOLEM_EFFECTS_V42?.drawImpactForeground(
         g,state.animation);
+    if(state.animation?.stage==="wind-impact"){
+      const a=state.animation;
+      window.WIZARDRY_TORNADO_V53?.drawForeground(g,{
+        stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
+        time,targets:a.windImpactTargets||[]
+      });
+    }
     if(state.animation?.stage==="estel-impact"){
       const a=state.animation;
       window.WIZARDRY_LADY_ESTEL_V51?.drawForeground(g,{
@@ -1775,6 +1854,11 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    getEffectiveAccuracy:(unitId,cardId)=>{
+      const u=getUnit(unitId),card=BY_ID[cardId];
+      return !u||!card?null:Math.min(1,card.accuracy+
+        (u.statuses.find(st=>st.kind==="tailwind")?.value||0));
+    },
     isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),

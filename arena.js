@@ -1,4 +1,4 @@
-/* Wizardry 0.45 — interactive 2.5D battle test.
+/* Wizardry 0.46 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -104,7 +104,8 @@
     ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
     ctx.restore();return true;
   }
-  const ARM_RAISE_MS=300,AUTO_TRACE_MS=850,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  const ARM_RAISE_MS=300,AUTO_TRACE_MS=1600,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  const RUNE_GLOW_MS=620,RUNE_CRUMBLE_MS=700;
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Original full Golem animation: emerge, clasp, wind up, slam,
   // stand/idle, then dissolve while the independent fissure is still moving.
@@ -320,23 +321,24 @@
     const c=getUnit(a.source);
     const label=Math.round(a.card.accuracy*100)+"% accuracy";
     if(success){
-      // Freeze actual target coordinates before the Golem starts winding up,
-      // including targets on the left side of PvP local test.
+      // The COMPLETED ELEMENT rune must brighten and hold before any
+      // summon begins. Freeze the chosen Golem target for its later fissure.
       if(a.card.id==="golem"){
         const goal=getUnit(a.target);
         a.targetPoint=goal?{x:goal.x,y:goal.y+8}:null;
         a.golemPostSlamMs=0;
       }
-      // Stone Golem gets distinct original slam and independent fissure stages.
-      startStage(a,a.card.id==="golem"?"golem-slam":"summon",
-        a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
+      startStage(a,"rune-success",RUNE_GLOW_MS);
       ui.hint.textContent=c.name+" completes the "+a.card.school+
-        " rune ("+label+") — "+a.card.name+" is summoned!";
+        " rune ("+label+") — it pulses with magical light!";
     }else{
-      startStage(a,"fizzle",FIZZLE_MS);
+      // Keep the FAILED glyph on screen until its own darkening/crumbling
+      // animation has finished. No generic red X or premature fizzle.
+      startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
       flash(c,"MISS","#f6a7a2");
       state.log=[c.name+"'s "+a.card.name+" missed ("+label+").",...state.log].slice(0,5);
-      ui.hint.textContent=c.name+"'s "+a.card.name+" missed ("+label+"); no damage.";
+      ui.hint.textContent=c.name+"'s "+a.card.school+
+        " rune goes dark and crumbles — no damage.";
     }
     paintUI();
     return success;
@@ -351,7 +353,7 @@
     // independently while the caster lowers their staff and resumes idle.
     if(a.stage==="tracing-auto")
       a.traceMs=(a.traceMs||0)+Math.max(0,deltaMs);
-    if(["summon","fizzle","lowering","golem-slam","golem-travel","golem-impact"]
+    if(["rune-success","rune-fail","summon","fizzle","lowering","golem-slam","golem-travel","golem-impact"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -373,6 +375,19 @@
       paintUI();
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
+    }else if(a.stage==="rune-success"){
+      // Begin the ORIGINAL summon only AFTER the bright completed rune
+      // has held for its entire glow sequence.
+      startStage(a,a.card.id==="golem"?"golem-slam":"summon",
+        a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
+      ui.hint.textContent=caster.name+" invokes "+a.card.name+"!";
+      paintUI();
+    }else if(a.stage==="rune-fail"){
+      // The fractured rune has completely disappeared. End the attempt
+      // without starting a summon, without a red-X overlay and without
+      // granting Poseidon recharge or Tidal Echo.
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
+      paintUI();
     }else if(a.stage==="golem-slam"){
       // The original approved frame 11 is the moment the clasped-fist
       // ground slam finishes. Spawn the separate fissure ONLY after it.
@@ -1094,7 +1109,7 @@
     const action=state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
-    if(action&&["summon","fizzle","lowering","golem-slam",
+    if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
         "golem-travel","golem-impact"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
@@ -1402,6 +1417,15 @@
       centerX:500,centerY:310,scale:5.55
     });
   }
+  function drawRuneOutcome(a){
+    if(!a||!["rune-success","rune-fail"].includes(a.stage))return;
+    window.WIZARDRY_ELEMENT_TRACE_V45?.drawOutcome(g,{
+      school:a.card.school,
+      result:a.stage==="rune-success"?"success":"fail",
+      elapsed:a.elapsed,duration:a.duration,
+      centerX:500,centerY:310,scale:5.55
+    });
+  }
   function drawFizzle(a){
     if(!a||a.stage!=="fizzle")return;
     const c=getUnit(a.source);if(!c)return;
@@ -1432,6 +1456,7 @@
       }else if(a.stage==="summon")drawAction(a,time);
       else {
         drawAirborneRune(a);
+        drawRuneOutcome(a);
         drawFizzle(a);
       }
     }
@@ -1488,6 +1513,8 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
+      crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,

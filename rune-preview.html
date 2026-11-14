@@ -28,16 +28,16 @@
 <body>
 <main>
   <header><h1>WIZARDRY · ELEMENT RUNES</h1>
-    <a href="./arena.html?v=0.45.0">Back to battle</a></header>
-  <p>Each spell traces the same symbol as the top of its card. Amber portal-like sparks follow the moving tip, then stop at rune resolution.</p>
+    <a href="./arena.html?v=0.46.0">Back to battle</a></header>
+  <p>Elemental symbols trace more slowly. A successful rune glows brightly before summoning; a failed rune goes dark, fractures, and crumbles. Choose either outcome to preview.</p>
   <div class="panel">
     <canvas id="visual" width="960" height="540" aria-label="Animated magical rune tracing"></canvas>
-    <div class="bar"><span id="phase">Water · Tracing</span><small>Actual game trace: 850 milliseconds</small></div>
+    <div class="bar"><span id="phase">Water · Tracing</span><small>Actual game: 1.6s trace · 0.62s glow / 0.7s crumble</small></div>
   </div>
-  <div id="controls" class="controls" aria-label="Choose element"><button type="button" id="replay">↻ Replay</button></div>
+  <div id="controls" class="controls" aria-label="Choose element"><button type="button" id="replay">↻ Replay</button><button id="success" class="active" type="button" aria-pressed="true">✦ Successful glow</button><button id="failure" type="button" aria-pressed="false">◈ Failed crumble</button></div>
   <p class="note">Preview only: sparks and glyphs are visual effects. Spell accuracy and battle mechanics are unchanged.</p>
 </main>
-<script src="./assets/element-tracing-v45.js?v=0.45.0" defer></script>
+<script src="./assets/element-tracing-v45.js?v=0.46.0" defer></script>
 <script>
 window.addEventListener("DOMContentLoaded",()=>{
   const canvas=document.getElementById("visual"),ctx=canvas.getContext("2d");
@@ -45,7 +45,17 @@ window.addEventListener("DOMContentLoaded",()=>{
   const tracer=window.WIZARDRY_ELEMENT_TRACE_V45;
   const elements=["water","earth","fire","air","light","shadow","nature","arcane","ice","lightning"];
   const labels={water:"Water",earth:"Earth",fire:"Fire",air:"Air",light:"Light",shadow:"Shadow",nature:"Nature",arcane:"Arcane",ice:"Ice",lightning:"Lightning"};
-  let school="water",start=performance.now();
+  let school="water",result="success",start=performance.now();
+  const SUCCESS_MS=620,FAIL_MS=700,TRACE_MS=1600;
+  function setResult(value){
+    result=value;start=performance.now();
+    document.getElementById("success").classList.toggle("active",result==="success");
+    document.getElementById("failure").classList.toggle("active",result==="fail");
+    document.getElementById("success").setAttribute("aria-pressed",String(result==="success"));
+    document.getElementById("failure").setAttribute("aria-pressed",String(result==="fail"));
+  }
+  document.getElementById("success").onclick=()=>setResult("success");
+  document.getElementById("failure").onclick=()=>setResult("fail");
   for(const element of elements){
     const b=document.createElement("button");
     b.type="button";b.dataset.school=element;
@@ -80,12 +90,20 @@ window.addEventListener("DOMContentLoaded",()=>{
     ctx.lineTo(495,449);ctx.closePath();ctx.fill();
     ctx.textAlign="center";ctx.font="700 20px Georgia,serif";ctx.fillStyle="#f2e2c5";
     ctx.fillText(labels[school].toUpperCase()+" RUNE",480,65);
-    let elapsed=(time-start)%1650;
-    if(elapsed<850){
-      tracer.draw(ctx,{school,elapsed,duration:850,centerX:480,centerY:245,scale:7});
-      phase.textContent=labels[school]+" · Tracing sparks";
+    const resultMs=result==="success"?SUCCESS_MS:FAIL_MS;
+    const elapsed=(time-start)%(TRACE_MS+resultMs+550);
+    if(elapsed<TRACE_MS){
+      tracer.draw(ctx,{school,elapsed,duration:TRACE_MS,centerX:480,centerY:245,scale:7});
+      phase.textContent=labels[school]+" · Tracing (1.6 seconds)";
+    }else if(elapsed<TRACE_MS+resultMs){
+      tracer.drawOutcome(ctx,{school,result,elapsed:elapsed-TRACE_MS,duration:resultMs,centerX:480,centerY:245,scale:7});
+      phase.textContent=result==="success"?
+        labels[school]+" · Successful rune glows":
+        labels[school]+" · Failed rune crumbles";
     }else{
-      phase.textContent=labels[school]+" · Rune resolved";
+      phase.textContent=result==="success"?
+        labels[school]+" · Summoning begins!":
+        labels[school]+" · No summon";
     }
     requestAnimationFrame(draw);
   }

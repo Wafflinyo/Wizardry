@@ -1,3 +1,15 @@
+## NEW — Slower rune tracing, successful glow, failed crumble (v0.46.0)
+
+**[Play the updated arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.46.0)** · **[Preview successful and failed runes](https://wafflinyo.github.io/Wizardry/rune-preview.html?v=0.46.0)**
+
+The actual card-element glyph traces **in 1,600 ms** instead of 850 ms, giving the golden swirling portal sparks and drawing tip more time to be seen. Both the player and CPU wizards use the same animation. When the rune's accuracy check succeeds, the entire completed symbol **holds and intensifies into a luminous 620 ms glow**, including rotating amber arcs and sparks; **only after the glow finishes** does the original approved Poseidon or Golem summon begin. When the rune fails, it **goes dark, splits into falling glyph-shaped fragments and crumbles for 700 ms**, then clears without displaying the old generic red X or summoning anything. The casting wizard stops waving immediately when the result is determined and lowers the staff during the glow/crumble.
+
+The standalone rune preview includes **Successful glow** and **Failed crumble** toggles and the new timing. The rune shapes still match the water-drop/mountain icons on the actual cards.
+
+**Spell mechanics unchanged:** Poseidon 70% accuracy, Stone Golem 85%, original damage/summon durations, fixed canvas dimensions and costume animations. Tidal Echo and recharge are still gained **only on a successful Poseidon cast**, never a failed cast.
+
+---
+
 ## NEW — Element-symbol tracing with swirling magical sparks (v0.45.0)
 
 **[Play the updated Wizardry arena](https://wafflinyo.github.io/Wizardry/arena.html?v=0.45.0)** · **[Preview the elemental runes](https://wafflinyo.github.io/Wizardry/rune-preview.html?v=0.45.0)**

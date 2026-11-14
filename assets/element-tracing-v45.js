@@ -1,4 +1,4 @@
-/* Wizardry 0.45 — actual elemental sigils with portal-like spark tracing.
+/* Wizardry 0.46 — actual elemental sigils with portal-like spark tracing.
    The glyph geometry mirrors each card's SVG emblem. All sparks are visual
    only; hit chance and animation state are owned by arena.js. */
 (function(root){
@@ -229,8 +229,149 @@ function draw(ctx,options){
   }
   ctx.restore();return true;
 }
+
+// A completed rune never vanishes instantly. A successful one blooms
+// into an intense portal-like halo before the summon; a failed one
+// loses its elemental light, fractures and drops into dark particles.
+function drawOutcome(ctx,options){
+  if(!ctx||!options)return false;
+  const school=PATHS[options.school]?options.school:"arcane";
+  const geo=GEOMETRY[school],color=COLORS[school];
+  const result=options.result==="success"?"success":"fail";
+  const ms=Math.max(0,Number(options.elapsed)||0);
+  const duration=Math.max(1,Number(options.duration)||620);
+  const p=clamp(ms/duration),time=ms*.001;
+  const cx=Number(options.centerX)||500,cy=Number(options.centerY)||310;
+  const scale=Number(options.scale)||5.55;
+  const project=point=>[cx+(point[0]-12)*scale,cy+(point[1]-12)*scale];
+  const ring=78*scale/5.55;
+  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";
+  if(result==="success"){
+    // The entire drawn symbol holds, amplifies and flashes, then the
+    // summon stage begins. The line art remains the card's actual icon.
+    const bloom=.65+.35*Math.sin(p*Math.PI*.85);
+    const swell=1+.085*Math.sin(p*Math.PI);
+    const glow=ctx.createRadialGradient(cx,cy,8,cx,cy,ring*1.35*swell);
+    glow.addColorStop(0,"#fffbd521");
+    glow.addColorStop(.53,"#ffcb6818");
+    glow.addColorStop(1,"#ffbb2700");
+    ctx.fillStyle=glow;ctx.beginPath();
+    ctx.arc(cx,cy,ring*1.35*swell,0,TAU);ctx.fill();
+    // Circular amber portal arcs rotate around, not across, the icon.
+    for(let i=0;i<4;i++){
+      const angle=time*(i%2?-2.8:2.3)+i*TAU/4;
+      ctx.beginPath();ctx.arc(cx,cy,ring+(i%2)*7,angle,angle+1.25);
+      ctx.strokeStyle=i%2?"#fff2ae":"#ffc15e";
+      ctx.lineWidth=2.5+1.2*bloom;
+      ctx.globalAlpha=.65+.35*Math.sin(p*Math.PI);
+      ctx.shadowColor="#ffac45";ctx.shadowBlur=15;
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;ctx.shadowColor="#ffcb56";
+    paintPath(ctx,geo,project,1);
+    ctx.lineWidth=13;ctx.strokeStyle="#f6a538";
+    ctx.shadowBlur=30*bloom;ctx.globalAlpha=.43+.12*bloom;ctx.stroke();
+    ctx.globalAlpha=1;ctx.shadowBlur=15+13*bloom;
+    ctx.lineWidth=7.2;ctx.strokeStyle="#ffdc7d";ctx.stroke();
+    ctx.shadowBlur=10;ctx.lineWidth=3.8;
+    ctx.strokeStyle=color;ctx.stroke();
+    ctx.shadowBlur=0;ctx.lineWidth=1.5;
+    ctx.strokeStyle="#ffffff";ctx.stroke();
+    // Bursting stars follow glyph points and arc around its perimeter.
+    for(let i=0;i<60;i++){
+      const base=pointAlong(geo,hash(i*13+5));
+      const pt=project(base);
+      const a=time*5+i*2.399;
+      const r=2+hash(i*23+2)*14*(.6+p);
+      const xx=pt[0]+Math.cos(a)*r,yy=pt[1]+Math.sin(a)*r;
+      const flicker=.40+.55*(.5+.5*Math.sin(ms*.034+i*7));
+      streak(ctx,xx,yy,Math.cos(a)*5,Math.sin(a)*5,
+        i%5===0?color:i%2===0?"#fffada":"#ffbc5d",
+        .9+(i%3)*.3,flicker);
+    }
+    // A final bright crescendo gives an unmistakable successful hold.
+    if(p>.76){
+      const flash=(p-.76)/.24;
+      ctx.globalAlpha=flash*.28;
+      ctx.strokeStyle="#fff8dc";ctx.lineWidth=7*flash;
+      ctx.beginPath();ctx.arc(cx,cy,ring+8+flash*18,0,TAU);ctx.stroke();
+      ctx.globalAlpha=flash*.14;ctx.fillStyle="#ffffdd";
+      ctx.beginPath();ctx.arc(cx,cy,ring*.96,0,TAU);ctx.fill();
+    }
+  }else{
+    // Stage one: the fully-drawn symbol rapidly turns charcoal.
+    // Stage two: its ORIGINAL strokes split into tumbling rock-like
+    // fragments, which fall and vanish rather than leaving a red X.
+    const darken=clamp(p/.24),crumble=clamp((p-.22)/.78);
+    ctx.strokeStyle="#4b555c";ctx.lineWidth=5.3;
+    ctx.globalAlpha=1-crumble*.88;
+    paintPath(ctx,geo,project,1);ctx.stroke();
+    if(darken<1){
+      ctx.globalAlpha=1-darken;ctx.shadowColor=color;
+      ctx.shadowBlur=(1-darken)*21;ctx.lineWidth=5;
+      ctx.strokeStyle=color;ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    // Fractured line fragments are sampled from the symbol's real
+    // contours, not generic bits that break its elemental identity.
+    let count=0;
+    for(const stroke of geo.strokes){
+      for(let i=1;i<stroke.points.length;i++){
+        const p0=stroke.points[i-1],p1=stroke.points[i],
+          len=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
+        const subdivisions=Math.max(1,Math.ceil(len/2.7));
+        for(let k=0;k<subdivisions;k++){
+          const id=count++;
+          const t0=k/subdivisions,t1=(k+1)/subdivisions;
+          const center=[mix(p0[0],p1[0],(t0+t1)/2),
+                        mix(p0[1],p1[1],(t0+t1)/2)];
+          const pt=project(center);
+          const angle=Math.atan2(p1[1]-p0[1],p1[0]-p0[0]);
+          const length=len*scale/subdivisions;
+          const stagger=hash(id*11+3)*.30;
+          const fall=clamp((crumble-stagger)/(.72+stagger));
+          const dx=(hash(id*7+1)-.5)*46*fall;
+          const dy=(12+hash(id*17+8)*54)*fall*fall;
+          const opacity=clamp(1-fall*.98);
+          if(opacity<=.01)continue;
+          ctx.save();ctx.globalAlpha=opacity;
+          ctx.translate(pt[0]+dx,pt[1]+dy);
+          ctx.rotate(angle+(hash(id*31+9)-.5)*2.4*fall);
+          ctx.strokeStyle=id%4===0?"#69706b":"#39454b";
+          ctx.lineWidth=(3.1+hash(id*5+4)*1.8)*(1-fall*.4);
+          ctx.beginPath();ctx.moveTo(-length*.46,0);
+          ctx.lineTo(length*.46,0);ctx.stroke();
+          ctx.restore();
+          // A sprinkling of angular falling dust, not a secondary rune.
+          if(id%4===0&&fall>.05){
+            const dust=clamp(opacity*.64);
+            ctx.globalAlpha=dust;ctx.fillStyle="#74807c";
+            ctx.beginPath();
+            ctx.moveTo(pt[0]+dx+2,pt[1]+dy+3);
+            ctx.lineTo(pt[0]+dx+5,pt[1]+dy+6);
+            ctx.lineTo(pt[0]+dx+1,pt[1]+dy+8);
+            ctx.fill();
+          }
+        }
+      }
+    }
+    // The extinguished ring collapses into a dark, shrinking rim.
+    if(p<.82){
+      const decay=1-p/.82;
+      ctx.globalAlpha=decay*.44;ctx.strokeStyle="#596068";
+      ctx.lineWidth=2.4*decay;
+      for(let k=0;k<3;k++){
+        const a=time*(-2+k)+k*TAU/3;
+        ctx.beginPath();ctx.arc(cx,cy,ring*(1-.12*crumble),
+          a,a+(.72+decay*.5));ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();return true;
+}
+
 root.WIZARDRY_ELEMENT_TRACE_V45={
-  draw,
+  draw,drawOutcome,
   pathFor:school=>(PATHS[school]||PATHS.arcane)[0].map(p=>p.slice()),
   pointAt:(school,t)=>pointAlong(GEOMETRY[PATHS[school]?school:"arcane"],t),
   schools:Object.keys(PATHS)

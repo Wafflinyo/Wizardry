@@ -1,4 +1,4 @@
-/* Wizardry 0.62 — interactive 2.5D battle test.
+/* Wizardry 0.63 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -215,7 +215,7 @@
   // Fire dragon lands, charges its own fireball, shoots at one enemy
   // and splashes only their immediate formation neighbors, then flies off.
   const DRAGON_DROP_MS=880,DRAGON_LAND_MS=600,DRAGON_CHARGE_MS=1280;
-  const DRAGON_SHOT_MS=850,DRAGON_SPLASH_MS=780;
+  const DRAGON_SHOT_MS=260,DRAGON_SPLASH_MS=780;
   const DRAGON_IMPACT_MS=420,DRAGON_EXIT_MS=970;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
@@ -610,14 +610,14 @@
       ui.hint.textContent="The dragon charges an enormous fireball in its mouth!";
     }else if(a.stage==="dragon-charge"){
       startStage(a,"dragon-shot",DRAGON_SHOT_MS);
-      ui.hint.textContent="The dragon launches its fireball toward "+
+      ui.hint.textContent="The dragon blasts a fast fireball straight toward "+
         (getUnit(a.target)?.name||"the enemy")+"!";
     }else if(a.stage==="dragon-shot"){
       // Main fireball contacts the target now: 650 HP and the 25% Burn
       // roll resolve at impact. Mini fireballs will carry splash separately.
       applyDragonImpact(a);
       startStage(a,"dragon-splash",DRAGON_SPLASH_MS);
-      ui.hint.textContent="The main fireball bursts and launches smaller fireballs at adjacent enemies!";
+      ui.hint.textContent="BOOM! A fiery explosion sends mini fireballs toward adjacent enemies!";
       paintUI();
     }else if(a.stage==="dragon-splash"){
       startStage(a,"dragon-impact",DRAGON_IMPACT_MS);

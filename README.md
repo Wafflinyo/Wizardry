@@ -1,3 +1,17 @@
+## Dragonfire Descent — fast fireball + explosive impact (v0.63.0)
+
+**[Play Wizardry v0.63.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.63.0)**
+
+The baby dragon now shoots the fireball from its actual mouth to the main target in **260 milliseconds, down from 850 milliseconds**. A long hot orange-white streak emphasizes its speed and maintains the same mouth position as the preceding charging animation.
+
+At the main enemy, the fireball now detonates in a bright explosion using an **eight-frame impact sprite based on the previously approved fireball/explosion sheet** (`assets/dragonfire-explosion-v63.webp`, transparent 4×2 atlas) and a separately animated white-gold flash, expanding fiery shockwave, embers, and smoke. The full explosion is drawn only once in the world-depth scene; small glints appear over the affected wizard without obscuring health bars.
+
+The two smaller splash fireballs leave from the main impact **after the main blast**, flying to the immediately adjacent living enemies. Each deals 150 damage **only when its own projectile lands**. Main-target damage stays at 650, and the 25% Burn chance (50 per turn for three future turns) remains unchanged. Missing the cast does not create any fireball or burn.
+
+The grounded side-profile dragon artwork, 7-mana cost, 80% accuracy, five-card maximum hand, one draw each turn and automatic inclusion of new spells in the starting hand remain intact. No other elemental spells changed.
+
+---
+
 ## FIX — Profiled grounded dragon, aligned fireball + five-card draw hand (v0.62.0)
 
 **[Play Wizardry v0.62.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.62.0)**

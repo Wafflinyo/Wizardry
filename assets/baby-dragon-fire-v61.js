@@ -1,4 +1,4 @@
-/* Wizardry 0.62 — single mouth-anchored fireball and delayed branched splash.
+/* Wizardry 0.63 — single mouth-anchored fireball and delayed branched splash.
    The new 16-frame dragon atlas contains NO painted projectile.
    Main fireball, split fireballs and impact blooms are independently drawn
    and depth-sorted alongside fighters. */
@@ -8,6 +8,17 @@ const PI=Math.PI,TAU=PI*2,C=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const L=(a,b,t)=>a+(b-a)*t,E=t=>{t=C(t);return t*t*(3-2*t)};
 const rand=n=>{const x=Math.sin(n*89.77+12.3)*45718.12;return x-Math.floor(x)};
 const img=new Image();img.decoding="async";const callbacks=[];
+// Approved fiery impact artwork: 8 frames (4 columns × 2 rows), 32px
+// cells. Pixel detail is supplemented with crisp vector flashes and embers
+// when expanded over the target in the battle camera.
+const explosion=new Image();explosion.decoding="async";
+explosion.src="./assets/dragonfire-explosion-v63.webp?v=0.63.0";
+const explosionReady=()=>explosion.complete&&explosion.naturalWidth===128&&explosion.naturalHeight===64;
+const EXPLOSION_FRAMES=8;
+function explosionFrameAt(progress){
+  return Math.min(EXPLOSION_FRAMES-1,Math.floor(C(progress)*EXPLOSION_FRAMES));
+}
+
 img.onload=()=>callbacks.splice(0).forEach(fn=>{try{fn()}catch(e){}});
 img.src="./assets/baby-dragon-fire-v62.webp?v=0.62.0";
 function ready(){return img.complete&&img.naturalWidth===1024&&img.naturalHeight===1024}
@@ -121,11 +132,29 @@ function drawCharge(c,o){
 }
 function drawShot(c,o){
  const at=fireballAt(o),p=C(o.progress||0),time=o.time||0;
+ // Fast 260ms straight blast: a high-energy streak points back toward the
+ // SAME dragon mouth coordinate used in the charge stage.
+ const dx=at.x-at.start.x,dy=at.y-at.start.y;
+ const dist=Math.hypot(dx,dy),length=Math.min(88,dist*.84);
+ if(dist>1){
+   const ox=at.x-dx/dist*length,oy=at.y-dy/dist*length;
+   c.save();c.lineCap="round";
+   c.shadowColor="#ff6819";c.shadowBlur=15;
+   c.strokeStyle="#ff6715bf";c.lineWidth=21;
+   c.beginPath();c.moveTo(ox,oy);c.lineTo(at.x,at.y);c.stroke();
+   c.shadowBlur=0;
+   c.strokeStyle="#ffc145e7";c.lineWidth=9;
+   c.beginPath();c.moveTo(ox,oy);c.lineTo(at.x,at.y);c.stroke();
+   c.strokeStyle="#fff0b6";c.lineWidth=3.5;
+   c.beginPath();c.moveTo(at.x-dx/dist*length*.7,at.y-dy/dist*length*.7);
+   c.lineTo(at.x,at.y);c.stroke();
+   c.restore();
+ }
  for(let i=8;i>0;i--){
-   const t=C(p-i*.025);
+   const t=C(p-i*.036);
    if(t===0)continue;
    const prev=fireballAt({...o,progress:t});
-   circle(c,prev.x,prev.y,4+((8-i)*.6),i%2?"#ffb431bc":"#ff6c2699");
+   circle(c,prev.x,prev.y,3+((8-i)*.55),i%2?"#ffb431bc":"#ff6c2699");
  }
  fire(c,at.x,at.y,27,time);
 }
@@ -146,6 +175,81 @@ function burst(c,x,y,p,size=1){
     2+rand(i*17)*4,i%3?"#ff8738":"#fff1a2");
  }
  c.restore();
+}
+
+// The approved impact frames expand from a white-hot starburst to a fiery
+// mushroom plume and smoke. This effect is a single main-target explosion;
+// adjacent enemies get their OWN smaller fireballs after it detonates.
+function drawMainExplosion(c,o,front=false){
+ const target=o.target;
+ if(!target)return false;
+ const x=target.x,y=target.y-100;
+ const stage=o.stage,p=C(o.progress||0),time=o.time||0;
+ const active=stage==="dragon-splash";
+ const t=active?C(p/.80):1;
+ const alpha=active?1-E((p-.78)/.22):.47*(1-p);
+ if(front){
+   // Foreground draws ONLY tiny glints over the target; the whole
+   // explosion belongs to the world-depth layer and renders once.
+   if(!active)return true;
+   const flicker=1-E(t/.48);
+   c.save();c.globalAlpha*=flicker*.75;
+   for(let i=0;i<9;i++){
+     const angle=i*TAU/9+time*.0008,r=33+86*E(t);
+     circle(c,x+Math.cos(angle)*r,y+Math.sin(angle)*r*.63,
+       2.5+3*(1-t),i%2?"#fff2b2":"#ff9943");
+   }
+   c.restore();return true;
+ }
+ c.save();c.globalAlpha*=Math.max(0,alpha);
+ if(explosionReady()){
+   const frame=explosionFrameAt(t);
+   const fw=32,fh=32;
+   // A substantial impact but never tall enough to block HP sideplates.
+   const size=185*(.78+.24*E(t/.45));
+   c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
+   c.drawImage(explosion,(frame%4)*fw,Math.floor(frame/4)*fh,
+     fw,fh,x-size/2,y-size*.58,size,size);
+ }else{
+   // Functional fallback while the sprite file downloads.
+   burst(c,x,y,t,1.18);
+ }
+ if(active){
+   // Brilliant first-contact flash, rapidly widening hot shockwave,
+   // radial sparks and chunky blazing fragments.
+   const heat=1-E(t/.31),ring=26+120*E(t/.72);
+   if(heat>.01){
+     const glow=c.createRadialGradient(x,y,2,x,y,118);
+     glow.addColorStop(0,"#fff9d9");glow.addColorStop(.20,"#ffef8ee6");
+     glow.addColorStop(.60,"#ff692d55");glow.addColorStop(1,"#ff4c1200");
+     c.save();c.globalAlpha*=heat*.86;
+     circle(c,x,y,118,glow);
+     c.restore();
+   }
+   c.save();c.globalAlpha*=1-E((t-.12)/.66);
+   c.strokeStyle="#ffe7a5";c.lineWidth=Math.max(1,8*(1-t));
+   c.shadowColor="#ff8a2a";c.shadowBlur=16;
+   c.beginPath();c.ellipse(x,y,ring,ring*.70,0,0,TAU);c.stroke();
+   c.restore();
+   c.save();c.globalAlpha*=(1-E((t-.54)/.46))*.95;
+   for(let i=0;i<18;i++){
+     const ang=i*2.39996+time*.0005;
+     const radius=(19+92*E(t/.70))*(.68+rand(i*31)*.35);
+     const px=x+Math.cos(ang)*radius;
+     const py=y+Math.sin(ang)*radius*.70-28*t;
+     const span=(2+rand(i*18)*5)*(1+Math.min(1,t*2));
+     c.beginPath();
+     c.moveTo(px,py-span*1.8);
+     c.lineTo(px+span*.8,py);
+     c.lineTo(px,py+span);
+     c.lineTo(px-span*.8,py);
+     c.closePath();
+     c.fillStyle=i%3?"#ffac4c":"#fff2ae";c.fill();
+   }
+   c.restore();
+ }
+ c.restore();
+ return true;
 }
 function drawMini(c,o,target,index,count){
  const at=miniAt(o,target,index,count),p=C(o.progress||0);
@@ -179,10 +283,8 @@ function draw(c,o){
  if(layer==="projectile"||layer==="all"){
    if(s==="dragon-charge")drawCharge(c,o);
    if(s==="dragon-shot")drawShot(c,o);
-   if(s==="dragon-splash"&&o.target)
-     burst(c,o.target.x,o.target.y-100,C(p/.68),1);
-   if(s==="dragon-impact"&&o.target)
-     burst(c,o.target.x,o.target.y-100,.67+p*.33,.65);
+   if((s==="dragon-splash"||s==="dragon-impact")&&o.target)
+     drawMainExplosion(c,o);
  }
  if((layer==="splash"||layer==="all")&&s==="dragon-splash"){
    const neighbors=Array.isArray(o.splashTargets)?o.splashTargets:[];
@@ -206,6 +308,7 @@ function foreground(c,o){
    circle(c,target.x+Math.cos(a)*rr,target.y-100+Math.sin(a)*rr*.62,
      i%3?2.1:3.4,i%2?"#ffc77b":"#ff8c4d");
  }
+ if(o.stage==="dragon-splash")drawMainExplosion(c,o,true);
  c.restore();return true;
 }
 function depthFor(o,layer="actor"){
@@ -231,6 +334,7 @@ function drawCardArt(c,w,h){
 root.WIZARDRY_BABY_DRAGON_V61={
  draw,drawForeground:foreground,drawCardArt,imageReady:ready,onReady,
  fireballAt,miniAt,mouthAt,splashHitAt,splashLaunchAt,
+ explosionFrameAt,explosionReady,explosionAsset:"assets/dragonfire-explosion-v63.webp",
  depthFor,actorPose:pose,actorPosition:position,home:HOME,frameCount:16,
  groundedFootPixel:248,attackProfile:true
 };

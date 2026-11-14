@@ -1,3 +1,13 @@
+## New — Smaller raccoon Professor Volt (v0.50.0)
+
+**[Play Wizardry with the new small professor](https://wafflinyo.github.io/Wizardry/arena.html?v=0.50.0)**
+
+The Lightning summon now uses the newly approved **little raccoon professor** artwork in a fresh **1024×512, eight-frame transparent WebP atlas**. His wild white hair, goggles, striped raccoon tail and both electro antennas are preserved, but the actual character has been **shrunk to approximately half a normal wizard's height**. On-canvas drawing dimensions were reduced from 326×293 to 220×196, with the visible little raccoon occupying only part of that transparent rectangle. Every pose uses the same 236-pixel boot/portal baseline to stop floating between frames. The circular floor shadow and magic rings are smaller, and the electrical beam now originates at the smaller professor's antenna tips, with reduced beam thickness. The card uses a frame from the same new eight-pose artwork.
+
+**No gameplay balance changes:** 450 Lightning damage, 80% spell accuracy, 20% stun chance on a successful hit, one skipped enemy action, and 5 mana. The existing summoning stages, element rune, Poseidon's Wrath and Stone Golem are unchanged.
+
+---
+
 ## POLISH — Professor Volt keeps his feet on the arena floor (v0.49.1)
 
 **[Play Wizardry with Professor Volt](https://wafflinyo.github.io/Wizardry/arena.html?v=0.49.1)**

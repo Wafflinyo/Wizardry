@@ -1,4 +1,4 @@
-/* Wizardry v0.49.1 — Professor Volt, low-poly lightning summon.
+/* Wizardry v0.50.0 — Professor Volt, small raccoon lightning summon.
    Eight transparent frames from the actual spell animation, 4x2 WebP.
    Beam is rendered independently so it reaches the enemy's real position. */
 (function(root){
@@ -11,7 +11,7 @@ const rand=n=>{const s=Math.sin(n*67.39+3.74)*16913.23;return s-Math.floor(s)};
 const atlas=new Image();atlas.decoding="async";
 const readyListeners=[];
 atlas.onload=()=>{for(const cb of readyListeners)try{cb();}catch{}};
-atlas.src="./assets/professor-sparkwhisk-v49.webp?v=0.49.0";
+atlas.src="./assets/professor-volt-small-v50.webp?v=0.50.0";
 function imageReady(){return atlas.complete&&atlas.naturalWidth===1024&&atlas.naturalHeight===512;}
 function onReady(callback){
   if(typeof callback!=="function")return;
@@ -56,11 +56,11 @@ function electricBeam(ctx,x1,y1,x2,y2,progress,time){
   }
   ctx.save();
   ctx.shadowColor="#46e9ff";ctx.shadowBlur=25;ctx.globalAlpha=.72;
-  trace(ctx,polygon,"#087ebae1",22);
+  trace(ctx,polygon,"#087ebae1",17);
   ctx.shadowBlur=16;ctx.globalAlpha=1;
-  trace(ctx,polygon,"#22baff",11);
-  ctx.shadowBlur=8;trace(ctx,polygon,"#d2fcff",4);
-  ctx.shadowBlur=0;trace(ctx,polygon,"#ffffff",1.6);
+  trace(ctx,polygon,"#22baff",8);
+  ctx.shadowBlur=8;trace(ctx,polygon,"#d2fcff",3.5);
+  ctx.shadowBlur=0;trace(ctx,polygon,"#ffffff",1.4);
   // Two antenna channels run toward the same concentrated beam core.
   const head=lerp(1,.8,progress),antenna=21;
   for(const sign of [-1,1]){
@@ -89,32 +89,31 @@ function draw(ctx,options){
   const cy=469,cx=500;
   ctx.save();
   // The summoning disk/boots exist on the SAME floor as existing wizards.
-  ctx.beginPath();ctx.ellipse(cx,cy+5,94,23,0,0,TWO);
+  ctx.beginPath();ctx.ellipse(cx,cy+4,47,12,0,0,TWO);
   ctx.fillStyle="#061a2eb2";ctx.fill();
   if(p<.27||p>.88){
     const strength=p<.27?ease(p/.27):1-ease((p-.88)/.12);
     ctx.globalAlpha=.40+.5*strength;
     ctx.shadowColor="#47e7ff";ctx.shadowBlur=22;
-    glowRing(ctx,cx,cy+3,72,19,"#6af8ff",4);
-    glowRing(ctx,cx,cy+3,58,14,"#d2ffff",1.5);
+    glowRing(ctx,cx,cy+3,43,12,"#6af8ff",3);
+    glowRing(ctx,cx,cy+3,33,9,"#d2ffff",1.2);
     ctx.shadowBlur=0;ctx.globalAlpha=1;
   }
   const alpha=p<.14?ease(p/.14):p>.91?1-ease((p-.91)/.09):1;
   ctx.save();ctx.globalAlpha=alpha;
   ctx.translate(cx,0);ctx.scale(direction,1);
   const idx=frameFor(p);
-  // The approved transparent sprite frames have different empty margins
-  // BELOW the boots. Align each source frame's feet (or lightning portal)
-  // against the same world ground line to prevent floating/jumping.
-  const footY=[244,213,233,233,234,235,235,246][idx];
-  const frameHeight=293,drawY=cy-footY*frameHeight/256;
-  if(!drawFrame(ctx,idx,-163,drawY,326,frameHeight)){
+  // The new SMALL raccoon atlas is normalized to one boot baseline.
+  // Its painted character is roughly half the height of an adult wizard.
+  const footY=236,frameHeight=196,frameWidth=220;
+  const drawY=cy-footY*frameHeight/256;
+  if(!drawFrame(ctx,idx,-frameWidth/2,drawY,frameWidth,frameHeight)){
     // Low-poly silhouette fallback if the downloaded art isn't ready.
     ctx.fillStyle="#4d4266";ctx.beginPath();
-    ctx.moveTo(-58,430);ctx.lineTo(-51,308);ctx.lineTo(0,272);
-    ctx.lineTo(52,307);ctx.lineTo(59,430);ctx.closePath();ctx.fill();
-    ctx.strokeStyle="#6ef6ff";ctx.lineWidth=6;
-    trace(ctx,[[-29,322],[-4,298],[10,326]],"#baf8ff",4);
+    ctx.moveTo(-31,455);ctx.lineTo(-27,389);ctx.lineTo(0,373);
+    ctx.lineTo(27,391);ctx.lineTo(31,455);ctx.closePath();ctx.fill();
+    ctx.strokeStyle="#6ef6ff";ctx.lineWidth=3;
+    trace(ctx,[[-18,393],[-3,380],[8,395]],"#baf8ff",3);
   }
   ctx.restore();
   // Rod convergence occurs BEFORE damage. Only beam connects to the
@@ -123,7 +122,7 @@ function draw(ctx,options){
     const charge=clamp((p-.49)/.09);
     const end=clamp((.81-p)/.08);
     const bright=ease(charge)*ease(end);
-    const startX=cx+direction*112,startY=348;
+    const startX=cx+direction*62,startY=cy-79;
     const toX=lerp(startX,tx,ease(clamp((p-.51)/.11)));
     const toY=lerp(startY,ty,ease(clamp((p-.51)/.11)));
     ctx.globalAlpha=bright;
@@ -147,11 +146,12 @@ function drawCardArt(ctx,width,height){
   ctx.save();
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
   // Two antennas are visible in the approved airborne charge frame.
-  ctx.drawImage(atlas,512,0,256,256,-10,-21,width+20,height+36);
+  ctx.drawImage(atlas,512,0,256,256,0,0,width,height);
   ctx.restore();return true;
 }
 root.WIZARDRY_PROFESSOR_V49={
   draw,drawCardArt,imageReady,onReady,
-  frameFor,asset:"assets/professor-sparkwhisk-v49.webp"
+  frameFor,asset:"assets/professor-volt-small-v50.webp",
+  displaySize:{width:220,height:196,worldBootY:469}
 };
 })(window);

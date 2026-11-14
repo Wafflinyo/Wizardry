@@ -1,3 +1,14 @@
+## NEW — Stable battlefield layout + slower spell effects (v0.34.0)
+
+**[Play updated Wizardry battle](https://wafflinyo.github.io/Wizardry/arena.html?v=0.34.0)**
+
+- The **battle canvas stays at a 1000×620 drawing buffer with a stable 1000:620 displayed frame** while spell phases and HUD hints change. The arena no longer flex-shrinks when the turn hint wraps or the Confirm Target button disappears. Mobile browser address-bar changes use stable `svh` dimensions for arena sizing, retaining portrait/landscape layouts.
+- All combatants now trace runes for **850ms** (previously 570ms); the top wizard's trace-wave frame tempo is also slightly slower (130ms per frame, previously 110ms).
+- Poseidon's Wrath now runs **2550ms** (was 2100ms); Stone Golem **2850ms** (was 2360ms). The same approved summon art, impact timing proportions, damage, accuracy, recharge, and targeting behavior are preserved.
+- No change to the 12-frame idle, 16-frame cast atlas, or sprites' depth order.
+
+---
+
 ## NEW — Smoother approved wizard animations in battle (v0.33.0)
 
 **[Battle test with approved animations](https://wafflinyo.github.io/Wizardry/arena.html?v=0.33.0)**

@@ -353,3 +353,68 @@ body{height:100dvh;overflow:hidden}
   display:grid;place-items:center;width:28px;height:28px;
   border:1px solid #78a5b5;border-radius:7px;background:#102d40;
   color:#fff0d1;font-size:20px;font-weight:700}
+
+/* v0.34 — Stabilize arena geometry independently of combat-state text.
+   The 1000×620 Canvas pixel buffer and 1000:620 display ratio never change.
+   Fixed HUD row heights prevent a second hint line, a confirm button, or
+   a shorter "Casting" label from resizing the battle via flex shrink.
+   svh is stable while mobile browser chrome expands/collapses. */
+body{height:100svh}
+.game{height:100svh;max-height:100svh}
+.battle{min-height:0}
+.arena{
+  flex:0 0 auto;
+  width:100%;height:auto;max-height:none;
+  min-height:0;aspect-ratio:1000/620;
+  max-width:min(100%,calc((100svh - 342px)*1.6129));
+}
+.battle-top{
+  flex:0 0 32px;height:32px;min-height:32px;max-height:32px;
+  overflow:hidden
+}
+.battle-top>div:first-child{min-width:0;overflow:hidden}
+.battle h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phase strong{min-width:112px;text-align:center}
+.turnbar{
+  flex:0 0 44px;height:44px;min-height:44px;max-height:44px;
+  overflow:hidden
+}
+.turnbar #turnHint{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  white-space:normal;line-height:1.2;max-height:2.4em;overflow:hidden
+}
+.hand-head{height:34px;min-height:34px;max-height:34px;overflow:hidden}
+.hand-head>div{flex:1 1 auto;min-width:0;overflow:hidden}
+#handTitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hand-assist{height:40px;min-height:40px;max-height:40px;overflow:hidden}
+@media(max-width:700px){
+  .arena{max-width:min(100%,calc((100svh - 395px)*1.6129))}
+  .battle-top{flex-basis:28px;height:28px;min-height:28px;max-height:28px}
+  .phase strong{min-width:90px}
+  .turnbar{flex-basis:38px;height:38px;min-height:38px;max-height:38px}
+  .hand-head{height:30px;min-height:30px;max-height:30px}
+  .hand-assist{height:38px;min-height:38px;max-height:38px}
+}
+@media (max-height:650px) and (orientation:portrait){
+  .arena{max-width:min(100%,calc((100svh - 365px)*1.6129))}
+  .battle-top{flex-basis:25px;height:25px;min-height:25px;max-height:25px}
+  .turnbar{flex-basis:34px;height:34px;min-height:34px;max-height:34px}
+  .hand-assist{height:34px;min-height:34px;max-height:34px}
+}
+@media (orientation:landscape) and (max-height:620px) and (min-width:690px){
+  .arena{
+    flex:0 0 auto;width:auto;height:auto;
+    max-height:calc(100svh - 140px);
+    max-width:min(100%,calc((100svh - 155px)*1.6129))
+  }
+  .battle-top{flex-basis:25px;height:25px;min-height:25px;max-height:25px}
+  .turnbar{flex-basis:31px;height:31px;min-height:31px;max-height:31px}
+  .hand-head{height:30px;min-height:30px;max-height:30px}
+  .hand-assist{height:35px;min-height:35px;max-height:35px}
+}
+@media(max-height:390px) and (orientation:landscape){
+  .arena{max-width:min(100%,calc((100svh - 134px)*1.6129))}
+  .battle-top{flex-basis:23px;height:23px;min-height:23px;max-height:23px}
+  .turnbar{flex-basis:27px;height:27px;min-height:27px;max-height:27px}
+  .hand-assist{height:29px;min-height:29px;max-height:29px}
+}

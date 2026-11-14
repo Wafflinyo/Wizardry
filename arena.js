@@ -1,4 +1,4 @@
-/* Wizardry 0.33 — interactive 2.5D battle test.
+/* Wizardry 0.34 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -18,9 +18,9 @@
   // remain a possible game-system extension, but are not in this test hand.
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
-      icon:"♆",description:"Recharge 1 round · Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2100,hit:.60,artFrame:8},
+      icon:"♆",description:"Recharge 1 round · Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:8},
     {id:"golem",name:"Stone Golem",school:"earth",cost:6,target:"enemy",kind:"summon",damage:900,
-      icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2360,hit:.62,artFrame:10}
+      icon:"◆",description:"Seismic fissure · one enemy",short:"85% ACCURACY",accuracy:.85,duration:2850,hit:.62,artFrame:10}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -61,7 +61,7 @@
   wizardAtlas.decoding="async";
   wizardAtlas.src="./assets/wizard-approved-animations-v33.png";
   const wizardAtlasReady=()=>wizardAtlas.complete&&wizardAtlas.naturalWidth===512&&wizardAtlas.naturalHeight===896;
-  const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/110)%8);
+  const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
   function wizardFrame(stage,p,ms,time,lowerFrom){
     const progress=clamp(p,0,1);
     if(stage==="raising")return 12+Math.min(3,Math.floor(ease(progress)*4));
@@ -80,7 +80,7 @@
     ctx.drawImage(wizardAtlas,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220,148,220);
     ctx.restore();return true;
   }
-  const ARM_RAISE_MS=300,AUTO_TRACE_MS=570,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  const ARM_RAISE_MS=300,AUTO_TRACE_MS=850,ARM_LOWER_MS=340,FIZZLE_MS=360;
   // Rune drawings play automatically in the arena for all combatants.
   function createUnit(d,team,index){
     return {id:(team?"e":"a")+index,team,index,name:d.name,style:d.style,color:d.color,

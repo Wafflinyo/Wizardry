@@ -1,3 +1,13 @@
+## FIX — Lady Estel selectable ally targets (v0.51.1)
+
+**[Test Lady Estel on the battlefield](https://wafflinyo.github.io/Wizardry/arena.html?v=0.51.1)**
+
+The battle canvas previously **hard-coded enemy-only tap candidates** even when Lady Estel was selected. It now uses the card's own ally/enemy target rules, allowing the player to tap a living friendly wizard, including their own caster, in any battle size. The existing nameplates remain tappable, and valid healing recipients receive **green floor rings** instead of the offensive gold enemy selection rings. The **Choose target** dropdown now also selects the chosen ally and provides an alternative when units overlap on a phone screen. Players still must tap **Confirm Target** before the spell fires.
+
+The heal remains 750 HP with the existing 90% accuracy and 5 mana. Healing respects friendly team, living status and HP maximum; a full-health ally may be selected but receives 0 HP. CPU healing choices and all other spells are unchanged.
+
+---
+
 ## NEW — Lady Estel, Nature angel healing spell (v0.51.0)
 
 **[Play Wizardry with Lady Estel](https://wafflinyo.github.io/Wizardry/arena.html?v=0.51.0)**

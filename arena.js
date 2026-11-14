@@ -1,4 +1,4 @@
-/* Wizardry 0.51 — interactive 2.5D battle test.
+/* Wizardry 0.51.1 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -826,7 +826,7 @@
       for(const x of ui.sizes.querySelectorAll("button"))x.classList.toggle("active",x===b);
       setBattle(state.mode,Number(b.dataset.size));
     };
-    // Card -> enemy -> explicit confirmation. CPU teammates still auto-plan.
+    // Card -> appropriate ally/enemy -> explicit confirmation. CPU teammates can receive healing.
     ui.confirm.onclick=confirmTarget;
     ui.queue.onclick=()=>{};
     ui.auto.onclick=()=>{};
@@ -842,7 +842,14 @@
       };
     }
     ui.reset.onclick=()=>setBattle(state.mode,state.size);
-    if(ui.targetPicker)ui.targetPicker.onchange=()=>{};
+    // Working dropdown fallback for closely spaced allies in 4v4.
+    if(ui.targetPicker)ui.targetPicker.onchange=()=>{
+      if(ui.targetPicker.value)selectTarget(ui.targetPicker.value);
+      else if(state.phase==="planning"){
+        state.selectedTarget=null;
+        paintUI();
+      }
+    };
     ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
       const rect=canvas.getBoundingClientRect();
@@ -852,10 +859,11 @@
       if(hitStatusRune(x,y))return;
       closeStatusInfo();
       if(state.phase!=="planning")return;
-      // Opposing models and their new SIDE nameplates are both tappable.
-      // Selection previews the down arrow; only Confirm Target starts a cast.
-      if(!currentCard()||!caster())return;
-      const candidates=alive(1-state.planningSide)
+      // Ally healing must search the caster's OWN team, not enemies.
+      // The same nameplate and character tap areas work for both teams.
+      const card=currentCard(),active=caster();
+      if(!card||!active)return;
+      const candidates=targetsFor(card,active)
         .map(u=>{
           const plate=unitPlateRect(u);
           const onPlate=x>=plate.x-3&&x<=plate.x+plate.w+3&&
@@ -1262,8 +1270,12 @@
     }
     if(state.phase==="planning"&&u.id===state.humanByTeam[state.planningSide]&&u.hp>0)
       ellipse(g,0,5,77*scale,27*scale,"#18e8d21f","#70f6f2",4);
-    if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&u.team!==state.planningSide)
-      ellipse(g,0,5,87*scale,30*scale,"#d4b64d20","#f6d487",4);
+    // Green eligibility markers for heal targets, gold for enemies.
+    if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&
+       targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
+      ellipse(g,0,5,87*scale,30*scale,
+        currentCard().target==="ally"?"#57ec9628":"#d4b64d20",
+        currentCard().target==="ally"?"#95ffad":"#f6d487",4);
     if(state.animation&&(state.animation.source===u.id||state.animation.target===u.id)){
       ellipse(g,0,4,82*scale,29*scale,null,
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);

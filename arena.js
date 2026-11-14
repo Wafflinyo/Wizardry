@@ -1,4 +1,4 @@
-/* Wizardry 0.60 — interactive 2.5D battle test.
+/* Wizardry 0.61 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -179,7 +179,8 @@
   // Fire dragon lands, charges its own fireball, shoots at one enemy
   // and splashes only their immediate formation neighbors, then flies off.
   const DRAGON_DROP_MS=880,DRAGON_LAND_MS=600,DRAGON_CHARGE_MS=1280;
-  const DRAGON_SHOT_MS=850,DRAGON_IMPACT_MS=650,DRAGON_EXIT_MS=970;
+  const DRAGON_SHOT_MS=850,DRAGON_SPLASH_MS=780;
+  const DRAGON_IMPACT_MS=420,DRAGON_EXIT_MS=970;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -450,7 +451,8 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open",
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
-        "dragon-charge","dragon-shot","dragon-impact","dragon-exit"]
+        "dragon-charge","dragon-shot","dragon-splash",
+        "dragon-impact","dragon-exit"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -463,6 +465,17 @@
     else caster.armRaise=1;
     if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="dragon-splash"&&a.runeResult==="success"){
+      // Apply the 150 damage when each outward-traveling mini fireball
+      // reaches its neighbor, never before or more than once.
+      const splash=a.dragonSplashIds||[];
+      for(let i=0;i<splash.length;i++){
+        const id=splash[i];
+        const arrival=window.WIZARDRY_BABY_DRAGON_V61?.splashHitAt(i,splash.length)||
+          (splash.length===1?.62:i===0?.57:.73);
+        if(p>=arrival)applyDragonSplashHit(a,id);
+      }
+    }
     if(a.stage==="wind-volley"&&a.runeResult==="success"){
       // Each rock volley has its own launch/arrival window. Apply 200 HP
       // damage to EACH opposing wizard when that wizard's stones land,
@@ -559,9 +572,15 @@
       ui.hint.textContent="The dragon launches its fireball toward "+
         (getUnit(a.target)?.name||"the enemy")+"!";
     }else if(a.stage==="dragon-shot"){
+      // Main fireball contacts the target now: 650 HP and the 25% Burn
+      // roll resolve at impact. Mini fireballs will carry splash separately.
       applyDragonImpact(a);
+      startStage(a,"dragon-splash",DRAGON_SPLASH_MS);
+      ui.hint.textContent="The main fireball bursts and launches smaller fireballs at adjacent enemies!";
+      paintUI();
+    }else if(a.stage==="dragon-splash"){
       startStage(a,"dragon-impact",DRAGON_IMPACT_MS);
-      ui.hint.textContent="Dragonfire bursts onto the target and adjacent enemies!";
+      ui.hint.textContent="The smaller fireballs finish striking nearby enemies!";
       paintUI();
     }else if(a.stage==="dragon-impact"){
       startStage(a,"dragon-exit",DRAGON_EXIT_MS);
@@ -770,8 +789,10 @@
     // Lock the adjacent victims BEFORE primary damage (which may KO).
     const neighbors=dragonSplashTargets(target,c);
     a.dragonSplashIds=neighbors.map(u=>u.id);
+    a.dragonSplashHitIds=[];
+    // Only the main target is damaged here. Secondary hits wait until
+    // their separate fireballs actually arrive at adjacent opponents.
     damage(c,target,a.card.damage,a.card);
-    for(const u of neighbors)if(u.hp>0)damage(c,u,a.card.splash,a.card);
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
     if(target.hp>0&&a.runeResult==="success"&&roll<a.card.burnChance){
@@ -786,6 +807,18 @@
       a.dragonBurned=true;
     }
     paintUI();return true;
+  }
+  function applyDragonSplashHit(a,id){
+    if(!a||a.runeResult!=="success"||!a.dragonImpactResolved)return false;
+    if(!(a.dragonSplashIds||[]).includes(id))return false;
+    if(!a.dragonSplashHitIds)a.dragonSplashHitIds=[];
+    if(a.dragonSplashHitIds.includes(id))return false;
+    a.dragonSplashHitIds.push(id);
+    const caster=getUnit(a.source),neighbor=getUnit(id);
+    if(caster&&caster.hp>0&&neighbor&&neighbor.hp>0&&
+       neighbor.team!==caster.team)
+      damage(caster,neighbor,a.card.splash,a.card);
+    return true;
   }
   function tickBurnsForRound(){
     // Called once after advancing the round number. Burn is direct fixed
@@ -1787,7 +1820,7 @@
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
       if(card.id==="dragon"){
-        window.WIZARDRY_BABY_DRAGON_V60?.drawCardArt(c,width,height);
+        window.WIZARDRY_BABY_DRAGON_V61?.drawCardArt(c,width,height);
       }else if(card.id==="vampire"){
         window.WIZARDRY_VAMPIRE_V57?.drawCardArt(c,width,height);
       }else if(card.id==="wind"){
@@ -1838,7 +1871,7 @@
     // from the same art asset used for the battlefield animation.
     window.WIZARDRY_TORNADO_V54?.onReady(drawCardArts);
     window.WIZARDRY_VAMPIRE_V57?.onReady(drawCardArts);
-    window.WIZARDRY_BABY_DRAGON_V60?.onReady(drawCardArts);
+    window.WIZARDRY_BABY_DRAGON_V61?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1885,7 +1918,7 @@
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
     if(card.id==="dragon"){
-      window.WIZARDRY_BABY_DRAGON_V60?.draw(g,{
+      window.WIZARDRY_BABY_DRAGON_V61?.draw(g,{
         stage:anim.stage,progress:p,time,caster,target,
         splashTargets:(anim.dragonSplashIds||[]).map(getUnit).filter(Boolean)
       });
@@ -2036,7 +2069,7 @@
         // Vampire layers are inserted among wizard bodies below.
       }else if(a.card.id==="dragon"&&
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
-         "dragon-impact","dragon-exit"].includes(a.stage)){
+         "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2077,8 +2110,8 @@
     }
     if(action?.card?.id==="dragon"&&
       ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
-       "dragon-impact","dragon-exit"].includes(action.stage)){
-      const dragon=window.WIZARDRY_BABY_DRAGON_V60;
+       "dragon-splash","dragon-impact","dragon-exit"].includes(action.stage)){
+      const dragon=window.WIZARDRY_BABY_DRAGON_V61;
       if(dragon){
         const opts={stage:action.stage,
           progress:clamp(action.elapsed/action.duration,0,1),time,
@@ -2088,11 +2121,22 @@
           type:"baby-dragon",depthY:dragon.depthFor(opts,"actor"),priority:1,
           draw:()=>dragon.draw(g,{...opts,layer:"actor"})
         });
-        if(["dragon-shot","dragon-impact"].includes(action.stage)){
+        if(["dragon-charge","dragon-shot","dragon-splash","dragon-impact"]
+          .includes(action.stage)){
           renderables.push({
-            type:"dragon-fireball",depthY:dragon.depthFor(opts,"projectile"),
+            type:"dragon-main-fireball",depthY:dragon.depthFor(opts,"projectile"),
             priority:2,draw:()=>dragon.draw(g,{...opts,layer:"projectile"})
           });
+        }
+        if(action.stage==="dragon-splash"){
+          for(const [index,u] of opts.splashTargets.entries()){
+            const splashOpts={...opts,splashTarget:u,splashIndex:index};
+            renderables.push({
+              type:"dragon-mini-fireball-"+u.id,
+              depthY:dragon.depthFor(splashOpts,"splash"),priority:2,
+              draw:()=>dragon.draw(g,{...splashOpts,layer:"splash"})
+            });
+          }
         }
       }
     }
@@ -2115,9 +2159,9 @@
         time,targets:a.windImpactTargets||[]
       });
     }
-    if(state.animation?.stage==="dragon-impact"){
+    if(["dragon-splash","dragon-impact"].includes(state.animation?.stage)){
       const a=state.animation;
-      window.WIZARDRY_BABY_DRAGON_V60?.drawForeground(g,{
+      window.WIZARDRY_BABY_DRAGON_V61?.drawForeground(g,{
         stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
         time,target:getUnit(a.target),
         splashTargets:(a.dragonSplashIds||[]).map(getUnit).filter(Boolean)
@@ -2188,9 +2232,10 @@
       burned:!!state.animation.dragonBurned,
       impactResolved:!!state.animation.dragonImpactResolved,
       splashIds:state.animation.dragonSplashIds||[],
+      splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

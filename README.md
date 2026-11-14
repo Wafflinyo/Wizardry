@@ -1,3 +1,17 @@
+## FIX — Dragonfire Descent: mouth-anchored charge and flying splash fireballs (v0.61.0)
+
+**[Play Dragonfire Descent with split fireballs](https://wafflinyo.github.io/Wizardry/arena.html?v=0.61.0)**
+
+The original v0.60 spell displayed **a baked fireball inside the dragon's attack frames** and then separately drew another fireball from a fixed coordinate. Those two incompatible projectiles made the attack look disconnected.
+
+A new **transparent, sixteen-frame baby dragon sprite atlas** with matching landing, open-mouth charging, firing and exit poses contains **NO baked-in fireball**, preserving the intended small red-orange horned dragon silhouette and expressive animation. Instead, one procedural glowing orange-yellow ball **grows from the precise mouth position** as the dragon charges; the same source coordinate anchors its launch. The big ball travels independently to the selected enemy, casting a short fiery particle trail, and explodes on contact.
+
+**The splash now has its own projectiles.** After the big fireball impacts the main enemy, it releases **two smaller fireballs**, one toward each living adjacent enemy (formation indices ±1, when present). They move outward from the *main enemy's impact point*, have their own visible trails and impact bursts, are individually depth-sorted among the wizards, and land at separate milestones in the new 780ms `dragon-splash` animation stage. An enemy receives their **150 damage only on their own mini fireball's arrival**, never instantly when the main enemy is hit. The primary enemy takes **650** as the large ball lands, and only it can receive the **25% Burn** chance. Burn remains 50 damage at the beginning of each of the next three turns, with refresh instead of stacking.
+
+The dragon still falls from the sky, lands in smoke, charges, attacks, then flies away; existing mana cost (7), card accuracy (80%), elemental tracing, all other spells, and camera/depth sorting remain unchanged.
+
+---
+
 ## NEW — Dragonfire Descent, Fire spell (v0.60.0)
 
 **[Play Dragonfire Descent](https://wafflinyo.github.io/Wizardry/arena.html?v=0.60.0)**

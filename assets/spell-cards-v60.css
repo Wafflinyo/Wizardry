@@ -123,3 +123,11 @@
   }
   #cardHand.cards>button.spell.card-ornate .spell-art-shell{min-height:24px}
 }
+/* Icefang uses the same readable five-card layout with an icy finish. */
+#cardHand.cards>button.spell.card-ornate.school-ice{
+ background:linear-gradient(155deg,#e2fbff,#4b9fb8 48%,#102a49);
+ border-color:#c2f5ff;--school-color:#b8f2ff;
+}
+#cardHand.cards>button.spell.card-ornate.school-ice .spell-tier,
+#cardHand.cards>button.spell.card-ornate.school-ice .spell-effect,
+#cardHand.cards>button.spell.card-ornate.school-ice .spell-combat b{color:#e1fbff}

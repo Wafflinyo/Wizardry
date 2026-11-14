@@ -1,3 +1,19 @@
+## Icefang Rampage (v0.67.0)
+
+New Ice summon: an icicle-furred polar bear appears on all fours, rears up roaring, drops to all fours, charges the locked target, claws for 600 base damage once at contact, and disperses into frost. Initial balance: 6 mana, 85% accuracy. Misses do not summon or damage. The new card is guaranteed in the human starting hand; five-card maximum and one draw per round remain intact. Bear and card art share the generated 16-frame atlas, mirrored toward the target and depth-sorted with fighters.
+
+Validation: `node --check arena.js`, `node --check assets/polar-bear-v67.js`, `node tests/round-lock.cjs`.
+
+---
+
+## Round lock-in and defeated-target failure (v0.66.0)
+
+[Play Wizardry v0.66.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.66.0)
+
+All eligible human and CPU wizards lock their spell and target before initiative begins. The resolution queue is immutable; no wizard selects a replacement spell or target during their turn. A spell whose locked target has been defeated fails, spending its card and mana without redirecting to another foe. Each new round requires fresh choices.
+
+---
+
 ## FIX — Grounded dragon takeoff dust and redesigned Fire rune (v0.65.0)
 
 **[Play Wizardry v0.65.0](https://wafflinyo.github.io/Wizardry/arena.html?v=0.65.0)**

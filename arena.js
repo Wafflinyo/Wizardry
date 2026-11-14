@@ -1,4 +1,4 @@
-/* Wizardry 0.64 — interactive 2.5D battle test.
+/* Wizardry 0.67 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -39,7 +39,10 @@
       kind:"dragon",damage:650,splash:150,burnChance:.25,
       burnDamage:50,burnTurns:3,icon:"♨",
       description:"Baby dragon drops in, charges a giant fireball and hits 650 + 150 to each adjacent enemy. 25% burn: 50 for 3 turns",
-      short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7}
+      short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7},
+    {id:"bear",name:"Icefang Rampage",school:"ice",cost:6,target:"enemy",
+      kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
+      short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -411,11 +414,18 @@
     runResolution();
   }
   function runResolution(){
+    if(state.phase!=="planning")return;
+    // All humans must lock in before any CPU or human action resolves.
+    if(state.units.some(u=>u.hp>0&&u.id===state.humanByTeam[u.team]&&
+      !requiresRest(u)&&!state.plans[u.id]))return;
+    autoFill(0);autoFill(1);
     const order=Object.values(state.plans)
       .filter(p=>getUnit(p.casterId)?.hp>0)
       .sort((a,b)=>getUnit(b.casterId).speed-getUnit(a.casterId).speed||
         a.casterId.localeCompare(b.casterId));
-    state.sequence=order;state.queueAt=0;state.animation=null;state.phase="resolving";
+    state.plans=Object.freeze(Object.fromEntries(Object.entries(state.plans)
+      .map(([id,plan])=>[id,Object.freeze({...plan})])));
+    state.sequence=Object.freeze(order.map(plan=>Object.freeze({...plan})));state.queueAt=0;state.animation=null;state.phase="resolving";
     for(const u of state.units)u.armRaise=0;
     state.log=["Actions resolve from fastest to slowest.",...state.log].slice(0,5);
     paintUI();
@@ -495,7 +505,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -503,6 +513,7 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="bear-claw"&&p>=.45&&!a.applied)applySpell(a);
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -551,7 +562,8 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
+      if(a.card.id==="bear")startStage(a,"bear-appear",650);
+      else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
       else if(a.card.id==="vampire")startStage(a,"vamp-rise",VAMP_RISE_MS);
       else if(a.card.id==="dragon")startStage(a,"dragon-drop",DRAGON_DROP_MS);
@@ -565,6 +577,19 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="bear-appear"){
+      startStage(a,"bear-roar",950);
+    }else if(a.stage==="bear-roar"){
+      startStage(a,"bear-ready",260);
+    }else if(a.stage==="bear-ready"){
+      startStage(a,"bear-charge",650);
+    }else if(a.stage==="bear-charge"){
+      startStage(a,"bear-claw",550);
+    }else if(a.stage==="bear-claw"){
+      if(!a.applied)applySpell(a);
+      startStage(a,"bear-disperse",650);
+    }else if(a.stage==="bear-disperse"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="estel-summon"){
       // Lady Estel's wings open and the glowing orb forms in her hand.
       // No healing occurs until its independent travel animation ends.
@@ -717,11 +742,13 @@
       if(card.target!=="team"&&card.target!=="all_enemies"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0||!valid.some(v=>v.id===t.id)){
-          const replacement=card.kind==="heal"?
-            [...valid].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:valid[0];
-          action.targetId=replacement?.id||null;
+          // A locked spell is spent on its original target, never redirected.
+          c.mana-=card.cost;
+          flash(c,"TARGET DEFEATED · FAILED","#ffd5b0");
+          state.log=[c.name+"'s "+card.name+" fails: the locked target is defeated or unavailable.",
+            ...state.log].slice(0,5);
+          continue;
         }
-        if(!action.targetId)continue;
       }
       c.mana-=card.cost;
       c.armRaise=0;
@@ -1117,7 +1144,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=water?
+        const effect=k.id==="bear"?
+          '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
           '<span class="spell-effect"><b>SEISMIC FISSURE</b><span>1 ENEMY</span></span>':
@@ -1856,10 +1884,10 @@
         nature=card.school==="nature";
       c.clearRect(0,0,width,height);
       const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind",
-        dark=card.school==="dark",fire=card.school==="fire";
-      sky.addColorStop(0,fire?"#983c2a":dark?"#5a243a":wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
-      sky.addColorStop(.55,fire?"#583024":dark?"#342039":wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
-      sky.addColorStop(1,fire?"#2a1a1a":dark?"#170e28":wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
+        dark=card.school==="dark",fire=card.school==="fire",ice=card.school==="ice";
+      sky.addColorStop(0,ice?"#9cdeeb":fire?"#983c2a":dark?"#5a243a":wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
+      sky.addColorStop(.55,ice?"#326c92":fire?"#583024":dark?"#342039":wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,ice?"#112b4b":fire?"#2a1a1a":dark?"#170e28":wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
       c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
       c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
@@ -1869,7 +1897,9 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(card.id==="dragon"){
+      if(card.id==="bear"){
+        window.WIZARDRY_POLAR_BEAR_V67?.drawCardArt(c,width,height);
+      }else if(card.id==="dragon"){
         window.WIZARDRY_BABY_DRAGON_V61?.drawCardArt(c,width,height);
       }else if(card.id==="vampire"){
         window.WIZARDRY_VAMPIRE_V57?.drawCardArt(c,width,height);
@@ -2189,6 +2219,13 @@
           }
         }
       }
+    }
+    if(action?.card?.id==="bear"&&action.stage.startsWith("bear-")){
+      const bear=window.WIZARDRY_POLAR_BEAR_V67;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
+        target:getUnit(action.target),caster:getUnit(action.source)};
+      if(bear)renderables.push({type:"polar-bear",depthY:bear.depthFor(opts),priority:0,
+        draw:()=>bear.draw(g,opts)});
     }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({

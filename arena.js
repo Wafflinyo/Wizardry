@@ -1,4 +1,4 @@
-/* Wizardry 0.55 — interactive 2.5D battle test.
+/* Wizardry 0.57 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -30,7 +30,11 @@
       short:"90% ACCURACY",accuracy:.90,duration:3200,hit:.66,artFrame:3},
     {id:"wind",name:"Tornado Barrage",school:"wind",cost:6,target:"all_enemies",
       kind:"aoe",damage:200,icon:"≋",description:"200 damage to each enemy; next cast gets +10 accuracy points on hit",
-      short:"80% ACCURACY",accuracy:.80,duration:3300,hit:.70,artFrame:0}
+      short:"80% ACCURACY",accuracy:.80,duration:3300,hit:.70,artFrame:0},
+    {id:"vampire",name:"Crimson Siphon",school:"dark",cost:7,target:"enemy",
+      kind:"drain",damage:550,leech:.5,icon:"☠",
+      description:"Vampire steals up to 550 HP, returns and offers a red orb healing 50% of HP actually drained",
+      short:"85% ACCURACY",accuracy:.85,duration:4500,hit:.68,artFrame:4}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const ALLIES=[
@@ -161,6 +165,9 @@
   // the former 620ms arcing hops. One damage event per target still lands
   // precisely at the renderer's own hitAt() milestone.
   const WIND_FORM_MS=960,WIND_VOLLEY_MS=1520,WIND_IMPACT_MS=420,WIND_DISSOLVE_MS=620;
+  const VAMP_RISE_MS=1100,VAMP_OPEN_MS=670,VAMP_LUNGE_MS=880;
+  const VAMP_DRAIN_MS=700,VAMP_RETURN_MS=1100,VAMP_PRESENT_MS=760;
+  const VAMP_ORB_MS=920,VAMP_VANISH_MS=650;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -428,7 +435,9 @@
     if(["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
         "golem-travel","golem-impact","estel-summon","estel-travel",
         "estel-impact","estel-exit","wind-summon","wind-volley",
-        "wind-impact","wind-dissolve"]
+        "wind-impact","wind-dissolve","vamp-rise","vamp-open",
+        "vamp-lunge","vamp-drain","vamp-return","vamp-present",
+        "vamp-orb","vamp-vanish"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -475,6 +484,7 @@
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
+      else if(a.card.id==="vampire")startStage(a,"vamp-rise",VAMP_RISE_MS);
       else startStage(a,a.card.id==="golem"?"golem-slam":"summon",
         a.card.id==="golem"?GOLEM_SLAM_MS:a.card.duration);
       ui.hint.textContent=caster.name+" invokes "+a.card.name+"!";
@@ -523,6 +533,32 @@
     }else if(a.stage==="wind-impact"){
       startStage(a,"wind-dissolve",WIND_DISSOLVE_MS);
     }else if(a.stage==="wind-dissolve"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
+    }else if(a.stage==="vamp-rise"){
+      startStage(a,"vamp-open",VAMP_OPEN_MS);
+      ui.hint.textContent="The coffin opens to reveal the vampire!";
+    }else if(a.stage==="vamp-open"){
+      startStage(a,"vamp-lunge",VAMP_LUNGE_MS);
+      ui.hint.textContent="The vampire launches out of the coffin toward its enemy!";
+    }else if(a.stage==="vamp-lunge"){
+      applyVampDamage(a);
+      startStage(a,"vamp-drain",VAMP_DRAIN_MS);
+      ui.hint.textContent="The vampire siphons "+(a.vampDrained||0)+" HP!";
+      paintUI();
+    }else if(a.stage==="vamp-drain"){
+      startStage(a,"vamp-return",VAMP_RETURN_MS);
+      ui.hint.textContent="The vampire flies back to "+caster.name+".";
+    }else if(a.stage==="vamp-return"){
+      startStage(a,"vamp-present",VAMP_PRESENT_MS);
+      ui.hint.textContent="The vampire presents a red blood orb to "+caster.name+".";
+    }else if(a.stage==="vamp-present"){
+      startStage(a,"vamp-orb",VAMP_ORB_MS);
+      ui.hint.textContent="The crimson orb floats into "+caster.name+".";
+    }else if(a.stage==="vamp-orb"){
+      applyVampHeal(a);
+      startStage(a,"vamp-vanish",VAMP_VANISH_MS);
+      paintUI();
+    }else if(a.stage==="vamp-vanish"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="golem-slam"){
       // The original approved frame 11 is the moment the clasped-fist
@@ -649,7 +685,7 @@
     const shield=consumeStatus(target,"shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
     const amount=Math.max(1,Math.round(raw));
-    const wasAlive=target.hp>0;
+    const oldHp=target.hp,wasAlive=target.hp>0;
     target.hp=Math.max(0,target.hp-amount);
     if(wasAlive&&target.hp===0){
       // Start the one-shot defeat animation at the exact lethal hit.
@@ -660,6 +696,30 @@
     state.log=[source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
+    return oldHp-target.hp;
+  }
+  function applyVampDamage(a){
+    if(a.vampDamageResolved)return;
+    a.vampDamageResolved=true;
+    const c=getUnit(a.source),t=getUnit(a.target);
+    a.vampDrained=c&&c.hp>0&&t&&t.hp>0&&t.team!==c.team?
+      damage(c,t,a.card.damage,a.card):0;
+    a.vampPotentialHeal=Math.round(a.vampDrained*(a.card.leech||.5));
+    state.log=["Vampire siphons "+a.vampDrained+" actual HP.",
+      ...state.log].slice(0,5);
+  }
+  function applyVampHeal(a){
+    if(a.vampHealingResolved)return;
+    a.vampHealingResolved=true;
+    const c=getUnit(a.source);
+    const n=c&&c.hp>0?Math.min(Math.max(0,c.maxHp-c.hp),
+      Math.max(0,a.vampPotentialHeal||0)):0;
+    if(c&&c.hp>0){
+      c.hp+=n;flash(c,n?"+"+n+" HP":"FULL HP","#ffb6c4");
+      state.log=[c.name+" receives "+n+" HP from the vampire's orb.",
+        ...state.log].slice(0,5);
+    }
+    a.applied=true;
   }
   function applySpell(anim){
     if(anim.applied)return;
@@ -784,7 +844,7 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Tap one of your five spells below."):
+        "Tap one of your six spells below."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:(planning?"Spectating teammates":"Your wizard"))+
       (planning?" · "+(card?(card.target==="all_enemies"?"Cast on all enemies":
@@ -886,9 +946,12 @@
           '<span class="spell-effect"><b>⚡ 20% STUN ON HIT</b><span>TARGET SKIPS 1 ACTION</span></span>':
           k.id==="estel"?
           '<span class="spell-effect"><b>❀ NATURE BLESSING</b><span>HEAL ONE ALLY · 750 HP</span></span>':
-          '<span class="spell-effect"><b>≋ 200 TO ALL ENEMIES</b><span>HIT: NEXT SPELL +10% ACC</span></span>';
+          k.id==="wind"?
+          '<span class="spell-effect"><b>≋ 200 TO ALL ENEMIES</b><span>HIT: NEXT SPELL +10% ACC</span></span>':
+          '<span class="spell-effect"><b>☠ SIPHON 550 HP</b><span>RETURN ORB HEALS 50%</span></span>';
         const rarity=water?"LEGENDARY":
-          k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":"RARE";
+          k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":
+          k.id==="vampire"?"LEGENDARY":"RARE";
         b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
@@ -900,7 +963,9 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="wind"?
+          "% accuracy. "+(k.id==="vampire"?
+            "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
+            k.id==="wind"?
             "A tornado hurls rocks at ALL living enemies for 200 damage each. Successful cast grants +10 percentage points of accuracy on the next spell of any element; consumed on next attempt.":
             k.id==="estel"?
             "Summons an angel-winged goddess who rises, blesses a chosen living ally, then flies away.":
@@ -1415,7 +1480,8 @@
     if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
         "golem-travel","golem-impact","estel-summon","estel-travel",
         "estel-impact","estel-exit","wind-summon","wind-volley",
-        "wind-impact","wind-dissolve"].includes(visualStage)){
+        "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
+        "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1596,10 +1662,11 @@
       const width=canvas.width,height=canvas.height,water=card.school==="water",
         nature=card.school==="nature";
       c.clearRect(0,0,width,height);
-      const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind";
-      sky.addColorStop(0,wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
-      sky.addColorStop(.55,wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
-      sky.addColorStop(1,wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
+      const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind",
+        dark=card.school==="dark";
+      sky.addColorStop(0,dark?"#5a243a":wind?"#638f97":nature?"#486d4d":water?"#155473":"#5e5143");
+      sky.addColorStop(.55,dark?"#342039":wind?"#2f505b":nature?"#203c37":water?"#0b3049":"#2c3032");
+      sky.addColorStop(1,dark?"#170e28":wind?"#152b39":nature?"#10292c":water?"#061c30":"#171d28");
       c.fillStyle=sky;c.fillRect(0,0,width,height);
       c.save();c.globalAlpha=.17;c.fillStyle=water?"#4dd4ed":"#dbc489";
       c.beginPath();c.moveTo(0,0);c.lineTo(width*.36,0);
@@ -1609,7 +1676,9 @@
       c.restore();
       const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
       const image=spriteCache[card.id]?.[row];
-      if(card.id==="wind"){
+      if(card.id==="vampire"){
+        window.WIZARDRY_VAMPIRE_V57?.drawCardArt(c,width,height);
+      }else if(card.id==="wind"){
         // Same faceted tornado and spiraling stones as the live cast.
         window.WIZARDRY_TORNADO_V54?.drawCardArt(c,width,height);
       }else if(card.id==="volt"||card.id==="estel"){
@@ -1656,6 +1725,7 @@
     // The approved wind atlas loads asynchronously; redraw its fifth card
     // from the same art asset used for the battlefield animation.
     window.WIZARDRY_TORNADO_V54?.onReady(drawCardArts);
+    window.WIZARDRY_VAMPIRE_V57?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1701,6 +1771,12 @@
     const baseX=lerp(caster.x,target?.x||500,.48);
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
+    if(card.id==="vampire"){
+      window.WIZARDRY_VAMPIRE_V57?.draw(g,{
+        stage:anim.stage,progress:p,time,caster,target
+      });
+      g.restore();return;
+    }
     if(card.id==="wind"){
       window.WIZARDRY_TORNADO_V54?.draw(g,{
         stage:anim.stage,progress:p,time,
@@ -1821,7 +1897,10 @@
           a.card.id==="estel"&&
             ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage)||
           a.card.id==="wind"&&
-            ["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(a.stage))
+            ["wind-summon","wind-volley","wind-impact","wind-dissolve"].includes(a.stage)||
+          a.card.id==="vampire"&&
+            ["vamp-rise","vamp-open","vamp-lunge","vamp-drain","vamp-return",
+              "vamp-present","vamp-orb","vamp-vanish"].includes(a.stage))
         drawAction(a,time);
       else {
         drawAirborneRune(a);
@@ -1841,6 +1920,13 @@
       window.WIZARDRY_TORNADO_V54?.drawForeground(g,{
         stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
         time,targets:a.windImpactTargets||[]
+      });
+    }
+    if(["vamp-drain","vamp-orb"].includes(state.animation?.stage)){
+      const a=state.animation;
+      window.WIZARDRY_VAMPIRE_V57?.drawForeground(g,{
+        stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
+        time,target:getUnit(a.target),caster:getUnit(a.source)
       });
     }
     if(state.animation?.stage==="estel-impact"){
@@ -1896,6 +1982,12 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    getVampireInfo:()=>state?.animation?.card?.id==="vampire"?{
+      stage:state.animation.stage,drained:state.animation.vampDrained||0,
+      pendingHeal:state.animation.vampPotentialHeal||0,
+      healed:!!state.animation.vampHealingResolved,
+      progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
+    }:null,
     getWindVolleyInfo:()=>state?.animation?.card?.id==="wind"?{
       stage:state.animation.stage,
       targets:(state.animation.windImpactTargets||[]).map(t=>({id:t.id,hit:t.hit})),

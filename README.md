@@ -1,3 +1,17 @@
+## NEW — Crimson Siphon (Dark vampire spell), v0.57.0
+
+**[Play Crimson Siphon in Wizardry](https://wafflinyo.github.io/Wizardry/arena.html?v=0.57.0)**
+
+A sixth card **Crimson Siphon (Legendary · Dark)** uses the **user-approved vampire-and-coffin 12-frame sprite artwork**, with the flying vampire matted separately from the coffin so the coffin stays stationary. Full story-driven summoning: (1) a dark coffin **rises from the arena floor**, (2) it opens to reveal the vampire, (3) the vampire flies **entirely out of the coffin** and lunges across the arena to the selected opponent, (4) on contact he **siphons up to 550 damage** into a forming red blood orb, (5) he flies all the way **back to the caster**, (6) pauses and presents the stolen life as a crimson orb, (7) the orb detaches and floats to the caster, **healing only on contact**, (8) the vampire/coffin disappear. Stages last 1100 + 670 + 880 + 700 + 1100 + 760 + 920 + 650 ms, plus the existing automatically traced Dark rune and recovery.
+
+**Real lifesteal:** Healing is 50% of the enemy's **actual HP lost** (not overkill, and accounting for shields and reductions). Standard successful 550-damage strike heals the caster for **275 HP**, capped at max HP. An enemy left with only 180 HP gives 90 HP; a missed accuracy check produces no summon, damage or heal. No regeneration until the red orb visibly touches the wizard. No healing enemies or dead wizards. CPU teammates and enemies can cast it independently, targeting the other team. Other elemental spells and their effects remain unchanged.
+
+**Official Dark symbol:** The new Dark school card emblem and automatic rune are a **skull**, not the old Shadow crescent. No user tracing required. The live card art uses the same approved vampire sprites. Sixth slim card stays in the one-row portrait/landscape mobile hand.
+
+**Provisional balance:** 85% accuracy and 7 mana; damage/heal values match the request.
+
+---
+
 ## FIX — Tornado spins from the instant it is summoned (v0.56.0)
 
 **[Play Tornado Barrage with continuous spinning](https://wafflinyo.github.io/Wizardry/arena.html?v=0.56.0)**

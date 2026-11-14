@@ -85,12 +85,21 @@ const PATHS={
   ]
 };
 PATHS.storm=PATHS.lightning;
-PATHS.dark=PATHS.shadow;
+// Skull traced automatically for the official Dark school.
+PATHS.dark=[
+ [[12,2],[7.7,2.9],[4.6,5.5],[3,9.6],[3.3,13.7],[7.3,17.6],[7.9,22],
+ [16.1,22],[16.7,17.6],[20.7,13.7],[21,9.6],[19.4,5.5],[16.3,2.9],[12,2]],
+ [[5.7,10.8],[10.2,9.7],[9.3,13.5],[6,14.2],[5.7,10.8]],
+ [[18.3,10.8],[13.8,9.7],[14.7,13.5],[18,14.2],[18.3,10.8]],
+ [[12,13.5],[10.2,16.3],[13.8,16.3],[12,13.5]],
+ [[8.2,18.6],[15.8,18.6]],[[10.5,18.6],[10.5,21]],
+ [[13.5,18.6],[13.5,21]]
+];
 PATHS.wind=PATHS.air; // Wind's trace is the card's wind swirls, not arcane.
 const COLORS={water:"#8cefff",earth:"#c9ee95",fire:"#ffc078",
   air:"#d7faff",wind:"#d7faff",light:"#fff0b2",shadow:"#ddc4ff",
   nature:"#a8f5b1",arcane:"#dabaff",ice:"#d4faff",
-  lightning:"#fff098",storm:"#fff098",dark:"#ddc4ff"};
+  lightning:"#fff098",storm:"#fff098",dark:"#f2b9cc"};
 function prepare(lines){
   const strokes=lines.map(points=>{
     const cumulative=[0];

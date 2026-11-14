@@ -1,4 +1,4 @@
-/* Wizardry 0.67 — interactive 2.5D battle test.
+/* Wizardry 0.68 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -582,7 +582,7 @@
     }else if(a.stage==="bear-roar"){
       startStage(a,"bear-ready",260);
     }else if(a.stage==="bear-ready"){
-      startStage(a,"bear-charge",650);
+      startStage(a,"bear-charge",800);
     }else if(a.stage==="bear-charge"){
       startStage(a,"bear-claw",550);
     }else if(a.stage==="bear-claw"){
@@ -2224,8 +2224,16 @@
       const bear=window.WIZARDRY_POLAR_BEAR_V67;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
         target:getUnit(action.target),caster:getUnit(action.source)};
-      if(bear)renderables.push({type:"polar-bear",depthY:bear.depthFor(opts),priority:0,
-        draw:()=>bear.draw(g,opts)});
+      if(bear){
+        // Shadows belong on the floor below all bodies. Keep the bear
+        // and the contact claw marks in separate depth-sorted layers.
+        bear.draw(g,{...opts,layer:"ground"});
+        renderables.push({type:"polar-bear",depthY:bear.depthFor(opts,"actor"),priority:0,
+          draw:()=>bear.draw(g,{...opts,layer:"actor"})});
+        if(action.stage==="bear-claw")renderables.push({type:"polar-bear-claw",
+          depthY:bear.depthFor(opts,"claw"),priority:2,
+          draw:()=>bear.draw(g,{...opts,layer:"claw"})});
+      }
     }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({

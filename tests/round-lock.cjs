@@ -18,7 +18,7 @@ console.log('Round lock-in and defeated-target regression checks passed.');
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
 assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'bear');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
-for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',650]]){
+for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
 }
 assert.equal(s.animation.stage,'bear-claw');api.updateCastSequence(240);assert.equal(s.units[1].hp,1000);
@@ -26,3 +26,16 @@ api.updateCastSequence(20);assert.equal(s.units[1].hp,400);api.updateCastSequenc
 assert.equal(s.animation.stage,'bear-disperse');assert.equal(s.units[1].hp,400);
 api.updateCastSequence(650);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,400);
 console.log('Ice bear sequence, opening hand and single 600-damage contact passed.');
+
+vm.runInNewContext(fs.readFileSync('assets/polar-bear-v67.js','utf8'),context);
+const polar=context.window.WIZARDRY_POLAR_BEAR_V67;
+for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
+ const opts={stage:'bear-claw',progress:.5,target};
+ assert.equal(polar.depthFor(opts,'actor'),target.y,'body sorts behind target at same depth');
+ assert.ok(polar.depthFor(opts,'claw')>target.y,'claw contact overlays target');
+ assert.ok(polar.depthFor(opts,'claw')<target.y+1,'contact does not overlay nearer fighters');
+ const start=polar.pose({...opts,stage:'bear-charge',progress:0});
+ const end=polar.pose({...opts,stage:'bear-charge',progress:1});
+ assert.equal(start.y,425);assert.equal(end.y,target.y+8);
+}
+console.log('Bear layering checks passed for both sides and front/back targets.');

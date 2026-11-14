@@ -1,3 +1,9 @@
+## Polar bear depth and charge timing (v0.68.0)
+
+The bear body now sorts behind its target, its shadow stays on the arena floor, and claw contact marks use a separate target-depth layer. Nearby wizards retain correct front/back occlusion. Charge travel takes 800 ms (previously 650 ms); roar, claw timing, damage and other spells are unchanged.
+
+---
+
 ## Icefang Rampage (v0.67.0)
 
 New Ice summon: an icicle-furred polar bear appears on all fours, rears up roaring, drops to all fours, charges the locked target, claws for 600 base damage once at contact, and disperses into frost. Initial balance: 6 mana, 85% accuracy. Misses do not summon or damage. The new card is guaranteed in the human starting hand; five-card maximum and one draw per round remain intact. Bear and card art share the generated 16-frame atlas, mirrored toward the target and depth-sorted with fighters.

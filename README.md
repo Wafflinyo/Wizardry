@@ -1,3 +1,15 @@
+## UPDATED — Approved full-wind tornado with staggered rock impacts (v0.54.0)
+
+**[Play Wizardry with the new tornado](https://wafflinyo.github.io/Wizardry/arena.html?v=0.54.0)**
+
+The live Tornado Barrage now uses the **user-approved original twelve-frame animated tornado** rather than the previous thin, code-drawn funnel. Its animation was converted from the approved GIF into a **transparent 4×3 atlas of 12 frames** (`assets/tornado-approved-v54.webp`) so the original picture's sky, masonry and floor do NOT cover the Wizardry battlefield. The original faceted, richly filled teal wind ribbons, churning base debris, and bulky swirling body are preserved. The exact same source frames appear in the spell card art.
+
+Instead of an instantaneous synchronized hit on everyone, the new tornado **fires distinct groups of stone projectiles** sequentially from the rotating funnel toward each currently living enemy. Every target has a separate launch and arrival time (roughly 34%, 50%, 66%, and 82% into the volley for 4v4). **Each enemy takes its 200 base damage at their own stone impact**, with brief individual rock-burst particles behind and in front of their wizard. The weathered tornado then fades out. No changes were made to the existing arena backdrop or wizard sprites.
+
+All previous Wind gameplay rules are preserved: **80% base card accuracy, 6 mana, 200 damage per living enemy (no friendly fire), +10 percentage points to the caster's next spell's accuracy on successful cast**, any element, one-use and nonstacking. Only a successful Wind accuracy roll launches the tornado; missed runes still crumble without effects. Other cards, AI choices, turn confirmation and team sizes are unchanged.
+
+---
+
 ## NEW — Tornado Barrage, Wind area attack (v0.53.0)
 
 **[Play Wizardry with Tornado Barrage](https://wafflinyo.github.io/Wizardry/arena.html?v=0.53.0)**

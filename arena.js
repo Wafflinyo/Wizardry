@@ -1,4 +1,4 @@
-/* Wizardry 0.53 — interactive 2.5D battle test.
+/* Wizardry 0.54 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -157,7 +157,7 @@
   const ESTEL_RISE_MS=1050,ESTEL_ORB_SPEED_PX_PER_MS=.39;
   const ESTEL_TRAVEL_MIN_MS=540,ESTEL_TRAVEL_MAX_MS=1100;
   const ESTEL_IMPACT_MS=720,ESTEL_EXIT_MS=840;
-  const WIND_FORM_MS=960,WIND_VOLLEY_MS=1250,WIND_IMPACT_MS=550,WIND_DISSOLVE_MS=620;
+  const WIND_FORM_MS=960,WIND_VOLLEY_MS=2000,WIND_IMPACT_MS=420,WIND_DISSOLVE_MS=620;
   // Same approved wizard mesh in every battle slot, with different palettes.
   const LOOK_PRESETS=[
     [{robeColor:"#6f4ab4",hatColor:"#6f4ab4",skinColor:"#cca084"},
@@ -438,6 +438,24 @@
     else caster.armRaise=1;
     if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="wind-volley"&&a.runeResult==="success"){
+      // Each rock volley has its own launch/arrival window. Apply 200 HP
+      // damage to EACH opposing wizard when that wizard's stones land,
+      // rather than damaging all opponents at the end of the sequence.
+      const targets=a.windImpactTargets||[];
+      for(let i=0;i<targets.length;i++){
+        const entry=targets[i];
+        if(entry.hit)continue;
+        const arrival=window.WIZARDRY_TORNADO_V54?.hitAt(i,targets.length)||
+          (targets.length<=1?.45:.34+i*.48/(targets.length-1));
+        if(p>=arrival){
+          entry.hit=true;
+          const unit=getUnit(entry.id);
+          if(unit&&unit.hp>0&&unit.team!==caster.team)
+            damage(caster,unit,a.card.damage,a.card);
+        }
+      }
+    }
     if(a.elapsed<a.duration)return;
     if(a.stage==="raising"){
       caster.armRaise=1;
@@ -485,13 +503,19 @@
     }else if(a.stage==="estel-exit"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="wind-summon"){
+      // Capture the living enemies before the first rock launches.
+      // Positions also anchor their own staggered impact effects.
+      a.windImpactTargets=alive(1-caster.team).map(u=>({
+        id:u.id,x:u.x,y:u.y,hit:false
+      }));
       startStage(a,"wind-volley",WIND_VOLLEY_MS);
-      ui.hint.textContent="A tornado hurls rocks at every enemy!";
+      ui.hint.textContent="The full-force tornado is firing rocks at each enemy!";
     }else if(a.stage==="wind-volley"){
-      a.windImpactTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y}));
+      // All individual rock impacts have completed by this boundary.
+      // This call grants Tailwind once and cannot replay previous damage.
       if(!a.applied)applySpell(a);
       startStage(a,"wind-impact",WIND_IMPACT_MS);
-      ui.hint.textContent="The rock storm impacts every opposing wizard!";
+      ui.hint.textContent="The rock barrage finishes; Tailwind empowers the next spell!";
       paintUI();
     }else if(a.stage==="wind-impact"){
       startStage(a,"wind-dissolve",WIND_DISSOLVE_MS);
@@ -640,7 +664,19 @@
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
     if(card.kind==="aoe"&&card.target==="all_enemies"){
-      for(const target of alive(1-c.team))damage(c,target,card.damage,card);
+      // The wind-volley stage normally applies hits individually at the
+      // precise arrival of each stone. This only resolves remaining hits,
+      // never replaying damage on an already impacted enemy.
+      const targets=anim.windImpactTargets||alive(1-c.team).map(u=>({
+        id:u.id,x:u.x,y:u.y,hit:false
+      }));
+      for(const entry of targets){
+        if(entry.hit)continue;
+        entry.hit=true;
+        const enemy=getUnit(entry.id);
+        if(enemy&&enemy.hp>0&&enemy.team!==c.team)
+          damage(c,enemy,card.damage,card);
+      }
       if(anim.runeResult==="success"){
         addStatus(c,"tailwind","≋",.10);
         flash(c,"TAILWIND +10% ACC","#b5f2dd");
@@ -1572,7 +1608,7 @@
       const image=spriteCache[card.id]?.[row];
       if(card.id==="wind"){
         // Same faceted tornado and spiraling stones as the live cast.
-        window.WIZARDRY_TORNADO_V53?.drawCardArt(c,width,height);
+        window.WIZARDRY_TORNADO_V54?.drawCardArt(c,width,height);
       }else if(card.id==="volt"||card.id==="estel"){
         const rendered=card.id==="volt"?
           window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height):
@@ -1614,6 +1650,9 @@
     // browsers that fire a cached data-image load event synchronously.
     window.WIZARDRY_PROFESSOR_V49?.onReady(drawCardArts);
     window.WIZARDRY_LADY_ESTEL_V51?.onReady(drawCardArts);
+    // The approved wind atlas loads asynchronously; redraw its fifth card
+    // from the same art asset used for the battlefield animation.
+    window.WIZARDRY_TORNADO_V54?.onReady(drawCardArts);
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -1660,7 +1699,7 @@
     const baseY=lerp(caster.y,target?.y||360,.53)+65;
     g.save();
     if(card.id==="wind"){
-      window.WIZARDRY_TORNADO_V53?.draw(g,{
+      window.WIZARDRY_TORNADO_V54?.draw(g,{
         stage:anim.stage,progress:p,time,
         targets:anim.windImpactTargets||alive(1-caster.team)
       });
@@ -1794,9 +1833,9 @@
     if(state.animation?.stage==="golem-impact")
       window.WIZARDRY_GOLEM_EFFECTS_V42?.drawImpactForeground(
         g,state.animation);
-    if(state.animation?.stage==="wind-impact"){
+    if(["wind-volley","wind-impact"].includes(state.animation?.stage)){
       const a=state.animation;
-      window.WIZARDRY_TORNADO_V53?.drawForeground(g,{
+      window.WIZARDRY_TORNADO_V54?.drawForeground(g,{
         stage:a.stage,progress:clamp(a.elapsed/a.duration,0,1),
         time,targets:a.windImpactTargets||[]
       });
@@ -1854,6 +1893,11 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
     cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
+    getWindVolleyInfo:()=>state?.animation?.card?.id==="wind"?{
+      stage:state.animation.stage,
+      targets:(state.animation.windImpactTargets||[]).map(t=>({id:t.id,hit:t.hit})),
+      progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
+    }:null,
     getEffectiveAccuracy:(unitId,cardId)=>{
       const u=getUnit(unitId),card=BY_ID[cardId];
       return !u||!card?null:Math.min(1,card.accuracy+

@@ -66,7 +66,8 @@
     {id:"rage",name:"Blazing Rage",school:"fire",cost:3,target:"ally",kind:"rage",boost:.20,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging spell deals 20% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."},
     {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell loses 50 percentage points of accuracy. An 80% spell becomes 30% accurate (70% failure). Combines with Static Shock and other active accuracy effects. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."},
     {id:"soul",name:"Soul Drain",school:"dark",cost:3,target:"enemy",kind:"souldrain",damage:100,drainTurns:3,accuracy:1,icon:"☠",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Curses one enemy for 3 turns. At the start of each turn, drains up to 100 HP and restores the HP actually drained to the caster, capped at maximum HP. 300 total drain. Cannot revive a defeated caster. Reapplying refreshes the curse without stacking."},
-    {id:"healingaura",name:"Healing Aura",school:"nature",cost:5,target:"team",kind:"teamregen",heal:600,healPerTurn:200,healTurns:3,accuracy:1,icon:"❀",rarity:"EPIC",duration:2300,hit:.72,short:"100% ACCURACY",description:"Blesses every living teammate, including yourself. Each restores 200 HP at the start of each of the next 3 turns: 600 HP per ally. Capped at maximum HP; cannot revive. Works alongside Calming Waters. Reapplying refreshes this aura without stacking copies."}
+    {id:"healingaura",name:"Healing Aura",school:"nature",cost:5,target:"team",kind:"teamregen",heal:600,healPerTurn:200,healTurns:3,accuracy:1,icon:"❀",rarity:"EPIC",duration:2300,hit:.72,short:"100% ACCURACY",description:"Blesses every living teammate, including yourself. Each restores 200 HP at the start of each of the next 3 turns: 600 HP per ally. Capped at maximum HP; cannot revive. Works alongside Calming Waters. Reapplying refreshes this aura without stacking copies."},
+    {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -403,8 +404,27 @@
     return !!u&&u.hp>0&&Number.isInteger(u.stunRound)&&
       state.round===u.stunRound&&u.statuses.some(st=>st.kind==="stun");
   }
+  function isFrozen(u,roll){
+    const frost=u?.statuses.find(st=>st.kind==="frozen");if(!frost||u.hp<=0||state.round<frost.startRound)return false;
+    if(frost.releaseRound&&state.round>=frost.releaseRound){consumeStatus(u,"frozen");return false;}
+    if(frost.lastTurnRound!==state.round){frost.lastTurnRound=state.round;frost.turnsTested=(frost.turnsTested||0)+1;
+      const chance=frost.turnsTested*.20;
+      if((roll??Math.random())<chance){consumeStatus(u,"frozen");flash(u,"THAWED","#b8f3ff");return false;}
+      flash(u,"FROZEN · SKIP","#b8f3ff");if(frost.turnsTested>=3)frost.releaseRound=state.round+1;
+    }return true;
+  }
+  function attemptMarkedFreeze(target,card,spell,roll){
+    if(card?.school!=="ice")return false;
+    if(spell?.freezeMarkTargets?.[target.id])return false;
+    if(spell){if(!spell.freezeMarkTargets)spell.freezeMarkTargets={};spell.freezeMarkTargets[target.id]=true;}
+    const mark=consumeStatus(target,"freezing_temps");if(!mark||target.hp<=0||(roll??Math.random())>=.5)return false;
+    addStatus(target,"frozen","❄",1);const frozen=target.statuses.find(st=>st.kind==="frozen");
+    const pending=state.phase==="resolving"&&state.sequence?.slice(state.queueAt).some(a=>a.casterId===target.id);
+    frozen.startRound=pending?state.round:state.round+1;frozen.turnsTested=0;frozen.lastTurnRound=null;frozen.releaseRound=null;
+    flash(target,"FROZEN","#b8f3ff");return true;
+  }
   function requiresRest(u){
-    return !!u&&u.hp>0&&(isStunned(u)||isRecharging(u)||
+    return !!u&&u.hp>0&&(isFrozen(u)||isStunned(u)||isRecharging(u)||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   function autoPlan(u){
@@ -911,6 +931,7 @@
       if(!c||c.hp<=0||!card)continue;
       // Exactly ONE eligible action is lost, whether the spell struck
       // before this wizard's planned cast or during a prior round.
+      if(isFrozen(c)){state.log=[c.name+" loses their action while frozen.",...state.log].slice(0,5);continue;}
       if(isStunned(c)){
         consumeStatus(c,"stun");c.stunRound=null;
         flash(c,"STUNNED · SKIPPED","#88e8ff");
@@ -1014,6 +1035,7 @@
     state.log=[source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
+    attemptMarkedFreeze(target,card,spell);
     return oldHp-target.hp;
   }
   function applyVampDamage(a){
@@ -1135,6 +1157,7 @@
     return true;
   }
   function tickBurnsForRound(){
+    for(const u of state.units)isFrozen(u);
     for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
       if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
     for(const u of state.units)for(const kind of ["calming_waters","healing_aura"]){const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
@@ -1205,6 +1228,8 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
+    } else if(card.kind==="freezing"&&t&&t.hp>0&&t.team!==c.team){
+      addStatus(t,"freezing_temps","❄",.5);flash(t,"FREEZING TEMPS","#b8f3ff");state.log=[t.name+" is marked: the next Ice spell has a 50% freeze chance.",...state.log].slice(0,5);
     } else if(card.kind==="teamregen"){
       for(const ally of alive(c.team)){addStatus(ally,"healing_aura","❀",card.healPerTurn);const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
       state.log=[c.name+" blesses the entire team: 200 HP per turn for 3 turns each.",...state.log].slice(0,5);
@@ -1287,7 +1312,7 @@
     nearestAvailableCaster();
     state.log=["Round "+state.round+" begins: your spell and target choice.",...state.log].slice(0,5);
     ui.status.textContent="Round "+state.round+": "+
-      (isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
+      (isFrozen(caster())?"Frozen — your wizard skips this turn.":isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
        isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
        "Choose a card in hand, tap a target, and confirm.");
     paintUI();
@@ -1316,7 +1341,7 @@
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
     if(planning)ui.hint.textContent=c?
-      (isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
+      (isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
        card?(card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
@@ -1415,7 +1440,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="healingaura"?
+        const effect=k.id==="freezing"?
+          '<span class="spell-effect"><b>NEXT ICE: 50% FREEZE</b><span>UP TO 3 TURNS · THAW 20/40/60%</span></span>':k.id==="healingaura"?
           '<span class="spell-effect"><b>200 HP × 3 TURNS</b><span>ENTIRE TEAM · 600 EACH</span></span>':k.id==="soul"?
           '<span class="spell-effect"><b>DRAIN 100 HP × 3 TURNS</b><span>HEALS CASTER · 300 TOTAL</span></span>':k.id==="turbulence"?
           '<span class="spell-effect"><b>−50% SPELL ACCURACY</b><span>ENEMY · NEXT SPELL</span></span>':k.id==="rage"?
@@ -1450,14 +1476,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
+          (k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2067,6 +2093,8 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "freezing_temps":return {title:"❄ Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
+      case "frozen":return {title:"❄ Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
       case "healing_aura":return {title:"❀ Healing Aura · Nature healing",detail:"Restores 200 HP at the start of each turn for "+st.remaining+" more turns: 600 HP total. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
       case "soul_drain":return {title:"☠ Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
@@ -2151,7 +2179,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="healing_aura")window.WIZARDRY_HEALING_AURA_V92?.emblem(g,r.x,r.y,18);
+      }else if(st.kind==="freezing_temps"||st.kind==="frozen")window.WIZARDRY_FREEZING_TEMPS_V93?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="healing_aura")window.WIZARDRY_HEALING_AURA_V92?.emblem(g,r.x,r.y,18);
       else if(st.kind==="soul_drain")window.WIZARDRY_SOUL_DRAIN_V91?.emblem(g,r.x,r.y,18);
       else if(st.kind==="turbulence")window.WIZARDRY_TURBULENCE_V90?.emblem(g,r.x,r.y,18);
       else if(st.kind==="blazing_rage")window.WIZARDRY_BLAZING_RAGE_V89?.emblem(g,r.x,r.y,18);
@@ -2337,6 +2366,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="freezing"){window.WIZARDRY_FREEZING_TEMPS_V93?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="healingaura"){window.WIZARDRY_HEALING_AURA_V92?.draw(g,{progress:p,targets:alive(caster.team)});g.restore();return;}
     if(card.id==="soul"){window.WIZARDRY_SOUL_DRAIN_V91?.draw(g,{progress:p,target,caster});g.restore();return;}
     if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
@@ -2753,7 +2783,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
     },
-    isStunned,attemptVoltStun,requiresRest,applySpell,
+    isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

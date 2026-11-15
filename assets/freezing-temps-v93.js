@@ -1,0 +1,5 @@
+/* Ice curse seal and frost crystals. */
+(function(root){'use strict';const T=Math.PI*2;
+function emblem(c,x,y,size,alpha=1,time=0){c.save();c.translate(x,y);c.scale(size/100,size/100);c.globalAlpha*=alpha;c.strokeStyle='#d2faff';c.shadowColor='#6ccbee';c.shadowBlur=7;c.lineWidth=2;c.beginPath();c.arc(0,0,48,0,T);c.stroke();for(let i=0;i<6;i++){c.save();c.rotate(i*T/6);c.beginPath();c.moveTo(0,0);c.lineTo(0,-34);for(const y of [-16,-26]){c.moveTo(-8,y-6);c.lineTo(0,y);c.lineTo(8,y-6);}c.stroke();c.restore();}c.restore();}
+function draw(c,{progress:p,target}){if(!target)return;const t=Math.max(0,Math.min(1,(p-.2)/.45)),q=t*t*(3-2*t),x=500+(target.x-500)*q,y=335+(target.y-95-335)*q,fade=Math.min(1,p/.15,(1-p)/.2);emblem(c,x,y,90,fade,p);
+ c.save();for(let i=0;i<22;i++){const a=i*2.399+p*5,r=50+i%3*9;c.globalAlpha=fade*.7;c.fillStyle='#c2f6ff';c.save();c.translate(x+Math.cos(a)*r,y+Math.sin(a)*r);c.rotate(a);c.beginPath();c.moveTo(0,-5);c.lineTo(3,1);c.lineTo(0,5);c.lineTo(-3,1);c.closePath();c.fill();c.restore();}c.restore();}root.WIZARDRY_FREEZING_TEMPS_V93={emblem,draw};})(window);

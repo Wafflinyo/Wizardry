@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='freezing'&&root.WIZARDRY_FREEZING_TEMPS_V93){root.WIZARDRY_FREEZING_TEMPS_V93.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='healingaura'&&root.WIZARDRY_HEALING_AURA_V92){root.WIZARDRY_HEALING_AURA_V92.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='soul'&&root.WIZARDRY_SOUL_DRAIN_V91){root.WIZARDRY_SOUL_DRAIN_V91.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='turbulence'&&root.WIZARDRY_TURBULENCE_V90){root.WIZARDRY_TURBULENCE_V90.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}

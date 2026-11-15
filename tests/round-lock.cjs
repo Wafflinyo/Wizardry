@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'healingaura');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'freezing');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('healingaura'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('freezing'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -284,3 +284,10 @@ const teamBless=()=>combat.applySpell({action:{casterId:'human'},card:healingAur
 for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[0].hp,200+(r-1)*200);assert.equal(s.units[3].hp,100+(r-1)*200);}assert.equal(s.units[0].hp,800);assert.equal(s.units[3].hp,700);
 teamBless();teamBless();assert.equal(s.units[0].statuses.filter(x=>x.kind==='healing_aura').length,1);combat.applySpell({action:{casterId:'human',targetId:'human'},card:calming});s.units[0].hp=500;s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,825,'aura and Calming Waters both heal');s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,1000,'HP cap');
 console.log('Healing Aura entire-team targeting, 200 × 3 each, single ticks, no KO healing, refresh and coexistence passed.');
+
+const freezingCard=cards.find(c=>c.id==='freezing');s=battle();s.auras={};api.set(s);const markIce=()=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:freezingCard});markIce();assert.equal(combat.attemptMarkedFreeze(s.units[1],benderCard,{},0),false);assert.ok(s.units[1].statuses.some(x=>x.kind==='freezing_temps'));
+assert.equal(combat.attemptMarkedFreeze(s.units[1],bear,{},.5),false);assert.equal(s.units[1].statuses.length,0,'failed 50% roll consumes mark');markIce();const iceSpell={};assert.equal(combat.attemptMarkedFreeze(s.units[1],bear,iceSpell,.499),true);assert.equal(combat.attemptMarkedFreeze(s.units[1],bear,iceSpell,0),false,'one roll per spell');
+assert.equal(combat.isFrozen(s.units[1],.99),false,'already acted: freeze begins next round');for(let r=2;r<=4;r++){s.round=r;assert.equal(combat.isFrozen(s.units[1],.99),true);assert.equal(combat.isFrozen(s.units[1],0),true,'no duplicate thaw roll');}s.round=5;assert.equal(combat.isFrozen(s.units[1],.99),false,'auto thaw after three missed turns');
+for(const [turn,roll] of [[1,.199],[2,.399],[3,.599]]){s=battle();s.auras={};api.set(s);markIce();combat.attemptMarkedFreeze(s.units[1],bear,{},0);for(let i=1;i<=turn;i++){s.round=i+1;assert.equal(combat.isFrozen(s.units[1],i===turn?roll:.99),i!==turn);}}
+s=battle();s.auras={};s.phase='resolving';s.sequence=[{casterId:'cpu',cardId:bear.id,targetId:'human'}];s.queueAt=0;api.set(s);markIce();combat.attemptMarkedFreeze(s.units[1],bear,{},0);assert.equal(s.units[1].statuses.find(x=>x.kind==='frozen').startRound,1,'pending action affected immediately');vm.runInNewContext('Math.random=()=>.99',context);api.startNextAction();assert.equal(s.animation,undefined,'frozen wizard cannot cast');
+console.log('Freezing Temps: Ice-only mark, one 50% roll, three skipped turns, rising thaw chance, no rerolls, immediate pending skip and auto thaw passed.');

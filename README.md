@@ -1,3 +1,11 @@
+## Starter Lightning spell: Socket Serpent (v0.76.0)
+
+A cord-bodied cobra appears in the arena center, plugged into a stationary summoned outlet. It rises, spreads its hood, charges an animated current between metal plug-prong fangs, lunges at its locked target in 170 ms, deals 250 base Lightning damage once at contact, retracts and disperses. Accuracy is 75%; initial mana cost is 3. A miss does not summon or damage. The outlet remains in place and the cable stretches to the striking snake. New generated 16-frame low-poly atlas is used for both the cast and fitted card artwork. Guaranteed in the human opening hand for testing.
+
+Validation: syntax, 250-damage contact timing, no duplicate hit, 75% card accuracy, opening-hand guarantee and existing burst/combat/hand gesture checks passed.
+
+---
+
 ## Rapid, fluid Water Pistol burst (v0.75.0)
 
 The three shots now launch 100 milliseconds apart and travel concurrently for 170 ms each. All three impacts land within 370 ms of the first launch, while their splash explosions overlap and fade independently. The sigil forms in 250 ms. Replaced solid angular projectile bodies and shard spray with translucent, deforming water blobs, curved foam highlights, undulating wakes, drifting droplets and rounded splash spray. Card art uses the same fluid bullet renderer. Central origin, 50 damage per contact/150 total, 2 mana and 95% accuracy remain unchanged.

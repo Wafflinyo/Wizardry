@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'pistol');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'cobra');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -62,3 +62,11 @@ for(const caster of [{x:175,y:340},{x:831,y:488}]){const anchor=water.anchors({c
 assert.ok(water.shotProgress({elapsed:130,shotIndex:0})>0&&water.shotProgress({elapsed:130,shotIndex:0})<1);
 assert.ok(water.shotProgress({elapsed:130,shotIndex:1})>0&&water.shotProgress({elapsed:130,shotIndex:1})<1,'two water bullets fly concurrently');
 console.log('Rapid Water Pistol: 100ms launch spacing, overlapping flight, three 50-damage contacts, bonus, miss and defeated-target checks passed.');
+
+const cobra=cards.find(c=>c.id==='cobra');assert.equal(cobra.damage,250);assert.equal(cobra.accuracy,.75);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:cobra,stage:'cobra-rise',elapsed:0,duration:550,runeResult:'success'};api.set(s);
+api.updateCastSequence(550);assert.equal(s.animation.stage,'cobra-charge');assert.equal(s.units[1].hp,1000);
+api.updateCastSequence(650);assert.equal(s.animation.stage,'cobra-strike');api.updateCastSequence(169);assert.equal(s.units[1].hp,1000);
+api.updateCastSequence(1);assert.equal(s.units[1].hp,750);assert.equal(s.units[2].hp,1000);
+api.updateCastSequence(220);api.updateCastSequence(300);api.updateCastSequence(300);assert.equal(s.units[1].hp,750);assert.equal(s.animation.stage,'lowering');
+console.log('Socket Serpent: 250 damage once at fast-strike contact, 75% card accuracy and opening-hand guarantee passed.');

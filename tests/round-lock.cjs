@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'scorpion');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'octo');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('scorpion'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('octo'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -309,3 +309,20 @@ s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation=
 console.log('Scorpion full summon completes and hands off to next action.');
 
 assert.equal(scorpionFx.pose(scorpionFx.timeline(3900/4700)).burrow,0,'holds for half a second before digging');assert.ok(scorpionFx.pose(scorpionFx.timeline(4300/4700)).burrow>0);assert.equal(scorpionFx.timeline(1),1);
+
+const octoAPI=context.window.WIZARDRY_ARENA_TEST;
+s=battle();s.phase='resolving';s.sequence=[{casterId:'human',cardId:'octo',targetId:'cpu'},{casterId:'cpu',cardId:card.id,targetId:'human'}];s.queueAt=1;api.set(s);
+assert.equal(octoAPI.attemptOctoFlinch(s.units[1],.149),true);
+api.startNextAction();assert.equal(s.units[1].mana,10,'flinch skips pending action without spending mana');assert.equal(s.units[1].flinchRound,null);
+s=battle();s.phase='resolving';s.sequence=[{casterId:'cpu'}];s.queueAt=1;api.set(s);
+assert.equal(octoAPI.attemptOctoFlinch(s.units[1],0),false,'already acted cannot flinch');assert.equal(s.units[1].flinchRound,undefined);
+s.queueAt=0;assert.equal(octoAPI.attemptOctoFlinch(s.units[1],.15),false,'15 percent boundary');
+s.units[1].hp=0;assert.equal(octoAPI.attemptOctoFlinch(s.units[1],0),false,'defeated target cannot flinch');
+const octo=cards.find(c=>c.id==='octo');assert.equal(octo.damage,400);assert.equal(octo.school,'water');
+console.log('Octo Whip: 400 damage, pending-action flinch, no carryover and chance boundary passed.');
+s=battle();s.auras={};s.phase='resolving';s.sequence=[{casterId:'cpu',cardId:card.id,targetId:'human'}];s.queueAt=0;api.set(s);
+octoAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:octo,flinchRoll:0});assert.equal(s.units[1].hp,600);assert.equal(s.units[1].flinchRound,1);
+vm.runInNewContext(fs.readFileSync('assets/octo-whip-v95.js','utf8'),context);
+const canvasMock=new Proxy({}, {get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
+for(const target of [{x:175,y:340},{x:831,y:488}])for(let step=0;step<=100;step++)for(const layer of ['body','whip'])context.window.WIZARDRY_OCTO_V95.draw(canvasMock,{progress:step/100,target,layer});
+console.log('Octo impact applies 400 damage and flinch; animation completes for both team directions.');

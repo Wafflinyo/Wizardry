@@ -182,8 +182,8 @@ console.log('Weight transfer and impact-only camera rumble checks passed.');
 
 const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,750);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,runeResult:'success',stage:'frost-gust',elapsed:0,duration:800};api.set(s);
-for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-lift',850],['frost-windup',500],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
-assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(389);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
+for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-lift',650],['frost-windup',500],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
+assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(442);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
 const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1200);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,250);
 const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,250,'no instant tick in application turn');for(const [round,hp] of [[2,200],[3,150],[4,100]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,100,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
 s=battle();s.auras={};s.units[1].hp=4000;s.units[1].maxHp=4000;api.set(s);const snowCast=()=>({source:'human',target:'cpu',card:frosty,runeResult:'success'});frostyHit(snowCast());s.units[1].statuses.find(st=>st.kind==='frostbite').remaining=1;frostyHit(snowCast());assert.equal(s.units[1].statuses.filter(st=>st.kind==='frostbite').length,1);assert.equal(s.units[1].statuses.find(st=>st.kind==='frostbite').remaining,3,'refreshes duration without stacking');
@@ -192,8 +192,15 @@ s=battle();s.auras={};s.round=2;api.set(s);s.units[1].statuses=[{kind:'burn',val
 console.log('Frosty: happy/angry transformation, 750 on snowball arrival, exactly three 50-damage Frostbite turns, refresh, coexistence and miss/defeat checks passed.');
 
 vm.runInNewContext(fs.readFileSync('assets/frosty-v85.js','utf8'),context);const frostFx=context.window.WIZARDRY_FROSTY_V85;
-for(const [a,b] of [['frost-angry','frost-transform'],['frost-transform','frost-lift'],['frost-lift','frost-windup']]){
- const end=frostFx.sequence({stage:a,progress:1}),start=frostFx.sequence({stage:b,progress:0});assert.equal(end.a,start.a,'transition pose continuity');assert.equal(end.t,0);assert.equal(start.t,0);
+
+for(const stage of ['frost-transform','frost-lift','frost-windup','frost-throw','frost-flight'])for(const p of [0,.25,.5,.75,1]){
+ const pose=frostFx.motion({stage,progress:p});assert.equal(pose.alpha,1,'poses remain fully opaque');assert.ok(Number.isInteger(pose.frame),'only real sprite frames, no pose crossfades');
 }
-assert.equal(frostFx.pose({stage:'frost-gust',progress:1}).alpha,0,'snowman remains hidden during gust');
-console.log('Frosty smooth-expression/growth/lift pose continuity passed.');
+for(const stage of ['frost-lift','frost-windup','frost-throw','frost-flight','frost-impact'])assert.equal(frostFx.motion({stage,progress:.5}).atlas,'throw','same-arm pickup/windup/release atlas');
+assert.equal(frostFx.projectile({stage:'frost-throw',progress:.74,target:{x:800,y:450}}),null,'ball stays in throwing hand before release');
+assert.ok(frostFx.projectile({stage:'frost-throw',progress:.76,target:{x:800,y:450}}),'ball begins flight at release pose');
+assert.equal(frostFx.pose({stage:'frost-gust',progress:1}).alpha,0,'hidden during gust');
+console.log('Frosty: fully opaque in-betweens and consistent same-arm throw/release checks passed.');
+
+assert.equal(frostFx.motion({stage:'frost-transform',progress:1}).height,frostFx.motion({stage:'frost-lift',progress:0}).height,'growth continues into bend without a size pop');
+assert.equal(frostFx.motion({stage:'frost-windup',progress:1}).frame,frostFx.motion({stage:'frost-throw',progress:0}).frame,'windup carries directly into same-arm throw');

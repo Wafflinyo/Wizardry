@@ -58,7 +58,7 @@
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
     {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
       short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
-    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7090,frostDamage:50,frostTurns:3,
+    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:6942.5,frostDamage:50,frostTurns:3,
       short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -645,13 +645,13 @@
     }else if(a.stage==="frost-angry"){
       startStage(a,"frost-transform",1000);
     }else if(a.stage==="frost-transform"){
-      startStage(a,"frost-lift",850);
+      startStage(a,"frost-lift",650);
     }else if(a.stage==="frost-lift"){
       startStage(a,"frost-windup",500);
     }else if(a.stage==="frost-windup"){
       startStage(a,"frost-throw",150);
     }else if(a.stage==="frost-throw"){
-      startStage(a,"frost-flight",390);
+      startStage(a,"frost-flight",442.5);
     }else if(a.stage==="frost-flight"){
       applyFrostyImpact(a);startStage(a,"frost-impact",350);
     }else if(a.stage==="frost-impact"){

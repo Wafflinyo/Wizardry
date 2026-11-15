@@ -56,7 +56,7 @@
       short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"},
     {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
-    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3600,
+    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
       short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -543,6 +543,9 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="bender-stomp"&&p>=.68&&!a.benderRumblePlayed){
+      a.benderRumblePlayed=true;window.WIZARDRY_STONE_BENDER_V83?.rumble?.();
+    }
     if(a.stage==="bender-barrage"&&a.elapsed>=90&&!a.applied)applyBenderStrike(a);
     if(a.stage==="reaper-slash"&&p>=.4&&!a.applied)applyReaperStrike(a);
     if(a.stage==="ronin-volley"&&a.runeResult==="success")
@@ -631,7 +634,7 @@
     }else if(a.stage==="bender-appear"){
       startStage(a,"bender-stance",500);
     }else if(a.stage==="bender-stance"){
-      startStage(a,"bender-stomp",500);
+      startStage(a,"bender-stomp",850);
     }else if(a.stage==="bender-stomp"){
       startStage(a,"bender-wall",650);
     }else if(a.stage==="bender-wall"){
@@ -1447,6 +1450,7 @@
     };
     ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
+      window.WIZARDRY_STONE_BENDER_V83?.unlockAudio?.();
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;
@@ -2319,6 +2323,8 @@
   }
   function render(time){
     g.setTransform(1,0,0,1,0,0);
+    const quake=state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):null;
+    if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);

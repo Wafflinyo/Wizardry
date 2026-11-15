@@ -895,7 +895,9 @@
       ui.hint.textContent="Stone fissure strikes "+(getUnit(a.target)?.name||"the target")+"!";
     }else if(a.stage==="golem-impact"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
-    }else if(a.stage==="summon"||a.stage==="fizzle"){
+    }else if(a.card.id==="scorpion"&&a.stage==="summon"){
+        // Scorpion joins the fighters in the shared world depth pass.
+      }else if(a.stage==="summon"||a.stage==="fizzle"){
       if(a.card.id==="poseidon"&&!a.postCastEffectsApplied){
         // A successful rune earns BOTH the one-round recharge and
         // Tidal Echo. A fizzle grants neither; any earlier Echo remains.
@@ -2521,6 +2523,10 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.card?.id==="scorpion"&&action.stage==="summon"){
+      const scorpion=window.WIZARDRY_SCORPION_V94,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      if(scorpion)renderables.push({type:"scorpion",depthY:scorpion.depthFor(opts),priority:2,draw:()=>scorpion.draw(g,opts)});
+    }
     if(action?.card?.id==="vampire"&&vampStages.includes(action.stage)){
       const vampire=window.WIZARDRY_VAMPIRE_V57;
       if(vampire){

@@ -11,7 +11,7 @@ function poly(c,pts,color){c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):
 let bounds;
 function prepare(){if(bounds||!image.complete||!image.naturalWidth)return bounds;const w=image.naturalWidth/4,h=image.naturalHeight/4;bounds=[];for(let f=0;f<16;f++){const tile=document.createElement('canvas');tile.width=w;tile.height=h;const g=tile.getContext('2d');g.drawImage(image,f%4*w,Math.floor(f/4)*h,w,h,0,0,w,h);const data=g.getImageData(0,0,w,h).data;let bottom=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>70)bottom=Math.max(bottom,y);bounds.push(bottom);}return bounds;}
 function actor(c,p,target){const b=pose(p,target),bb=prepare();if(!bb)return;const w=image.naturalWidth/4,h=image.naturalHeight/4,k=SIZE/w;
- c.save();c.beginPath();c.rect(0,-800,1000,1230);c.clip();
+ c.save();if(b.burrow>0){c.beginPath();c.rect(0,-800,1000,1230);c.clip();}
  // Coiled-ball sprites rotate about their own center, not around the floor.
  const land=b.y,bottom=bb[b.frame<14?b.frame:13];c.translate(b.x,land+b.burrow*145);c.scale(b.dir,1);
  if(p<.17){c.translate(0,-58);c.rotate(b.roll);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-SIZE/2,-SIZE/2,SIZE,h*k);}
@@ -22,5 +22,6 @@ function draw(c,{progress:p,target}){if(!target)return;const b=pose(p,target);c.
  actor(c,p,target);
  const landing=p>.15&&p<.30,burrow=p>.88; if(landing||burrow){const q=landing?C((p-.15)/.15):b.burrow;c.save();c.globalAlpha=landing?1-q:Math.sin(q*Math.PI)*.9;for(let i=0;i<36;i++){const a=i*2.399+q,r=30+q*(30+i%5*12),x=500+Math.cos(a)*r,y=429+Math.sin(a)*r*.22-Math.sin(q*Math.PI)*(i%4)*9,s=3+i%5;poly(c,[[x-s,y],[x,y-s],[x+s,y-1],[x+s*.4,y+s]],i%2?'#b79868':'#806746');}c.restore();}
  if(p>=.70&&p<.84){const q=C((p-.70)/.04);c.save();c.globalAlpha=p>.78?( .84-p)/.06:1;c.strokeStyle='#eeb568';c.lineWidth=3;if(p>=.74){c.strokeStyle='#e9d69d';c.beginPath();c.arc(target.x,target.y-95,10+(p-.74)*170,0,T);c.stroke();}c.restore();}}
+function depthFor(o){const b=pose(o.progress,o.target);return o.progress>=.68&&o.progress<.88?L(425,o.target?.y||425,b.reach)+.1:425;}
 function portrait(c,w,h){if(!prepare())return;c.save();const sw=image.naturalWidth/4,sh=image.naturalHeight/4,k=Math.min(w/sw,h/sh)*.95;c.drawImage(image,0,sh,sw,sh,(w-sw*k)/2,(h-sh*k)/2,sw*k,sh*k);c.restore();}
-root.WIZARDRY_SCORPION_V94={draw,pose,portrait,onReady:fn=>listeners.push(fn)};})(window);
+root.WIZARDRY_SCORPION_V94={draw,pose,depthFor,portrait,onReady:fn=>listeners.push(fn)};})(window);

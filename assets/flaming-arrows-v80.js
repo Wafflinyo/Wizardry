@@ -42,6 +42,6 @@ function items(o){
 function drawItem(c,item){if(item.type==='arrow')arrow(c,item.start,item.end,item.q,item.seed);else impacts(c,item.target,item.age,item.seed);}
 function drawCircle(c,o){const p=C(o.progress),dir=(o.targets?.[0]?.x||750)>=500?1:-1,alpha=o.stage==='rain-form'?C(p*2):o.stage==='rain-fade'?1-p:1;
  circle(c,dir,o.stage==='rain-form'?p:1,alpha);}
-function drawPortrait(c,w,h){c.save();const scale=Math.min(w/290,h/335);c.translate(w/2,h/2);c.scale(scale,scale);c.translate(-500,-258);circle(c,1,1);for(let i=0;i<4;i++)arrow(c,{x:455+i*25,y:162},{x:590+i*17,y:405-i*13},.40+i*.13,i);c.restore();}
+function drawPortrait(c,w,h){c.save();const scale=Math.min((w-16)/290,(h-16)/335);c.translate(w/2,h/2);c.scale(scale,scale);c.translate(-500,-258);circle(c,1,1);for(let i=0;i<4;i++)arrow(c,{x:455+i*25,y:162},{x:590+i*17,y:405-i*13},.40+i*.13,i);c.restore();}
 root.WIZARDRY_FLAMING_ARROWS_V80={hitAt,items,drawItem,drawCircle,drawPortrait};
 })(window);

@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'ronin');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'reaper');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('ronin'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('reaper'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -141,3 +141,20 @@ const roninHit=context.window.WIZARDRY_ARENA_TEST.applyRoninHit;
 s=battle();s.auras={};s.units[1].hp=200;api.set(s);const sword={source:'human',target:'cpu',card:ronin,runeResult:'success',slashHits:[]};assert.equal(roninHit(sword,0),true);assert.equal(s.units[1].hp,50);assert.equal(roninHit(sword,1),true);assert.equal(s.units[1].hp,0);assert.equal(roninHit(sword,2),false);assert.equal(s.units[2].hp,1000,'no retarget after defeat');assert.equal(roninHit(sword,0),false,'cannot repeat a slash');
 s=battle();s.auras={};api.set(s);assert.equal(roninHit({...sword,runeResult:'failed',slashHits:[]},0),false);assert.equal(s.units[1].hp,1000);
 console.log('Wind Slashes: featured hand, deliberate draw, three timed 150 hits, 80% accuracy, no duplicate damage or retarget after defeat passed.');
+
+const reaperCard=cards.find(c=>c.id==='reaper');assert.equal(reaperCard.damage,950);
+s=battle();s.auras={};s.phase='resolving';s.units[1].hp=2000;s.units[1].maxHp=2000;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:reaperCard,runeResult:'success',stage:'reaper-circle',elapsed:0,duration:650};api.set(s);
+for(const [stage,d] of [['reaper-circle',650],['reaper-rise',850],['reaper-windup',550],['reaper-lunge',320]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,2000);api.updateCastSequence(d);}
+api.updateCastSequence(167);assert.equal(s.units[1].hp,2000);api.updateCastSequence(1);assert.equal(s.units[1].hp,1050);assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'&&st.value===.2));api.updateCastSequence(252);assert.equal(s.units[1].hp,1050,'scythe hits once');
+const marked=s.units[1],slashCast={source:'human',target:'cpu',card:ronin,runeResult:'success',slashHits:[]};
+for(let i=0;i<3;i++)roninHit(slashCast,i);assert.equal(marked.hp,510,'all three hits get +20%: 1050 - 540');assert.equal(marked.statuses.some(st=>st.kind==='decaying_strength'),false);
+const nextSlash={source:'human',target:'cpu',card:ronin,runeResult:'success',slashHits:[]};roninHit(nextSlash,0);assert.equal(marked.hp,360,'following spell has no old bonus');
+const reaperHit=context.window.WIZARDRY_ARENA_TEST.applyReaperStrike;
+s=battle();s.auras={};s.units[1].hp=5000;s.units[1].maxHp=5000;api.set(s);const reap=()=>({source:'human',target:'cpu',card:reaperCard,runeResult:'success'});
+assert.equal(reaperHit(reap()),true);assert.equal(s.units[1].hp,4050);assert.equal(reaperHit(reap()),true);assert.equal(s.units[1].hp,2910);assert.equal(s.units[1].statuses.filter(st=>st.kind==='decaying_strength').length,1,'refreshes, never stacks');
+assert.equal(reaperHit({...reap(),runeResult:'failed'}),false);assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'),'miss leaves debuff');
+context.window.WIZARDRY_ARENA_TEST.applySpell({action:{casterId:'cpu',targetId:'cpu'},card:cards.find(c=>c.id==='estel')});assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'),'healing leaves debuff');
+s.units[1].statuses.push({kind:'burn',value:50,remaining:3,appliedRound:0,lastTickRound:0});s.round=1;context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound();assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'),'burn tick leaves debuff');
+const area={source:'human',card:arrows,runeResult:'success'};const before=s.units[1].hp;rainHit(area,{id:'cpu'},1);rainHit(area,{id:'other'},1);assert.equal(s.units[1].hp,before-180);assert.equal(s.units[2].hp,850,'other AOE victim receives no decay bonus');
+s.units[1].hp=0;assert.equal(reaperHit(reap()),false);assert.equal(s.units[2].hp,850,'Reaper never retargets a defeated foe');
+console.log('Reaper: 950 once, next-spell +20% across all hits, non-stacking refresh, misses/heals/burn preservation and target isolation passed.');

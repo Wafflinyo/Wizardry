@@ -1,0 +1,28 @@
+/* Reaper: shadow portal, rising hooded figure, lunging scythe strike. */
+(function(root){
+'use strict';const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,p)=>a+(b-a)*p,TAU=Math.PI*2;
+const image=new Image();image.src='./assets/reaper-v82.webp';
+function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450},dir=t.x>=500?1:-1;let x=500,y=431,frame=3,alpha=1;
+ if(s==='reaper-circle')alpha=0;
+ if(s==='reaper-rise'){frame=Math.min(3,Math.floor(p*4));y=L(515,431,p);alpha=C(p*3);}
+ if(s==='reaper-windup')frame=p<.6?4:5;
+ if(s==='reaper-lunge'){frame=6;x=L(500,t.x-dir*65,1-(1-p)*(1-p));y=L(431,t.y+6,p);}
+ if(['reaper-slash','reaper-dissolve','reaper-close'].includes(s)){x=t.x-dir*65;y=t.y+6;}
+ if(s==='reaper-slash')frame=p<.55?7:8;
+ if(s==='reaper-dissolve'){frame=p<.3?9:p<.7?10:11;alpha=1-p;}
+ if(s==='reaper-close')alpha=0;
+ return{x,y,dir,frame,alpha,groundY:s==='reaper-circle'||s==='reaper-rise'||s==='reaper-windup'?425:s==='reaper-lunge'?L(425,t.y,p):t.y};}
+function portal(c,p,alpha){c.save();c.globalAlpha*=alpha;c.fillStyle='#070912d9';c.beginPath();c.ellipse(500,425,62*p,17*p,0,0,TAU);c.fill();c.strokeStyle='#704578';c.lineWidth=2;c.stroke();
+ for(let j=0;j<9;j++){const a=j*TAU/9+p*2,x=500+Math.cos(a)*49*p,y=425+Math.sin(a)*13*p;c.strokeStyle=j%2?'#9d526d88':'#4f385fc0';c.beginPath();c.moveTo(x,y);c.quadraticCurveTo(x+Math.sin(a)*9,y-13,x+Math.cos(a)*5,y-24*p);c.stroke();}c.restore();}
+function draw(c,o){const b=pose(o),p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};
+ if(o.layer==='ground'){portal(c,s==='reaper-circle'?p:1,s==='reaper-close'?1-p:1);c.save();c.globalAlpha*=b.alpha*.35;c.fillStyle='#090b18';c.beginPath();c.ellipse(b.x,b.groundY,30,8,0,0,TAU);c.fill();c.restore();}
+ if(o.layer==='actor'&&b.alpha>0&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;
+  c.save();c.globalAlpha*=b.alpha;if(s==='reaper-rise'){c.beginPath();c.rect(0,0,1000,425);c.clip();}
+  if(s==='reaper-lunge')for(let i=3;i>0;i--){c.save();c.globalAlpha*=.12/i;c.translate(b.x-b.dir*i*15,b.y);c.scale(b.dir,1);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-100,-194,200,200);c.restore();}
+  c.translate(b.x,b.y);c.scale(b.dir,1);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-100,-194,200,200);c.restore();
+ }
+ if(o.layer==='slash'&&s==='reaper-slash'){c.save();c.globalAlpha*=Math.sin(Math.PI*p);c.translate(t.x,t.y-94);c.rotate(-b.dir*.6);c.scale(b.dir,1);
+  for(let layer=2;layer>=0;layer--){c.strokeStyle=['#bd5274','#38223f','#090d19'][layer];c.lineWidth=[2,7,14][layer];c.beginPath();c.ellipse(-14,0,43,62,0,-1.4,1.4);c.stroke();}c.restore();}
+}
+root.WIZARDRY_REAPER_V82={draw,pose,depthFor:(o,layer)=>layer==='slash'?(o.target?.y||450)+.1:pose(o).groundY-.1};
+})(window);

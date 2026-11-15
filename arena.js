@@ -1,4 +1,4 @@
-/* Wizardry 0.81 — interactive 2.5D battle test.
+/* Wizardry 0.82 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -53,7 +53,9 @@
       damage:150,accuracy:.85,icon:"♨",rarity:"RARE",burnChance:.10,burnDamage:50,burnTurns:3,duration:2900,
       short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 10% chance to burn for 50 damage at the start of each of the next 3 rounds"},
     {id:"ronin",name:"Wind Slashes",school:"wind",cost:5,target:"enemy",kind:"slashes",damage:150,accuracy:.80,icon:"≋",rarity:"EPIC",duration:3280,
-      short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"}
+      short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"},
+    {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
+      short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -531,7 +533,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -539,6 +541,7 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="reaper-slash"&&p>=.4&&!a.applied)applyReaperStrike(a);
     if(a.stage==="ronin-volley"&&a.runeResult==="success")
       for(let i=0;i<3;i++)if(a.elapsed>=260+i*135)applyRoninHit(a,i);
     if(a.stage==="rain-barrage"&&a.runeResult==="success")
@@ -575,7 +578,7 @@
           entry.hit=true;
           const unit=getUnit(entry.id);
           if(unit&&unit.hp>0&&unit.team!==caster.team)
-            damage(caster,unit,a.card.damage,a.card);
+            damage(caster,unit,a.card.damage,a.card,a);
         }
       }
     }
@@ -593,7 +596,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="ronin"){
+      if(a.card.id==="reaper"){
+        const target=getUnit(a.target);a.reaperTargetPoint=target?{x:target.x,y:target.y}:null;
+        startStage(a,"reaper-circle",650);
+      }else if(a.card.id==="ronin"){
         const target=getUnit(a.target);a.slashTargetPoint=target?{x:target.x,y:target.y}:null;a.slashHits=[];
         startStage(a,"ronin-drop",450);
       }else if(a.card.id==="arrows"){
@@ -616,6 +622,21 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="reaper-circle"){
+      startStage(a,"reaper-rise",850);
+    }else if(a.stage==="reaper-rise"){
+      startStage(a,"reaper-windup",550);
+    }else if(a.stage==="reaper-windup"){
+      startStage(a,"reaper-lunge",320);
+    }else if(a.stage==="reaper-lunge"){
+      startStage(a,"reaper-slash",420);
+    }else if(a.stage==="reaper-slash"){
+      if(!a.applied)applyReaperStrike(a);
+      startStage(a,"reaper-dissolve",650);
+    }else if(a.stage==="reaper-dissolve"){
+      startStage(a,"reaper-close",300);
+    }else if(a.stage==="reaper-close"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="ronin-drop"){
       startStage(a,"ronin-land",300);
     }else if(a.stage==="ronin-land"){
@@ -885,7 +906,7 @@
       " for one action!",...state.log].slice(0,5);
     return true;
   }
-  function damage(source,target,base,card){
+  function damage(source,target,base,card,spell=null){
     let raw=base,notes=[];
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
     // spell, a fizzle, or a spell without a living target cannot consume it.
@@ -897,6 +918,14 @@
     if(blade){raw*=1+blade.value;notes.push("BLADE");}
     const aura=state.auras[source.team];
     if(aura&&aura.turns>0){raw*=1+aura.value;notes.push("AURA");}
+    // Decaying Strength belongs to the next successful SPELL, including every hit.
+    let decay=spell?.decayBonusTargets?.[target.id];
+    if(decay===undefined){
+      const mark=consumeStatus(target,"decaying_strength");
+      decay=mark?.value||0;
+      if(spell){if(!spell.decayBonusTargets)spell.decayBonusTargets={};spell.decayBonusTargets[target.id]=decay;}
+    }
+    if(decay){raw*=1+decay;notes.push("DECAYING STRENGTH +20%");}
     const trap=consumeStatus(target,"trap");
     if(trap){raw*=1+trap.value;notes.push("TRAP");}
     const shield=consumeStatus(target,"shield");
@@ -920,7 +949,7 @@
     a.vampDamageResolved=true;
     const c=getUnit(a.source),t=getUnit(a.target);
     a.vampDrained=c&&c.hp>0&&t&&t.hp>0&&t.team!==c.team?
-      damage(c,t,a.card.damage,a.card):0;
+      damage(c,t,a.card.damage,a.card,a):0;
     a.vampPotentialHeal=Math.round(a.vampDrained*(a.card.leech||.5));
     state.log=["Vampire siphons "+a.vampDrained+" actual HP.",
       ...state.log].slice(0,5);
@@ -945,20 +974,28 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+  function applyReaperStrike(a){
+    if(!a||a.applied||a.runeResult!=="success")return false;
+    a.applied=true;const caster=getUnit(a.source),target=getUnit(a.target);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    damage(caster,target,a.card.damage,a.card,a);
+    if(target.hp>0){addStatus(target,"decaying_strength","☠",.20);flash(target,"DECAYING STRENGTH","#c89bd8");}
+    paintUI();return true;
+  }
   function applyRoninHit(a,index){
     if(!a||a.runeResult!=="success"||index<0||index>2)return false;
     if(!a.slashHits)a.slashHits=[];if(a.slashHits.includes(index))return false;
     a.slashHits.push(index);
     const c=getUnit(a.source),target=getUnit(a.target);
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
-    damage(c,target,a.card.damage,a.card);paintUI();return true;
+    damage(c,target,a.card.damage,a.card,a);paintUI();return true;
   }
   function applyRainHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
     const caster=getUnit(a.source),target=getUnit(entry.id);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
-    damage(caster,target,a.card.damage,a.card);
+    damage(caster,target,a.card.damage,a.card,a);
     // One independent burn roll per enemy hit, not per cosmetic arrow.
     if(target.hp>0&&(roll??Math.random())<a.card.burnChance){
       addStatus(target,"burn","🔥",a.card.burnDamage);
@@ -979,7 +1016,7 @@
     a.dragonSplashHitIds=[];
     // Only the main target is damaged here. Secondary hits wait until
     // their separate fireballs actually arrive at adjacent opponents.
-    damage(c,target,a.card.damage,a.card);
+    damage(c,target,a.card.damage,a.card,a);
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
     if(target.hp>0&&a.runeResult==="success"&&roll<a.card.burnChance){
@@ -1004,7 +1041,7 @@
     const caster=getUnit(a.source),neighbor=getUnit(id);
     if(caster&&caster.hp>0&&neighbor&&neighbor.hp>0&&
        neighbor.team!==caster.team)
-      damage(caster,neighbor,a.card.splash,a.card);
+      damage(caster,neighbor,a.card.splash,a.card,a);
     return true;
   }
   function tickBurnsForRound(){
@@ -1045,7 +1082,7 @@
         entry.hit=true;
         const enemy=getUnit(entry.id);
         if(enemy&&enemy.hp>0&&enemy.team!==c.team)
-          damage(c,enemy,card.damage,card);
+          damage(c,enemy,card.damage,card,anim);
       }
       if(anim.runeResult==="success"){
         addStatus(c,"tailwind","≋",.10);
@@ -1055,7 +1092,7 @@
       }
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
-        damage(c,t,card.damage,card);
+        damage(c,t,card.damage,card,anim);
         // The independent 20% stun roll happens ONLY after a successful
         // lightning rune and beam impact against a surviving target.
         if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0)
@@ -1259,7 +1296,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="ronin"?
+        const effect=k.id==="reaper"?
+          '<span class="spell-effect"><b>DECAYING STRENGTH</b><span>NEXT SPELL TAKEN +20%</span></span>':k.id==="ronin"?
           '<span class="spell-effect"><b>3 × 150 SLASHES</b><span>1 ENEMY · 450 TOTAL</span></span>':k.id==="arrows"?
           '<span class="spell-effect"><b>150 TO ALL</b><span>10% BURN · 50×3</span></span>':k.id==="thunder"?
           '<span class="spell-effect"><b>THUNDERCLAP · 550</b><span>1 ENEMY</span></span>':k.id==="shark"?
@@ -1291,7 +1329,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1826,7 +1864,7 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
         "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
         "dragon-drop","dragon-land","dragon-charge","dragon-shot",
-        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit"].includes(visualStage)){
+        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1868,7 +1906,7 @@
     return {x,y,w,h:43};
   }
   function unitStatuses(u){
-    const list=u.statuses.slice(0,3);
+    const list=[...u.statuses].sort((a,b)=>(b.kind==="decaying_strength")-(a.kind==="decaying_strength")).slice(0,3);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
   }
@@ -1878,6 +1916,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "decaying_strength":return {title:"☠ Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
       case "recharge":
         return {title:"⧖ Recharge · Debuff",
           detail:u.name+" must skip Round "+u.rechargeRound+
@@ -1959,7 +1998,7 @@
       const glow=st.kind==="tidal_echo"?"#44dbee":
         st.kind==="stun"?"#98dfff":
         st.kind==="recharge"?"#e6b75b":
-        st.kind==="burn"?"#ff9258":"#b4eac2";
+        st.kind==="burn"?"#ff9258":st.kind==="decaying_strength"?"#d39bd5":"#b4eac2";
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
@@ -2346,6 +2385,13 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
+    if(action?.card?.id==="reaper"&&action.stage.startsWith("reaper-")){
+      const reaper=window.WIZARDRY_REAPER_V82;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.reaperTargetPoint||getUnit(action.target)};
+      if(reaper){reaper.draw(g,{...opts,layer:"ground"});
+        for(const layer of ["actor","slash"])renderables.push({type:"reaper-"+layer,depthY:reaper.depthFor(opts,layer),priority:layer==="slash"?2:0,draw:()=>reaper.draw(g,{...opts,layer})});
+      }
+    }
     if(action?.card?.id==="ronin"&&action.stage.startsWith("ronin-")){
       const ronin=window.WIZARDRY_WIND_SLASHES_V81;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.slashTargetPoint||getUnit(action.target)};
@@ -2483,7 +2529,7 @@
       splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,applyReaperStrike,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

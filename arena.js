@@ -1,4 +1,4 @@
-/* Wizardry 0.70 — interactive 2.5D battle test.
+/* Wizardry 0.71 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -115,7 +115,7 @@
   const lerp=(a,b,t)=>a+(b-a)*t;
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const rand=(seed)=>{let n=(seed*9301+49297)%233280;return n/233280};
-  let state=null,background=null,frameLast=0,spriteCache={};
+  let state=null,background=null,frameLast=0,spriteCache={},handSwipe=null;
   // User-approved, transparent 12-frame idle + 16-frame casting atlas.
   const wizardAtlas=new Image();
   wizardAtlas.decoding="async";
@@ -278,6 +278,7 @@
       selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
+    handSwipe?.reset();
     closeCardPreview();
     ui.statusPopup.hidden=true;
     ui.status.textContent=mode==="story"?
@@ -311,6 +312,7 @@
     return selected;
   }
   function clearSelection(){
+    handSwipe?.reset();
     closeCardPreview();
     state.selectedCard=null;
     state.selectedTarget=null;
@@ -1100,7 +1102,7 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Tap a card to enlarge it, then select your spell."):
+        "Swipe to browse your hand. Tap a card to inspect it."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
@@ -1277,6 +1279,7 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    handSwipe=window.WIZARDRY_HAND_SWIPE_V71?.attach(ui.hand)||null;
     $("closePreview").onclick=closeCardPreview;
     $("backToHand").onclick=closeCardPreview;
     ui.previewSelect.onclick=selectInspectedCard;

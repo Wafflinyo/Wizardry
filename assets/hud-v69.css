@@ -80,3 +80,6 @@ body{height:auto;min-height:100svh;background:conic-gradient(from 35deg at 15% 2
    Paint at its actual dimensions; never cover-crop the full sprite. */
 #cardHand .spell-art-shell,#previewArtwork .spell-art-shell{position:relative;overflow:hidden;flex-shrink:1}
 #cardHand .spell-art-canvas,#previewArtwork .spell-art-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+/* Swipe browsing raises a card at its normal size; only taps open inspection. */
+#cardHand.cards,#cardHand.cards>button.spell.card-ornate{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#cardHand.cards>button.spell.card-ornate.browsed{z-index:20;transform:translateX(-50%) translateY(calc(var(--fan-drop) - 20px)) rotate(0deg);filter:brightness(1.08);box-shadow:inset 0 0 0 2px #071b27,inset 0 0 0 4px #d1b47864,0 6px 20px #0009}

@@ -1,3 +1,11 @@
+## Swipe hand browsing (v0.71.0)
+
+Swipe horizontally across the five-card fan to bring cards to the front at their normal size without opening inspection or selecting a spell. Drag release cannot trigger the card tap handler. A fresh deliberate tap still opens inspection immediately, with Select Spell and target confirmation unchanged. Vertical scrolling remains native, and browsing resets between rounds and new battles. Arrow keys also browse the fan.
+
+Validation: swipe/reverse swipe, suppression of release clicks, immediate deliberate tap, vertical-scroll handling and browse reset checks pass, along with existing combat regression checks.
+
+---
+
 ## Full spell-card artwork framing (v0.70.0)
 
 All eight spell portraits now use a shared card-only renderer that measures visible atlas pixels, centers the complete subject with padding and preserves its aspect ratio. Artwork canvases render at the actual hand/inspection window size and update when the viewport or dialog changes. Removed cover-cropping and the dark lower overlay that obscured portraits. The vampire's full body and blood orb, bear's ears/paws/feet, Estel's wings and other spell silhouettes fit within the art panel. Battle sprite rendering and combat rules are unchanged.

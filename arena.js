@@ -67,7 +67,8 @@
     {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell loses 50 percentage points of accuracy. An 80% spell becomes 30% accurate (70% failure). Combines with Static Shock and other active accuracy effects. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."},
     {id:"soul",name:"Soul Drain",school:"dark",cost:3,target:"enemy",kind:"souldrain",damage:100,drainTurns:3,accuracy:1,icon:"☠",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Curses one enemy for 3 turns. At the start of each turn, drains up to 100 HP and restores the HP actually drained to the caster, capped at maximum HP. 300 total drain. Cannot revive a defeated caster. Reapplying refreshes the curse without stacking."},
     {id:"healingaura",name:"Healing Aura",school:"nature",cost:5,target:"team",kind:"teamregen",heal:600,healPerTurn:200,healTurns:3,accuracy:1,icon:"❀",rarity:"EPIC",duration:2300,hit:.72,short:"100% ACCURACY",description:"Blesses every living teammate, including yourself. Each restores 200 HP at the start of each of the next 3 turns: 600 HP per ally. Capped at maximum HP; cannot revive. Works alongside Calming Waters. Reapplying refreshes this aura without stacking copies."},
-    {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."}
+    {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."},
+    {id:"scorpion",name:"Scorpion Sting",school:"earth",cost:4,target:"enemy",kind:"scorpion",damage:340,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.85,icon:"◆",rarity:"RARE",duration:3500,hit:.74,short:"85% ACCURACY",description:"A giant orange scorpion rolls down into the arena, pauses, winds up its tail and stings one enemy for 340 damage. 30% chance to poison for 50 HP per turn for 3 turns."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -1178,12 +1179,12 @@
       if(!effect.remaining||!u.hp)consumeStatus(u,"soul_drain");
     }
     // Burn and Frostbite tick independently; neither consumes spell-only marks or shields.
-    for(const u of state.units)for(const kind of ["burn","frostbite"]){
+    for(const u of state.units)for(const kind of ["burn","frostbite","poison"]){
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       effect.lastTickRound=state.round;const amount=Math.min(u.hp,effect.value||50);u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
-      flash(u,(kind==="burn"?"🔥 -":"❄ -")+amount,kind==="burn"?"#ffa56a":"#b6eeff");
+      flash(u,(kind==="burn"?"🔥 -":kind==="poison"?"POISON −":"❄ -")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       state.log=[u.name+" takes "+amount+" "+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
       if(!effect.remaining||u.hp===0)consumeStatus(u,kind);
@@ -1214,6 +1215,9 @@
         state.log=[c.name+" gains Tailwind: +10 accuracy points on the next spell (any element).",
           ...state.log].slice(0,5);
       }
+    }else if(card.kind==="scorpion"){
+      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
+        if(t.hp>0&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",card.poisonDamage);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
@@ -1440,7 +1444,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="freezing"?
+        const effect=k.id==="scorpion"?
+          '<span class="spell-effect"><b>STING · 340</b><span>30% POISON · 50×3</span></span>':k.id==="freezing"?
           '<span class="spell-effect"><b>NEXT ICE: 50% FREEZE</b><span>UP TO 3 TURNS · THAW 20/40/60%</span></span>':k.id==="healingaura"?
           '<span class="spell-effect"><b>200 HP × 3 TURNS</b><span>ENTIRE TEAM · 600 EACH</span></span>':k.id==="soul"?
           '<span class="spell-effect"><b>DRAIN 100 HP × 3 TURNS</b><span>HEALS CASTER · 300 TOTAL</span></span>':k.id==="turbulence"?
@@ -1483,7 +1488,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2093,6 +2098,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "poison":return {title:"☠ Poison · Earth damage over time",detail:"Loses 50 HP at the start of each turn for "+st.remaining+" more turns. Refreshes without stacking copies. Works alongside burn and Frostbite; preserves spell-only effects."};
       case "freezing_temps":return {title:"❄ Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
       case "frozen":return {title:"❄ Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
       case "healing_aura":return {title:"❀ Healing Aura · Nature healing",detail:"Restores 200 HP at the start of each turn for "+st.remaining+" more turns: 600 HP total. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
@@ -2366,6 +2372,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="scorpion"){window.WIZARDRY_SCORPION_V94?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="freezing"){window.WIZARDRY_FREEZING_TEMPS_V93?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="healingaura"){window.WIZARDRY_HEALING_AURA_V92?.draw(g,{progress:p,targets:alive(caster.team)});g.restore();return;}
     if(card.id==="soul"){window.WIZARDRY_SOUL_DRAIN_V91?.draw(g,{progress:p,target,caster});g.restore();return;}

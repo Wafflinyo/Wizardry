@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'freezing');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'scorpion');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('freezing'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('scorpion'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -291,3 +291,8 @@ assert.equal(combat.isFrozen(s.units[1],.99),false,'already acted: freeze begins
 for(const [turn,roll] of [[1,.199],[2,.399],[3,.599]]){s=battle();s.auras={};api.set(s);markIce();combat.attemptMarkedFreeze(s.units[1],bear,{},0);for(let i=1;i<=turn;i++){s.round=i+1;assert.equal(combat.isFrozen(s.units[1],i===turn?roll:.99),i!==turn);}}
 s=battle();s.auras={};s.phase='resolving';s.sequence=[{casterId:'cpu',cardId:bear.id,targetId:'human'}];s.queueAt=0;api.set(s);markIce();combat.attemptMarkedFreeze(s.units[1],bear,{},0);assert.equal(s.units[1].statuses.find(x=>x.kind==='frozen').startRound,1,'pending action affected immediately');vm.runInNewContext('Math.random=()=>.99',context);api.startNextAction();assert.equal(s.animation,undefined,'frozen wizard cannot cast');
 console.log('Freezing Temps: Ice-only mark, one 50% roll, three skipped turns, rising thaw chance, no rerolls, immediate pending skip and auto thaw passed.');
+
+const scorpionCard=cards.find(c=>c.id==='scorpion');s=battle();s.auras={};api.set(s);const sting=(roll)=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:scorpionCard,poisonRoll:roll});sting(.299);assert.equal(s.units[1].hp,660);assert.ok(s.units[1].statuses.some(x=>x.kind==='poison'));combat.tickBurnsForRound();assert.equal(s.units[1].hp,660);for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,660-(r-1)*50);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false);
+s=battle();s.auras={};api.set(s);sting(.30);assert.equal(s.units[1].hp,660);assert.equal(s.units[1].statuses.length,0,'30% boundary');
+vm.runInNewContext(fs.readFileSync('assets/scorpion-sting-v94.js','utf8'),context);const scorpionFx=context.window.WIZARDRY_SCORPION_V94;for(const t of [{x:800,y:450},{x:200,y:350}]){const b=scorpionFx.pose(.74,t);assert.ok(Math.abs(500+b.tip.x*b.dir-t.x)<1e-8);assert.ok(Math.abs(425+b.tip.y-(t.y-95))<1e-8);}assert.ok(scorpionFx.pose(0).y<0);assert.equal(scorpionFx.pose(.3).y,425);
+console.log('Scorpion Sting 340 damage, 30% poison, three 50 ticks, no duplicate ticks and mirrored tail contact passed.');

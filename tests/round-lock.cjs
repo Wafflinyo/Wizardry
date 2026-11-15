@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'arrows');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'ronin');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('arrows'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('ronin'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -132,3 +132,12 @@ vm.runInNewContext(fs.readFileSync('assets/flaming-arrows-v80.js','utf8'),contex
 const streams=rainFx.items({stage:'rain-barrage',progress:.4,targets:[{x:650,y:340},{x:820,y:470}]});assert.ok(streams.filter(x=>x.type==='arrow').length>2,'multiple arrows cover each wizard');
 assert.ok(streams.filter(x=>x.type==='arrow').every(x=>x.end.y>x.start.y),'arrows rain diagonally downward');
 console.log('Flaming Arrows: one 150 hit per enemy, independent 10% burn, no friendly fire/tailwind, defeated-target failure and multi-arrow barrage passed.');
+
+const ronin=cards.find(c=>c.id==='ronin');assert.equal(ronin.damage,150);assert.equal(ronin.accuracy,.8);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:ronin,runeResult:'success',stage:'ronin-drop',elapsed:0,duration:450,slashHits:[]};api.set(s);
+for(const [stage,d] of [['ronin-drop',450],['ronin-land',300],['ronin-reach',1000],['ronin-draw',120]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
+api.updateCastSequence(259);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,850);api.updateCastSequence(135);assert.equal(s.units[1].hp,700);api.updateCastSequence(135);assert.equal(s.units[1].hp,550);api.updateCastSequence(230);assert.equal(s.units[1].hp,550);assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'ronin-finish');
+const roninHit=context.window.WIZARDRY_ARENA_TEST.applyRoninHit;
+s=battle();s.auras={};s.units[1].hp=200;api.set(s);const sword={source:'human',target:'cpu',card:ronin,runeResult:'success',slashHits:[]};assert.equal(roninHit(sword,0),true);assert.equal(s.units[1].hp,50);assert.equal(roninHit(sword,1),true);assert.equal(s.units[1].hp,0);assert.equal(roninHit(sword,2),false);assert.equal(s.units[2].hp,1000,'no retarget after defeat');assert.equal(roninHit(sword,0),false,'cannot repeat a slash');
+s=battle();s.auras={};api.set(s);assert.equal(roninHit({...sword,runeResult:'failed',slashHits:[]},0),false);assert.equal(s.units[1].hp,1000);
+console.log('Wind Slashes: featured hand, deliberate draw, three timed 150 hits, 80% accuracy, no duplicate damage or retarget after defeat passed.');

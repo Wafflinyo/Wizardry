@@ -1,4 +1,4 @@
-/* Wizardry 0.80 — interactive 2.5D battle test.
+/* Wizardry 0.81 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -51,7 +51,9 @@
       short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"},
     {id:"arrows",name:"Flaming Arrows",school:"fire",cost:4,target:"all_enemies",kind:"rain",
       damage:150,accuracy:.85,icon:"♨",rarity:"RARE",burnChance:.10,burnDamage:50,burnTurns:3,duration:2900,
-      short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 10% chance to burn for 50 damage at the start of each of the next 3 rounds"}
+      short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 10% chance to burn for 50 damage at the start of each of the next 3 rounds"},
+    {id:"ronin",name:"Wind Slashes",school:"wind",cost:5,target:"enemy",kind:"slashes",damage:150,accuracy:.80,icon:"≋",rarity:"EPIC",duration:3280,
+      short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -529,7 +531,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -537,6 +539,8 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="ronin-volley"&&a.runeResult==="success")
+      for(let i=0;i<3;i++)if(a.elapsed>=260+i*135)applyRoninHit(a,i);
     if(a.stage==="rain-barrage"&&a.runeResult==="success")
       for(let i=0;i<(a.rainTargets||[]).length;i++)
         if(a.elapsed>=440+i*55)applyRainHit(a,a.rainTargets[i]);
@@ -589,7 +593,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="arrows"){
+      if(a.card.id==="ronin"){
+        const target=getUnit(a.target);a.slashTargetPoint=target?{x:target.x,y:target.y}:null;a.slashHits=[];
+        startStage(a,"ronin-drop",450);
+      }else if(a.card.id==="arrows"){
         a.rainTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y,hit:false}));
         startStage(a,"rain-form",650);
       }else if(a.card.id==="thunder")startStage(a,"thunder-form",700);
@@ -609,6 +616,21 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="ronin-drop"){
+      startStage(a,"ronin-land",300);
+    }else if(a.stage==="ronin-land"){
+      startStage(a,"ronin-reach",1000);
+    }else if(a.stage==="ronin-reach"){
+      startStage(a,"ronin-draw",120);
+    }else if(a.stage==="ronin-draw"){
+      startStage(a,"ronin-volley",760);
+    }else if(a.stage==="ronin-volley"){
+      for(let i=0;i<3;i++)applyRoninHit(a,i);
+      a.applied=true;startStage(a,"ronin-finish",350);
+    }else if(a.stage==="ronin-finish"){
+      startStage(a,"ronin-exit",300);
+    }else if(a.stage==="ronin-exit"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="rain-form"){
       startStage(a,"rain-barrage",1800);
     }else if(a.stage==="rain-barrage"){
@@ -923,6 +945,14 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+  function applyRoninHit(a,index){
+    if(!a||a.runeResult!=="success"||index<0||index>2)return false;
+    if(!a.slashHits)a.slashHits=[];if(a.slashHits.includes(index))return false;
+    a.slashHits.push(index);
+    const c=getUnit(a.source),target=getUnit(a.target);
+    if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
+    damage(c,target,a.card.damage,a.card);paintUI();return true;
+  }
   function applyRainHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
@@ -1229,7 +1259,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="arrows"?
+        const effect=k.id==="ronin"?
+          '<span class="spell-effect"><b>3 × 150 SLASHES</b><span>1 ENEMY · 450 TOTAL</span></span>':k.id==="arrows"?
           '<span class="spell-effect"><b>150 TO ALL</b><span>10% BURN · 50×3</span></span>':k.id==="thunder"?
           '<span class="spell-effect"><b>THUNDERCLAP · 550</b><span>1 ENEMY</span></span>':k.id==="shark"?
           '<span class="spell-effect"><b>SHARK CHOMP · 480</b><span>1 ENEMY</span></span>':k.id==="bear"?
@@ -1254,13 +1285,13 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="heal"?"✚ ":"✹ ")+
-          (k.kind==="heal"?k.heal:k.damage).toLocaleString()+'</b></span>'+
+          (k.kind==="heal"?k.heal:k.id==="ronin"?450:k.damage).toLocaleString()+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
-            k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+            (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
+          "% accuracy. "+(k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1795,7 +1826,7 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
         "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
         "dragon-drop","dragon-land","dragon-charge","dragon-shot",
-        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade"].includes(visualStage)){
+        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -2001,7 +2032,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
+      if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
+      else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
       else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
 
     }
@@ -2314,6 +2346,14 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
+    if(action?.card?.id==="ronin"&&action.stage.startsWith("ronin-")){
+      const ronin=window.WIZARDRY_WIND_SLASHES_V81;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.slashTargetPoint||getUnit(action.target)};
+      if(ronin){ronin.draw(g,{...opts,layer:"ground"});
+        renderables.push({type:"ronin",depthY:417,priority:0,draw:()=>ronin.draw(g,{...opts,layer:"actor"})});
+        for(const item of ronin.items(opts))renderables.push({type:"wind-slash",depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>ronin.drawItem(g,item)});
+      }
+    }
     if(action?.card?.id==="arrows"&&action.stage.startsWith("rain-")){
       const rain=window.WIZARDRY_FLAMING_ARROWS_V80;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),targets:action.rainTargets||[]};
@@ -2443,7 +2483,7 @@
       splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

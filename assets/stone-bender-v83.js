@@ -2,7 +2,7 @@
 (function(root){
 'use strict';const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,p)=>a+(b-a)*p,TAU=Math.PI*2;
 const image=new Image();image.src='./assets/stone-bender-v83.webp?v=0.83.1';
-const HIT_MS=90;
+const HIT_MS=90,BENDER_SCALE=.84;
 function poly(c,pts,color){c.fillStyle=color;c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();}
 function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let frame=0,alpha=1,wall=0,burst=-1;
  if(s==='bender-appear')alpha=C(p*2);
@@ -43,7 +43,7 @@ function rumble(){if(!audio||audio.state!=='running')return;try{
  const noise=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();noise.buffer=buffer;filter.type='lowpass';filter.frequency.setValueAtTime(160,now);filter.frequency.exponentialRampToValueAtTime(55,now+.5);gain.gain.setValueAtTime(.3,now);gain.gain.exponentialRampToValueAtTime(.001,now+.58);noise.connect(filter);filter.connect(gain);gain.connect(audio.destination);noise.start(now);noise.stop(now+.58);
  const thump=audio.createOscillator(),hitGain=audio.createGain();thump.frequency.setValueAtTime(85,now);thump.frequency.exponentialRampToValueAtTime(30,now+.19);hitGain.gain.setValueAtTime(.09,now);hitGain.gain.exponentialRampToValueAtTime(.001,now+.23);thump.connect(hitGain);hitGain.connect(audio.destination);thump.start(now);thump.stop(now+.24);
  }catch{}}
-function groundShock(c,o,b){const age=impactAge(o);if(age<0||age>650)return;const x=500+b.dir*48;
+function groundShock(c,o,b){const age=impactAge(o);if(age<0||age>650)return;const x=500+b.dir*48*BENDER_SCALE;
  for(let i=0;i<3;i++){const q=(age-i*75)/350;if(q<0||q>1)continue;c.save();c.globalAlpha*=(1-q)*(.65-i*.12);c.strokeStyle='#d4c6a0';c.lineWidth=3-i*.6;c.beginPath();c.ellipse(x,425,12+q*150,4+q*38,0,0,TAU);c.stroke();c.restore();}
  const p=C(age/520);c.save();c.globalAlpha*=(1-p)*.75;
  for(let i=0;i<15;i++){const a=i*2.399,r=12+p*105,px=x+Math.cos(a)*r,py=425+Math.sin(a)*r*.23-Math.sin(p*Math.PI)*(15+i%3*8);poly(c,[[px-3,py-3],[px+4,py-2],[px+3,py+3],[px-2,py+4]],i%2?'#928a73':'#c3b495');}
@@ -85,13 +85,13 @@ function dust(c,x,y,p,strength=1){if(p<0||p>1)return;c.save();c.globalAlpha*=str
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   groundShock(c,o,b);
-  c.save();c.globalAlpha*=b.alpha*.3;c.fillStyle='#12212a';c.beginPath();c.ellipse(500,427,30,8,0,0,TAU);c.fill();c.restore();
-  if(s==='bender-stomp'&&p>=.68)dust(c,500+b.dir*48,425,(p-.68)/.32*.3,1);
+  c.save();c.globalAlpha*=b.alpha*.3;c.fillStyle='#12212a';c.beginPath();c.ellipse(500,427,30*BENDER_SCALE,8*BENDER_SCALE,0,0,TAU);c.fill();c.restore();
+  if(s==='bender-stomp'&&p>=.68)dust(c,500+b.dir*48*BENDER_SCALE,425,(p-.68)/.32*.3,1);
   if(s==='bender-wall')dust(c,500+b.dir*38,425,.3+p*.7,1);
   if(s==='bender-punch'&&p>=.62)dust(c,500+b.dir*95,425,(p-.62)*.7,.8);
   if(s==='bender-barrage'&&p<.5)dust(c,500+b.dir*95,425,.27+p*1.4,.7);
  }
- if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,425);c.scale(b.dir,1);
+ if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,425);c.scale(b.dir*BENDER_SCALE,BENDER_SCALE);
   actor(c,o,b,w,h);c.restore();
  }
  if(o.layer==='wall'&&b.wall>0)stoneWall(c,b);
@@ -99,7 +99,7 @@ function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
 function items(o){const b=pose(o),target=o.target||{x:800,y:450},out=[];if(b.burst<0)return out;
  // Thick blocks launch in a closely staggered burst and cross the arena in about 0.2 seconds.
  for(let i=0;i<24;i++){
-  const col=i%4,row=Math.floor(i/4),delay=i===0?0:Math.floor(noise(i+431)*100)+(i%3)*11,flight=185+(i%3)*12,age=b.burst-delay;
+  const col=i%4,row=Math.floor(i/4),delay=i===0?0:Math.floor(noise(i+431)*155)+(i%5===1?35:0),flight=185+(i%3)*12,age=b.burst-delay;
   const start={x:500+b.dir*(50+(col+.5)*22.5),y:425-(row+.5)*34},end={x:target.x+Math.sin(i*7.1)*22,y:target.y-95+Math.cos(i*3.7)*26};
   const q=C(age/flight),dx=end.x-start.x,dy=end.y-start.y,len=Math.max(1,Math.hypot(dx,dy));
   if(age<=flight)out.push({type:'rock',x:L(start.x,end.x,q),y:L(start.y,end.y,q),size:L(18,13,q),angle:q*(i%2?.55:-.55),seed:i,vx:dx/len,vy:dy/len,depthY:L(425,target.y,q)-.1});

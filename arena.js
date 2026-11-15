@@ -64,7 +64,7 @@
     {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."},
     {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."},
     {id:"rage",name:"Blazing Rage",school:"fire",cost:3,target:"ally",kind:"rage",boost:.20,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging spell deals 20% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."},
-    {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell has an additional independent 50% chance to fail after its normal accuracy check. An 80% spell has a 40% overall success chance. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."}
+    {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell loses 50 percentage points of accuracy. An 80% spell becomes 30% accurate (70% failure). Combines with Static Shock and other active accuracy effects. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -480,21 +480,17 @@
   // Accuracy is a separate per-cast random roll, independent of user input.
   // A uniform roll in [0,1) gives the card's exact percentage chance.
   function spellHitCheck(card,roll=Math.random(),bonus=0){
-    return roll<Math.max(0,Math.min(1,card.accuracy+bonus));
+    return roll<Math.max(0,Math.min(1,Math.round((card.accuracy+bonus)*1e12)/1e12));
   }
   function resolveAutoRune(){
     const a=state?.animation;
     if(!a||a.stage!=="tracing-auto")return false;
     const c=getUnit(a.source);
-    const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),bonus=(used?.value||0)-(shock?.value||0);
+    const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),turbulence=consumeStatus(c,"turbulence"),bonus=(used?.value||0)-(shock?.value||0)-(turbulence?.value||0);
     a.accuracyBonusUsed=bonus;
     a.effectiveAccuracy=Math.max(0,Math.min(1,a.card.accuracy+bonus));
-    const turbulence=consumeStatus(c,"turbulence");
-    const accuracyPassed=spellHitCheck(a.card,Math.random(),bonus);
-    const windPassed=turbulence?Math.random()>=.5:true;
-    a.effectiveAccuracy*=turbulence?.5:1;
-    const success=accuracyPassed&&windPassed;
-    if(turbulence){flash(c,"TURBULENCE","#b8efdc");state.log=[c.name+" uses up Turbulence: an extra 50% failure roll.",...state.log].slice(0,5);}
+    const success=spellHitCheck(a.card,Math.random(),bonus);
+    if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");state.log=[c.name+" uses up Turbulence (−50 accuracy points).",...state.log].slice(0,5);}
     a.runeResult=success?"success":"failed";
     if(used){
       flash(c,"TAILWIND +10% ACC","#cbf7e4");
@@ -608,9 +604,9 @@
     if(a.stage==="raising"){
       caster.armRaise=1;
       startStage(a,"tracing-auto",AUTO_TRACE_MS);
-      const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0);
+      const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0)-(caster.statuses.find(st=>st.kind==="turbulence")?.value||0);
       ui.hint.textContent=caster.name+" automatically traces the "+a.card.school+
-        " rune · "+Math.round(Math.max(0,Math.min(1,a.card.accuracy+nextBonus))*(caster.statuses.some(st=>st.kind==="turbulence")?.5:1)*100)+"% accuracy";
+        " rune · "+Math.round(Math.max(0,Math.min(1,a.card.accuracy+nextBonus))*100)+"% accuracy";
       paintUI();
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
@@ -1198,7 +1194,7 @@
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
     } else if(card.kind==="turbulence"&&t&&t.hp>0&&t.team!==c.team){
-      addStatus(t,"turbulence","≋",.5);flash(t,"TURBULENCE","#b8efdc");state.log=[t.name+" gains an extra 50% failure chance on their next spell.",...state.log].slice(0,5);
+      addStatus(t,"turbulence","≋",.5);flash(t,"TURBULENCE","#b8efdc");state.log=[t.name+" loses 50 accuracy points on their next spell.",...state.log].slice(0,5);
     } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"blazing_rage","♨",card.boost);flash(t,"BLAZING RAGE +20%","#ffbb76");state.log=[t.name+" gains +20% damage on their next damaging spell.",...state.log].slice(0,5);
     } else if(card.kind==="static"&&t&&t.hp>0&&t.team!==c.team){
@@ -1401,7 +1397,7 @@
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=k.id==="turbulence"?
-          '<span class="spell-effect"><b>50% EXTRA FAIL CHANCE</b><span>ENEMY · NEXT SPELL</span></span>':k.id==="rage"?
+          '<span class="spell-effect"><b>−50% SPELL ACCURACY</b><span>ENEMY · NEXT SPELL</span></span>':k.id==="rage"?
           '<span class="spell-effect"><b>+20% SPELL DAMAGE</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="static"?
           '<span class="spell-effect"><b>−30% ACC · 3 TURNS</b><span>ON MISS: 100 DAMAGE</span></span>':k.id==="calming"?
           '<span class="spell-effect"><b>125 HP × 3 TURNS</b><span>SELF / ALLY · 375 TOTAL</span></span>':k.id==="solidity"?
@@ -2050,7 +2046,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
-      case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"An extra independent 50% failure roll on the next spell, on top of its normal accuracy. 80% becomes 40% overall success. Consumed on the next cast attempt, even if it misses. Does not stack."};
+      case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
       case "blazing_rage":return {title:"♨ Blazing Rage · Fire blessing",detail:"Next successful damaging spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
       case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores 125 HP at the start of each turn for "+st.remaining+" more turns. 375 total over 3 turns. Refreshes without stacking; cannot revive or exceed maximum HP."};
@@ -2728,7 +2724,7 @@
     getEffectiveAccuracy:(unitId,cardId)=>{
       const u=getUnit(unitId),card=BY_ID[cardId];
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
-        (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)))*(u.statuses.some(st=>st.kind==="turbulence")?.5:1);
+        (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
     },
     isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,

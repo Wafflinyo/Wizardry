@@ -69,3 +69,19 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.ok(reef.pose({...opts,stage:'shark-dive',progress:1}).y>target.y+120,'body dives below floor');
 }
 console.log('Reef Rush: continuous angled breach, mirrored targets, 480-damage chomp, splash disappearance and miss checks passed.');
+
+
+// Swim path and heading mirror toward the chosen side before breaching.
+for(const p of [0,.25,.5,.75,1]){
+ const right=reef.pose({stage:'shark-swim',progress:p,target:{x:831,y:488}});
+ const left=reef.pose({stage:'shark-swim',progress:p,target:{x:169,y:488}});
+ assert.ok(Math.abs(right.x+left.x-1000)<1e-9,'circular paths mirror horizontally');
+ assert.ok(Math.abs(right.y-left.y)<1e-9,'mirrored swim keeps the same floor depth');
+}
+for(const x of [169,831]){
+ const target={x,y:488},swim=reef.pose({stage:'shark-swim',progress:1,target}),dip=reef.pose({stage:'shark-submerge',progress:0,target});
+ assert.ok((-Math.sin(swim.theta)*swim.dir)*swim.dir>.99,'fin finishes pointing toward target side');
+ for(const key of ['x','y','theta'])assert.ok(Math.abs(swim[key]-dip[key])<1e-9,'submerge preserves final heading');
+ assert.equal(reef.pose({stage:'shark-rise',progress:0,target}).dir,swim.dir,'breach faces the same side as fin');
+}
+console.log('Enemy shark reverse swim, trailing wake and target-facing breach checks passed.');

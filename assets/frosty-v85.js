@@ -59,15 +59,24 @@ function solidActor(c,o,b){const m=motion(o);if(!m)return false;const src=m.atla
 }
 function swirlClock(o){return (o.stage==='frost-gust'?C(o.progress)*800:800+C(o.progress)*650)*.007*pose(o).dir;}
 function drawVeil(c,o){const p=C(o.progress),s=o.stage;if(s!=='frost-gust'&&s!=='frost-appear')return;
- const fade=s==='frost-gust'?C(p*4):1-p*p*(3-2*p),spin=swirlClock(o)*1.5;if(fade<=0)return;
+ const clear=s==='frost-appear'?C((p-.55)/.45):0,fade=s==='frost-gust'?C(p*4):1-clear,spin=swirlClock(o)*1.5;if(fade<=0)return;
  c.save();c.globalAlpha*=fade;
- // Short tapered wind ribbons: an open icy vortex, with no round fog core.
+ // Opaque, ragged snow column. Its drifting silhouette fully masks the summon.
+ const edge=(u,side)=>{const wobble=Math.sin(spin*1.7+u*19)*8+Math.sin(spin*2.3-u*37+side)*5;return 500+Math.sin(spin+u*9)*10+side*(55+u*55+wobble);};
+ c.fillStyle='#bcdde8';c.beginPath();
+ for(let i=0;i<=32;i++){const u=i/32;c.lineTo(edge(u,-1),431-u*180);}
+ for(let i=32;i>=0;i--){const u=i/32;c.lineTo(edge(u,1),431-u*180);}
+ c.closePath();c.fill();
+ // Overlapping, fully filled snow sheets give the column churning uneven layers.
+ for(let i=0;i<27;i++){const u=i/27,v=Math.min(1,(i+1.5)/27),y=431-u*180,yy=431-v*180,slant=Math.sin(spin*2+i*1.83)*9;
+ c.fillStyle=['#c8e7ed','#dceff2','#a8d2e2','#e4f4f4'][i%4];c.beginPath();c.moveTo(edge(u,-1),y);c.lineTo(edge(v,-1),yy);c.lineTo(edge(v,1),yy+slant);c.lineTo(edge(u,1),y+slant);c.closePath();c.fill();}
+ // Jagged streamers rotate around the dense snow rather than forming even rings.
  for(const front of [false,true])for(let strand=0;strand<5;strand++){
   for(let j=0;j<74;j++){
    const u=j/74,v=(j+1)/74,a=spin+strand*1.25+u*TAU*2.4,b=spin+strand*1.25+v*TAU*2.4;
    if((Math.sin((a+b)/2)>0)!==front)continue;
-   const r=30+u*91,rr=30+v*91,x=500+Math.cos(a)*r,y=425-u*145+Math.sin(a)*r*.20,xx=500+Math.cos(b)*rr,yy=425-v*145+Math.sin(b)*rr*.20;
-   const width=(4+Math.sin(u*Math.PI)*9)*(1-u*.55);c.save();c.globalAlpha*=(front?.72:.28)*Math.sin(Math.PI*(.06+u*.88));c.fillStyle=(j+strand)%4?'#b1e4ef':'#ecffff';c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.lineTo(xx+3,yy+width);c.lineTo(x+3,y+width);c.closePath();c.fill();c.restore();
+   const r=78+u*36+Math.sin(a*3+spin)*9,rr=78+v*36+Math.sin(b*3+spin)*9,x=500+Math.cos(a)*r,y=425-u*170+Math.sin(a)*r*.20,xx=500+Math.cos(b)*rr,yy=425-v*170+Math.sin(b)*rr*.20;
+   const width=(7+Math.sin(u*27+spin)*3+Math.sin(u*Math.PI)*10)*(1-u*.3);c.save();c.globalAlpha*=(front?.72:.28)*Math.sin(Math.PI*(.06+u*.88));c.fillStyle=(j+strand)%4?'#b1e4ef':'#ecffff';c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.lineTo(xx+3,yy+width);c.lineTo(x+3,y+width);c.closePath();c.fill();c.restore();
   }
  }
  for(let i=0;i<85;i++){const u=(i/85+spin*.025)%1,a=spin*1.2+i*2.399,r=32+u*100;flake(c,500+Math.cos(a)*r,425-u*150+Math.sin(a)*r*.2,1+i%3,.35+.5*Math.sin(a)**2);}c.restore();

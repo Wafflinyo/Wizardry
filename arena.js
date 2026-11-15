@@ -1,4 +1,4 @@
-/* Wizardry 0.76 — interactive 2.5D battle test.
+/* Wizardry 0.77 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -43,12 +43,9 @@
     {id:"bear",name:"Icefang Rampage",school:"ice",cost:6,target:"enemy",
       kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
       short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
-    {id:"pistol",name:"Water Pistol",school:"water",cost:2,target:"enemy",kind:"damage",
-      damage:150,shots:3,hitDamage:50,icon:"◈",accuracy:.95,duration:980,hit:.65,rarity:"STARTER",
-      short:"95% ACCURACY",description:"A central water sigil fires three large water bullets, each exploding on one target for 50 damage (150 total)"},
-    {id:"cobra",name:"Socket Serpent",school:"lightning",cost:3,target:"enemy",kind:"damage",
-      damage:250,icon:"ϟ",accuracy:.75,duration:2190,hit:.63,rarity:"STARTER",
-      short:"75% ACCURACY",description:"A cord-bodied cobra plugs into an outlet, rises and arcs electricity between its prong fangs, then strikes one target for 250 damage"}
+    {id:"shark",name:"Reef Rush",school:"water",cost:4,target:"enemy",kind:"damage",
+      damage:480,icon:"♆",accuracy:.90,duration:5800,hit:.65,rarity:"EPIC",
+      short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -524,7 +521,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","pistol-form","pistol-burst","cobra-rise","cobra-charge","cobra-strike","cobra-impact","cobra-return","cobra-vanish"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -533,12 +530,6 @@
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
     if(a.stage==="bear-claw"&&p>=.45&&!a.applied)applySpell(a);
-    if(a.stage==="pistol-burst"){
-      // Shots launch 100ms apart and travel concurrently for 170ms.
-      // Resolve every crossed contact even if a frame is delayed.
-      while((a.pistolShotsFired||0)<a.card.shots&&
-        a.elapsed>=170+100*(a.pistolShotsFired||0))applyPistolHit(a);
-    }
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -587,8 +578,7 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="cobra")startStage(a,"cobra-rise",550);
-      else if(a.card.id==="pistol")startStage(a,"pistol-form",250);
+      if(a.card.id==="shark")startStage(a,"shark-fin",1100);
       else if(a.card.id==="bear")startStage(a,"bear-appear",650);
       else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
@@ -604,26 +594,25 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
-    }else if(a.stage==="cobra-rise"){
-      startStage(a,"cobra-charge",650);
-      ui.hint.textContent="Socket Serpent arcs electricity between its prong fangs!";
-    }else if(a.stage==="cobra-charge"){
-      startStage(a,"cobra-strike",170);
-    }else if(a.stage==="cobra-strike"){
+    }else if(a.stage==="shark-fin"){
+      startStage(a,"shark-swim",1500);
+    }else if(a.stage==="shark-swim"){
+      startStage(a,"shark-submerge",350);
+    }else if(a.stage==="shark-submerge"){
+      startStage(a,"shark-rise",650);
+    }else if(a.stage==="shark-rise"){
+      startStage(a,"shark-flop",500);
+    }else if(a.stage==="shark-flop"){
+      startStage(a,"shark-arch",550);
+    }else if(a.stage==="shark-arch"){
+      startStage(a,"shark-chomp",180);
+    }else if(a.stage==="shark-chomp"){
       if(!a.applied)applySpell(a);
-      startStage(a,"cobra-impact",220);
-    }else if(a.stage==="cobra-impact"){
-      startStage(a,"cobra-return",300);
-    }else if(a.stage==="cobra-return"){
-      startStage(a,"cobra-vanish",300);
-    }else if(a.stage==="cobra-vanish"){
+      startStage(a,"shark-dive",520);
+    }else if(a.stage==="shark-dive"){
+      startStage(a,"shark-splash",450);
+    }else if(a.stage==="shark-splash"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
-    }else if(a.stage==="pistol-form"){
-      a.pistolShotsFired=0;
-      startStage(a,"pistol-burst",730);
-      ui.hint.textContent="Water Pistol unleashes a rapid three-shot burst!";
-    }else if(a.stage==="pistol-burst"){
-      a.applied=true;startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="bear-appear"){
       startStage(a,"bear-roar",950);
     }else if(a.stage==="bear-roar"){
@@ -838,22 +827,8 @@
       " for one action!",...state.log].slice(0,5);
     return true;
   }
-  function applyPistolHit(a){
-    const shot=a.pistolShotsFired||0;
-    if(shot>=a.card.shots)return;
-    a.pistolShotsFired=shot+1;
-    const c=getUnit(a.source),t=getUnit(a.target);
-    if(a.runeResult!=="success"||!c||c.hp<=0||!t||t.hp<=0||t.team===c.team)return;
-    // One spell consumes a one-use bonus/shield once; its modifier covers
-    // all three bullets. A dead locked target is never replaced.
-    a.pistolModifiers=a.pistolModifiers||{};
-    damage(c,t,a.card.hitDamage,a.card,a.pistolModifiers);
-    paintUI();
-  }
-  function damage(source,target,base,card,modifierCache=null){
+  function damage(source,target,base,card){
     let raw=base,notes=[];
-    if(modifierCache?.factor!==undefined){raw*=modifierCache.factor;notes=modifierCache.notes;}
-    else{
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
     // spell, a fizzle, or a spell without a living target cannot consume it.
     if(card?.school==="water"){
@@ -868,8 +843,6 @@
     if(trap){raw*=1+trap.value;notes.push("TRAP");}
     const shield=consumeStatus(target,"shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
-    if(modifierCache){modifierCache.factor=raw/base;modifierCache.notes=[...notes];}
-    }
     const amount=Math.max(1,Math.round(raw));
     const oldHp=target.hp,wasAlive=target.hp>0;
     target.hp=Math.max(0,target.hp-amount);
@@ -1205,9 +1178,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="cobra"?
-          '<span class="spell-effect"><b>PRONG-FANG STRIKE</b><span>250 · 1 ENEMY</span></span>':k.id==="pistol"?
-          '<span class="spell-effect"><b>3 × 50 DAMAGE</b><span>WATER BURST</span></span>':k.id==="bear"?
+        const effect=k.id==="shark"?
+          '<span class="spell-effect"><b>SHARK CHOMP · 480</b><span>1 ENEMY</span></span>':k.id==="bear"?
           '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
@@ -1235,7 +1207,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="cobra"?k.description:k.id==="pistol"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2288,28 +2260,17 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
-    if(action?.card?.id==="pistol"&&action.stage.startsWith("pistol-")){
-      const pistol=window.WIZARDRY_WATER_PISTOL_V73;
+    if(action?.card?.id==="shark"&&action.stage.startsWith("shark-")){
+      const shark=window.WIZARDRY_REEF_RUSH_V77;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
-        elapsed:action.elapsed,caster:getUnit(action.source),target:getUnit(action.target)};
-      if(pistol){
-        renderables.push({type:"water-pistol-sigil",depthY:pistol.depthFor(opts,"sigil"),priority:0,
-          draw:()=>pistol.draw(g,{...opts,layer:"sigil"})});
-        if(action.stage==="pistol-burst")for(let shotIndex=0;shotIndex<3;shotIndex++){
-          const shotOpts={...opts,shotIndex};
-          for(const layer of ["bullet","impact"])renderables.push({type:"water-pistol-"+layer+shotIndex,
-            depthY:pistol.depthFor(shotOpts,layer),priority:0,
-            draw:()=>pistol.draw(g,{...shotOpts,layer})});
-        }
+        elapsed:action.elapsed,target:getUnit(action.target)};
+      if(shark){
+        shark.draw(g,{...opts,layer:"water"});
+        renderables.push({type:"reef-shark",depthY:shark.depthFor(opts,"actor"),priority:0,
+          draw:()=>shark.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"shark-splash",depthY:shark.depthFor(opts,"splash"),priority:0,
+          draw:()=>shark.draw(g,{...opts,layer:"splash"})});
       }
-    }
-    if(action?.card?.id==="cobra"&&action.stage.startsWith("cobra-")){
-      const cobra=window.WIZARDRY_SOCKET_SERPENT_V76;
-      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),elapsed:action.elapsed,
-        caster:getUnit(action.source),target:getUnit(action.target)};
-      if(cobra)for(const layer of ["outlet","actor","impact"])renderables.push({type:"socket-serpent-"+layer,
-        depthY:cobra.depthFor(opts,layer),priority:layer==="impact"?2:0,
-        draw:()=>cobra.draw(g,{...opts,layer})});
     }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({

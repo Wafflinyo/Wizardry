@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'cobra');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'shark');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -41,32 +41,24 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
 console.log('Bear layering checks passed for both sides and front/back targets.');
 
 
-const pistol=cards.find(c=>c.id==='pistol');assert.equal(pistol.damage,150);assert.equal(pistol.cost,2);
-function pistolBattle(hp=1000,statuses=[]){
- const result=battle();result.units[1].hp=hp;result.units[0].statuses=statuses;result.auras={};result.phase='resolving';
- result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:250,runeResult:'success'};api.set(result);return result;
-}
-s=pistolBattle();api.updateCastSequence(250);assert.equal(s.animation.stage,'pistol-burst');
-api.updateCastSequence(169);assert.equal(s.units[1].hp,1000);
-api.updateCastSequence(1);assert.equal(s.units[1].hp,950);
-api.updateCastSequence(100);assert.equal(s.units[1].hp,900);
-api.updateCastSequence(100);assert.equal(s.units[1].hp,850);
-api.updateCastSequence(360);assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'lowering');
-s=pistolBattle();api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,850,'delayed frames still resolve all three contacts');
-s=pistolBattle(1000,[{kind:'tidal_echo',value:.3}]);api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,805);assert.equal(s.units[0].statuses.length,0);
-s=pistolBattle(30);api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,0);assert.equal(s.units[2].hp,1000);
-s=pistolBattle();s.animation.stage='rune-fail';s.animation.duration=100;s.animation.runeResult='failed';api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
-vm.runInNewContext(fs.readFileSync('assets/water-pistol-v73.js','utf8'),context);
-const water=context.window.WIZARDRY_WATER_PISTOL_V73;
-for(const caster of [{x:175,y:340},{x:831,y:488}]){const anchor=water.anchors({caster,target:{x:175,y:340}});assert.equal(anchor.start.x,500);assert.equal(anchor.start.y,340);}
-assert.ok(water.shotProgress({elapsed:130,shotIndex:0})>0&&water.shotProgress({elapsed:130,shotIndex:0})<1);
-assert.ok(water.shotProgress({elapsed:130,shotIndex:1})>0&&water.shotProgress({elapsed:130,shotIndex:1})<1,'two water bullets fly concurrently');
-console.log('Rapid Water Pistol: 100ms launch spacing, overlapping flight, three 50-damage contacts, bonus, miss and defeated-target checks passed.');
 
-const cobra=cards.find(c=>c.id==='cobra');assert.equal(cobra.damage,250);assert.equal(cobra.accuracy,.75);
-s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:cobra,stage:'cobra-rise',elapsed:0,duration:550,runeResult:'success'};api.set(s);
-api.updateCastSequence(550);assert.equal(s.animation.stage,'cobra-charge');assert.equal(s.units[1].hp,1000);
-api.updateCastSequence(650);assert.equal(s.animation.stage,'cobra-strike');api.updateCastSequence(169);assert.equal(s.units[1].hp,1000);
-api.updateCastSequence(1);assert.equal(s.units[1].hp,750);assert.equal(s.units[2].hp,1000);
-api.updateCastSequence(220);api.updateCastSequence(300);api.updateCastSequence(300);assert.equal(s.units[1].hp,750);assert.equal(s.animation.stage,'lowering');
-console.log('Socket Serpent: 250 damage once at fast-strike contact, 75% card accuracy and opening-hand guarantee passed.');
+assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
+const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('shark'));
+function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
+s=sharkBattle();
+for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
+ assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(ms);
+}
+assert.equal(s.animation.stage,'shark-chomp');api.updateCastSequence(179);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,520);assert.equal(s.units[2].hp,1000);
+api.updateCastSequence(520);api.updateCastSequence(450);assert.equal(s.units[1].hp,520);assert.equal(s.animation.stage,'lowering');
+s=sharkBattle();s.animation.stage='rune-fail';s.animation.duration=100;s.animation.runeResult='failed';api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
+vm.runInNewContext(fs.readFileSync('assets/reef-rush-v77.js','utf8'),context);const reef=context.window.WIZARDRY_REEF_RUSH_V77;
+for(const target of [{x:175,y:340},{x:831,y:488}]){
+ for(const p of [0,.25,.5,.75,1])assert.equal(reef.pose({stage:'shark-rise',progress:p,target}).x,500,'jump rises vertically before targeting');
+ const apex=reef.pose({stage:'shark-flop',progress:1,target}),landing=reef.pose({stage:'shark-arch',progress:1,target});
+ assert.ok(landing.y>apex.y,'shark arches down from apex');assert.ok(Math.abs(landing.x-500)>20);
+ assert.equal(reef.pose({stage:'shark-splash',progress:1,target}).alpha,0);
+ const dipped=reef.pose({stage:'shark-submerge',progress:1,target});assert.ok(dipped.y-238*.71+238*.4>dipped.groundY,'fin fully below surface before jump');
+}
+console.log('Reef Rush: removed cards, opening hand, vertical jump/flop/downward arc, 480-damage chomp, splash disappearance and miss checks passed.');

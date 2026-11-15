@@ -3,7 +3,7 @@
 'use strict';
 const portraits={},listeners=[];
 const SPECS={
- cobra:{source:()=> './assets/socket-serpent-v76.webp',rect:im=>[im.naturalWidth*3/4,im.naturalHeight/4,im.naturalWidth/4,im.naturalHeight/4]},
+ shark:{source:()=> './assets/reef-rush-v77.webp',rect:im=>[im.naturalWidth/2,im.naturalHeight/2,im.naturalWidth/4,im.naturalHeight/4]},
  poseidon:{source:()=>root.WIZARDRY_POSEIDON_V22_ROWS?.[1],rect:()=>[940,0,314,313]},
  golem:{source:()=>root.WIZARDRY_GOLEM_V23_ROWS?.[2],rect:()=>[627,0,313,313]},
  volt:{source:()=> './assets/professor-volt-small-v50.webp',rect:()=>[512,0,256,256]},
@@ -47,7 +47,6 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
- if(id==='pistol')return root.WIZARDRY_WATER_PISTOL_V73?.drawCardArt(c,w,h)||false;
  const entry=prepare(id);if(!entry?.bounds||!c||w<=0||h<=0)return false;
  const b=entry.bounds,d=contain(b,w,h);
  c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';

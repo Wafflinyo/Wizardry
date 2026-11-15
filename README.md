@@ -1,3 +1,11 @@
+## Reef Rush replaces Water Pistol and Socket Serpent (v0.77.0)
+
+Removed Water Pistol and Socket Serpent from all hands/decks and unloaded their animation code. New Water spell Reef Rush: 480 base damage, 90% accuracy, initial 4-mana cost. Its dorsal fin gradually rises through the arena floor in the middle, swims a short oval route with a wake, fully submerges its fin in a separate 350ms stage, then the shark jumps straight UP from that spot. It flops briefly at the apex before arching DOWN toward the locked target, chomps once, dives through the floor and disappears in a splash. The jump's horizontal position remains fixed until the downward attack arc begins. Generated low-poly shark atlas supplies the shared in-game/card artwork. The newest card starts in the human opening hand within the five-card maximum.
+
+Validation: removed card IDs absent, opening hand, vertical rise and downward arc on either side, 480-damage contact only, no repeated damage, no damage on miss, splash disappearance and existing combat/hand checks passed.
+
+---
+
 ## Starter Lightning spell: Socket Serpent (v0.76.0)
 
 A cord-bodied cobra appears in the arena center, plugged into a stationary summoned outlet. It rises, spreads its hood, charges an animated current between metal plug-prong fangs, lunges at its locked target in 170 ms, deals 250 base Lightning damage once at contact, retracts and disperses. Accuracy is 75%; initial mana cost is 3. A miss does not summon or damage. The outlet remains in place and the cable stretches to the striking snake. New generated 16-frame low-poly atlas is used for both the cast and fitted card artwork. Guaranteed in the human opening hand for testing.

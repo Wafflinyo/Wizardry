@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='rage'&&root.WIZARDRY_BLAZING_RAGE_V89){root.WIZARDRY_BLAZING_RAGE_V89.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='static'&&root.WIZARDRY_STATIC_SHOCK_V88){root.WIZARDRY_STATIC_SHOCK_V88.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='calming'&&root.WIZARDRY_CALMING_WATERS_V87){root.WIZARDRY_CALMING_WATERS_V87.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  if(id==='solidity'&&root.WIZARDRY_SOLIDITY_V86){root.WIZARDRY_SOLIDITY_V86.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}

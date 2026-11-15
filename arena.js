@@ -41,8 +41,8 @@
       description:"Baby dragon drops in, charges a giant fireball and hits 650 + 150 to each adjacent enemy. 25% burn: 50 for 3 turns",
       short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7},
     {id:"bear",name:"Icefang Rampage",school:"ice",cost:6,target:"enemy",
-      kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
-      short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
+      kind:"summon",damage:460,icon:"❄",accuracy:.85,duration:3300,hit:.65,
+      short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 460 damage, then disperses",artFrame:6},
     {id:"shark",name:"Reef Rush",school:"water",cost:4,target:"enemy",kind:"damage",
       damage:480,icon:"♆",accuracy:.90,duration:5800,hit:.65,rarity:"EPIC",
       short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"},
@@ -56,13 +56,14 @@
       short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"},
     {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
-    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
-      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
-    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,
-      short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"},
+    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:540,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
+      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 540 total damage to one enemy"},
+    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,frostChance:.30,
+      short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, with a 30% chance to inflict Frostbite: 50 damage per turn for 3 turns"},
     {id:"solidity",name:"Solidity",school:"earth",cost:3,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."},
     {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."},
-    {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."}
+    {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."},
+    {id:"rage",name:"Blazing Rage",school:"fire",cost:3,target:"ally",kind:"rage",boost:.20,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging spell deals 20% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -974,6 +975,9 @@
       const echo=consumeStatus(source,"tidal_echo");
       if(echo){raw*=1+echo.value;notes.push("TIDAL ECHO +30%");}
     }
+    let rage=spell?.rageBonus;
+    if(rage===undefined){rage=consumeStatus(source,"blazing_rage")?.value||0;if(spell)spell.rageBonus=rage;}
+    if(rage){raw*=1+rage;notes.push("BLAZING RAGE +20%");}
     const blade=consumeStatus(source,"blade");
     if(blade){raw*=1+blade.value;notes.push("BLADE");}
     const aura=state.auras[source.team];
@@ -1038,12 +1042,12 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
-  function applyFrostyImpact(a){
+  function applyFrostyImpact(a,roll){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
-    if(target.hp>0){
+    if(target.hp>0&&(roll??Math.random())<a.card.frostChance){
       addStatus(target,"frostbite","❄",a.card.frostDamage);
       const frost=target.statuses.find(st=>st.kind==="frostbite");frost.remaining=a.card.frostTurns;frost.appliedRound=state.round;frost.lastTickRound=state.round;
       flash(target,"FROSTBITE (3 TURNS)","#b6eeff");
@@ -1187,6 +1191,8 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
+    } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
+      addStatus(t,"blazing_rage","♨",card.boost);flash(t,"BLAZING RAGE +20%","#ffbb76");state.log=[t.name+" gains +20% damage on their next damaging spell.",...state.log].slice(0,5);
     } else if(card.kind==="static"&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"static_shock","ϟ",.30);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");state.log=[t.name+" is cursed with Static Shock for 3 turns.",...state.log].slice(0,5);
@@ -1386,18 +1392,19 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="static"?
+        const effect=k.id==="rage"?
+          '<span class="spell-effect"><b>+20% SPELL DAMAGE</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="static"?
           '<span class="spell-effect"><b>−30% ACC · 3 TURNS</b><span>ON MISS: 100 DAMAGE</span></span>':k.id==="calming"?
           '<span class="spell-effect"><b>125 HP × 3 TURNS</b><span>SELF / ALLY · 375 TOTAL</span></span>':k.id==="solidity"?
           '<span class="spell-effect"><b>25% DAMAGE REDUCTION</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="frosty"?
-          '<span class="spell-effect"><b>FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
-          '<span class="spell-effect"><b>STONE BARRAGE · 400</b><span>1 ENEMY</span></span>':k.id==="reaper"?
+          '<span class="spell-effect"><b>30% FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
+          '<span class="spell-effect"><b>STONE BARRAGE · 540</b><span>1 ENEMY</span></span>':k.id==="reaper"?
           '<span class="spell-effect"><b>DECAYING STRENGTH</b><span>NEXT SPELL TAKEN +20%</span></span>':k.id==="ronin"?
           '<span class="spell-effect"><b>3 × 150 SLASHES</b><span>1 ENEMY · 450 TOTAL</span></span>':k.id==="arrows"?
           '<span class="spell-effect"><b>150 TO ALL</b><span>10% BURN · 50×3</span></span>':k.id==="thunder"?
           '<span class="spell-effect"><b>THUNDERCLAP · 550</b><span>1 ENEMY</span></span>':k.id==="shark"?
           '<span class="spell-effect"><b>SHARK CHOMP · 480</b><span>1 ENEMY</span></span>':k.id==="bear"?
-          '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
+          '<span class="spell-effect"><b>ICY CLAW · 460</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
           '<span class="spell-effect"><b>SEISMIC FISSURE</b><span>1 ENEMY</span></span>':
@@ -1417,14 +1424,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen")?"✚ ":"✹ ")+
-          (k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen")?"✚ ":"✹ ")+
+          (k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2034,6 +2041,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "blazing_rage":return {title:"♨ Blazing Rage · Fire blessing",detail:"Next successful damaging spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
       case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores 125 HP at the start of each turn for "+st.remaining+" more turns. 375 total over 3 turns. Refreshes without stacking; cannot revive or exceed maximum HP."};
       case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
@@ -2114,7 +2122,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
+      }else if(st.kind==="blazing_rage")window.WIZARDRY_BLAZING_RAGE_V89?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
       else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
       else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
       else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
@@ -2296,6 +2305,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}

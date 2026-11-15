@@ -302,8 +302,10 @@ assert.equal(scorpionFx.pose(.08).frame,0,'compact armored roll frame');assert.e
 for(const target of [{x:800,y:450},{x:200,y:350}]){const a=scorpionFx.pose(.03,target),b=scorpionFx.pose(.12,target),land=scorpionFx.pose(.17,target),dir=target.x>500?1:-1;assert.ok((b.x-a.x)*dir>0,'roll approaches toward target');assert.ok(b.y>a.y,'diagonal descent');assert.ok(b.roll>a.roll,'local clockwise rotation mirrors with facing');assert.equal(land.x,500,'unfolds at arena center');}
 console.log('Scorpion angled approach and target-directed rolling passed for both sides.');
 
-for(const y of [315,350,450,508]){const depth=scorpionFx.depthFor({progress:.75,target:{x:800,y}});assert.ok(depth>y,'sting appears in front of target');assert.ok(depth<y+1,'closer fighters still overlay scorpion');}
+for(const y of [315,350,450,508]){const depth=scorpionFx.depthFor({progress:3150/4700,target:{x:800,y}});assert.ok(depth>y,'sting appears in front of target');assert.ok(depth<y+1,'closer fighters still overlay scorpion');}
 console.log('Scorpion sting depth sorts ahead of target and behind nearer fighters.');
 
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:scorpionCard,stage:'summon',duration:scorpionCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(scorpionCard.duration);assert.equal(s.animation.stage,'lowering','scorpion completes after burrowing');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'finished scorpion releases sequence');
 console.log('Scorpion full summon completes and hands off to next action.');
+
+assert.equal(scorpionFx.pose(scorpionFx.timeline(3900/4700)).burrow,0,'holds for half a second before digging');assert.ok(scorpionFx.pose(scorpionFx.timeline(4300/4700)).burrow>0);assert.equal(scorpionFx.timeline(1),1);

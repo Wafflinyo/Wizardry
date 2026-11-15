@@ -40,30 +40,25 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
 }
 console.log('Bear layering checks passed for both sides and front/back targets.');
 
-const pistol=cards.find(c=>c.id==='pistol');assert.equal(pistol.damage,150);assert.equal(pistol.cost,2);
-s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
-api.updateCastSequence(450);assert.equal(s.animation.stage,'pistol-flight');assert.equal(s.units[1].hp,1000);
-for(let i=1;i<=3;i++){
- api.updateCastSequence(279);assert.equal(s.units[1].hp,1000-(i-1)*50);
- api.updateCastSequence(1);assert.equal(s.units[1].hp,1000-i*50);
- assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'pistol-impact');
- api.updateCastSequence(260);assert.equal(s.units[1].hp,1000-i*50);
- assert.equal(s.animation.stage,i<3?'pistol-flight':'lowering');
-}
-s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'rune-fail',elapsed:0,duration:100,runeResult:'failed'};api.set(s);api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
-console.log('Water Pistol: three contact-timed 50-damage hits, 150 total, no area damage, miss-safe checks passed.');
 
-// Tidal Echo is consumed once and boosts the complete burst to 195.
-s=battle();s.auras={};s.units[0].statuses=[{kind:'tidal_echo',value:.30}];s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
-api.updateCastSequence(450);for(let i=0;i<3;i++){api.updateCastSequence(280);api.updateCastSequence(260);}
-assert.equal(s.units[1].hp,805);assert.equal(s.units[0].statuses.length,0);
-// If bullet one defeats the locked foe, bullets two/three never redirect.
-s=battle();s.units[1].hp=30;s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
-api.updateCastSequence(450);for(let i=0;i<3;i++){api.updateCastSequence(280);api.updateCastSequence(260);}
-assert.equal(s.units[1].hp,0);assert.equal(s.units[2].hp,1000);
-vm.runInNewContext(fs.readFileSync('assets/water-pistol-v73.js','utf8'),context);
-for(const caster of [{x:175,y:340},{x:831,y:488}]){
- const anchor=context.window.WIZARDRY_WATER_PISTOL_V73.anchors({caster,target:{x:175,y:340}});
- assert.equal(anchor.start.x,500);assert.equal(anchor.start.y,340);
+const pistol=cards.find(c=>c.id==='pistol');assert.equal(pistol.damage,150);assert.equal(pistol.cost,2);
+function pistolBattle(hp=1000,statuses=[]){
+ const result=battle();result.units[1].hp=hp;result.units[0].statuses=statuses;result.auras={};result.phase='resolving';
+ result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:250,runeResult:'success'};api.set(result);return result;
 }
-console.log('Central Water Pistol origin, whole-burst Water bonus and defeated-target checks passed.');
+s=pistolBattle();api.updateCastSequence(250);assert.equal(s.animation.stage,'pistol-burst');
+api.updateCastSequence(169);assert.equal(s.units[1].hp,1000);
+api.updateCastSequence(1);assert.equal(s.units[1].hp,950);
+api.updateCastSequence(100);assert.equal(s.units[1].hp,900);
+api.updateCastSequence(100);assert.equal(s.units[1].hp,850);
+api.updateCastSequence(360);assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'lowering');
+s=pistolBattle();api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,850,'delayed frames still resolve all three contacts');
+s=pistolBattle(1000,[{kind:'tidal_echo',value:.3}]);api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,805);assert.equal(s.units[0].statuses.length,0);
+s=pistolBattle(30);api.updateCastSequence(250);api.updateCastSequence(730);assert.equal(s.units[1].hp,0);assert.equal(s.units[2].hp,1000);
+s=pistolBattle();s.animation.stage='rune-fail';s.animation.duration=100;s.animation.runeResult='failed';api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
+vm.runInNewContext(fs.readFileSync('assets/water-pistol-v73.js','utf8'),context);
+const water=context.window.WIZARDRY_WATER_PISTOL_V73;
+for(const caster of [{x:175,y:340},{x:831,y:488}]){const anchor=water.anchors({caster,target:{x:175,y:340}});assert.equal(anchor.start.x,500);assert.equal(anchor.start.y,340);}
+assert.ok(water.shotProgress({elapsed:130,shotIndex:0})>0&&water.shotProgress({elapsed:130,shotIndex:0})<1);
+assert.ok(water.shotProgress({elapsed:130,shotIndex:1})>0&&water.shotProgress({elapsed:130,shotIndex:1})<1,'two water bullets fly concurrently');
+console.log('Rapid Water Pistol: 100ms launch spacing, overlapping flight, three 50-damage contacts, bonus, miss and defeated-target checks passed.');

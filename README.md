@@ -1,3 +1,11 @@
+## Rapid, fluid Water Pistol burst (v0.75.0)
+
+The three shots now launch 100 milliseconds apart and travel concurrently for 170 ms each. All three impacts land within 370 ms of the first launch, while their splash explosions overlap and fade independently. The sigil forms in 250 ms. Replaced solid angular projectile bodies and shard spray with translucent, deforming water blobs, curved foam highlights, undulating wakes, drifting droplets and rounded splash spray. Card art uses the same fluid bullet renderer. Central origin, 50 damage per contact/150 total, 2 mana and 95% accuracy remain unchanged.
+
+Validation: overlapping projectile progress, exact 170/270/370ms damage contacts, all contacts across a delayed frame, Water bonus, missed cast, defeated-target behavior and existing hand/combat checks passed.
+
+---
+
 ## Central three-round Water Pistol burst (v0.74.0)
 
 Water Pistol's sigil now appears at the arena center (500,340), regardless of caster position. It fires three larger, 30% wider-profile water bullets at the same locked target. Each bullet deals 50 base damage only at contact (150 total); each hit has a white-blue splash explosion, expanding rings and spray shards. The central sigil remains visible during the burst, and card art/text now show three bullets and 3×50 damage. Existing summons already originate in the central x=500 lane; the generic fallback projectile origin now follows that convention too.

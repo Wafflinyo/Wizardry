@@ -1,4 +1,4 @@
-/* Wizardry 0.74 — interactive 2.5D battle test.
+/* Wizardry 0.75 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -44,7 +44,7 @@
       kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
       short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
     {id:"pistol",name:"Water Pistol",school:"water",cost:2,target:"enemy",kind:"damage",
-      damage:150,shots:3,hitDamage:50,icon:"◈",accuracy:.95,duration:2070,hit:.65,rarity:"STARTER",
+      damage:150,shots:3,hitDamage:50,icon:"◈",accuracy:.95,duration:980,hit:.65,rarity:"STARTER",
       short:"95% ACCURACY",description:"A central water sigil fires three large water bullets, each exploding on one target for 50 damage (150 total)"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -521,7 +521,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","pistol-form","pistol-flight","pistol-impact"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","pistol-form","pistol-burst"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -530,6 +530,12 @@
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
     if(a.stage==="bear-claw"&&p>=.45&&!a.applied)applySpell(a);
+    if(a.stage==="pistol-burst"){
+      // Shots launch 100ms apart and travel concurrently for 170ms.
+      // Resolve every crossed contact even if a frame is delayed.
+      while((a.pistolShotsFired||0)<a.card.shots&&
+        a.elapsed>=170+100*(a.pistolShotsFired||0))applyPistolHit(a);
+    }
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
@@ -578,7 +584,7 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="pistol")startStage(a,"pistol-form",450);
+      if(a.card.id==="pistol")startStage(a,"pistol-form",250);
       else if(a.card.id==="bear")startStage(a,"bear-appear",650);
       else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
@@ -596,14 +602,10 @@
       paintUI();
     }else if(a.stage==="pistol-form"){
       a.pistolShotsFired=0;
-      startStage(a,"pistol-flight",280);
-      ui.hint.textContent="Water Pistol fires a three-round burst!";
-    }else if(a.stage==="pistol-flight"){
-      applyPistolHit(a);
-      startStage(a,"pistol-impact",260);
-    }else if(a.stage==="pistol-impact"){
-      if(a.pistolShotsFired<a.card.shots)startStage(a,"pistol-flight",280);
-      else{a.applied=true;startStage(a,"lowering",WIZARD_RECOVERY_MS);}
+      startStage(a,"pistol-burst",730);
+      ui.hint.textContent="Water Pistol unleashes a rapid three-shot burst!";
+    }else if(a.stage==="pistol-burst"){
+      a.applied=true;startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="bear-appear"){
       startStage(a,"bear-roar",950);
     }else if(a.stage==="bear-roar"){
@@ -2270,11 +2272,17 @@
     if(action?.card?.id==="pistol"&&action.stage.startsWith("pistol-")){
       const pistol=window.WIZARDRY_WATER_PISTOL_V73;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
-        caster:getUnit(action.source),target:getUnit(action.target)};
-      const layers=action.stage==="pistol-form"?["sigil"]:
-        action.stage==="pistol-flight"?["sigil","bullet"]:["sigil","impact"];
-      if(pistol)for(const layer of layers)renderables.push({type:"water-pistol-"+layer,
-        depthY:pistol.depthFor(opts,layer),priority:0,draw:()=>pistol.draw(g,{...opts,layer})});
+        elapsed:action.elapsed,caster:getUnit(action.source),target:getUnit(action.target)};
+      if(pistol){
+        renderables.push({type:"water-pistol-sigil",depthY:pistol.depthFor(opts,"sigil"),priority:0,
+          draw:()=>pistol.draw(g,{...opts,layer:"sigil"})});
+        if(action.stage==="pistol-burst")for(let shotIndex=0;shotIndex<3;shotIndex++){
+          const shotOpts={...opts,shotIndex};
+          for(const layer of ["bullet","impact"])renderables.push({type:"water-pistol-"+layer+shotIndex,
+            depthY:pistol.depthFor(shotOpts,layer),priority:0,
+            draw:()=>pistol.draw(g,{...shotOpts,layer})});
+        }
+      }
     }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({

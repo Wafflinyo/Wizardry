@@ -97,9 +97,9 @@ function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='wall'&&b.wall>0)stoneWall(c,b);
 }
 function items(o){const b=pose(o),target=o.target||{x:800,y:450},out=[];if(b.burst<0)return out;
- // Thick blocks burst almost simultaneously and cross the arena in about 0.2 seconds.
+ // Thick blocks launch in a closely staggered burst and cross the arena in about 0.2 seconds.
  for(let i=0;i<24;i++){
-  const col=i%4,row=Math.floor(i/4),delay=(i%4)*7,flight=185+(i%3)*12,age=b.burst-delay;
+  const col=i%4,row=Math.floor(i/4),delay=i===0?0:Math.floor(noise(i+431)*100)+(i%3)*11,flight=185+(i%3)*12,age=b.burst-delay;
   const start={x:500+b.dir*(50+(col+.5)*22.5),y:425-(row+.5)*34},end={x:target.x+Math.sin(i*7.1)*22,y:target.y-95+Math.cos(i*3.7)*26};
   const q=C(age/flight),dx=end.x-start.x,dy=end.y-start.y,len=Math.max(1,Math.hypot(dx,dy));
   if(age<=flight)out.push({type:'rock',x:L(start.x,end.x,q),y:L(start.y,end.y,q),size:L(18,13,q),angle:q*(i%2?.55:-.55),seed:i,vx:dx/len,vy:dy/len,depthY:L(425,target.y,q)-.1});

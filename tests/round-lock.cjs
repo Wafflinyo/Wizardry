@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'soul');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'healingaura');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('soul'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('healingaura'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -278,3 +278,9 @@ soulCurse();soulCurse();assert.equal(s.units[1].statuses.filter(x=>x.kind==='sou
 s=battle();s.auras={};s.units[0].hp=100;api.set(s);s.units[1].hp=40;soulCurse();s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,140,'heals only actual 40 HP drained');
 s=battle();s.auras={};api.set(s);soulCurse();s.units[0].hp=0;s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,0,'never revives caster');assert.equal(s.units[1].hp,900,'curse still drains');
 console.log('Soul Drain three ticks, no duplicate ticks, actual HP transfer, cap, refresh, target KO and defeated-caster checks passed.');
+
+const healingAura=cards.find(c=>c.id==='healingaura');s=battle();s.auras={};s.units.push(unit('ally',0,100),unit('ko',0,0));s.units[0].hp=200;api.set(s);
+const teamBless=()=>combat.applySpell({action:{casterId:'human'},card:healingAura});teamBless();assert.equal(s.units[0].hp,200);assert.ok(s.units[3].statuses.some(x=>x.kind==='healing_aura'));assert.equal(s.units[1].statuses.length,0);assert.equal(s.units[4].statuses.length,0,'no revival');
+for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[0].hp,200+(r-1)*200);assert.equal(s.units[3].hp,100+(r-1)*200);}assert.equal(s.units[0].hp,800);assert.equal(s.units[3].hp,700);
+teamBless();teamBless();assert.equal(s.units[0].statuses.filter(x=>x.kind==='healing_aura').length,1);combat.applySpell({action:{casterId:'human',targetId:'human'},card:calming});s.units[0].hp=500;s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,825,'aura and Calming Waters both heal');s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,1000,'HP cap');
+console.log('Healing Aura entire-team targeting, 200 × 3 each, single ticks, no KO healing, refresh and coexistence passed.');

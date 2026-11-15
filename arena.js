@@ -65,7 +65,8 @@
     {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."},
     {id:"rage",name:"Blazing Rage",school:"fire",cost:3,target:"ally",kind:"rage",boost:.20,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging spell deals 20% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."},
     {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell loses 50 percentage points of accuracy. An 80% spell becomes 30% accurate (70% failure). Combines with Static Shock and other active accuracy effects. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."},
-    {id:"soul",name:"Soul Drain",school:"dark",cost:3,target:"enemy",kind:"souldrain",damage:100,drainTurns:3,accuracy:1,icon:"☠",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Curses one enemy for 3 turns. At the start of each turn, drains up to 100 HP and restores the HP actually drained to the caster, capped at maximum HP. 300 total drain. Cannot revive a defeated caster. Reapplying refreshes the curse without stacking."}
+    {id:"soul",name:"Soul Drain",school:"dark",cost:3,target:"enemy",kind:"souldrain",damage:100,drainTurns:3,accuracy:1,icon:"☠",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Curses one enemy for 3 turns. At the start of each turn, drains up to 100 HP and restores the HP actually drained to the caster, capped at maximum HP. 300 total drain. Cannot revive a defeated caster. Reapplying refreshes the curse without stacking."},
+    {id:"healingaura",name:"Healing Aura",school:"nature",cost:5,target:"team",kind:"teamregen",heal:600,healPerTurn:200,healTurns:3,accuracy:1,icon:"❀",rarity:"EPIC",duration:2300,hit:.72,short:"100% ACCURACY",description:"Blesses every living teammate, including yourself. Each restores 200 HP at the start of each of the next 3 turns: 600 HP per ally. Capped at maximum HP; cannot revive. Works alongside Calming Waters. Reapplying refreshes this aura without stacking copies."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -316,7 +317,7 @@
   function currentCard(){return state.selectedCard?BY_ID[state.selectedCard]||null:null;}
   function targetsFor(card,c){
     if(!card||!c)return[];
-    if(card.target==="team")return[];
+    if(card.target==="team")return alive(c.team);
     if(card.target==="all_enemies")return alive(1-c.team);
     return alive(card.target==="ally"?c.team:1-c.team);
   }
@@ -376,19 +377,19 @@
   }
   function confirmTarget(){
     if(state.phase!=="planning"||!caster()||!currentCard())return;
-    if(currentCard().target!=="all_enemies"&&!correctTarget())return;
+    if(!["team","all_enemies"].includes(currentCard().target)&&!correctTarget())return;
     if(queueSpell())resolvePressed();
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    const area=card?.target==="all_enemies";
+    const area=["team","all_enemies"].includes(card?.target);
     if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
        c.mana<card.cost||!c.hand.includes(card.id)||(!target&&!area)||
-       (area&&!alive(1-c.team).length))return false;
+       (area&&!alive(card.target==="team"?c.team:1-c.team).length))return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
       targetId:area?null:target.id,team:c.team,auto:false};
     playHandCard(c,card.id);
-    state.log=[c.name+" played "+card.name+" against "+(area?"ALL ENEMIES":target.name),
+    state.log=[c.name+" played "+card.name+" against "+(area?(card.target==="team"?"ALL ALLIES":"ALL ENEMIES"):target.name),
       ...state.log].slice(0,5);
     clearSelection();
     paintUI();
@@ -416,12 +417,12 @@
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
-    const target=card.target==="all_enemies"?null:
+    const target=["team","all_enemies"].includes(card.target)?null:
       card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
         card.target==="ally"?alive(u.team)[Math.floor(Math.random()*alive(u.team).length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
-    if(!target&&card.target!=="all_enemies")return null;
+    if(!target&&!["team","all_enemies"].includes(card.target))return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
       team:u.team,auto:true};
   }
@@ -1136,12 +1137,12 @@
   function tickBurnsForRound(){
     for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
       if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
-    for(const u of state.units){const effect=u.statuses.find(st=>st.kind==="calming_waters");if(!effect)continue;
-      if(u.hp<=0){consumeStatus(u,"calming_waters");continue;}
+    for(const u of state.units)for(const kind of ["calming_waters","healing_aura"]){const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
+      if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       effect.lastTickRound=state.round;const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));u.hp+=amount;effect.remaining--;
-      flash(u,"+"+amount+" HP","#a8f1ee");state.log=[u.name+" restores "+amount+" HP from Calming Waters ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
-      if(!effect.remaining)consumeStatus(u,"calming_waters");
+      flash(u,"+"+amount+" HP","#a8f1ee");state.log=[u.name+" restores "+amount+" HP from "+(kind==="healing_aura"?"Healing Aura":"Calming Waters")+" ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
+      if(!effect.remaining)consumeStatus(u,kind);
     }
     for(const u of state.units){const effect=u.statuses.find(st=>st.kind==="soul_drain");if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,"soul_drain");continue;}
@@ -1204,6 +1205,9 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
+    } else if(card.kind==="teamregen"){
+      for(const ally of alive(c.team)){addStatus(ally,"healing_aura","❀",card.healPerTurn);const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
+      state.log=[c.name+" blesses the entire team: 200 HP per turn for 3 turns each.",...state.log].slice(0,5);
     } else if(card.kind==="souldrain"&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"soul_drain","☠",card.damage);const curse=t.statuses.find(st=>st.kind==="soul_drain");
       curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
@@ -1314,7 +1318,7 @@
     if(planning)ui.hint.textContent=c?
       (isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(card.target==="all_enemies"?
+       card?(card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
@@ -1335,18 +1339,18 @@
         input.style.setProperty("--swatch",color);
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
-    const allEnemies=card?.target==="all_enemies";
-    ui.chosenTarget.textContent=allEnemies?
+    const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
+    ui.chosenTarget.textContent=allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
     const canConfirm=planning&&!!c&&!!card&&
-      (!!target||(allEnemies&&alive(1-c.team).length>0))&&
+      (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
       c.mana>=card.cost&&!state.plans[c.id];
     ui.confirm.hidden=!canConfirm;
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Actual initiative preview, ordered by speed. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -1389,7 +1393,7 @@
       placeholder.value="";
       placeholder.textContent="Choose target";
       ui.targetPicker.appendChild(placeholder);
-      if(c&&card?.target!=="all_enemies"){
+      if(c&&!["team","all_enemies"].includes(card?.target)){
         // When Lady Estel is selected, show allies (including the caster).
         // Without a selected card, show opponents as before.
         const choices=card?targetsFor(card,c):alive(1-c.team);
@@ -1401,8 +1405,8 @@
         }
       }
       ui.targetPicker.value=state.selectedTarget||"";
-      ui.targetPicker.disabled=!planning||!c||card?.target==="all_enemies";
-      ui.targetPicker.hidden=!planning||card?.target==="all_enemies";
+      ui.targetPicker.disabled=!planning||!c||["team","all_enemies"].includes(card?.target);
+      ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
       for(const k of CARDS){
@@ -1411,7 +1415,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="soul"?
+        const effect=k.id==="healingaura"?
+          '<span class="spell-effect"><b>200 HP × 3 TURNS</b><span>ENTIRE TEAM · 600 EACH</span></span>':k.id==="soul"?
           '<span class="spell-effect"><b>DRAIN 100 HP × 3 TURNS</b><span>HEALS CASTER · 300 TOTAL</span></span>':k.id==="turbulence"?
           '<span class="spell-effect"><b>−50% SPELL ACCURACY</b><span>ENEMY · NEXT SPELL</span></span>':k.id==="rage"?
           '<span class="spell-effect"><b>+20% SPELL DAMAGE</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="static"?
@@ -1445,14 +1450,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen")?"✚ ":"✹ ")+
-          (k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
+          (k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1965,9 +1970,9 @@
     if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&
        targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
       ellipse(g,0,5,87*scale,30*scale,
-        currentCard().target==="ally"?"#57ec9628":
+        ["ally","team"].includes(currentCard().target)?"#57ec9628":
         currentCard().target==="all_enemies"?"#9ed5d02c":"#d4b64d20",
-        currentCard().target==="ally"?"#95ffad":
+        ["ally","team"].includes(currentCard().target)?"#95ffad":
         currentCard().target==="all_enemies"?"#b9edf0":"#f6d487",4);
     if(state.animation&&(state.animation.source===u.id||state.animation.target===u.id)){
       ellipse(g,0,4,82*scale,29*scale,null,
@@ -2062,6 +2067,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "healing_aura":return {title:"❀ Healing Aura · Nature healing",detail:"Restores 200 HP at the start of each turn for "+st.remaining+" more turns: 600 HP total. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
       case "soul_drain":return {title:"☠ Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
       case "blazing_rage":return {title:"♨ Blazing Rage · Fire blessing",detail:"Next successful damaging spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
@@ -2145,7 +2151,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="soul_drain")window.WIZARDRY_SOUL_DRAIN_V91?.emblem(g,r.x,r.y,18);
+      }else if(st.kind==="healing_aura")window.WIZARDRY_HEALING_AURA_V92?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="soul_drain")window.WIZARDRY_SOUL_DRAIN_V91?.emblem(g,r.x,r.y,18);
       else if(st.kind==="turbulence")window.WIZARDRY_TURBULENCE_V90?.emblem(g,r.x,r.y,18);
       else if(st.kind==="blazing_rage")window.WIZARDRY_BLAZING_RAGE_V89?.emblem(g,r.x,r.y,18);
       else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
@@ -2330,6 +2337,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="healingaura"){window.WIZARDRY_HEALING_AURA_V92?.draw(g,{progress:p,targets:alive(caster.team)});g.restore();return;}
     if(card.id==="soul"){window.WIZARDRY_SOUL_DRAIN_V91?.draw(g,{progress:p,target,caster});g.restore();return;}
     if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}

@@ -162,13 +162,13 @@ console.log('Reaper: 950 once, next-spell +20% across all hits, non-stacking ref
 const benderCard=cards.find(c=>c.id==='bender');assert.equal(benderCard.damage,400);
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:benderCard,runeResult:'success',stage:'bender-appear',elapsed:0,duration:550};api.set(s);
 for(const [stage,d] of [['bender-appear',550],['bender-stance',500],['bender-stomp',500],['bender-wall',650],['bender-punch',250]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
-assert.equal(s.animation.stage,'bender-barrage');api.updateCastSequence(324);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,600);api.updateCastSequence(575);assert.equal(s.units[1].hp,600);assert.equal(s.units[2].hp,1000,'stone barrage is single-target');assert.equal(s.animation.stage,'bender-exit');
+assert.equal(s.animation.stage,'bender-barrage');api.updateCastSequence(89);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,600);api.updateCastSequence(460);assert.equal(s.units[1].hp,600);assert.equal(s.units[2].hp,1000,'stone barrage is single-target');assert.equal(s.animation.stage,'bender-exit');
 const benderHit=context.window.WIZARDRY_ARENA_TEST.applyBenderStrike;
 assert.equal(benderHit(s.animation),false,'cosmetic debris cannot repeat damage');
 s=battle();s.auras={};api.set(s);s.units[1].hp=0;assert.equal(benderHit({source:'human',target:'cpu',card:benderCard,runeResult:'success'}),false);assert.equal(s.units[2].hp,1000,'no retargeting');
 s.units[1].hp=1000;assert.equal(benderHit({source:'human',target:'cpu',card:benderCard,runeResult:'failed'}),false);assert.equal(s.units[1].hp,1000);
 s.units[1].statuses.push({kind:'decaying_strength',value:.2});assert.equal(benderHit({source:'human',target:'cpu',card:benderCard,runeResult:'success'}),true);assert.equal(s.units[1].hp,520,'Decaying Strength boosts entire barrage to 480 once');
 vm.runInNewContext(fs.readFileSync('assets/stone-bender-v83.js','utf8'),context);const stoneFx=context.window.WIZARDRY_STONE_BENDER_V83;
-assert.equal(stoneFx.pose({stage:'bender-appear',progress:1}).frame,0,'starts arms crossed');assert.equal(stoneFx.pose({stage:'bender-stomp',progress:.5}).frame,4,'back foot raised before stomp');assert.equal(stoneFx.pose({stage:'bender-wall',progress:1}).wall,1,'full rectangular wall before punch');
+assert.equal(stoneFx.pose({stage:'bender-appear',progress:1}).frame,0,'starts arms crossed');assert.equal(stoneFx.pose({stage:'bender-stomp',progress:.5}).frame,4,'forward foot raised before stomp');assert.equal(stoneFx.pose({stage:'bender-wall',progress:1}).wall,1,'full rectangular wall before punch');
 assert.ok(stoneFx.items({stage:'bender-barrage',progress:.15,target:{x:800,y:450}}).filter(i=>i.type==='rock').length>20,'wall breaks into many rocks');
 console.log('Stone Bender: crossed arms, raised-foot stomp, wall then punch, one 400 barrage, decay interaction and no miss/KO retarget damage passed.');

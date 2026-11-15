@@ -182,8 +182,8 @@ console.log('Weight transfer and impact-only camera rumble checks passed.');
 
 const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,750);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,runeResult:'success',stage:'frost-gust',elapsed:0,duration:800};api.set(s);
-for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-lift',650],['frost-windup',500],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
-assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(442);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
+for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-lift',650],['frost-windup',600],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
+assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(322);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
 const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1200);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,250);
 const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,250,'no instant tick in application turn');for(const [round,hp] of [[2,200],[3,150],[4,100]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,100,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
 s=battle();s.auras={};s.units[1].hp=4000;s.units[1].maxHp=4000;api.set(s);const snowCast=()=>({source:'human',target:'cpu',card:frosty,runeResult:'success'});frostyHit(snowCast());s.units[1].statuses.find(st=>st.kind==='frostbite').remaining=1;frostyHit(snowCast());assert.equal(s.units[1].statuses.filter(st=>st.kind==='frostbite').length,1);assert.equal(s.units[1].statuses.find(st=>st.kind==='frostbite').remaining,3,'refreshes duration without stacking');
@@ -204,3 +204,11 @@ console.log('Frosty: fully opaque in-betweens and consistent same-arm throw/rele
 
 assert.equal(frostFx.motion({stage:'frost-transform',progress:1}).height,frostFx.motion({stage:'frost-lift',progress:0}).height,'growth continues into bend without a size pop');
 assert.equal(frostFx.motion({stage:'frost-windup',progress:1}).frame,frostFx.motion({stage:'frost-throw',progress:0}).frame,'windup carries directly into same-arm throw');
+
+assert.equal(frostFx.formScale({stage:'frost-happy',progress:1}),1,'happy snowman size unchanged');
+assert.equal(frostFx.formScale({stage:'frost-transform',progress:1}),.9,'giant reduced ten percent');
+assert.equal(frostFx.formScale({stage:'frost-throw',progress:.5}),.9,'giant scale stays consistent');
+assert.ok(frostFx.forcePose({stage:'frost-windup',progress:1}).lean< -20,'loads weight backward');
+assert.ok(frostFx.forcePose({stage:'frost-throw',progress:.8}).lean>20,'drives torso forward');
+assert.deepEqual(JSON.parse(JSON.stringify(frostFx.forcePose({stage:'frost-throw',progress:1}))),JSON.parse(JSON.stringify(frostFx.forcePose({stage:'frost-flight',progress:0}))),'continuous forceful follow-through');
+console.log('Frosty reduced giant scale and backward-coil/forward-drive checks passed.');

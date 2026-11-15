@@ -1,3 +1,13 @@
+## Central three-round Water Pistol burst (v0.74.0)
+
+Water Pistol's sigil now appears at the arena center (500,340), regardless of caster position. It fires three larger, 30% wider-profile water bullets at the same locked target. Each bullet deals 50 base damage only at contact (150 total); each hit has a white-blue splash explosion, expanding rings and spray shards. The central sigil remains visible during the burst, and card art/text now show three bullets and 3×50 damage. Existing summons already originate in the central x=500 lane; the generic fallback projectile origin now follows that convention too.
+
+Water bonuses and one-use protection are consumed once per spell and cover the complete burst. A miss launches no bullets. If an early bullet defeats the target, remaining bullets do no further damage and never retarget. Splash explosions are visual and do not damage neighboring units. Mana/accuracy remain 2/95%.
+
+Validation: three separate contact-timed 50-damage hits, 150 total, whole-burst Tidal Echo 195, defeated-target handling, central origin on both sides, no area damage, miss handling and existing combat/hand checks passed.
+
+---
+
 ## Starter Water spell: Water Pistol (v0.73.0)
 
 Water Pistol costs 2 mana, has 95% accuracy and deals 150 base Water damage to one locked enemy. After the shared automatic Water trace succeeds, a glowing faceted Water sigil forms by the caster, fires a large independent water bullet, and bursts against its target. Damage occurs once at bullet contact, with no splash damage, recharge or new status. Existing Water bonuses apply normally. A failed trace does not launch the bullet or deal damage. The card uses the same sigil/bullet artwork as its actual cast and is guaranteed in the human starting hand for testing, respecting the five-card maximum.

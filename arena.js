@@ -1,4 +1,4 @@
-/* Wizardry 0.73 — interactive 2.5D battle test.
+/* Wizardry 0.74 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -44,8 +44,8 @@
       kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
       short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
     {id:"pistol",name:"Water Pistol",school:"water",cost:2,target:"enemy",kind:"damage",
-      damage:150,icon:"◈",accuracy:.95,duration:1170,hit:.65,rarity:"STARTER",
-      short:"95% ACCURACY",description:"A water sigil fires a large water bullet that bursts against one enemy for 150 damage"}
+      damage:150,shots:3,hitDamage:50,icon:"◈",accuracy:.95,duration:2070,hit:.65,rarity:"STARTER",
+      short:"95% ACCURACY",description:"A central water sigil fires three large water bullets, each exploding on one target for 50 damage (150 total)"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -595,13 +595,15 @@
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
     }else if(a.stage==="pistol-form"){
-      startStage(a,"pistol-flight",320);
-      ui.hint.textContent="Water Pistol fires a large water bullet!";
+      a.pistolShotsFired=0;
+      startStage(a,"pistol-flight",280);
+      ui.hint.textContent="Water Pistol fires a three-round burst!";
     }else if(a.stage==="pistol-flight"){
-      if(!a.applied)applySpell(a);
-      startStage(a,"pistol-impact",400);
+      applyPistolHit(a);
+      startStage(a,"pistol-impact",260);
     }else if(a.stage==="pistol-impact"){
-      startStage(a,"lowering",WIZARD_RECOVERY_MS);
+      if(a.pistolShotsFired<a.card.shots)startStage(a,"pistol-flight",280);
+      else{a.applied=true;startStage(a,"lowering",WIZARD_RECOVERY_MS);}
     }else if(a.stage==="bear-appear"){
       startStage(a,"bear-roar",950);
     }else if(a.stage==="bear-roar"){
@@ -816,8 +818,22 @@
       " for one action!",...state.log].slice(0,5);
     return true;
   }
-  function damage(source,target,base,card){
+  function applyPistolHit(a){
+    const shot=a.pistolShotsFired||0;
+    if(shot>=a.card.shots)return;
+    a.pistolShotsFired=shot+1;
+    const c=getUnit(a.source),t=getUnit(a.target);
+    if(a.runeResult!=="success"||!c||c.hp<=0||!t||t.hp<=0||t.team===c.team)return;
+    // One spell consumes a one-use bonus/shield once; its modifier covers
+    // all three bullets. A dead locked target is never replaced.
+    a.pistolModifiers=a.pistolModifiers||{};
+    damage(c,t,a.card.hitDamage,a.card,a.pistolModifiers);
+    paintUI();
+  }
+  function damage(source,target,base,card,modifierCache=null){
     let raw=base,notes=[];
+    if(modifierCache?.factor!==undefined){raw*=modifierCache.factor;notes=modifierCache.notes;}
+    else{
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
     // spell, a fizzle, or a spell without a living target cannot consume it.
     if(card?.school==="water"){
@@ -832,6 +848,8 @@
     if(trap){raw*=1+trap.value;notes.push("TRAP");}
     const shield=consumeStatus(target,"shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
+    if(modifierCache){modifierCache.factor=raw/base;modifierCache.notes=[...notes];}
+    }
     const amount=Math.max(1,Math.round(raw));
     const oldHp=target.hp,wasAlive=target.hp>0;
     target.hp=Math.max(0,target.hp-amount);
@@ -840,7 +858,7 @@
       // This remains independent of the attacker's ongoing summon/trace.
       target.defeatElapsedMs=0;
     }
-    flash(target,"-"+amount,shield?"#8df2f5":"#f8c49c");
+    flash(target,"-"+amount,notes.includes("BLOCK")?"#8df2f5":"#f8c49c");
     state.log=[source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
@@ -1168,7 +1186,7 @@
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=k.id==="pistol"?
-          '<span class="spell-effect"><b>WATER BULLET · 150</b><span>1 ENEMY</span></span>':k.id==="bear"?
+          '<span class="spell-effect"><b>3 × 50 DAMAGE</b><span>WATER BURST</span></span>':k.id==="bear"?
           '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
@@ -2009,8 +2027,7 @@
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
     if(!caster)return;
-    const baseX=lerp(caster.x,target?.x||500,.48);
-    const baseY=lerp(caster.y,target?.y||360,.53)+65;
+    const baseX=500,baseY=470;
     g.save();
     if(card.id==="dragon"){
       window.WIZARDRY_BABY_DRAGON_V61?.draw(g,{
@@ -2057,9 +2074,9 @@
       // Poseidon's flying trident is now a separate depth-sorted object.
     }else{
       if(target&&card.target!=="team"){
-        const x=lerp(caster.x,target.x,ease(p)),y=lerp(caster.y-105,target.y-100,ease(p));
+        const x=lerp(500,target.x,ease(p)),y=lerp(340,target.y-100,ease(p));
         if(card.kind==="damage"){
-          line(g,caster.x,caster.y-125,x,y,"#66e2f1",9);
+          line(g,500,340,x,y,"#66e2f1",9);
           ellipse(g,x,y,15,26,"#9bebff","#efffff",2);
         }else{
           const ring=ease(p);
@@ -2255,7 +2272,7 @@
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
         caster:getUnit(action.source),target:getUnit(action.target)};
       const layers=action.stage==="pistol-form"?["sigil"]:
-        action.stage==="pistol-flight"?["sigil","bullet"]:["impact"];
+        action.stage==="pistol-flight"?["sigil","bullet"]:["sigil","impact"];
       if(pistol)for(const layer of layers)renderables.push({type:"water-pistol-"+layer,
         depthY:pistol.depthFor(opts,layer),priority:0,draw:()=>pistol.draw(g,{...opts,layer})});
     }

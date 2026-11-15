@@ -43,8 +43,27 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 const pistol=cards.find(c=>c.id==='pistol');assert.equal(pistol.damage,150);assert.equal(pistol.cost,2);
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
 api.updateCastSequence(450);assert.equal(s.animation.stage,'pistol-flight');assert.equal(s.units[1].hp,1000);
-api.updateCastSequence(319);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);
-assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'pistol-impact');
-api.updateCastSequence(400);assert.equal(s.units[1].hp,850);assert.equal(s.animation.stage,'lowering');
+for(let i=1;i<=3;i++){
+ api.updateCastSequence(279);assert.equal(s.units[1].hp,1000-(i-1)*50);
+ api.updateCastSequence(1);assert.equal(s.units[1].hp,1000-i*50);
+ assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'pistol-impact');
+ api.updateCastSequence(260);assert.equal(s.units[1].hp,1000-i*50);
+ assert.equal(s.animation.stage,i<3?'pistol-flight':'lowering');
+}
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'rune-fail',elapsed:0,duration:100,runeResult:'failed'};api.set(s);api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
-console.log('Water Pistol: featured starter, contact-only 150 damage, no splash, miss-safe checks passed.');
+console.log('Water Pistol: three contact-timed 50-damage hits, 150 total, no area damage, miss-safe checks passed.');
+
+// Tidal Echo is consumed once and boosts the complete burst to 195.
+s=battle();s.auras={};s.units[0].statuses=[{kind:'tidal_echo',value:.30}];s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
+api.updateCastSequence(450);for(let i=0;i<3;i++){api.updateCastSequence(280);api.updateCastSequence(260);}
+assert.equal(s.units[1].hp,805);assert.equal(s.units[0].statuses.length,0);
+// If bullet one defeats the locked foe, bullets two/three never redirect.
+s=battle();s.units[1].hp=30;s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
+api.updateCastSequence(450);for(let i=0;i<3;i++){api.updateCastSequence(280);api.updateCastSequence(260);}
+assert.equal(s.units[1].hp,0);assert.equal(s.units[2].hp,1000);
+vm.runInNewContext(fs.readFileSync('assets/water-pistol-v73.js','utf8'),context);
+for(const caster of [{x:175,y:340},{x:831,y:488}]){
+ const anchor=context.window.WIZARDRY_WATER_PISTOL_V73.anchors({caster,target:{x:175,y:340}});
+ assert.equal(anchor.start.x,500);assert.equal(anchor.start.y,340);
+}
+console.log('Central Water Pistol origin, whole-burst Water bonus and defeated-target checks passed.');

@@ -298,3 +298,6 @@ vm.runInNewContext(fs.readFileSync('assets/scorpion-sting-v94.js','utf8'),contex
 console.log('Scorpion Sting 340 damage, 30% poison, three 50 ticks, no duplicate ticks and mirrored tail contact passed.');
 
 assert.equal(scorpionFx.pose(.08).frame,0,'compact armored roll frame');assert.equal(scorpionFx.pose(.20).frame,2,'unfold before standing');assert.equal(scorpionFx.pose(.6).frame,8,'tail windup');assert.ok(scorpionFx.pose(.96).burrow>0);assert.equal(scorpionFx.pose(1).alpha,0,'fully underground at end');
+
+for(const target of [{x:800,y:450},{x:200,y:350}]){const a=scorpionFx.pose(.03,target),b=scorpionFx.pose(.12,target),land=scorpionFx.pose(.17,target),dir=target.x>500?1:-1;assert.ok((b.x-a.x)*dir>0,'roll approaches toward target');assert.ok(b.y>a.y,'diagonal descent');assert.ok(b.roll>a.roll,'local clockwise rotation mirrors with facing');assert.equal(land.x,500,'unfolds at arena center');}
+console.log('Scorpion angled approach and target-directed rolling passed for both sides.');

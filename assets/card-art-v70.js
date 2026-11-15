@@ -3,6 +3,7 @@
 'use strict';
 const portraits={},listeners=[];
 const SPECS={
+ frosty:{source:()=> './assets/frosty-v85.webp',rect:im=>[0,0,im.naturalWidth/4,im.naturalHeight/3]},
  bender:{source:()=> './assets/stone-bender-v83.webp?v=0.83.1',rect:im=>[im.naturalWidth*3/4,0,im.naturalWidth/4,im.naturalHeight/3]},
  reaper:{source:()=> './assets/reaper-v82.webp',rect:im=>[im.naturalWidth*3/4,0,im.naturalWidth/4,im.naturalHeight/3]},
  thunder:{source:()=> './assets/thunderclap-v79.webp',rect:im=>[im.naturalWidth/4,im.naturalHeight/3,im.naturalWidth/4,im.naturalHeight/3]},

@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'bender');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'frosty');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('bender'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('frosty'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -179,3 +179,14 @@ assert.deepEqual(JSON.parse(JSON.stringify(stoneFx.cameraShake({stage:'bender-st
 assert.ok(Math.abs(stoneFx.cameraShake({stage:'bender-stomp',progress:.7}).x)>0,'impact shakes arena');
 assert.deepEqual(JSON.parse(JSON.stringify(stoneFx.cameraShake({stage:'bender-wall',progress:1}))),{x:0,y:0},'quake settles');
 console.log('Weight transfer and impact-only camera rumble checks passed.');
+
+const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,750);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,runeResult:'success',stage:'frost-gust',elapsed:0,duration:650};api.set(s);
+for(const [stage,d] of [['frost-gust',650],['frost-appear',450],['frost-happy',850],['frost-angry',500],['frost-transform',750],['frost-lift',650],['frost-windup',450],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
+assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(389);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
+const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1100);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,250);
+const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,250,'no instant tick in application turn');for(const [round,hp] of [[2,200],[3,150],[4,100]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,100,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
+s=battle();s.auras={};s.units[1].hp=4000;s.units[1].maxHp=4000;api.set(s);const snowCast=()=>({source:'human',target:'cpu',card:frosty,runeResult:'success'});frostyHit(snowCast());s.units[1].statuses.find(st=>st.kind==='frostbite').remaining=1;frostyHit(snowCast());assert.equal(s.units[1].statuses.filter(st=>st.kind==='frostbite').length,1);assert.equal(s.units[1].statuses.find(st=>st.kind==='frostbite').remaining,3,'refreshes duration without stacking');
+s=battle();s.auras={};api.set(s);assert.equal(frostyHit({...snowCast(),runeResult:'failed'}),false);assert.equal(s.units[1].hp,1000);assert.equal(s.units[1].statuses.length,0);s.units[1].hp=0;assert.equal(frostyHit(snowCast()),false);assert.equal(s.units[2].hp,1000,'never retargets defeated foe');
+s=battle();s.auras={};s.round=2;api.set(s);s.units[1].statuses=[{kind:'burn',value:50,remaining:3,appliedRound:1,lastTickRound:1},{kind:'frostbite',value:50,remaining:3,appliedRound:1,lastTickRound:1},{kind:'decaying_strength',value:.2}];tickDots();assert.equal(s.units[1].hp,900,'burn and frostbite tick separately for 50 each');assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'),'frostbite never consumes next-spell debuff');
+console.log('Frosty: happy/angry transformation, 750 on snowball arrival, exactly three 50-damage Frostbite turns, refresh, coexistence and miss/defeat checks passed.');

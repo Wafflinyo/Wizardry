@@ -1,4 +1,4 @@
-/* Wizardry 0.83 — interactive 2.5D battle test.
+/* Wizardry 0.85 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -57,7 +57,9 @@
     {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
     {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
-      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"}
+      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
+    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:6290,frostDamage:50,frostTurns:3,
+      short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -535,7 +537,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit","frost-gust","frost-appear","frost-happy","frost-angry","frost-transform","frost-lift","frost-windup","frost-throw","frost-flight","frost-impact","frost-melt"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -602,7 +604,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="bender"){
+      if(a.card.id==="frosty"){
+        const target=getUnit(a.target);a.frostTargetPoint=target?{x:target.x,y:target.y}:null;
+        startStage(a,"frost-gust",650);
+      }else if(a.card.id==="bender"){
         const target=getUnit(a.target);a.benderTargetPoint=target?{x:target.x,y:target.y}:null;
         startStage(a,"bender-appear",550);
       }else if(a.card.id==="reaper"){
@@ -631,6 +636,28 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="frost-gust"){
+      startStage(a,"frost-appear",450);
+    }else if(a.stage==="frost-appear"){
+      startStage(a,"frost-happy",850);
+    }else if(a.stage==="frost-happy"){
+      startStage(a,"frost-angry",500);
+    }else if(a.stage==="frost-angry"){
+      startStage(a,"frost-transform",750);
+    }else if(a.stage==="frost-transform"){
+      startStage(a,"frost-lift",650);
+    }else if(a.stage==="frost-lift"){
+      startStage(a,"frost-windup",450);
+    }else if(a.stage==="frost-windup"){
+      startStage(a,"frost-throw",150);
+    }else if(a.stage==="frost-throw"){
+      startStage(a,"frost-flight",390);
+    }else if(a.stage==="frost-flight"){
+      applyFrostyImpact(a);startStage(a,"frost-impact",350);
+    }else if(a.stage==="frost-impact"){
+      startStage(a,"frost-melt",1100);
+    }else if(a.stage==="frost-melt"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="bender-appear"){
       startStage(a,"bender-stance",500);
     }else if(a.stage==="bender-stance"){
@@ -998,6 +1025,18 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+  function applyFrostyImpact(a){
+    if(!a||a.applied||a.runeResult!=="success")return false;
+    a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
+    if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
+    damage(c,target,a.card.damage,a.card,a);
+    if(target.hp>0){
+      addStatus(target,"frostbite","❄",a.card.frostDamage);
+      const frost=target.statuses.find(st=>st.kind==="frostbite");frost.remaining=a.card.frostTurns;frost.appliedRound=state.round;frost.lastTickRound=state.round;
+      flash(target,"FROSTBITE (3 TURNS)","#b6eeff");
+    }
+    paintUI();return true;
+  }
   function applyBenderStrike(a){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
@@ -1075,24 +1114,16 @@
     return true;
   }
   function tickBurnsForRound(){
-    // Called once after advancing the round number. Burn is direct fixed
-    // damage, bypasses one-hit shields and never deals damage to KO units.
-    for(const u of state.units){
-      const burn=u.statuses.find(st=>st.kind==="burn");
-      if(!burn)continue;
-      if(u.hp<=0){consumeStatus(u,"burn");continue;}
-      if(burn.lastTickRound===state.round||burn.appliedRound>=state.round)continue;
-      burn.lastTickRound=state.round;
-      const amount=Math.min(u.hp,burn.value||50);
-      u.hp-=amount;burn.remaining=Math.max(0,(burn.remaining||1)-1);
-      flash(u,"🔥 -"+amount,"#ffa56a");
-      state.log=[u.name+" takes "+amount+" burn damage ("+
-        burn.remaining+" ticks remaining).",...state.log].slice(0,5);
-      if(u.hp===0){
-        u.defeatElapsedMs=0;
-        flash(u,"DEFEATED","#ffdb9c");
-      }
-      if(!burn.remaining||u.hp===0)consumeStatus(u,"burn");
+    // Burn and Frostbite tick independently; neither consumes spell-only marks or shields.
+    for(const u of state.units)for(const kind of ["burn","frostbite"]){
+      const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
+      if(u.hp<=0){consumeStatus(u,kind);continue;}
+      if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
+      effect.lastTickRound=state.round;const amount=Math.min(u.hp,effect.value||50);u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      flash(u,(kind==="burn"?"🔥 -":"❄ -")+amount,kind==="burn"?"#ffa56a":"#b6eeff");
+      state.log=[u.name+" takes "+amount+" "+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
+      if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
+      if(!effect.remaining||u.hp===0)consumeStatus(u,kind);
     }
   }
   function applySpell(anim){
@@ -1326,7 +1357,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="bender"?
+        const effect=k.id==="frosty"?
+          '<span class="spell-effect"><b>FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
           '<span class="spell-effect"><b>STONE BARRAGE · 400</b><span>1 ENEMY</span></span>':k.id==="reaper"?
           '<span class="spell-effect"><b>DECAYING STRENGTH</b><span>NEXT SPELL TAKEN +20%</span></span>':k.id==="ronin"?
           '<span class="spell-effect"><b>3 × 150 SLASHES</b><span>1 ENEMY · 450 TOTAL</span></span>':k.id==="arrows"?
@@ -1360,7 +1392,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1896,7 +1928,7 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
         "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
         "dragon-drop","dragon-land","dragon-charge","dragon-shot",
-        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit"].includes(visualStage)){
+        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit","frost-gust","frost-appear","frost-happy","frost-angry","frost-transform","frost-lift","frost-windup","frost-throw","frost-flight","frost-impact","frost-melt"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1938,7 +1970,7 @@
     return {x,y,w,h:43};
   }
   function unitStatuses(u){
-    const list=[...u.statuses].sort((a,b)=>(b.kind==="decaying_strength")-(a.kind==="decaying_strength")).slice(0,3);
+    const list=[...u.statuses].sort((a,b)=>((b.kind==="decaying_strength"?2:b.kind==="frostbite"?1:0)-(a.kind==="decaying_strength"?2:a.kind==="frostbite"?1:0))).slice(0,3);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
   }
@@ -1958,6 +1990,7 @@
           detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
+      case "frostbite":return {title:"❄ Frostbite · Ice damage over time",detail:u.name+" takes 50 damage at the start of each turn for "+(st.remaining||0)+" more turns. 150 total over 3 turns. Reapplying refreshes the duration; it does not stack. Does not consume Decaying Strength."};
       case "burn":
         return {title:"🔥 Burning · Fire damage over time",
           detail:u.name+" takes "+(st.value||50)+" damage at the start of each round for "+
@@ -2039,11 +2072,14 @@
       const glow=st.kind==="tidal_echo"?"#44dbee":
         st.kind==="stun"?"#98dfff":
         st.kind==="recharge"?"#e6b75b":
-        st.kind==="burn"?"#ff9258":st.kind==="decaying_strength"?"#d39bd5":"#b4eac2";
+        st.kind==="burn"?"#ff9258":st.kind==="decaying_strength"?"#d39bd5":st.kind==="frostbite"?"#99e9ff":"#b4eac2";
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
-      if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
+      if(st.kind==="frostbite"){
+        g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
+        for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
+      }else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
       else g.fillText(st.icon,r.x,r.y+1);
     });
     g.restore();
@@ -2429,6 +2465,13 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
+    if(action?.card?.id==="frosty"&&action.stage.startsWith("frost-")){
+      const frosty=window.WIZARDRY_FROSTY_V85,opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.frostTargetPoint||getUnit(action.target)};
+      if(frosty){frosty.draw(g,{...opts,layer:"ground"});renderables.push({type:"frosty",depthY:424,priority:0,draw:()=>frosty.draw(g,{...opts,layer:"actor"})});
+        const ball=frosty.projectile(opts);if(ball)renderables.push({type:"frosty-snowball",depthY:ball.depthY,priority:1,draw:()=>frosty.drawBall(g,ball)});
+        renderables.push({type:"frosty-impact",depthY:(opts.target?.y||450)+.1,priority:2,draw:()=>frosty.drawImpact(g,opts)});
+      }
+    }
     if(action?.card?.id==="bender"&&action.stage.startsWith("bender-")){
       const bender=window.WIZARDRY_STONE_BENDER_V83;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.benderTargetPoint||getUnit(action.target)};
@@ -2582,7 +2625,7 @@
       splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,applyReaperStrike,applyBenderStrike,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,applyReaperStrike,applyBenderStrike,applyFrostyImpact,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

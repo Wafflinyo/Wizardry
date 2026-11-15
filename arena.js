@@ -1,4 +1,4 @@
-/* Wizardry 0.71 — interactive 2.5D battle test.
+/* Wizardry 0.72 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -14,9 +14,7 @@
     robeColor:$("wizardColor"),hatColor:$("wizardHatColor"),
     skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
     statusPopup:$("statusPopup"),statusName:$("statusName"),
-    statusText:$("statusText"),statusClose:$("statusClose"),
-    preview:$("cardPreview"),previewTitle:$("previewTitle"),previewArt:$("previewArtwork"),
-    previewDescription:$("previewDescription"),previewSelect:$("selectPreview")};
+    statusText:$("statusText"),statusClose:$("statusClose")};
   // Cards use accuracy rolls, never manual tracing. The lightning summon
   // adds a real one-action stun only AFTER a successful damaging cast.
   const CARDS=[
@@ -279,7 +277,6 @@
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
     handSwipe?.reset();
-    closeCardPreview();
     ui.statusPopup.hidden=true;
     ui.status.textContent=mode==="story"?
       "You control Tidecaller only. All other allies and enemies are CPU-controlled.":
@@ -313,7 +310,6 @@
   }
   function clearSelection(){
     handSwipe?.reset();
-    closeCardPreview();
     state.selectedCard=null;
     state.selectedTarget=null;
   }
@@ -336,52 +332,16 @@
     state.selectedTarget=id;
     paintUI();
   }
-  function closeCardPreview(){
-    if(ui.preview?.open)ui.preview.close();
-    if(state)state.previewCard=null;
-  }
-  function inspectCard(id){
+  function selectFanCard(id){
     const u=caster(),card=BY_ID[id];
     if(state.phase!=="planning"||!u?.hand.includes(id)||!card)return;
-    state.previewCard=id;
-    ui.previewTitle.textContent=card.name;
-    ui.previewDescription.textContent=card.description+". "+card.cost+
-      " mana · "+Math.round(card.accuracy*100)+"% accuracy.";
-    ui.previewArt.replaceChildren();
-    const original=[...ui.hand.children].find(b=>b.dataset.card===id);
-    if(original){
-      const copy=original.cloneNode(true);
-      copy.disabled=false;copy.hidden=false;copy.tabIndex=-1;
-      copy.removeAttribute("aria-pressed");copy.removeAttribute("aria-haspopup");
-      copy.classList.remove("chosen");copy.style.cssText="";
-      // Preserve each element's paint while the inspection card uses its
-      // own larger typography and dimensions outside the hand container.
-      for(const selector of [null,".spell-name",".spell-tier",".spell-mana-cost",".spell-effect"]){
-        const from=selector?original.querySelector(selector):original;
-        const to=selector?copy.querySelector(selector):copy;
-        if(!from||!to)continue;
-        const style=getComputedStyle(from);
-        for(const prop of ["background","border-color","color","--trim"])
-          to.style.setProperty(prop,style.getPropertyValue(prop));
-      }
-      ui.previewArt.appendChild(copy);
-      const from=original.querySelector("canvas"),to=copy.querySelector("canvas");
-      if(from&&to)to.getContext("2d").drawImage(from,0,0);
+    handSwipe?.focusCard(id);
+    if(requiresRest(u)||u.mana<card.cost){
+      state.selectedCard=null;state.selectedTarget=null;paintUI();
+      ui.hint.textContent=u.mana<card.cost?"Not enough mana for "+card.name+".":"Your wizard cannot cast this round.";
+      return;
     }
-    const canSelect=!requiresRest(u)&&u.mana>=card.cost&&!state.plans[u.id];
-    ui.previewSelect.disabled=!canSelect;
-    ui.previewSelect.textContent=canSelect?"Select Spell":
-      u.mana<card.cost?"Not enough mana":"Cannot cast this round";
-    if(!ui.preview.open)ui.preview.showModal();
-    drawCardArts();
-  }
-  function selectInspectedCard(){
-    const id=state.previewCard,u=caster(),card=BY_ID[id];
-    if(state.phase!=="planning"||!card||!u?.hand.includes(id)||
-      requiresRest(u)||u.mana<card.cost||state.plans[u.id])return;
-    closeCardPreview();chooseCard(id);
-    ui.hint.textContent=card.target==="all_enemies"?"Confirm to cast on all enemies.":
-      "Now tap "+(card.target==="ally"?"an ally":"an enemy")+", then confirm your target.";
+    chooseCard(id);
   }
   function chooseCard(id){
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
@@ -1102,7 +1062,7 @@
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
-        "Swipe to browse your hand. Tap a card to inspect it."):
+        "Slide across your cards to browse. Tap one, then choose a target."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
@@ -1123,7 +1083,7 @@
     ui.chosenTarget.textContent=allEnemies?
       "All living enemies · next spell +10 accuracy points":
       target?"Target: "+target.name:
-      !card?"Tap a card to inspect":
+      !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
     const canConfirm=planning&&!!c&&!!card&&
       (!!target||(allEnemies&&alive(1-c.team).length>0))&&
@@ -1234,8 +1194,7 @@
             water?"On a successful cast, recharge one round and gain Tidal Echo +30% next Water hit. On a miss, neither effect is applied.":
             k.id==="golem"?"Seismic fissure attack.":
             "Summons Professor Volt: 450 Lightning damage and 20% stun chance on a successful hit; target skips one action."));
-        b.onclick=()=>inspectCard(k.id);
-        b.setAttribute("aria-haspopup","dialog");
+        b.onclick=()=>selectFanCard(k.id);
         ui.hand.appendChild(b);
       }
       drawCardArts();
@@ -1280,16 +1239,6 @@
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
     handSwipe=window.WIZARDRY_HAND_SWIPE_V71?.attach(ui.hand)||null;
-    $("closePreview").onclick=closeCardPreview;
-    $("backToHand").onclick=closeCardPreview;
-    ui.previewSelect.onclick=selectInspectedCard;
-    ui.preview.addEventListener("close",()=>{if(state)state.previewCard=null;});
-    ui.preview.addEventListener("click",event=>{
-      if(event.target!==ui.preview)return;
-      const r=ui.preview.getBoundingClientRect();
-      if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)
-        closeCardPreview();
-    });
     for(const b of ui.mode.querySelectorAll("button[data-mode]"))b.onclick=()=>{
       for(const x of ui.mode.querySelectorAll("button")){const on=x===b;x.classList.toggle("active",on);x.setAttribute("aria-pressed",String(on));}
       setBattle(b.dataset.mode,state.size);
@@ -1947,7 +1896,7 @@
   // Both artworks are literal frames from the approved summon animation.
   // Poseidon frame 7 shows him gripping the raised trident.
   function drawCardArts(){
-    const cards=[...ui.hand.children,...(ui.preview?.open?ui.previewArt.children:[])];
+    const cards=[...ui.hand.children];
     for(const b of cards){
       const card=BY_ID[b.dataset.card];
       const canvas=b.querySelector?.(".spell-art-canvas");
@@ -2002,7 +1951,7 @@
     window.WIZARDRY_CARD_ART_V70?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
-      observer.observe(ui.hand);observer.observe(ui.preview);
+      observer.observe(ui.hand);
     }
     window.addEventListener("resize",()=>requestAnimationFrame(drawCardArts));
     requestAnimationFrame(drawCardArts);

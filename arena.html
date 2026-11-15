@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="./assets/spell-cards-v57.css?v=0.57.0">
   <link rel="stylesheet" href="./assets/spell-cards-v60.css?v=0.67.0">
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
-  <link rel="stylesheet" href="./assets/hud-v69.css?v=0.71.0">
+  <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 </head>
 <body>
 <main class="game" id="game">
@@ -64,8 +64,8 @@
       <div><span class="eyebrow">YOUR GRIMOIRE</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
       <span class="mana" id="selectedMana">10 / 10 MANA</span>
     </div>
-    <div class="cards" id="cardHand" role="group" aria-label="Five-card fan. Swipe to browse; tap to inspect before selecting."></div>
-    <div class="fan-caption">SWIPE TO BROWSE <span>◆</span> TAP TO INSPECT</div>
+    <div class="cards" id="cardHand" role="group" aria-label="Five-card fan. Slide across cards to browse; tap to select a spell."></div>
+    <div class="fan-caption">SWIPE TO BROWSE <span>◆</span> TAP TO SELECT</div>
     <div class="hand-assist" aria-live="polite">
       <div class="spell-choice-info">
         <strong id="chosenSpell">SELECT A SPELL</strong>
@@ -108,17 +108,7 @@
     <div id="plannedList"></div>
   </section>
 </main>
-<dialog id="cardPreview" aria-labelledby="previewTitle" aria-describedby="previewDescription">
-  <button type="button" id="closePreview" class="preview-close" aria-label="Close card preview">×</button>
-  <span class="eyebrow">SPELL INSPECTION</span>
-  <h2 id="previewTitle"></h2>
-  <div id="previewArtwork" class="cards" aria-hidden="true"></div>
-  <p id="previewDescription"></p>
-  <div class="preview-actions">
-    <button type="button" id="backToHand" class="preview-back">Back to hand</button>
-    <button type="button" id="selectPreview" class="confirm-target">Select Spell</button>
-  </div>
-</dialog>
+
 <script src="./assets/poseidon-v22-row0.js?v=0.22.0" defer></script>
 <script src="./assets/poseidon-v22-row1.js?v=0.22.0" defer></script>
 <script src="./assets/poseidon-v22-row2.js?v=0.22.0" defer></script>
@@ -138,7 +128,7 @@
 <script src="./assets/baby-dragon-fire-v61.js?v=0.65.0" defer></script>
 <script src="./assets/polar-bear-v67.js?v=0.68.0" defer></script>
 <script src="./assets/card-art-v70.js?v=0.70.0" defer></script>
-<script src="./assets/hand-swipe-v71.js?v=0.71.0" defer></script>
-<script src="./arena.js?v=0.71.0" defer></script>
+<script src="./assets/hand-swipe-v71.js?v=0.72.0" defer></script>
+<script src="./arena.js?v=0.72.0" defer></script>
 </body>
 </html>

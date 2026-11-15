@@ -1,3 +1,11 @@
+## Direct in-fan selection and finger-position sliding (v0.72.0)
+
+Removed the enlarged card dialog. Tap any held card to raise it at normal size in the fan and select it for battlefield targeting. Separate target confirmation remains required. Sliding now brings forward the card underneath the finger using cached fan positions instead of fixed, reversed jumps from the center. Sliding only browses and release cannot select a spell. A fresh tap selects immediately. Unaffordable cards can be brought forward but clear the selected spell and explain the mana requirement.
+
+Validation: actual phone-width browser drag browsed a different card without selection; tapping it selected it with no dialog. Finger-position/reverse-slide, click suppression, direct focus, reset and existing combat regression checks passed.
+
+---
+
 ## Swipe hand browsing (v0.71.0)
 
 Swipe horizontally across the five-card fan to bring cards to the front at their normal size without opening inspection or selecting a spell. Drag release cannot trigger the card tap handler. A fresh deliberate tap still opens inspection immediately, with Select Spell and target confirmation unchanged. Vertical scrolling remains native, and browsing resets between rounds and new battles. Arrow keys also browse the fan.

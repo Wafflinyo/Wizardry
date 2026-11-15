@@ -1,4 +1,4 @@
-/* Wizardry 0.82 — interactive 2.5D battle test.
+/* Wizardry 0.83 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -55,7 +55,9 @@
     {id:"ronin",name:"Wind Slashes",school:"wind",cost:5,target:"enemy",kind:"slashes",damage:150,accuracy:.80,icon:"≋",rarity:"EPIC",duration:3280,
       short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"},
     {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
-      short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"}
+      short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
+    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
+      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then stomps hard with her back foot to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -533,7 +535,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -541,6 +543,7 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="bender-barrage"&&a.elapsed>=325&&!a.applied)applyBenderStrike(a);
     if(a.stage==="reaper-slash"&&p>=.4&&!a.applied)applyReaperStrike(a);
     if(a.stage==="ronin-volley"&&a.runeResult==="success")
       for(let i=0;i<3;i++)if(a.elapsed>=260+i*135)applyRoninHit(a,i);
@@ -596,7 +599,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="reaper"){
+      if(a.card.id==="bender"){
+        const target=getUnit(a.target);a.benderTargetPoint=target?{x:target.x,y:target.y}:null;
+        startStage(a,"bender-appear",550);
+      }else if(a.card.id==="reaper"){
         const target=getUnit(a.target);a.reaperTargetPoint=target?{x:target.x,y:target.y}:null;
         startStage(a,"reaper-circle",650);
       }else if(a.card.id==="ronin"){
@@ -622,6 +628,21 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="bender-appear"){
+      startStage(a,"bender-stance",500);
+    }else if(a.stage==="bender-stance"){
+      startStage(a,"bender-stomp",500);
+    }else if(a.stage==="bender-stomp"){
+      startStage(a,"bender-wall",650);
+    }else if(a.stage==="bender-wall"){
+      startStage(a,"bender-punch",250);
+    }else if(a.stage==="bender-punch"){
+      startStage(a,"bender-barrage",900);
+    }else if(a.stage==="bender-barrage"){
+      if(!a.applied)applyBenderStrike(a);
+      startStage(a,"bender-exit",600);
+    }else if(a.stage==="bender-exit"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="reaper-circle"){
       startStage(a,"reaper-rise",850);
     }else if(a.stage==="reaper-rise"){
@@ -974,6 +995,12 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+  function applyBenderStrike(a){
+    if(!a||a.applied||a.runeResult!=="success")return false;
+    a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
+    if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
+    damage(c,target,a.card.damage,a.card,a);paintUI();return true;
+  }
   function applyReaperStrike(a){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const caster=getUnit(a.source),target=getUnit(a.target);
@@ -1296,7 +1323,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="reaper"?
+        const effect=k.id==="bender"?
+          '<span class="spell-effect"><b>STONE BARRAGE · 400</b><span>1 ENEMY</span></span>':k.id==="reaper"?
           '<span class="spell-effect"><b>DECAYING STRENGTH</b><span>NEXT SPELL TAKEN +20%</span></span>':k.id==="ronin"?
           '<span class="spell-effect"><b>3 × 150 SLASHES</b><span>1 ENEMY · 450 TOTAL</span></span>':k.id==="arrows"?
           '<span class="spell-effect"><b>150 TO ALL</b><span>10% BURN · 50×3</span></span>':k.id==="thunder"?
@@ -1329,7 +1357,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1864,7 +1892,7 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
         "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
         "dragon-drop","dragon-land","dragon-charge","dragon-shot",
-        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close"].includes(visualStage)){
+        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade","ronin-drop","ronin-land","ronin-reach","ronin-draw","ronin-volley","ronin-finish","ronin-exit","reaper-circle","reaper-rise","reaper-windup","reaper-lunge","reaper-slash","reaper-dissolve","reaper-close","bender-appear","bender-stance","bender-stomp","bender-wall","bender-punch","bender-barrage","bender-exit"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -2395,6 +2423,15 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
+    if(action?.card?.id==="bender"&&action.stage.startsWith("bender-")){
+      const bender=window.WIZARDRY_STONE_BENDER_V83;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.benderTargetPoint||getUnit(action.target)};
+      if(bender){bender.draw(g,{...opts,layer:"ground"});
+        renderables.push({type:"stone-bender",depthY:417,priority:0,draw:()=>bender.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"stone-wall",depthY:425,priority:1,draw:()=>bender.draw(g,{...opts,layer:"wall"})});
+        for(const item of bender.items(opts))renderables.push({type:"bender-"+item.type,depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>bender.drawItem(g,item)});
+      }
+    }
     if(action?.card?.id==="reaper"&&action.stage.startsWith("reaper-")){
       const reaper=window.WIZARDRY_REAPER_V82;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.reaperTargetPoint||getUnit(action.target)};
@@ -2539,7 +2576,7 @@
       splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,applyReaperStrike,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,applyRoninHit,applyReaperStrike,applyBenderStrike,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

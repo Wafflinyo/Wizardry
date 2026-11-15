@@ -1,3 +1,11 @@
+## Full spell-card artwork framing (v0.70.0)
+
+All eight spell portraits now use a shared card-only renderer that measures visible atlas pixels, centers the complete subject with padding and preserves its aspect ratio. Artwork canvases render at the actual hand/inspection window size and update when the viewport or dialog changes. Removed cover-cropping and the dark lower overlay that obscured portraits. The vampire's full body and blood orb, bear's ears/paws/feet, Estel's wings and other spell silhouettes fit within the art panel. Battle sprite rendering and combat rules are unchanged.
+
+Validation: all eight portraits reviewed together in-browser; actual 390px phone inspection verified for vampire and bear; syntax and existing combat/depth regression checks passed.
+
+---
+
 ## Faceted HUD and five-card fan (v0.69.0)
 
 Redesigned the HUD with angular slate panels, turquoise crystal accents, antique-gold corners and compact battle controls. Five wider portrait cards overlap in a curved fan; card positions follow actual hand order and recenter as the hand changes. Tap any card to open an enlarged inspection dialog with matching spell artwork, damage, accuracy, mana and full ability text. Select Spell closes inspection and enables battlefield targeting; the existing separate target confirmation still locks the action. Back, close, Escape and outside-tap dismiss inspection without changing the selected spell or spending a card/mana. Insufficient-mana cards remain inspectable with selection disabled.

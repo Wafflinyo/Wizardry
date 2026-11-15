@@ -1,4 +1,4 @@
-/* Wizardry 0.69 — interactive 2.5D battle test.
+/* Wizardry 0.70 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -371,6 +371,7 @@
     ui.previewSelect.textContent=canSelect?"Select Spell":
       u.mana<card.cost?"Not enough mana":"Cannot cast this round";
     if(!ui.preview.open)ui.preview.showModal();
+    drawCardArts();
   }
   function selectInspectedCard(){
     const id=state.previewCard,u=caster(),card=BY_ID[id];
@@ -1943,13 +1944,19 @@
   // Both artworks are literal frames from the approved summon animation.
   // Poseidon frame 7 shows him gripping the raised trident.
   function drawCardArts(){
-    for(const b of ui.hand.children){
+    const cards=[...ui.hand.children,...(ui.preview?.open?ui.previewArt.children:[])];
+    for(const b of cards){
       const card=BY_ID[b.dataset.card];
       const canvas=b.querySelector?.(".spell-art-canvas");
       if(!card||!canvas)continue;
       const c=canvas.getContext("2d");if(!c)continue;
-      const width=canvas.width,height=canvas.height,water=card.school==="water",
-        nature=card.school==="nature";
+      const shell=canvas.parentElement,rect=shell.getBoundingClientRect();
+      const width=Math.max(1,rect.width||240),height=Math.max(1,rect.height||196);
+      const ratio=Math.min(window.devicePixelRatio||1,2);
+      const pixelW=Math.round(width*ratio),pixelH=Math.round(height*ratio);
+      if(canvas.width!==pixelW||canvas.height!==pixelH){canvas.width=pixelW;canvas.height=pixelH;}
+      c.setTransform(ratio,0,0,ratio,0,0);
+      const water=card.school==="water",nature=card.school==="nature";
       c.clearRect(0,0,width,height);
       const sky=c.createLinearGradient(0,0,0,height),wind=card.school==="wind",
         dark=card.school==="dark",fire=card.school==="fire",ice=card.school==="ice";
@@ -1963,41 +1970,10 @@
       c.beginPath();c.moveTo(width*.76,0);c.lineTo(width,0);
       c.lineTo(width,height*.68);c.lineTo(width*.82,height*.44);c.closePath();c.fill();
       c.restore();
-      const frame=card.artFrame||0,row=Math.floor(frame/4),col=frame%4;
-      const image=spriteCache[card.id]?.[row];
-      if(card.id==="bear"){
-        window.WIZARDRY_POLAR_BEAR_V67?.drawCardArt(c,width,height);
-      }else if(card.id==="dragon"){
-        window.WIZARDRY_BABY_DRAGON_V61?.drawCardArt(c,width,height);
-      }else if(card.id==="vampire"){
-        window.WIZARDRY_VAMPIRE_V57?.drawCardArt(c,width,height);
-      }else if(card.id==="wind"){
-        // Same faceted tornado and spiraling stones as the live cast.
-        window.WIZARDRY_TORNADO_V54?.drawCardArt(c,width,height);
-      }else if(card.id==="volt"||card.id==="estel"){
-        const rendered=card.id==="volt"?
-          window.WIZARDRY_PROFESSOR_V49?.drawCardArt(c,width,height):
-          window.WIZARDRY_LADY_ESTEL_V51?.drawCardArt(c,width,height);
-        if(!rendered){
-          c.font="bold 71px Georgia,serif";c.textAlign="center";
-          c.fillStyle=card.id==="estel"?"#d2ffbd":"#a7f4fc";
-          c.fillText(card.id==="estel"?"❀":"ϟ",width/2,height*.57);
-        }
-      }else if(image?.complete&&image.naturalWidth>0){
-        const edges=[0,314,627,940,1254],size=water?212:210;
-        c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
-        c.drawImage(image,edges[col],0,edges[col+1]-edges[col],
-          row===0||row===3?314:313,(width-size)/2,water?-9:-6,size,size);
-        c.restore();
-      }else{
-        c.font="bold 70px Georgia,serif";c.textAlign="center";
-        c.fillStyle=water?"#96eefa":"#dbcc92";
-        c.fillText(water?"♆":"◆",width/2,height*.55);
-      }
-      const v=c.createLinearGradient(0,height*.61,0,height);
-      v.addColorStop(0,"#07172600");
-      v.addColorStop(1,nature?"#0d3027e8":water?"#061b32e9":"#171d29eb");
-      c.fillStyle=v;c.fillRect(0,height*.61,width,height*.39);
+      // All card artwork shares the same visible-bounds contain fit.
+      // The battlefield renderers keep their independent sprite anchors.
+      window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
+
     }
   }
   function setupSprites(){
@@ -2020,6 +1996,12 @@
     window.WIZARDRY_TORNADO_V54?.onReady(drawCardArts);
     window.WIZARDRY_VAMPIRE_V57?.onReady(drawCardArts);
     window.WIZARDRY_BABY_DRAGON_V61?.onReady(drawCardArts);
+    window.WIZARDRY_CARD_ART_V70?.onReady(drawCardArts);
+    if(typeof ResizeObserver!=="undefined"){
+      const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
+      observer.observe(ui.hand);observer.observe(ui.preview);
+    }
+    window.addEventListener("resize",()=>requestAnimationFrame(drawCardArts));
     requestAnimationFrame(drawCardArts);
   }
   // Normalized original 16-cell timing for the ALREADY APPROVED Poseidon art.
@@ -2389,6 +2371,7 @@
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,
+    drawCardArts,
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARD,drawCard,startHand,playHandCard,

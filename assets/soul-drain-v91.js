@@ -1,0 +1,8 @@
+/* Dark soul seal and returning life motes. */
+(function(root){'use strict';const T=Math.PI*2;
+function emblem(c,x,y,size,alpha=1,time=0){c.save();c.translate(x,y);c.scale(size/100,size/100);c.globalAlpha*=alpha;c.shadowColor='#b353d3';c.shadowBlur=8;c.strokeStyle='#dca8eb';c.lineWidth=2;c.beginPath();c.arc(0,0,48,0,T);c.stroke();
+ for(let j=0;j<8;j++){const a=j*T/8+time;c.beginPath();c.arc(0,0,41,a,a+.4);c.stroke();}
+ c.beginPath();c.moveTo(0,-30);c.bezierCurveTo(-33,-30,-30,2,-17,12);c.lineTo(-14,28);c.lineTo(14,28);c.lineTo(17,12);c.bezierCurveTo(30,2,33,-30,0,-30);c.fillStyle='#573263';c.fill();c.stroke();c.fillStyle='#f1c9ff';for(const x of [-10,10]){c.beginPath();c.ellipse(x,-3,6,8,x<0?-.3:.3,0,T);c.fill();}c.beginPath();c.moveTo(0,6);c.lineTo(-4,13);c.lineTo(4,13);c.closePath();c.fill();c.beginPath();for(let i=-1;i<=1;i++){c.moveTo(i*7,19);c.lineTo(i*7,28);}c.stroke();c.restore();}
+function draw(c,{progress:p,target,caster}){if(!target)return;const t=Math.max(0,Math.min(1,(p-.18)/.4)),q=t*t*(3-2*t),x=500+(target.x-500)*q,y=335+(target.y-95-335)*q,fade=Math.min(1,p/.15,(1-p)/.2);emblem(c,x,y,90,fade,p*2);
+ c.save();for(let i=0;i<24;i++){const a=i*2.399+p*8,r=50+i%3*8;c.globalAlpha=fade*.5;c.fillStyle='#c389dc';c.beginPath();c.arc(x+Math.cos(a)*r,y+Math.sin(a)*r,1+i%3,0,T);c.fill();}
+ if(p>.58&&caster){for(let i=0;i<9;i++){const u=Math.max(0,Math.min(1,(p-.58)/.42*1.6-i*.08));if(!u||u>=1)continue;const xx=target.x+(caster.x-target.x)*u,yy=target.y-95+(caster.y-target.y)*u-Math.sin(u*Math.PI)*45;c.globalAlpha=(1-u)*.8;c.fillStyle='#e3b6ef';c.shadowColor='#ca6cec';c.shadowBlur=10;c.beginPath();c.arc(xx,yy,3+i%3,0,T);c.fill();}}c.restore();}root.WIZARDRY_SOUL_DRAIN_V91={emblem,draw};})(window);

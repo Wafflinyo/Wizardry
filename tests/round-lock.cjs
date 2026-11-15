@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'turbulence');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'soul');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('turbulence'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('soul'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -270,3 +270,11 @@ gustCurse();vm.runInNewContext('Math.random=()=>.299',context);s.animation={sour
 for(const order of [0,1]){s=battle();s.auras={};api.set(s);if(order){gustCurse();curse();}else{curse();gustCurse();}assert.equal(combat.getEffectiveAccuracy('cpu','ronin'),0,'both penalties apply regardless of receipt order');vm.runInNewContext('Math.random=()=>0',context);s.animation={source:'cpu',card:cards.find(c=>c.id==='ronin'),stage:'tracing-auto',traceMs:0};api.resolveAutoRune();assert.equal(s.units[1].hp,900,'combined failure triggers Static Shock');assert.equal(s.units[1].statuses.some(x=>x.kind==='static_shock'||x.kind==='turbulence'),false);}
 s=battle();s.auras={};api.set(s);curse();gustCurse();s.units[1].statuses.push({kind:'tailwind',value:.1});assert.ok(Math.abs(combat.getEffectiveAccuracy('cpu','ronin')-.1)<1e-9,'accuracy buffs combine with both debuffs before clamping');
 console.log('Turbulence −50 accuracy, 30% success boundary, simultaneous stacking in either order, consumption and Static Shock discharge passed.');
+
+const soulCard=cards.find(c=>c.id==='soul');s=battle();s.auras={};s.units[0].hp=500;api.set(s);
+const soulCurse=()=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:soulCard});soulCurse();combat.tickBurnsForRound();assert.equal(s.units[1].hp,1000,'no immediate drain');
+for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,1000-100*(r-1));assert.equal(s.units[0].hp,500+100*(r-1));}assert.equal(s.units[1].statuses.some(x=>x.kind==='soul_drain'),false);
+soulCurse();soulCurse();assert.equal(s.units[1].statuses.filter(x=>x.kind==='soul_drain').length,1);s.units[1].hp=40;s.units[0].hp=990;s.round++;combat.tickBurnsForRound();assert.equal(s.units[1].hp,0);assert.equal(s.units[0].hp,1000,'healing capped at max');assert.equal(s.units[1].statuses.some(x=>x.kind==='soul_drain'),false);
+s=battle();s.auras={};s.units[0].hp=100;api.set(s);s.units[1].hp=40;soulCurse();s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,140,'heals only actual 40 HP drained');
+s=battle();s.auras={};api.set(s);soulCurse();s.units[0].hp=0;s.round++;combat.tickBurnsForRound();assert.equal(s.units[0].hp,0,'never revives caster');assert.equal(s.units[1].hp,900,'curse still drains');
+console.log('Soul Drain three ticks, no duplicate ticks, actual HP transfer, cap, refresh, target KO and defeated-caster checks passed.');

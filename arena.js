@@ -1973,6 +1973,15 @@
     }
     return false;
   }
+  function drawDeathRune(ctx,x,y,color){
+    ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.lineCap="round";
+    // A drawn death seal stays legible on mobile without depending on an emoji font.
+    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(-8,side*8);ctx.lineTo(8,-side*8);ctx.stroke();}
+    pathPoly(ctx,[[-6,-6],[-3,-9],[3,-9],[6,-6],[6,0],[3,3],[3,7],[-3,7],[-3,3],[-6,0]],color);
+    ctx.fillStyle="#151023";ctx.beginPath();ctx.ellipse(-2.7,-2,1.6,2,-.2,0,Math.PI*2);ctx.ellipse(2.7,-2,1.6,2,.2,0,Math.PI*2);ctx.fill();
+    pathPoly(ctx,[[0,0],[-1.4,3],[1.4,3]],"#151023");
+    ctx.strokeStyle="#38233d";ctx.lineWidth=1;for(const dx of [-1,1]){ctx.beginPath();ctx.moveTo(dx,4);ctx.lineTo(dx,7);ctx.stroke();}ctx.restore();
+  }
   function drawUnitPlate(u){
     const {x,y,w}=unitPlateRect(u);
     g.save();
@@ -2002,7 +2011,8 @@
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
-      g.fillText(st.icon,r.x,r.y+1);
+      if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
+      else g.fillText(st.icon,r.x,r.y+1);
     });
     g.restore();
   }

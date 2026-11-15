@@ -21,8 +21,19 @@ function draw(c,o){const b=pose(o),p=C(o.progress),s=o.stage,t=o.target||{x:800,
   if(s==='reaper-lunge')for(let i=3;i>0;i--){c.save();c.globalAlpha*=.12/i;c.translate(b.x-b.dir*i*15,b.y);c.scale(b.dir,1);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-100,-194,200,200);c.restore();}
   c.translate(b.x,b.y);c.scale(b.dir,1);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-100,-194,200,200);c.restore();
  }
- if(o.layer==='slash'&&s==='reaper-slash'){c.save();c.globalAlpha*=Math.sin(Math.PI*p);c.translate(t.x,t.y-94);c.rotate(-b.dir*.6);c.scale(b.dir,1);
-  for(let layer=2;layer>=0;layer--){c.strokeStyle=['#bd5274','#38223f','#090d19'][layer];c.lineWidth=[2,7,14][layer];c.beginPath();c.ellipse(-14,0,43,62,0,-1.4,1.4);c.stroke();}c.restore();}
+ if(o.layer==='slash'&&s==='reaper-slash'){
+  c.save();c.translate(t.x,t.y-94);c.rotate(-b.dir*.6);c.scale(b.dir,1);
+  // An advancing cloud of shadow follows the scythe sweep; no solid crescent rim.
+  for(let i=0;i<32;i++){
+   const u=i/31,age=p-u*.55;if(age<0||age>.55)continue;
+   const a=-1.4+u*2.8,x=-14+Math.cos(a)*43+Math.sin(i*4.7+p*13)*age*16,y=Math.sin(a)*62-age*18;
+   const r=8+age*24+(i%3)*2,haze=c.createRadialGradient(x,y,0,x,y,r);
+   haze.addColorStop(0,'#0b0b17b0');haze.addColorStop(.5,'#23172d70');haze.addColorStop(1,'#30203a00');
+   c.save();c.globalAlpha*=Math.sin(Math.PI*C(age/.55))*.85;c.fillStyle=haze;c.beginPath();c.ellipse(x,y,r,r*.8,i*.2,0,TAU);c.fill();c.restore();
+  }
+  c.save();c.globalAlpha*=Math.sin(Math.PI*p)*.38;c.strokeStyle='#855373';c.lineWidth=1.2;c.setLineDash([8,13]);c.lineDashOffset=-p*35;c.beginPath();c.ellipse(-14,0,43,62,0,-1.4,-1.4+2.8*C(p*1.8));c.stroke();c.restore();c.restore();
+ }
+
 }
 root.WIZARDRY_REAPER_V82={draw,pose,depthFor:(o,layer)=>layer==='slash'?(o.target?.y||450)+.1:pose(o).groundY-.1};
 })(window);

@@ -1,3 +1,11 @@
+## Starter Water spell: Water Pistol (v0.73.0)
+
+Water Pistol costs 2 mana, has 95% accuracy and deals 150 base Water damage to one locked enemy. After the shared automatic Water trace succeeds, a glowing faceted Water sigil forms by the caster, fires a large independent water bullet, and bursts against its target. Damage occurs once at bullet contact, with no splash damage, recharge or new status. Existing Water bonuses apply normally. A failed trace does not launch the bullet or deal damage. The card uses the same sigil/bullet artwork as its actual cast and is guaranteed in the human starting hand for testing, respecting the five-card maximum.
+
+Validation: syntax, starter-card guarantee, damage timing, single 150-damage hit, no splash, miss handling and existing combat/hand gesture regression checks passed.
+
+---
+
 ## Direct in-fan selection and finger-position sliding (v0.72.0)
 
 Removed the enlarged card dialog. Tap any held card to raise it at normal size in the fan and select it for battlefield targeting. Separate target confirmation remains required. Sliding now brings forward the card underneath the finger using cached fan positions instead of fixed, reversed jumps from the center. Sliding only browses and release cannot select a spell. A fresh tap selects immediately. Unaffordable cards can be brought forward but clear the selected spell and explain the mana requirement.

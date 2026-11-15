@@ -1,4 +1,4 @@
-/* Wizardry 0.72 — interactive 2.5D battle test.
+/* Wizardry 0.73 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -42,7 +42,10 @@
       short:"80% ACCURACY",accuracy:.80,duration:4400,hit:.65,artFrame:7},
     {id:"bear",name:"Icefang Rampage",school:"ice",cost:6,target:"enemy",
       kind:"summon",damage:600,icon:"❄",accuracy:.85,duration:3300,hit:.65,
-      short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6}
+      short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
+    {id:"pistol",name:"Water Pistol",school:"water",cost:2,target:"enemy",kind:"damage",
+      damage:150,icon:"◈",accuracy:.95,duration:1170,hit:.65,rarity:"STARTER",
+      short:"95% ACCURACY",description:"A water sigil fires a large water bullet that bursts against one enemy for 150 damage"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -518,7 +521,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","pistol-form","pistol-flight","pistol-impact"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -575,7 +578,8 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="bear")startStage(a,"bear-appear",650);
+      if(a.card.id==="pistol")startStage(a,"pistol-form",450);
+      else if(a.card.id==="bear")startStage(a,"bear-appear",650);
       else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
       else if(a.card.id==="vampire")startStage(a,"vamp-rise",VAMP_RISE_MS);
@@ -590,6 +594,14 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="pistol-form"){
+      startStage(a,"pistol-flight",320);
+      ui.hint.textContent="Water Pistol fires a large water bullet!";
+    }else if(a.stage==="pistol-flight"){
+      if(!a.applied)applySpell(a);
+      startStage(a,"pistol-impact",400);
+    }else if(a.stage==="pistol-impact"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="bear-appear"){
       startStage(a,"bear-roar",950);
     }else if(a.stage==="bear-roar"){
@@ -1155,7 +1167,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="bear"?
+        const effect=k.id==="pistol"?
+          '<span class="spell-effect"><b>WATER BULLET · 150</b><span>1 ENEMY</span></span>':k.id==="bear"?
           '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
           k.id==="golem"?
@@ -1169,9 +1182,9 @@
           k.id==="vampire"?
           '<span class="spell-effect"><b>DRAIN 550 HP</b><span>HEAL HALF</span></span>':
           '<span class="spell-effect"><b>650 + 150 SPLASH</b><span>25% BURN · 50×3</span></span>';
-        const rarity=water?"LEGENDARY":
+        const rarity=k.rarity||(water?"LEGENDARY":
           k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":
-          k.id==="vampire"||k.id==="dragon"?"LEGENDARY":"RARE";
+          k.id==="vampire"||k.id==="dragon"?"LEGENDARY":"RARE");
         b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
@@ -1183,7 +1196,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="pistol"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2236,6 +2249,15 @@
           depthY:bear.depthFor(opts,"claw"),priority:2,
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
+    }
+    if(action?.card?.id==="pistol"&&action.stage.startsWith("pistol-")){
+      const pistol=window.WIZARDRY_WATER_PISTOL_V73;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),
+        caster:getUnit(action.source),target:getUnit(action.target)};
+      const layers=action.stage==="pistol-form"?["sigil"]:
+        action.stage==="pistol-flight"?["sigil","bullet"]:["impact"];
+      if(pistol)for(const layer of layers)renderables.push({type:"water-pistol-"+layer,
+        depthY:pistol.depthFor(opts,layer),priority:0,draw:()=>pistol.draw(g,{...opts,layer})});
     }
     const trident=poseidonProjectileAt(action);
     if(trident)renderables.push({

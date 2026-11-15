@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'bear');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'pistol');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -39,3 +39,12 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(start.y,425);assert.equal(end.y,target.y+8);
 }
 console.log('Bear layering checks passed for both sides and front/back targets.');
+
+const pistol=cards.find(c=>c.id==='pistol');assert.equal(pistol.damage,150);assert.equal(pistol.cost,2);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'pistol-form',elapsed:0,duration:450,runeResult:'success'};api.set(s);
+api.updateCastSequence(450);assert.equal(s.animation.stage,'pistol-flight');assert.equal(s.units[1].hp,1000);
+api.updateCastSequence(319);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);
+assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,1000);assert.equal(s.animation.stage,'pistol-impact');
+api.updateCastSequence(400);assert.equal(s.units[1].hp,850);assert.equal(s.animation.stage,'lowering');
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:pistol,stage:'rune-fail',elapsed:0,duration:100,runeResult:'failed'};api.set(s);api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
+console.log('Water Pistol: featured starter, contact-only 150 damage, no splash, miss-safe checks passed.');

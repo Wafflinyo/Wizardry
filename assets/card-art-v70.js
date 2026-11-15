@@ -46,6 +46,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='pistol')return root.WIZARDRY_WATER_PISTOL_V73?.drawCardArt(c,w,h)||false;
  const entry=prepare(id);if(!entry?.bounds||!c||w<=0||h<=0)return false;
  const b=entry.bounds,d=contain(b,w,h);
  c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';

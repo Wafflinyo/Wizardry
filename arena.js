@@ -47,7 +47,7 @@
       damage:480,icon:"♆",accuracy:.90,duration:5800,hit:.65,rarity:"EPIC",
       short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"},
     {id:"thunder",name:"Thunderclap",school:"lightning",cost:6,target:"enemy",kind:"summon",
-      damage:550,icon:"⚡",accuracy:.75,duration:2690,hit:.65,rarity:"EPIC",
+      damage:550,icon:"⚡",accuracy:.75,duration:3060,hit:.65,rarity:"EPIC",
       short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -606,7 +606,7 @@
       startStage(a,"thunder-bolt",320);
     }else if(a.stage==="thunder-bolt"){
       if(!a.applied)applySpell(a);
-      startStage(a,"thunder-impact",280);
+      startStage(a,"thunder-impact",650);
     }else if(a.stage==="thunder-impact"){
       startStage(a,"thunder-dissolve",600);
     }else if(a.stage==="thunder-dissolve"){

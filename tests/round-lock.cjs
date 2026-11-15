@@ -93,7 +93,7 @@ for(const [stage,ms] of [['thunder-form',700],['thunder-spread',650],['thunder-c
 }
 assert.equal(s.animation.stage,'thunder-bolt');api.updateCastSequence(319);assert.equal(s.units[1].hp,1000);
 api.updateCastSequence(1);assert.equal(s.units[1].hp,450);assert.equal(s.units[2].hp,1000);
-api.updateCastSequence(280);api.updateCastSequence(600);assert.equal(s.units[1].hp,450);assert.equal(s.animation.stage,'lowering');
+api.updateCastSequence(650);api.updateCastSequence(600);assert.equal(s.units[1].hp,450);assert.equal(s.animation.stage,'lowering');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:thunder,stage:'rune-fail',elapsed:0,duration:100,runeResult:'failed'};api.set(s);api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
 vm.runInNewContext(fs.readFileSync('assets/thunderclap-v79.js','utf8'),context);
 const cloud=context.window.WIZARDRY_THUNDERCLAP_V79;
@@ -101,8 +101,9 @@ for(const target of [{x:175,y:340},{x:831,y:488}]){
  const opts={stage:'thunder-bolt',progress:.5,target},b=cloud.pose(opts);
  assert.ok(Math.abs(b.x-500)<=9,'clap thrust stays centered');assert.equal(cloud.pose({...opts,stage:'thunder-form'}).x,500);assert.equal(b.y,425);assert.equal(b.dir,target.x>500?1:-1);
  assert.deepEqual(cloud.path(opts,0),b.source);
- assert.ok(Math.abs(cloud.path(opts,1).x-target.x)<1e-9);assert.ok(Math.abs(cloud.path(opts,1).y-(target.y-105))<1e-9);
- assert.ok(cloud.path(opts,.5).y<(b.source.y+b.end.y)/2,'bolt follows upward arc');
+ assert.ok(Math.abs(cloud.crescent(opts,1,.5).x-target.x)<1e-9);assert.ok(Math.abs(cloud.crescent(opts,1,.5).y-(target.y-105))<1e-9);
+ assert.equal(cloud.pose({...opts,stage:'thunder-bolt',progress:1}).frame,7,'holds closed clap while wave travels');assert.equal(cloud.pose({...opts,stage:'thunder-impact',progress:1}).frame,7,'holds closed clap through impact');
+ const top=cloud.crescent(opts,.5,0),mid=cloud.crescent(opts,.5,.5),bottom=cloud.crescent(opts,.5,1);assert.ok((mid.x-top.x)*b.dir>30);assert.ok(Math.abs(top.x-bottom.x)<1e-9);assert.ok(bottom.y-top.y>140,'parenthesis has broad vertical sweep');
  assert.equal(cloud.pose({...opts,stage:'thunder-dissolve',progress:1}).alpha,0);
 }
 console.log('Thunderclap: featured opening card, 550 damage once on bolt arrival, 75% accuracy, miss, mirrored arc and dissolve passed.');

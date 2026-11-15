@@ -7,31 +7,60 @@ function poly(c,pts,color){c.fillStyle=color;c.beginPath();pts.forEach(([x,y],i)
 function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let frame=0,alpha=1,wall=0,burst=-1;
  if(s==='bender-appear')alpha=C(p*2);
  if(s==='bender-stance')frame=p<.4?2:3;
- if(s==='bender-stomp'){frame=p<.6?4:5;wall=C((p-.6)/.4)*.25;}
- if(s==='bender-wall'){frame=5;wall=L(.25,1,p);}
+ if(s==='bender-stomp'){frame=3;wall=C((p-.6)/.4)*.25;}
+ if(s==='bender-wall'){frame=3;wall=L(.25,1,p);}
  if(s==='bender-punch'){frame=p<.45?6:7;wall=1;if(p>=.62){wall=0;burst=p*250-155;}}
  if(s==='bender-barrage'){frame=p<.45?8:9;burst=95+p*550;}
  if(s==='bender-exit'){frame=p<.5?10:11;alpha=1-p;}
  return{x:500,y:425,dir:t.x>=500?1:-1,frame,alpha,wall,burst};}
+// Move only the existing forward leg; the support foot and torso keep their stance.
+function frontLegAngle(o){if(o.stage!=='bender-stomp')return 0;const p=C(o.progress);return p<.42?-.8*Math.sin(p/.42*Math.PI/2):p<.5?-.8:p<.6?-.8*(1-((p-.5)/.1)**2):0;}
+function legPath(c){const points=[[.60,.58],[.78,.60],[.91,.70],[.85,.85],[.96,.91],[.98,.99],[.74,.99],[.68,.86],[.62,.77],[.55,.70]];c.moveTo(-85+points[0][0]*170,-163+points[0][1]*170);for(let i=1;i<points.length;i++)c.lineTo(-85+points[i][0]*170,-163+points[i][1]*170);c.closePath();}
+function actor(c,o,b,w,h){
+ const draw=()=>c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-85,-163,170,170);
+ if(o.stage!=='bender-stomp'){draw();return;}
+ c.save();c.beginPath();c.rect(-200,-260,400,300);legPath(c);c.clip('evenodd');draw();c.restore();
+ c.save();const hip={x:20,y:-61};c.translate(hip.x,hip.y);c.rotate(frontLegAngle(o));c.translate(-hip.x,-hip.y);c.beginPath();legPath(c);c.clip();draw();c.restore();
+}
+const noise=n=>{const x=Math.sin(n*127.1+41.7)*43758.5453;return x-Math.floor(x);};
+function stoneWall(c,b){
+ const h=b.wall*205;c.save();c.beginPath();c.rect(0,0,1000,425);c.clip();c.translate(500,425+205-h);c.scale(b.dir,1);
+ const face=[[50,0],[140,0],[143,-42],[138,-76],[141,-119],[138,-171],[134,-202],[120,-206],[109,-201],[84,-205],[63,-201],[50,-194],[48,-146],[52,-109],[49,-64]];
+ poly(c,[[140,0],[158,-12],[157,-56],[155,-92],[160,-143],[153,-207],[134,-202],[138,-171],[141,-119],[138,-76],[143,-42]],'#4e574f');
+ poly(c,[[50,-194],[63,-201],[84,-205],[109,-201],[120,-206],[134,-202],[153,-207],[133,-217],[112,-214],[99,-217],[71,-213]],'#a6aa9c');
+ poly(c,face,'#878c7d');c.save();c.beginPath();face.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.clip();
+ const palette=['#939787','#818879','#a0a393','#777f72','#8a8f7d','#969a89'];
+ for(let row=0;row<9;row++)for(let col=0;col<5;col++){
+  const id=row*5+col,x=48+col*19,y=-216+row*27,shift=(noise(id+3)-.5)*9;
+  poly(c,[[x,y],[x+20,y-3],[x+19+shift,y+25]],palette[Math.floor(noise(id+20)*palette.length)]);
+  poly(c,[[x,y],[x+19+shift,y+25],[x-3,y+28]],palette[Math.floor(noise(id+80)*palette.length)]);
+ }
+ // Dense mineral grain, pitted pockets and chipped light-catching edges.
+ for(let i=0;i<270;i++){
+  const x=50+noise(i*3)*90,y=-205+noise(i*3+1)*205,r=.45+noise(i*3+2)*1.5;
+  c.fillStyle=i%5===0?'#c0c2ac':i%3===0?'#5b6659':'#727c69';c.globalAlpha=i%5===0?.65:.55;c.fillRect(x,y,r,r*.65);
+  if(i%19===0){c.globalAlpha=.55;poly(c,[[x-2,y],[x+3,y-1],[x+1,y+4],[x-2,y+3]],'#4d594c');c.fillStyle='#b1b6a1';c.fillRect(x-2,y+3,3,.8);}
+ }c.globalAlpha=1;
+ const cracks=[[[110,-207],[102,-183],[108,-162],[94,-143],[100,-125],[88,-102],[98,-83],[93,-56],[104,-35],[99,-5]],[[94,-143],[75,-150],[66,-141],[51,-143]],[[98,-83],[120,-77],[138,-88]],[[102,-183],[125,-172],[138,-176]]];
+ for(const pts of cracks){c.strokeStyle='#3e4b40';c.lineWidth=2.7;c.lineJoin='round';c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();c.strokeStyle='#b0b49e';c.lineWidth=.8;c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x+1.7,y+1):c.moveTo(x+1.7,y+1));c.stroke();}
+ c.strokeStyle='#c1c1a8';c.globalAlpha=.35;c.lineWidth=.8;for(let i=0;i<4;i++){const y=-40-i*43;c.beginPath();c.moveTo(54,y);c.lineTo(73,y-8);c.lineTo(91,y-4);c.stroke();}c.globalAlpha=1;c.restore();
+ poly(c,[[50,-194],[63,-201],[70,-193],[58,-187]],'#b3b5a2');poly(c,[[134,-202],[153,-207],[148,-194],[138,-187]],'#697562');poly(c,[[143,-42],[158,-53],[156,-40],[140,-30]],'#65725e');
+ c.strokeStyle='#384a3c';c.lineWidth=1;c.beginPath();c.moveTo(151,-177);c.lineTo(145,-143);c.lineTo(155,-120);c.moveTo(151,-85);c.lineTo(145,-67);c.stroke();c.restore();
+}
 function dust(c,x,y,p,strength=1){if(p<0||p>1)return;c.save();c.globalAlpha*=strength*(1-p);c.strokeStyle='#c7b895a0';c.lineWidth=3;c.beginPath();c.ellipse(x,y,12+130*p,4+32*p,0,0,TAU);c.stroke();
  for(let i=0;i<18;i++){const a=i*2.399,px=x+Math.cos(a)*(17+105*p),py=y+Math.sin(a)*15-24*Math.sin(p*Math.PI),r=6+13*p;const haze=c.createRadialGradient(px,py,0,px,py,r);haze.addColorStop(0,'#c1aa7f95');haze.addColorStop(1,'#ae987000');c.fillStyle=haze;c.beginPath();c.ellipse(px,py,r,r*.65,a,0,TAU);c.fill();}c.restore();}
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   c.save();c.globalAlpha*=b.alpha*.3;c.fillStyle='#12212a';c.beginPath();c.ellipse(500,427,30,8,0,0,TAU);c.fill();c.restore();
-  if(s==='bender-stomp'&&p>=.6)dust(c,500+b.dir*22,425,(p-.6)/.4*.3,1);
+  if(s==='bender-stomp'&&p>=.6)dust(c,500+b.dir*48,425,(p-.6)/.4*.3,1);
   if(s==='bender-wall')dust(c,500+b.dir*38,425,.3+p*.7,1);
   if(s==='bender-punch'&&p>=.62)dust(c,500+b.dir*95,425,(p-.62)*.7,.8);
   if(s==='bender-barrage'&&p<.5)dust(c,500+b.dir*95,425,.27+p*1.4,.7);
  }
  if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,425);c.scale(b.dir,1);
-  if(s==='bender-stomp'&&p>.6){const jolt=Math.sin(C((p-.6)/.4)*Math.PI);c.scale(1+jolt*.035,1-jolt*.035);}
-  c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-85,-163,170,170);c.restore();
+  actor(c,o,b,w,h);c.restore();
  }
- if(o.layer==='wall'&&b.wall>0){const h=b.wall*205;c.save();c.translate(500,425);c.scale(b.dir,1);
-  poly(c,[[50,0],[140,0],[140,-h],[50,-h]],'#817b67');poly(c,[[140,0],[157,-11],[157,-h-11],[140,-h]],'#4f554c');poly(c,[[50,-h],[140,-h],[157,-h-11],[67,-h-11]],'#b4aa8f');
-  poly(c,[[50,0],[50,-h],[89,-h],[72,-h*.48],[94,0]],'#96917a');poly(c,[[94,0],[72,-h*.48],[140,-h*.62],[140,0]],'#736f60');
-  c.strokeStyle='#454e44';c.lineWidth=2;c.beginPath();c.moveTo(103,-h);c.lineTo(95,-h*.73);c.lineTo(114,-h*.48);c.lineTo(103,-h*.27);c.moveTo(95,-h*.73);c.lineTo(64,-h*.6);c.stroke();c.restore();
- }
+ if(o.layer==='wall'&&b.wall>0)stoneWall(c,b);
 }
 function items(o){const b=pose(o),target=o.target||{x:800,y:450},out=[];if(b.burst<0)return out;
  // Thick blocks burst almost simultaneously and cross the arena in about 0.2 seconds.
@@ -57,5 +86,5 @@ function drawItem(c,a){c.save();c.translate(a.x,a.y);
   c.globalAlpha*=1-a.p;const r=7+a.p*23,haze=c.createRadialGradient(0,0,0,0,0,r);haze.addColorStop(0,'#b9a78785');haze.addColorStop(1,'#b9a78700');c.fillStyle=haze;c.beginPath();c.ellipse(0,0,r,r*.8,0,0,TAU);c.fill();
   for(let i=0;i<4;i++){const angle=i*2.399+a.seed,rr=5+a.p*31,x=Math.cos(angle)*rr,y=Math.sin(angle)*rr;poly(c,[[x-3,y-2],[x+4,y],[x+1,y+4],[x-3,y+2]],i%2?'#736e5c':'#b8a98c');}
  }c.restore();}
-root.WIZARDRY_STONE_BENDER_V83={pose,draw,items,drawItem,hitAt:()=>HIT_MS};
+root.WIZARDRY_STONE_BENDER_V83={pose,draw,items,drawItem,frontLegAngle,hitAt:()=>HIT_MS};
 })(window);

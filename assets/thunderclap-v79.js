@@ -3,6 +3,30 @@
 'use strict';
 const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,t)=>a+(b-a)*t,TAU=Math.PI*2;
 const image=new Image();image.src='./assets/thunderclap-v79.webp';
+// A shared summon clock keeps the vapor moving across stage boundaries.
+function clock(o){
+ if(Number.isFinite(o.time))return o.time;
+ const stages={'thunder-form':[0,700],'thunder-spread':[700,650],'thunder-clap':[1350,140],'thunder-bolt':[1490,320],'thunder-impact':[1810,650],'thunder-dissolve':[2460,600]};
+ const entry=stages[o.stage]||[0,1];return entry[0]+C(o.progress)*entry[1];
+}
+function lowerWarp(o,u){const phase=clock(o)*.0075,weight=Math.sin(Math.PI*u);
+ return{dx:Math.sin(phase-u*TAU*1.25)*10*weight,scale:1+Math.cos(phase-u*TAU)*.13*weight};
+}
+function cloudBody(c,o,b,w,h,bob){
+ const sx=(b.frame%4)*w,sy=Math.floor(b.frame/4)*h,split=.64;
+ c.drawImage(image,sx,sy,w,h*split,-145,-288-bob,290,290*split);
+ // Advect only the cloudy lower body. The chest, hands and eyes stay held.
+ const start=h*split;
+ for(let y=start;y<h;y+=3){const sh=Math.min(3,h-y),u=(y-start)/(h-start),warp=lowerWarp(o,u),dw=290*warp.scale;
+  c.drawImage(image,sx,sy+y,w,sh,-dw/2+warp.dx,-288-bob+y/h*290,dw,sh/h*290+.65);
+ }
+ const phase=clock(o)*.0075;
+ for(let strand=0;strand<2;strand++)for(let i=0;i<10;i++){
+  const u=i/10,a=phase+u*TAU*1.3+strand*Math.PI,r=30*(1-u)+7;
+  const x=Math.sin(a)*r,y=-91+u*80+Math.cos(a)*5,opacity=(.12+.12*Math.cos(a))*(1-u*.7);
+  c.save();c.globalAlpha*=opacity;c.fillStyle='#91a9bb';c.beginPath();c.ellipse(x,y,11*(1-u)+5,4*(1-u)+2,a*.1,0,0,TAU);c.fill();c.restore();
+ }
+}
 function pose(o){
  const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450},dir=t.x>=500?1:-1;
  let frame=2,alpha=1;
@@ -64,7 +88,7 @@ function draw(c,o){
   const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(b.x,425);c.scale(b.dir,1);
   if(s==='thunder-clap'&&p>.55){const force=Math.sin((p-.55)/.45*Math.PI);c.scale(1+force*.035,1-force*.025);}
   const bob=['thunder-spread'].includes(s)?Math.sin(p*Math.PI)*3:0;
-  c.drawImage(image,(b.frame%4)*w,Math.floor(b.frame/4)*h,w,h,-145,-288-bob,290,290);c.restore();
+  cloudBody(c,o,b,w,h,bob);c.restore();
   if(s==='thunder-clap'&&p>.65)burst(c,b.source.x,b.source.y,(p-.65)/.35*.2,90);
  }
  if(o.layer==='bolt'){
@@ -78,5 +102,5 @@ function draw(c,o){
   if(s==='thunder-bolt'||s==='thunder-impact')bolt(c,o);
  }
 }
-root.WIZARDRY_THUNDERCLAP_V79={draw,pose,path,crescent,depthFor:(o,layer)=>layer==='bolt'?(o.target?.y||450)+.1:425-8};
+root.WIZARDRY_THUNDERCLAP_V79={draw,pose,path,crescent,clock,lowerWarp,depthFor:(o,layer)=>layer==='bolt'?(o.target?.y||450)+.1:425-8};
 })(window);

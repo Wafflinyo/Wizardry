@@ -107,3 +107,10 @@ for(const target of [{x:175,y:340},{x:831,y:488}]){
  assert.equal(cloud.pose({...opts,stage:'thunder-dissolve',progress:1}).alpha,0);
 }
 console.log('Thunderclap: featured opening card, 550 damage once on bolt arrival, 75% accuracy, miss, mirrored arc and dissolve passed.');
+
+const hold={stage:'thunder-impact',progress:.5,target:{x:831,y:488}};
+assert.notDeepEqual(cloud.lowerWarp({...hold,time:1900},.5),cloud.lowerWarp({...hold,time:2150},.5),'lower cloud moves while hands remain held');
+assert.equal(cloud.pose({...hold,time:1900}).frame,cloud.pose({...hold,time:2150}).frame,'held upper-body pose stays fixed');
+assert.equal(cloud.clock({stage:'thunder-clap',progress:1}),cloud.clock({stage:'thunder-bolt',progress:0}),'swirl clock continuous across clap and bolt');
+assert.equal(cloud.clock({stage:'thunder-bolt',progress:1}),cloud.clock({stage:'thunder-impact',progress:0}),'swirl clock continuous across bolt and impact');
+console.log('Continuous cloud swirl and stationary held hands passed.');

@@ -511,6 +511,8 @@
     const a=state?.animation;
     if(!a||state.phase!=="resolving")return;
     const caster=getUnit(a.source);
+    if(a.card.id==="thunder"&&a.stage.startsWith("thunder-"))
+      a.thunderMs=(a.thunderMs||0)+Math.min(Math.max(0,deltaMs),Math.max(0,a.duration-a.elapsed));
     a.elapsed=Math.min(a.duration,a.elapsed+Math.max(0,deltaMs));
     const p=clamp(a.elapsed/a.duration,0,1);
     // Trace only while checking the rune. The spell effect remains active
@@ -2280,7 +2282,7 @@
     }
     if(action?.card?.id==="thunder"&&action.stage.startsWith("thunder-")){
       const thunder=window.WIZARDRY_THUNDERCLAP_V79;
-      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),time:action.thunderMs||0,target:getUnit(action.target)};
       if(thunder){
         thunder.draw(g,{...opts,layer:"ground"});
         for(const layer of ["actor","bolt"])renderables.push({type:"thunder-"+layer,

@@ -59,32 +59,23 @@ function solidActor(c,o,b){const m=motion(o);if(!m)return false;const src=m.atla
 }
 function swirlClock(o){return (o.stage==='frost-gust'?C(o.progress)*800:800+C(o.progress)*650)*.007*pose(o).dir;}
 function drawVeil(c,o){const p=C(o.progress),s=o.stage;if(s!=='frost-gust'&&s!=='frost-appear')return;
- const fade=s==='frost-gust'?C(p*3.4):1-p*p*(3-2*p);if(fade<=0)return;const spin=swirlClock(o);
+ const fade=s==='frost-gust'?C(p*4):1-p*p*(3-2*p),spin=swirlClock(o)*1.5;if(fade<=0)return;
  c.save();c.globalAlpha*=fade;
- function bands(front){
-  for(let ring=0;ring<5;ring++){
-   const cy=404-ring*30,rx=116+(ring%2)*9,phase=spin+ring*.85,steps=23;
-   for(let j=0;j<steps;j++){
-    const u=j/steps,v=(j+1)/steps,a=phase+u*4.85,b=phase+v*4.85,isFront=Math.sin((a+b)/2)>0;if(isFront!==front)continue;
-    const x1=500+Math.cos(a)*rx,y1=cy+Math.sin(a)*rx*.21-u*10,x2=500+Math.cos(b)*rx,y2=cy+Math.sin(b)*rx*.21-v*10,thick=10+(ring%2)*4;
-    c.save();c.globalAlpha*=front?.64:.26;c.fillStyle=j%3?'#9dd4e7':'#cdebf4';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.lineTo(x2+2,y2+thick);c.lineTo(x1+2,y1+thick);c.closePath();c.fill();
-    c.strokeStyle='#e5fbff';c.lineWidth=1.2;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();c.restore();
-   }
+ // Short tapered wind ribbons: an open icy vortex, with no round fog core.
+ for(const front of [false,true])for(let strand=0;strand<5;strand++){
+  for(let j=0;j<74;j++){
+   const u=j/74,v=(j+1)/74,a=spin+strand*1.25+u*TAU*2.4,b=spin+strand*1.25+v*TAU*2.4;
+   if((Math.sin((a+b)/2)>0)!==front)continue;
+   const r=30+u*91,rr=30+v*91,x=500+Math.cos(a)*r,y=425-u*145+Math.sin(a)*r*.20,xx=500+Math.cos(b)*rr,yy=425-v*145+Math.sin(b)*rr*.20;
+   const width=(4+Math.sin(u*Math.PI)*9)*(1-u*.55);c.save();c.globalAlpha*=(front?.72:.28)*Math.sin(Math.PI*(.06+u*.88));c.fillStyle=(j+strand)%4?'#b1e4ef':'#ecffff';c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.lineTo(xx+3,yy+width);c.lineTo(x+3,y+width);c.closePath();c.fill();c.restore();
   }
  }
- // A short, broad swirl, with no pointed funnel or tall tornado column.
- bands(false);
- for(let i=0;i<12;i++){const a=i*2.399,x=500+Math.cos(a)*37+Math.sin(spin+i)*8,y=346+Math.sin(a)*34,r=57+i%3*7;
-  const fog=c.createRadialGradient(x,y,0,x,y,r);fog.addColorStop(0,'#eefafffa');fog.addColorStop(.52,'#d5edf5ed');fog.addColorStop(.8,'#bcdfeab0');fog.addColorStop(1,'#cce9f000');c.fillStyle=fog;c.beginPath();c.ellipse(x,y,r,r*.76,a*.08,0,TAU);c.fill();
- }
- bands(true);
- for(let i=0;i<45;i++){const u=i/45,a=spin*1.35+i*2.399,r=112+(i%4)*10,x=500+Math.cos(a)*r,y=416-u*155+Math.sin(a)*r*.22;flake(c,x,y,2+i%3,.55+.3*Math.sin(a)**2);}c.restore();
+ for(let i=0;i<85;i++){const u=(i/85+spin*.025)%1,a=spin*1.2+i*2.399,r=32+u*100;flake(c,500+Math.cos(a)*r,425-u*150+Math.sin(a)*r*.2,1+i%3,.35+.5*Math.sin(a)**2);}c.restore();
 }
 function flake(c,x,y,r,alpha){c.save();c.globalAlpha*=alpha;c.translate(x,y);c.strokeStyle='#e1faff';c.lineWidth=1;for(let i=0;i<3;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(-Math.cos(a)*r,-Math.sin(a)*r);c.lineTo(Math.cos(a)*r,Math.sin(a)*r);c.stroke();}c.restore();}
 function gust(c,o){const p=C(o.progress),fade=o.stage==='frost-gust'?Math.sin(p*Math.PI):1-p,spin=swirlClock(o);
- c.save();c.globalAlpha*=fade*.65;
- for(let j=0;j<7;j++){const r=105+j*7,y=420-j*17;c.strokeStyle=j%2?'#b6e7f080':'#e3fbff90';c.lineWidth=1.1+j%2;c.beginPath();c.ellipse(500,y,r,r*.22,0,spin+j*.7,spin+j*.7+4.5);c.stroke();}
- for(let i=0;i<25;i++){const a=spin+i*2.399,r=125+i%3*13,x=500+Math.cos(a)*r,y=420-(i%7)*21+Math.sin(a)*r*.2;flake(c,x,y,2+i%3,.7);}c.restore();}
+ c.save();c.globalAlpha*=fade*.5;
+ for(let i=0;i<22;i++){const a=spin*2+i*2.399,r=42+i%5*21;flake(c,500+Math.cos(a)*r,421+Math.sin(a)*r*.22,1+i%3,.8);}c.restore();}
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   throwPowder(c,o);

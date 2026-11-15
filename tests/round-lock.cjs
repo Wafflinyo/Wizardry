@@ -296,3 +296,5 @@ const scorpionCard=cards.find(c=>c.id==='scorpion');s=battle();s.auras={};api.se
 s=battle();s.auras={};api.set(s);sting(.30);assert.equal(s.units[1].hp,660);assert.equal(s.units[1].statuses.length,0,'30% boundary');
 vm.runInNewContext(fs.readFileSync('assets/scorpion-sting-v94.js','utf8'),context);const scorpionFx=context.window.WIZARDRY_SCORPION_V94;for(const t of [{x:800,y:450},{x:200,y:350}]){const b=scorpionFx.pose(.74,t);assert.ok(Math.abs(500+b.tip.x*b.dir-t.x)<1e-8);assert.ok(Math.abs(425+b.tip.y-(t.y-95))<1e-8);}assert.ok(scorpionFx.pose(0).y<0);assert.equal(scorpionFx.pose(.3).y,425);
 console.log('Scorpion Sting 340 damage, 30% poison, three 50 ticks, no duplicate ticks and mirrored tail contact passed.');
+
+assert.equal(scorpionFx.pose(.08).frame,0,'compact armored roll frame');assert.equal(scorpionFx.pose(.20).frame,2,'unfold before standing');assert.equal(scorpionFx.pose(.6).frame,8,'tail windup');assert.ok(scorpionFx.pose(.96).burrow>0);assert.equal(scorpionFx.pose(1).alpha,0,'fully underground at end');

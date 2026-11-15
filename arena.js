@@ -60,7 +60,8 @@
       short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
     {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,
       short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"},
-    {id:"solidity",name:"Solidity",school:"earth",cost:3,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."}
+    {id:"solidity",name:"Solidity",school:"earth",cost:3,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."},
+    {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -1122,6 +1123,13 @@
     return true;
   }
   function tickBurnsForRound(){
+    for(const u of state.units){const effect=u.statuses.find(st=>st.kind==="calming_waters");if(!effect)continue;
+      if(u.hp<=0){consumeStatus(u,"calming_waters");continue;}
+      if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
+      effect.lastTickRound=state.round;const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));u.hp+=amount;effect.remaining--;
+      flash(u,"+"+amount+" HP","#a8f1ee");state.log=[u.name+" restores "+amount+" HP from Calming Waters ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
+      if(!effect.remaining)consumeStatus(u,"calming_waters");
+    }
     // Burn and Frostbite tick independently; neither consumes spell-only marks or shields.
     for(const u of state.units)for(const kind of ["burn","frostbite"]){
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
@@ -1173,6 +1181,10 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
+    } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
+      addStatus(t,"calming_waters","≈",card.healPerTurn);const effect=t.statuses.find(st=>st.kind==="calming_waters");
+      effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;
+      flash(t,"CALMING WATERS","#a8f1ee");state.log=[t.name+" gains Calming Waters: 125 HP per turn for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="shield"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"solidity","◆",card.reduction);flash(t,"SOLIDITY −25%","#d8d7a0");
       state.log=["Shield attached to "+t.name,...state.log].slice(0,5);
@@ -1365,7 +1377,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="solidity"?
+        const effect=k.id==="calming"?
+          '<span class="spell-effect"><b>125 HP × 3 TURNS</b><span>SELF / ALLY · 375 TOTAL</span></span>':k.id==="solidity"?
           '<span class="spell-effect"><b>25% DAMAGE REDUCTION</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="frosty"?
           '<span class="spell-effect"><b>FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
           '<span class="spell-effect"><b>STONE BARRAGE · 400</b><span>1 ENEMY</span></span>':k.id==="reaper"?
@@ -1394,14 +1407,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="shield"?"◆ ":k.kind==="heal"?"✚ ":"✹ ")+
-          (k.kind==="shield"?"25%":(k.kind==="heal"?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen")?"✚ ":"✹ ")+
+          (k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="shield"?"reduces the next damaging spell by 25%":k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2011,6 +2024,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores 125 HP at the start of each turn for "+st.remaining+" more turns. 375 total over 3 turns. Refreshes without stacking; cannot revive or exceed maximum HP."};
       case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
       case "shield":return {title:"⬡ Shield",detail:"Reduces the next incoming hit by "+
         Math.round(st.value*100)+"%, then disappears."};
@@ -2089,7 +2103,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
+      }else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
       else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
       else g.fillText(st.icon,r.x,r.y+1);
     });
@@ -2269,6 +2284,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);

@@ -57,19 +57,34 @@ function idleBreath(o){return o.stage==='frost-pause'?Math.sin(C(o.progress)*Mat
 function solidActor(c,o,b){const m=motion(o);if(!m)return false;const src=m.atlas==='growth'?growth:m.atlas==='throw'?throwing:m.atlas==='prep'?prep:image,rows=m.atlas==='base'?3:4,info=prepareAtlas(src,rows);if(!info)return false;
  const r=info[m.frame],scale=m.atlas==='throw'&&o.stage!=='frost-melt'?228/info[4].h:m.height/r.h,ratio=m.atlas==='throw'?.81:m.atlas==='prep'?.94:1,k=formScale(o),force=forcePose(o);c.save();c.globalAlpha*=m.alpha;c.translate(500,425);const breath=idleBreath(o);c.scale(b.dir*k*(1+breath*.018),k*(1+breath*.025));c.transform(1,0,-force.lean/210,1-force.drop/210,0,0);c.drawImage(src,m.frame%4*r.w,Math.floor(m.frame/4)*r.cellH,r.w,r.cellH,-r.w*scale*ratio/2,-(r.bottom+1)*scale,r.w*scale*ratio,r.cellH*scale);c.restore();return true;
 }
+function swirlClock(o){return (o.stage==='frost-gust'?C(o.progress)*800:800+C(o.progress)*650)*.007*pose(o).dir;}
 function drawVeil(c,o){const p=C(o.progress),s=o.stage;if(s!=='frost-gust'&&s!=='frost-appear')return;
- const fade=s==='frost-gust'?C(p*3.4):1-p*p*(3-2*p);if(fade<=0)return;
+ const fade=s==='frost-gust'?C(p*3.4):1-p*p*(3-2*p);if(fade<=0)return;const spin=swirlClock(o);
  c.save();c.globalAlpha*=fade;
- for(let i=0;i<19;i++){const a=i*2.399,drift=Math.sin(p*5+i)*15,x=500+Math.cos(a)*(i%3*30)+drift,y=294+Math.sin(a)*(i%4*29),r=76+i%4*11;
-  const fog=c.createRadialGradient(x,y,0,x,y,r);fog.addColorStop(0,'#f2faffff');fog.addColorStop(.50,'#deeff7f5');fog.addColorStop(.78,'#c9e1eeaa');fog.addColorStop(1,'#d8edf500');c.fillStyle=fog;c.beginPath();c.ellipse(x,y,r,r*.88,a*.1,0,TAU);c.fill();
+ function bands(front){
+  for(let ring=0;ring<5;ring++){
+   const cy=404-ring*30,rx=116+(ring%2)*9,phase=spin+ring*.85,steps=23;
+   for(let j=0;j<steps;j++){
+    const u=j/steps,v=(j+1)/steps,a=phase+u*4.85,b=phase+v*4.85,isFront=Math.sin((a+b)/2)>0;if(isFront!==front)continue;
+    const x1=500+Math.cos(a)*rx,y1=cy+Math.sin(a)*rx*.21-u*10,x2=500+Math.cos(b)*rx,y2=cy+Math.sin(b)*rx*.21-v*10,thick=10+(ring%2)*4;
+    c.save();c.globalAlpha*=front?.64:.26;c.fillStyle=j%3?'#9dd4e7':'#cdebf4';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.lineTo(x2+2,y2+thick);c.lineTo(x1+2,y1+thick);c.closePath();c.fill();
+    c.strokeStyle='#e5fbff';c.lineWidth=1.2;c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();c.restore();
+   }
+  }
  }
- for(let i=0;i<65;i++){const q=(p*1.7+i/65)%1,x=500-180+q*360,y=170+(i*47%260)+Math.sin(q*TAU+i)*12;flake(c,x,y,2+i%3,.8);}c.restore();
+ // A short, broad swirl, with no pointed funnel or tall tornado column.
+ bands(false);
+ for(let i=0;i<12;i++){const a=i*2.399,x=500+Math.cos(a)*37+Math.sin(spin+i)*8,y=346+Math.sin(a)*34,r=57+i%3*7;
+  const fog=c.createRadialGradient(x,y,0,x,y,r);fog.addColorStop(0,'#eefafffa');fog.addColorStop(.52,'#d5edf5ed');fog.addColorStop(.8,'#bcdfeab0');fog.addColorStop(1,'#cce9f000');c.fillStyle=fog;c.beginPath();c.ellipse(x,y,r,r*.76,a*.08,0,TAU);c.fill();
+ }
+ bands(true);
+ for(let i=0;i<45;i++){const u=i/45,a=spin*1.35+i*2.399,r=112+(i%4)*10,x=500+Math.cos(a)*r,y=416-u*155+Math.sin(a)*r*.22;flake(c,x,y,2+i%3,.55+.3*Math.sin(a)**2);}c.restore();
 }
 function flake(c,x,y,r,alpha){c.save();c.globalAlpha*=alpha;c.translate(x,y);c.strokeStyle='#e1faff';c.lineWidth=1;for(let i=0;i<3;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(-Math.cos(a)*r,-Math.sin(a)*r);c.lineTo(Math.cos(a)*r,Math.sin(a)*r);c.stroke();}c.restore();}
-function gust(c,o){const p=C(o.progress),dir=pose(o).dir,fade=o.stage==='frost-gust'?Math.sin(p*Math.PI):1-p;
- c.save();c.globalAlpha*=fade;
- for(let j=0;j<11;j++){const y=245+j*15,phase=p*14+j*1.7;c.strokeStyle=j%3?'#a4d4df66':'#d9f6fa99';c.lineWidth=1+j%3;c.beginPath();c.moveTo(500-dir*160,y);c.bezierCurveTo(500-dir*70,y-20*Math.sin(phase),500+dir*50,y+18*Math.cos(phase),500+dir*160,y-10*Math.sin(phase));c.stroke();}
- for(let i=0;i<46;i++){const q=(p*1.8+i/46)%1,x=500+dir*(-180+q*360),y=220+(i*37%180)+Math.sin(q*TAU+i)*12;flake(c,x,y,2+i%3,.35+q*.45);}c.restore();}
+function gust(c,o){const p=C(o.progress),fade=o.stage==='frost-gust'?Math.sin(p*Math.PI):1-p,spin=swirlClock(o);
+ c.save();c.globalAlpha*=fade*.65;
+ for(let j=0;j<7;j++){const r=105+j*7,y=420-j*17;c.strokeStyle=j%2?'#b6e7f080':'#e3fbff90';c.lineWidth=1.1+j%2;c.beginPath();c.ellipse(500,y,r,r*.22,0,spin+j*.7,spin+j*.7+4.5);c.stroke();}
+ for(let i=0;i<25;i++){const a=spin+i*2.399,r=125+i%3*13,x=500+Math.cos(a)*r,y=420-(i%7)*21+Math.sin(a)*r*.2;flake(c,x,y,2+i%3,.7);}c.restore();}
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   throwPowder(c,o);

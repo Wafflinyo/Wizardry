@@ -61,7 +61,8 @@
     {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,
       short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"},
     {id:"solidity",name:"Solidity",school:"earth",cost:3,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."},
-    {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."}
+    {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."},
+    {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -477,15 +478,15 @@
   // Accuracy is a separate per-cast random roll, independent of user input.
   // A uniform roll in [0,1) gives the card's exact percentage chance.
   function spellHitCheck(card,roll=Math.random(),bonus=0){
-    return roll<Math.min(1,card.accuracy+Math.max(0,bonus));
+    return roll<Math.max(0,Math.min(1,card.accuracy+bonus));
   }
   function resolveAutoRune(){
     const a=state?.animation;
     if(!a||a.stage!=="tracing-auto")return false;
     const c=getUnit(a.source);
-    const used=consumeStatus(c,"tailwind"),bonus=used?.value||0;
+    const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),bonus=(used?.value||0)-(shock?.value||0);
     a.accuracyBonusUsed=bonus;
-    a.effectiveAccuracy=Math.min(1,a.card.accuracy+bonus);
+    a.effectiveAccuracy=Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const success=spellHitCheck(a.card,Math.random(),bonus);
     a.runeResult=success?"success":"failed";
     if(used){
@@ -514,6 +515,9 @@
       // animation has finished. No generic red X or premature fizzle.
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
       flash(c,"MISS","#f6a7a2");
+      if(shock){consumeStatus(c,"static_shock");c.hp=Math.max(0,c.hp-100);flash(c,"STATIC SHOCK −100","#a5dfff");
+        state.log=[c.name+" takes 100 damage from Static Shock; the curse expires.",...state.log].slice(0,5);
+        if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
       state.log=[c.name+"'s "+a.card.name+" missed ("+label+").",...state.log].slice(0,5);
       ui.hint.textContent=c.name+"'s "+a.card.school+
         " rune goes dark and crumbles — no damage.";
@@ -597,9 +601,9 @@
     if(a.stage==="raising"){
       caster.armRaise=1;
       startStage(a,"tracing-auto",AUTO_TRACE_MS);
-      const nextBonus=caster.statuses.find(st=>st.kind==="tailwind")?.value||0;
+      const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0);
       ui.hint.textContent=caster.name+" automatically traces the "+a.card.school+
-        " rune · "+Math.round(Math.min(1,a.card.accuracy+nextBonus)*100)+"% accuracy";
+        " rune · "+Math.round(Math.max(0,Math.min(1,a.card.accuracy+nextBonus))*100)+"% accuracy";
       paintUI();
     }else if(a.stage==="tracing-auto"){
       resolveAutoRune();
@@ -1123,6 +1127,8 @@
     return true;
   }
   function tickBurnsForRound(){
+    for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
+      if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
     for(const u of state.units){const effect=u.statuses.find(st=>st.kind==="calming_waters");if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,"calming_waters");continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
@@ -1181,6 +1187,9 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
+    } else if(card.kind==="static"&&t&&t.hp>0&&t.team!==c.team){
+      addStatus(t,"static_shock","ϟ",.30);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;
+      flash(t,"STATIC SHOCK −30% ACC","#a5dfff");state.log=[t.name+" is cursed with Static Shock for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"calming_waters","≈",card.healPerTurn);const effect=t.statuses.find(st=>st.kind==="calming_waters");
       effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;
@@ -1377,7 +1386,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="calming"?
+        const effect=k.id==="static"?
+          '<span class="spell-effect"><b>−30% ACC · 3 TURNS</b><span>ON MISS: 100 DAMAGE</span></span>':k.id==="calming"?
           '<span class="spell-effect"><b>125 HP × 3 TURNS</b><span>SELF / ALLY · 375 TOTAL</span></span>':k.id==="solidity"?
           '<span class="spell-effect"><b>25% DAMAGE REDUCTION</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="frosty"?
           '<span class="spell-effect"><b>FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
@@ -1414,7 +1424,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2024,6 +2034,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
       case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores 125 HP at the start of each turn for "+st.remaining+" more turns. 375 total over 3 turns. Refreshes without stacking; cannot revive or exceed maximum HP."};
       case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
       case "shield":return {title:"⬡ Shield",detail:"Reduces the next incoming hit by "+
@@ -2103,7 +2114,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
+      }else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
       else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
       else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
       else g.fillText(st.icon,r.x,r.y+1);
@@ -2284,6 +2296,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
@@ -2692,8 +2705,8 @@
     }:null,
     getEffectiveAccuracy:(unitId,cardId)=>{
       const u=getUnit(unitId),card=BY_ID[cardId];
-      return !u||!card?null:Math.min(1,card.accuracy+
-        (u.statuses.find(st=>st.kind==="tailwind")?.value||0));
+      return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
+        (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)));
     },
     isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,

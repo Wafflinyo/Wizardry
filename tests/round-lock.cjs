@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 let source=fs.readFileSync('arena.js','utf8');
-source=source.replace('  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);','  window.test={set:s=>state=s,runResolution,startNextAction,updateCastSequence}; paintUI=()=>{}; finishRound=()=>{state.phase="finished";};');
+source=source.replace('  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);','  window.test={set:s=>state=s,runResolution,startNextAction,updateCastSequence,resolveAutoRune}; paintUI=()=>{}; finishRound=()=>{state.phase="finished";};');
 const node={getContext:()=>({})};
 const context={Image:class {},window:{},document:{getElementById:()=>node},requestAnimationFrame:()=>{},console};
 vm.runInNewContext(source,context);
@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'calming');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'static');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('calming'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('static'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -244,3 +244,13 @@ assert.equal(s.units[1].statuses.some(x=>x.kind==='calming_waters'),false);
 bless();s.units[1].statuses.find(x=>x.kind==='calming_waters').remaining=1;bless();assert.equal(s.units[1].statuses.filter(x=>x.kind==='calming_waters').length,1);assert.equal(s.units[1].statuses.find(x=>x.kind==='calming_waters').remaining,3);
 s.units[1].hp=990;s.round++;combat.tickBurnsForRound();assert.equal(s.units[1].hp,1000,'capped at maximum');s.units[1].hp=0;s.round++;combat.tickBurnsForRound();assert.equal(s.units[1].hp,0,'never revives');
 console.log('Calming Waters: three 125 HP ticks, no duplicate ticks, refresh, HP cap and no revival passed.');
+
+const staticCard=cards.find(c=>c.id==='static');s=battle();s.auras={};api.set(s);
+const curse=()=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:staticCard});curse();curse();
+assert.equal(s.units[1].statuses.filter(x=>x.kind==='static_shock').length,1);
+assert.ok(Math.abs(combat.getEffectiveAccuracy('cpu','bear')-.55)<1e-9);
+s.units[1].statuses.push({kind:'tailwind',value:.1});assert.ok(Math.abs(combat.getEffectiveAccuracy('cpu','bear')-.65)<1e-9);
+vm.runInNewContext('Math.random=()=>.99',context);s.animation={source:'cpu',card:bear,stage:'tracing-auto',traceMs:0};api.resolveAutoRune();assert.equal(s.units[1].hp,900);assert.equal(s.units[1].statuses.some(x=>x.kind==='static_shock'),false);api.resolveAutoRune();assert.equal(s.units[1].hp,900,'no duplicate discharge');
+curse();vm.runInNewContext('Math.random=()=>0',context);s.animation={source:'cpu',card:bear,stage:'tracing-auto',traceMs:0};api.resolveAutoRune();assert.ok(s.units[1].statuses.some(x=>x.kind==='static_shock'),'success retains curse');
+s.round=4;combat.tickBurnsForRound();assert.equal(s.units[1].statuses.some(x=>x.kind==='static_shock'),false,'expires after 3 rounds');assert.equal(s.units[1].hp,900,'expiry does no damage');
+console.log('Static Shock accuracy stacking, single miss discharge, success preservation, refresh and expiry passed.');

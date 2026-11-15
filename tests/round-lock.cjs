@@ -54,11 +54,18 @@ assert.equal(s.animation.stage,'shark-chomp');api.updateCastSequence(179);assert
 api.updateCastSequence(520);api.updateCastSequence(450);assert.equal(s.units[1].hp,520);assert.equal(s.animation.stage,'lowering');
 s=sharkBattle();s.animation.stage='rune-fail';s.animation.duration=100;s.animation.runeResult='failed';api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
 vm.runInNewContext(fs.readFileSync('assets/reef-rush-v77.js','utf8'),context);const reef=context.window.WIZARDRY_REEF_RUSH_V77;
-for(const target of [{x:175,y:340},{x:831,y:488}]){
- for(const p of [0,.25,.5,.75,1])assert.equal(reef.pose({stage:'shark-rise',progress:p,target}).x,500,'jump rises vertically before targeting');
- const apex=reef.pose({stage:'shark-flop',progress:1,target}),landing=reef.pose({stage:'shark-arch',progress:1,target});
- assert.ok(landing.y>apex.y,'shark arches down from apex');assert.ok(Math.abs(landing.x-500)>20);
- assert.equal(reef.pose({stage:'shark-splash',progress:1,target}).alpha,0);
- const dipped=reef.pose({stage:'shark-submerge',progress:1,target});assert.ok(dipped.y-238*.71+238*.4>dipped.groundY,'fin fully below surface before jump');
+for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
+ const opts={target};
+ const start=reef.pose({...opts,stage:'shark-rise',progress:0}),rise=reef.pose({...opts,stage:'shark-rise',progress:1});
+ assert.ok(start.y-rise.y>Math.abs(start.x-rise.x),'breach travels predominantly upward');
+ for(const [a,b] of [['shark-rise','shark-flop'],['shark-flop','shark-arch'],['shark-arch','shark-chomp'],['shark-chomp','shark-dive']]){
+  const end=reef.pose({...opts,stage:a,progress:1}),next=reef.pose({...opts,stage:b,progress:0});
+  for(const key of ['x','y','angle'])assert.ok(Math.abs(end[key]-next[key])<.00001,`${a} connects continuously to ${b}: ${key}`);
+ }
+ const apex=reef.pose({...opts,stage:'shark-flop',progress:.5}),landing=reef.pose({...opts,stage:'shark-arch',progress:1});
+ assert.ok(landing.y>apex.y,'shark arches down from apex');
+ assert.equal(reef.pose({...opts,stage:'shark-splash',progress:1}).alpha,0);
+ assert.equal(reef.pose({...opts,stage:'shark-submerge',progress:1}).height,0,'fin disappears before breach');
+ assert.ok(reef.pose({...opts,stage:'shark-dive',progress:1}).y>target.y+120,'body dives below floor');
 }
-console.log('Reef Rush: removed cards, opening hand, vertical jump/flop/downward arc, 480-damage chomp, splash disappearance and miss checks passed.');
+console.log('Reef Rush: continuous angled breach, mirrored targets, 480-damage chomp, splash disappearance and miss checks passed.');

@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='solidity'&&root.WIZARDRY_SOLIDITY_V86){root.WIZARDRY_SOLIDITY_V86.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}
  const entry=prepare(id);if(!entry?.bounds||!c||w<=0||h<=0)return false;
  const b=entry.bounds,d=contain(b,w,h);
  c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';

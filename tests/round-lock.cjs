@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'frosty');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'solidity');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('frosty'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('solidity'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -219,3 +219,19 @@ assert.ok(Math.abs(frostFx.idleBreath({stage:'frost-pause',progress:1}))<1e-9,'s
 assert.equal(frostFx.idleBreath({stage:'frost-lift',progress:.5}),0,'breathing stops when pickup begins');
 assert.equal(frostFx.motion({stage:'frost-pause',progress:.5}).frame,15,'holds transformed giant for one breath');
 console.log('Frosty one-breath pause before pickup passed.');
+
+// Solidity protects one complete spell, including every rapid hit.
+const solidity=cards.find(c=>c.id==='solidity'),combat=context.window.WIZARDRY_ARENA_TEST;
+assert.equal(solidity.target,'ally');assert.equal(solidity.reduction,.25);
+s=battle();s.auras={};api.set(s);
+const ward=()=>combat.applySpell({action:{casterId:'cpu',targetId:'cpu'},card:solidity});
+ward();ward();assert.equal(s.units[1].statuses.filter(x=>x.kind==='solidity').length,1,'refresh, not stack');
+const volley={source:'human',target:'cpu',card:cards.find(c=>c.id==='ronin'),runeResult:'success',slashHits:[]};
+combat.applyRoninHit(volley,0);combat.applyRoninHit(volley,1);combat.applyRoninHit(volley,2);
+assert.equal(s.units[1].hp,661,'three 150 hits become three rounded 113 hits');
+assert.equal(s.units[1].statuses.some(x=>x.kind==='solidity'),false);
+combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:bear});assert.equal(s.units[1].hp,61,'next spell receives no protection');
+s=battle();s.auras={};api.set(s);ward();
+combat.applyRoninHit({...volley,runeResult:'failed',slashHits:[]},0);assert.ok(s.units[1].statuses.some(x=>x.kind==='solidity'),'miss preserves ward');
+s.units[1].statuses.push({kind:'frostbite',value:50,remaining:3,appliedRound:0,lastTickRound:0});combat.tickBurnsForRound();assert.ok(s.units[1].statuses.some(x=>x.kind==='solidity'),'damage over time preserves ward');
+console.log('Solidity self targeting, refresh, multi-hit protection, consumption and miss/DOT checks passed.');

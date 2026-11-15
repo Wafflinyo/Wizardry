@@ -59,7 +59,8 @@
     {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
       short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
     {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,
-      short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"}
+      short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"},
+    {id:"solidity",name:"Solidity",school:"earth",cost:3,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -413,6 +414,7 @@
     const target=card.target==="all_enemies"?null:
       card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
+        card.target==="ally"?alive(u.team)[Math.floor(Math.random()*alive(u.team).length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
     if(!target&&card.target!=="all_enemies")return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
@@ -981,6 +983,10 @@
     if(decay){raw*=1+decay;notes.push("DECAYING STRENGTH +20%");}
     const trap=consumeStatus(target,"trap");
     if(trap){raw*=1+trap.value;notes.push("TRAP");}
+    let solidity=spell?.solidityTargets?.[target.id];
+    if(solidity===undefined){const ward=consumeStatus(target,"solidity");solidity=ward?.value||0;
+      if(spell){if(!spell.solidityTargets)spell.solidityTargets={};spell.solidityTargets[target.id]=solidity;}}
+    if(solidity){raw*=1-solidity;notes.push("SOLIDITY -25%");}
     const shield=consumeStatus(target,"shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
     const amount=Math.max(1,Math.round(raw));
@@ -1167,8 +1173,8 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
-    } else if(card.kind==="shield"&&t&&t.hp>0){
-      addStatus(t,"shield","⬡",.55);flash(t,"SHIELD","#a3efff");
+    } else if(card.kind==="shield"&&t&&t.hp>0&&t.team===c.team){
+      addStatus(t,"solidity","◆",card.reduction);flash(t,"SOLIDITY −25%","#d8d7a0");
       state.log=["Shield attached to "+t.name,...state.log].slice(0,5);
     } else if(card.kind==="blade"&&t&&t.hp>0){
       addStatus(t,"blade","✦",.50);flash(t,"+50%","#f8db94");
@@ -1359,7 +1365,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="frosty"?
+        const effect=k.id==="solidity"?
+          '<span class="spell-effect"><b>25% DAMAGE REDUCTION</b><span>NEXT SPELL · SELF / ALLY</span></span>':k.id==="frosty"?
           '<span class="spell-effect"><b>FROSTBITE · 50×3</b><span>1 ENEMY · 750 HIT</span></span>':k.id==="bender"?
           '<span class="spell-effect"><b>STONE BARRAGE · 400</b><span>1 ENEMY</span></span>':k.id==="reaper"?
           '<span class="spell-effect"><b>DECAYING STRENGTH</b><span>NEXT SPELL TAKEN +20%</span></span>':k.id==="ronin"?
@@ -1387,14 +1394,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="heal"?"✚ ":"✹ ")+
-          (k.kind==="heal"?k.heal:k.id==="ronin"?450:k.damage).toLocaleString()+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="shield"?"◆ ":k.kind==="heal"?"✚ ":"✹ ")+
+          (k.kind==="shield"?"25%":(k.kind==="heal"?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="shield"?"reduces the next damaging spell by 25%":k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2004,6 +2011,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
+      case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
       case "shield":return {title:"⬡ Shield",detail:"Reduces the next incoming hit by "+
         Math.round(st.value*100)+"%, then disappears."};
       case "blade":return {title:"✦ Damage boost",detail:"The next successful attack deals "+
@@ -2081,7 +2089,8 @@
       if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
+      }else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
       else g.fillText(st.icon,r.x,r.y+1);
     });
     g.restore();
@@ -2260,6 +2269,7 @@
       });
       g.restore();return;
     }
+    if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
       const done=renderSprite(card.id,idx,500,470,310,target,p);

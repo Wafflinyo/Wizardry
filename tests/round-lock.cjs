@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'rage');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'turbulence');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('rage'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('turbulence'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -262,3 +262,10 @@ const empowered={source:'human',target:'cpu',card:cards.find(c=>c.id==='ronin'),
 s=battle();s.auras={};api.set(s);enrage();combat.applyRoninHit({...empowered,runeResult:'failed',slashHits:[]},0);assert.ok(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),'miss preserves boost');combat.applySpell({action:{casterId:'human',targetId:'human'},card:calming});assert.ok(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),'support preserves boost');
 s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.30);assert.equal(s.units[1].hp,250);assert.equal(s.units[1].statuses.some(x=>x.kind==='frostbite'),false,'30% boundary excludes frostbite');s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.299);assert.ok(s.units[1].statuses.some(x=>x.kind==='frostbite'),'under 30% applies frostbite');
 console.log('Blazing Rage multi-hit boost, consumption, miss/support preservation and Frostbite 30% boundary passed.');
+
+const turbulenceCard=cards.find(c=>c.id==='turbulence');s=battle();s.auras={};api.set(s);
+const gustCurse=()=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:turbulenceCard});gustCurse();gustCurse();assert.equal(s.units[1].statuses.filter(x=>x.kind==='turbulence').length,1);assert.ok(Math.abs(combat.getEffectiveAccuracy('cpu','ronin')-.4)<1e-9);
+vm.runInNewContext('Math.random=()=>0',context);s.animation={source:'cpu',card:bear,stage:'tracing-auto',traceMs:0};assert.equal(api.resolveAutoRune(),false,'wind can fail a successful accuracy roll');assert.equal(s.units[1].statuses.some(x=>x.kind==='turbulence'),false);
+gustCurse();vm.runInNewContext('var rolls=[0,.5];Math.random=()=>rolls.shift()??0',context);s.animation={source:'cpu',card:bear,stage:'tracing-auto',traceMs:0};assert.equal(api.resolveAutoRune(),true,'50% boundary passes');
+gustCurse();curse();assert.ok(Math.abs(combat.getEffectiveAccuracy('cpu','ronin')-.25)<1e-9);vm.runInNewContext('Math.random=()=>0',context);s.animation={source:'cpu',card:bear,stage:'tracing-auto',traceMs:0};api.resolveAutoRune();assert.equal(s.units[1].hp,900,'wind failure triggers Static Shock');assert.equal(s.units[1].statuses.some(x=>x.kind==='static_shock'||x.kind==='turbulence'),false);
+console.log('Turbulence independent failure roll, consumption, refresh, effective odds and Static Shock interaction passed.');

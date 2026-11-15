@@ -58,7 +58,7 @@
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
     {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:400,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
       short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 400 total damage to one enemy"},
-    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:6290,frostDamage:50,frostTurns:3,
+    {id:"frosty",name:"Frosty",school:"ice",cost:7,target:"enemy",kind:"frosty",damage:750,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7090,frostDamage:50,frostTurns:3,
       short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 750 damage. He melts away after the throw, leaving Frostbite: 50 damage per turn for 3 turns"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -606,7 +606,7 @@
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.id==="frosty"){
         const target=getUnit(a.target);a.frostTargetPoint=target?{x:target.x,y:target.y}:null;
-        startStage(a,"frost-gust",650);
+        startStage(a,"frost-gust",800);
       }else if(a.card.id==="bender"){
         const target=getUnit(a.target);a.benderTargetPoint=target?{x:target.x,y:target.y}:null;
         startStage(a,"bender-appear",550);
@@ -637,17 +637,17 @@
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
     }else if(a.stage==="frost-gust"){
-      startStage(a,"frost-appear",450);
+      startStage(a,"frost-appear",650);
     }else if(a.stage==="frost-appear"){
-      startStage(a,"frost-happy",850);
+      startStage(a,"frost-happy",700);
     }else if(a.stage==="frost-happy"){
       startStage(a,"frost-angry",500);
     }else if(a.stage==="frost-angry"){
-      startStage(a,"frost-transform",750);
+      startStage(a,"frost-transform",1000);
     }else if(a.stage==="frost-transform"){
-      startStage(a,"frost-lift",650);
+      startStage(a,"frost-lift",850);
     }else if(a.stage==="frost-lift"){
-      startStage(a,"frost-windup",450);
+      startStage(a,"frost-windup",500);
     }else if(a.stage==="frost-windup"){
       startStage(a,"frost-throw",150);
     }else if(a.stage==="frost-throw"){
@@ -655,7 +655,7 @@
     }else if(a.stage==="frost-flight"){
       applyFrostyImpact(a);startStage(a,"frost-impact",350);
     }else if(a.stage==="frost-impact"){
-      startStage(a,"frost-melt",1100);
+      startStage(a,"frost-melt",1200);
     }else if(a.stage==="frost-melt"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="bender-appear"){
@@ -2468,6 +2468,7 @@
     if(action?.card?.id==="frosty"&&action.stage.startsWith("frost-")){
       const frosty=window.WIZARDRY_FROSTY_V85,opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.frostTargetPoint||getUnit(action.target)};
       if(frosty){frosty.draw(g,{...opts,layer:"ground"});renderables.push({type:"frosty",depthY:424,priority:0,draw:()=>frosty.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"frosty-snow-veil",depthY:425,priority:1,draw:()=>frosty.drawVeil(g,opts)});
         const ball=frosty.projectile(opts);if(ball)renderables.push({type:"frosty-snowball",depthY:ball.depthY,priority:1,draw:()=>frosty.drawBall(g,ball)});
         renderables.push({type:"frosty-impact",depthY:(opts.target?.y||450)+.1,priority:2,draw:()=>frosty.drawImpact(g,opts)});
       }

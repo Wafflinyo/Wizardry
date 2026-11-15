@@ -895,9 +895,7 @@
       ui.hint.textContent="Stone fissure strikes "+(getUnit(a.target)?.name||"the target")+"!";
     }else if(a.stage==="golem-impact"){
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
-    }else if(a.card.id==="scorpion"&&a.stage==="summon"){
-        // Scorpion joins the fighters in the shared world depth pass.
-      }else if(a.stage==="summon"||a.stage==="fizzle"){
+    }else if(a.stage==="summon"||a.stage==="fizzle"){
       if(a.card.id==="poseidon"&&!a.postCastEffectsApplied){
         // A successful rune earns BOTH the one-round recharge and
         // Tidal Echo. A fizzle grants neither; any earlier Echo remains.
@@ -2507,6 +2505,8 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
+      }else if(a.stage==="summon"&&(a.card.id==="scorpion"||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+        // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
             ["estel-summon","estel-travel","estel-impact","estel-exit"].includes(a.stage)||
@@ -2523,6 +2523,11 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.stage==="summon"&&["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
+      const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
+      const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
+      renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
+    }
     if(action?.card?.id==="scorpion"&&action.stage==="summon"){
       const scorpion=window.WIZARDRY_SCORPION_V94,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
       if(scorpion)renderables.push({type:"scorpion",depthY:scorpion.depthFor(opts),priority:2,draw:()=>scorpion.draw(g,opts)});

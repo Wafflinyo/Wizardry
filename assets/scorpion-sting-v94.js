@@ -9,11 +9,11 @@ function pose(p,target={x:800,y:450}){const dir=target.x>=500?1:-1,drop=C(p/.17)
  return {dir,frame,x:L(500,target.x-dir*84,reach)-dir*(1-drop)*(1-drop)*320,y:L(425,target.y,reach)-(1-drop)*(1-drop)*460,roll:p<.17?-(1-drop)*T*1.7:0,wind:C((p-.42)/.26),reach,alpha:p>.998?0:Math.min(1,p/.025),burrow:C((p-.88)/.12),tip:{x:L(35-C((p-.42)/.26)*75,(target.x-500)*dir,reach),y:L(-128,target.y-425-95,reach)}};}
 function poly(c,pts,color){c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();}
 let bounds;
-function prepare(){if(bounds||!image.complete||!image.naturalWidth)return bounds;const w=image.naturalWidth/4,h=image.naturalHeight/4;bounds=[];for(let f=0;f<16;f++){const tile=document.createElement('canvas');tile.width=w;tile.height=h;const g=tile.getContext('2d');g.drawImage(image,f%4*w,Math.floor(f/4)*h,w,h,0,0,w,h);const data=g.getImageData(0,0,w,h).data;let bottom=0;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>70)bottom=Math.max(bottom,y);bounds.push(bottom);}return bounds;}
+function prepare(){if(bounds||!image.complete||!image.naturalWidth)return bounds;const w=image.naturalWidth/4,h=image.naturalHeight/4;bounds=[];for(let f=0;f<16;f++){const tile=document.createElement('canvas');tile.width=w;tile.height=h;const g=tile.getContext('2d');g.drawImage(image,f%4*w,Math.floor(f/4)*h,w,h,0,0,w,h);const data=g.getImageData(0,0,w,h).data;let bottom=0;for(let y=0;y<tile.height;y++){let count=0;for(let x=0;x<tile.width;x++)if(data[(y*tile.width+x)*4+3]>160)count++;if(count>=Math.max(4,tile.width*.02))bottom=y;}bounds.push(bottom);}return bounds;}
 function actor(c,p,target){const b=pose(p,target),bb=prepare();if(!bb)return;const w=image.naturalWidth/4,h=image.naturalHeight/4,k=SIZE/w;
- c.save();if(b.burrow>0){c.beginPath();c.rect(0,-800,1000,1230);c.clip();}
+ c.save();c.globalAlpha*=b.alpha;if(b.burrow>0){c.beginPath();c.rect(0,-800,1000,1230);c.clip();}
  // Coiled-ball sprites rotate about their own center, not around the floor.
- const land=b.y,bottom=bb[b.frame<14?b.frame:13];c.translate(b.x,land+b.burrow*145);c.scale(b.dir,1);
+ const land=b.y,bottom=bb[b.frame<14?b.frame:13];c.translate(b.x,land+b.burrow*270);c.scale(b.dir,1);
  if(p<.17){c.translate(0,-58);c.rotate(b.roll);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-SIZE/2,-SIZE/2,SIZE,h*k);}
  else{c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-SIZE/2,-bottom*k,SIZE,h*k);}
  c.restore();}

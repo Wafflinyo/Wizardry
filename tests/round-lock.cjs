@@ -304,3 +304,6 @@ console.log('Scorpion angled approach and target-directed rolling passed for bot
 
 for(const y of [315,350,450,508]){const depth=scorpionFx.depthFor({progress:.75,target:{x:800,y}});assert.ok(depth>y,'sting appears in front of target');assert.ok(depth<y+1,'closer fighters still overlay scorpion');}
 console.log('Scorpion sting depth sorts ahead of target and behind nearer fighters.');
+
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:scorpionCard,stage:'summon',duration:scorpionCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(scorpionCard.duration);assert.equal(s.animation.stage,'lowering','scorpion completes after burrowing');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'finished scorpion releases sequence');
+console.log('Scorpion full summon completes and hands off to next action.');

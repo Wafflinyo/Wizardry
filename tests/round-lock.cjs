@@ -182,7 +182,7 @@ console.log('Weight transfer and impact-only camera rumble checks passed.');
 
 const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,750);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,runeResult:'success',stage:'frost-gust',elapsed:0,duration:800};api.set(s);
-for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-lift',650],['frost-windup',600],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
+for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-pause',900],['frost-lift',650],['frost-windup',600],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
 assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(322);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
 const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1200);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,250);
 const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,250,'no instant tick in application turn');for(const [round,hp] of [[2,200],[3,150],[4,100]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,100,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
@@ -212,3 +212,10 @@ assert.ok(frostFx.forcePose({stage:'frost-windup',progress:1}).lean< -20,'loads 
 assert.ok(frostFx.forcePose({stage:'frost-throw',progress:.8}).lean>20,'drives torso forward');
 assert.deepEqual(JSON.parse(JSON.stringify(frostFx.forcePose({stage:'frost-throw',progress:1}))),JSON.parse(JSON.stringify(frostFx.forcePose({stage:'frost-flight',progress:0}))),'continuous forceful follow-through');
 console.log('Frosty reduced giant scale and backward-coil/forward-drive checks passed.');
+
+assert.equal(frostFx.idleBreath({stage:'frost-pause',progress:0}),0,'single breath starts settled');
+assert.equal(frostFx.idleBreath({stage:'frost-pause',progress:.5}),1,'single inhale peak');
+assert.ok(Math.abs(frostFx.idleBreath({stage:'frost-pause',progress:1}))<1e-9,'single breath ends settled');
+assert.equal(frostFx.idleBreath({stage:'frost-lift',progress:.5}),0,'breathing stops when pickup begins');
+assert.equal(frostFx.motion({stage:'frost-pause',progress:.5}).frame,15,'holds transformed giant for one breath');
+console.log('Frosty one-breath pause before pickup passed.');

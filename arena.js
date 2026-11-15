@@ -1,4 +1,4 @@
-/* Wizardry 0.77 — interactive 2.5D battle test.
+/* Wizardry 0.79 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -45,7 +45,10 @@
       short:"85% ACCURACY",description:"An icicle-furred polar bear roars, charges and claws one enemy for 600 damage, then disperses",artFrame:6},
     {id:"shark",name:"Reef Rush",school:"water",cost:4,target:"enemy",kind:"damage",
       damage:480,icon:"♆",accuracy:.90,duration:5800,hit:.65,rarity:"EPIC",
-      short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"}
+      short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"},
+    {id:"thunder",name:"Thunderclap",school:"lightning",cost:6,target:"enemy",kind:"summon",
+      damage:550,icon:"⚡",accuracy:.75,duration:2690,hit:.65,rarity:"EPIC",
+      short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -521,7 +524,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -578,7 +581,8 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="shark")startStage(a,"shark-fin",1100);
+      if(a.card.id==="thunder")startStage(a,"thunder-form",700);
+      else if(a.card.id==="shark")startStage(a,"shark-fin",1100);
       else if(a.card.id==="bear")startStage(a,"bear-appear",650);
       else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
       else if(a.card.id==="wind")startStage(a,"wind-summon",WIND_FORM_MS);
@@ -594,6 +598,19 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="thunder-form"){
+      startStage(a,"thunder-spread",650);
+    }else if(a.stage==="thunder-spread"){
+      startStage(a,"thunder-clap",140);
+    }else if(a.stage==="thunder-clap"){
+      startStage(a,"thunder-bolt",320);
+    }else if(a.stage==="thunder-bolt"){
+      if(!a.applied)applySpell(a);
+      startStage(a,"thunder-impact",280);
+    }else if(a.stage==="thunder-impact"){
+      startStage(a,"thunder-dissolve",600);
+    }else if(a.stage==="thunder-dissolve"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="shark-fin"){
       startStage(a,"shark-swim",1500);
     }else if(a.stage==="shark-swim"){
@@ -1178,7 +1195,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="shark"?
+        const effect=k.id==="thunder"?
+          '<span class="spell-effect"><b>THUNDERCLAP · 550</b><span>1 ENEMY</span></span>':k.id==="shark"?
           '<span class="spell-effect"><b>SHARK CHOMP · 480</b><span>1 ENEMY</span></span>':k.id==="bear"?
           '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
           '<span class="spell-effect"><b>REST 1 ROUND</b><span>NEXT WATER +30%</span></span>':
@@ -1207,7 +1225,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2258,6 +2276,16 @@
         if(action.stage==="bear-claw")renderables.push({type:"polar-bear-claw",
           depthY:bear.depthFor(opts,"claw"),priority:2,
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
+      }
+    }
+    if(action?.card?.id==="thunder"&&action.stage.startsWith("thunder-")){
+      const thunder=window.WIZARDRY_THUNDERCLAP_V79;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      if(thunder){
+        thunder.draw(g,{...opts,layer:"ground"});
+        for(const layer of ["actor","bolt"])renderables.push({type:"thunder-"+layer,
+          depthY:thunder.depthFor(opts,layer),priority:layer==="bolt"?2:0,
+          draw:()=>thunder.draw(g,{...opts,layer})});
       }
     }
     if(action?.card?.id==="shark"&&action.stage.startsWith("shark-")){

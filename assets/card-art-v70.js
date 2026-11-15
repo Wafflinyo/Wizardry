@@ -3,6 +3,7 @@
 'use strict';
 const portraits={},listeners=[];
 const SPECS={
+ thunder:{source:()=> './assets/thunderclap-v79.webp',rect:im=>[im.naturalWidth/4,im.naturalHeight/3,im.naturalWidth/4,im.naturalHeight/3]},
  shark:{source:()=> './assets/reef-rush-v77.webp',rect:im=>[im.naturalWidth/2,im.naturalHeight/2,im.naturalWidth/4,im.naturalHeight/4]},
  poseidon:{source:()=>root.WIZARDRY_POSEIDON_V22_ROWS?.[1],rect:()=>[940,0,314,313]},
  golem:{source:()=>root.WIZARDRY_GOLEM_V23_ROWS?.[2],rect:()=>[627,0,313,313]},

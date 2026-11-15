@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'shark');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'thunder');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('shark'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('thunder'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -85,3 +85,24 @@ for(const x of [169,831]){
  assert.equal(reef.pose({stage:'shark-rise',progress:0,target}).dir,swim.dir,'breach faces the same side as fin');
 }
 console.log('Enemy shark reverse swim, trailing wake and target-facing breach checks passed.');
+
+const thunder=cards.find(c=>c.id==='thunder');assert.equal(thunder.damage,550);assert.equal(thunder.accuracy,.75);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:thunder,stage:'thunder-form',elapsed:0,duration:700,runeResult:'success'};api.set(s);
+for(const [stage,ms] of [['thunder-form',700],['thunder-spread',650],['thunder-clap',140]]){
+ assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(ms);
+}
+assert.equal(s.animation.stage,'thunder-bolt');api.updateCastSequence(319);assert.equal(s.units[1].hp,1000);
+api.updateCastSequence(1);assert.equal(s.units[1].hp,450);assert.equal(s.units[2].hp,1000);
+api.updateCastSequence(280);api.updateCastSequence(600);assert.equal(s.units[1].hp,450);assert.equal(s.animation.stage,'lowering');
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:thunder,stage:'rune-fail',elapsed:0,duration:100,runeResult:'failed'};api.set(s);api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
+vm.runInNewContext(fs.readFileSync('assets/thunderclap-v79.js','utf8'),context);
+const cloud=context.window.WIZARDRY_THUNDERCLAP_V79;
+for(const target of [{x:175,y:340},{x:831,y:488}]){
+ const opts={stage:'thunder-bolt',progress:.5,target},b=cloud.pose(opts);
+ assert.ok(Math.abs(b.x-500)<=9,'clap thrust stays centered');assert.equal(cloud.pose({...opts,stage:'thunder-form'}).x,500);assert.equal(b.y,425);assert.equal(b.dir,target.x>500?1:-1);
+ assert.deepEqual(cloud.path(opts,0),b.source);
+ assert.ok(Math.abs(cloud.path(opts,1).x-target.x)<1e-9);assert.ok(Math.abs(cloud.path(opts,1).y-(target.y-105))<1e-9);
+ assert.ok(cloud.path(opts,.5).y<(b.source.y+b.end.y)/2,'bolt follows upward arc');
+ assert.equal(cloud.pose({...opts,stage:'thunder-dissolve',progress:1}).alpha,0);
+}
+console.log('Thunderclap: featured opening card, 550 damage once on bolt arrival, 75% accuracy, miss, mirrored arc and dissolve passed.');

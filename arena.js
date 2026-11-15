@@ -1,4 +1,4 @@
-/* Wizardry 0.79 — interactive 2.5D battle test.
+/* Wizardry 0.80 — interactive 2.5D battle test.
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
@@ -48,7 +48,10 @@
       short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 480 damage, then splashes back beneath the arena floor"},
     {id:"thunder",name:"Thunderclap",school:"lightning",cost:6,target:"enemy",kind:"summon",
       damage:550,icon:"⚡",accuracy:.75,duration:3060,hit:.65,rarity:"EPIC",
-      short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"}
+      short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"},
+    {id:"arrows",name:"Flaming Arrows",school:"fire",cost:4,target:"all_enemies",kind:"rain",
+      damage:150,accuracy:.85,icon:"♨",rarity:"RARE",burnChance:.10,burnDamage:50,burnTurns:3,duration:2900,
+      short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 10% chance to burn for 50 damage at the start of each of the next 3 rounds"}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -526,7 +529,7 @@
         "vamp-lunge","vamp-drain","vamp-return","vamp-present",
         "vamp-orb","vamp-vanish","dragon-drop","dragon-land",
         "dragon-charge","dragon-shot","dragon-splash",
-        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve"]
+        "dragon-impact","dragon-exit","bear-appear","bear-roar","bear-ready","bear-charge","bear-claw","bear-disperse","shark-fin","shark-swim","shark-submerge","shark-rise","shark-flop","shark-arch","shark-chomp","shark-dive","shark-splash","thunder-form","thunder-spread","thunder-clap","thunder-bolt","thunder-impact","thunder-dissolve","rain-form","rain-barrage","rain-fade"]
         .includes(a.stage)&&Number.isFinite(a.visualRecoveryMs))
       a.visualRecoveryMs=Math.min(WIZARD_RECOVERY_MS,
         a.visualRecoveryMs+Math.max(0,deltaMs));
@@ -534,6 +537,9 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
+    if(a.stage==="rain-barrage"&&a.runeResult==="success")
+      for(let i=0;i<(a.rainTargets||[]).length;i++)
+        if(a.elapsed>=440+i*55)applyRainHit(a,a.rainTargets[i]);
     if(a.stage==="bear-claw"&&p>=.45&&!a.applied)applySpell(a);
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
@@ -583,7 +589,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="thunder")startStage(a,"thunder-form",700);
+      if(a.card.id==="arrows"){
+        a.rainTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y,hit:false}));
+        startStage(a,"rain-form",650);
+      }else if(a.card.id==="thunder")startStage(a,"thunder-form",700);
       else if(a.card.id==="shark")startStage(a,"shark-fin",1100);
       else if(a.card.id==="bear")startStage(a,"bear-appear",650);
       else if(a.card.id==="estel")startStage(a,"estel-summon",ESTEL_RISE_MS);
@@ -600,6 +609,14 @@
       // granting Poseidon recharge or Tidal Echo.
       startStage(a,"lowering",WIZARD_RECOVERY_MS);
       paintUI();
+    }else if(a.stage==="rain-form"){
+      startStage(a,"rain-barrage",1800);
+    }else if(a.stage==="rain-barrage"){
+      // Finish any arrivals skipped by a large frame; extra visual arrows never multiply damage.
+      for(const entry of a.rainTargets||[])applyRainHit(a,entry);
+      a.applied=true;startStage(a,"rain-fade",450);
+    }else if(a.stage==="rain-fade"){
+      startStage(a,"lowering",WIZARD_RECOVERY_MS);
     }else if(a.stage==="thunder-form"){
       startStage(a,"thunder-spread",650);
     }else if(a.stage==="thunder-spread"){
@@ -906,6 +923,21 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+  function applyRainHit(a,entry,roll){
+    if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
+    entry.hit=true;
+    const caster=getUnit(a.source),target=getUnit(entry.id);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    damage(caster,target,a.card.damage,a.card);
+    // One independent burn roll per enemy hit, not per cosmetic arrow.
+    if(target.hp>0&&(roll??Math.random())<a.card.burnChance){
+      addStatus(target,"burn","🔥",a.card.burnDamage);
+      const burn=target.statuses.find(st=>st.kind==="burn");
+      burn.remaining=a.card.burnTurns;burn.appliedRound=state.round;burn.lastTickRound=state.round;
+      flash(target,"BURNED (3 TURNS)","#ffb178");
+    }
+    paintUI();return true;
+  }
   function applyDragonImpact(a,roll=Math.random()){
     if(!a||a.dragonImpactResolved||a.runeResult!=="success")return false;
     a.dragonImpactResolved=true;a.applied=true;
@@ -1123,7 +1155,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies";
     ui.chosenTarget.textContent=allEnemies?
-      "All living enemies · next spell +10 accuracy points":
+      (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -1197,7 +1229,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="thunder"?
+        const effect=k.id==="arrows"?
+          '<span class="spell-effect"><b>150 TO ALL</b><span>10% BURN · 50×3</span></span>':k.id==="thunder"?
           '<span class="spell-effect"><b>THUNDERCLAP · 550</b><span>1 ENEMY</span></span>':k.id==="shark"?
           '<span class="spell-effect"><b>SHARK CHOMP · 480</b><span>1 ENEMY</span></span>':k.id==="bear"?
           '<span class="spell-effect"><b>ICY CLAW · 600</b><span>1 ENEMY</span></span>':water?
@@ -1227,7 +1260,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="heal"?"heals up to "+k.heal+" HP to a living ally":
             k.damage+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1762,7 +1795,7 @@
         "wind-impact","wind-dissolve","vamp-rise","vamp-open","vamp-lunge",
         "vamp-drain","vamp-return","vamp-present","vamp-orb","vamp-vanish",
         "dragon-drop","dragon-land","dragon-charge","dragon-shot",
-        "dragon-impact","dragon-exit"].includes(visualStage)){
+        "dragon-impact","dragon-exit","rain-form","rain-barrage","rain-fade"].includes(visualStage)){
       // Stop waving the instant rune accuracy resolves. Smoothly lower the
       // staff while the summon/failure effect plays, then breathe at idle.
       visualProgress=clamp((action.visualRecoveryMs||0)/WIZARD_RECOVERY_MS,0,1);
@@ -1968,7 +2001,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
+      if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
+      else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
 
     }
   }
@@ -2280,6 +2314,14 @@
           draw:()=>bear.draw(g,{...opts,layer:"claw"})});
       }
     }
+    if(action?.card?.id==="arrows"&&action.stage.startsWith("rain-")){
+      const rain=window.WIZARDRY_FLAMING_ARROWS_V80;
+      const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),targets:action.rainTargets||[]};
+      if(rain){
+        rain.drawCircle(g,opts);
+        for(const item of rain.items(opts))renderables.push({type:"flaming-"+item.type,depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>rain.drawItem(g,item)});
+      }
+    }
     if(action?.card?.id==="thunder"&&action.stage.startsWith("thunder-")){
       const thunder=window.WIZARDRY_THUNDERCLAP_V79;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),time:action.thunderMs||0,target:getUnit(action.target)};
@@ -2401,7 +2443,7 @@
       splashHitIds:state.animation.dragonSplashHitIds||[],
       progress:clamp(state.animation.elapsed/state.animation.duration,0,1)
     }:null,
-    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,tickBurnsForRound,
+    dragonSplashTargets,applyDragonImpact,applyDragonSplashHit,applyRainHit,tickBurnsForRound,
     getPoseidonProjectileInfo:()=>poseidonProjectileAt(state?.animation),
     getSceneDepths:()=>[
       ...state.units.map(u=>({type:"wizard",depthY:u.y,id:u.id})),

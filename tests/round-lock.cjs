@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,600);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'thunder');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'arrows');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('thunder'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('arrows'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -114,3 +114,21 @@ assert.equal(cloud.pose({...hold,time:1900}).frame,cloud.pose({...hold,time:2150
 assert.equal(cloud.clock({stage:'thunder-clap',progress:1}),cloud.clock({stage:'thunder-bolt',progress:0}),'swirl clock continuous across clap and bolt');
 assert.equal(cloud.clock({stage:'thunder-bolt',progress:1}),cloud.clock({stage:'thunder-impact',progress:0}),'swirl clock continuous across bolt and impact');
 console.log('Continuous cloud swirl and stationary held hands passed.');
+
+const arrows=cards.find(c=>c.id==='arrows');assert.equal(arrows.damage,150);assert.equal(arrows.burnChance,.10);assert.equal(arrows.target,'all_enemies');
+s=battle();s.auras={};s.phase='resolving';const victims=s.units.filter(u=>u.team===1).map(u=>({id:u.id,x:u.x,y:u.y,hit:false}));
+s.animation={source:'human',target:null,action:{casterId:'human',targetId:null},card:arrows,runeResult:'success',stage:'rain-form',elapsed:0,duration:650,rainTargets:victims};api.set(s);
+api.updateCastSequence(650);assert.equal(s.animation.stage,'rain-barrage');api.updateCastSequence(439);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,1000);
+api.updateCastSequence(55);assert.equal(s.units[2].hp,850);api.updateCastSequence(1305);assert.equal(s.animation.stage,'rain-fade');assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,850);assert.equal(s.units[0].hp,1000);assert.equal(s.units[0].statuses.some(st=>st.kind==='tailwind'),false);
+api.updateCastSequence(450);assert.equal(s.animation.stage,'lowering');
+s=battle();s.auras={};api.set(s);const rainAnim={source:'human',card:arrows,runeResult:'success'};const hit1={id:'cpu',hit:false},hit2={id:'other',hit:false};
+const rainHit=context.window.WIZARDRY_ARENA_TEST.applyRainHit;
+assert.equal(rainHit(rainAnim,hit1,.099),true);assert.equal(rainHit(rainAnim,hit2,.10),true);assert.equal(s.units[1].hp,850);assert.equal(s.units[2].hp,850);
+assert.ok(s.units[1].statuses.some(st=>st.kind==='burn'&&st.remaining===3));assert.equal(s.units[2].statuses.some(st=>st.kind==='burn'),false);
+assert.equal(rainHit(rainAnim,hit1,0),false);assert.equal(s.units[1].hp,850,'extra arrows cannot repeat damage');
+s.units[2].hp=0;assert.equal(rainHit(rainAnim,{id:'other'},0),false,'defeated targets fail without retargeting');
+assert.equal(rainHit({...rainAnim,runeResult:'failed'},{id:'cpu'},0),false,'failed cast causes no damage or burn');assert.equal(s.units[1].hp,850);
+vm.runInNewContext(fs.readFileSync('assets/flaming-arrows-v80.js','utf8'),context);const rainFx=context.window.WIZARDRY_FLAMING_ARROWS_V80;
+const streams=rainFx.items({stage:'rain-barrage',progress:.4,targets:[{x:650,y:340},{x:820,y:470}]});assert.ok(streams.filter(x=>x.type==='arrow').length>2,'multiple arrows cover each wizard');
+assert.ok(streams.filter(x=>x.type==='arrow').every(x=>x.end.y>x.start.y),'arrows rain diagonally downward');
+console.log('Flaming Arrows: one 150 hit per enemy, independent 10% burn, no friendly fire/tailwind, defeated-target failure and multi-arrow barrage passed.');

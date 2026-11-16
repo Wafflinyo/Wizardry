@@ -1175,90 +1175,9 @@
     }
     paintUI();return true;
   }
-  function ninjaPoly(c,points,color){
-    c.fillStyle=color;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();
-  }
-  function ninjaKunai(c,x,y,angle,size=1){
-    c.save();c.translate(x,y);c.rotate(angle);c.scale(size,size);
-    ninjaPoly(c,[[-24,-2],[-10,-3],[-9,3],[-24,2]],"#395d77");
-    ninjaPoly(c,[[-10,0],[3,-7],[23,0],[3,7]],"#b9f7ff");
-    ninjaPoly(c,[[3,-7],[23,0],[-10,0]],"#f1ffff");
-    c.strokeStyle="#7be5ff";c.lineWidth=1.5;c.stroke();c.restore();
-  }
-  function ninjaBody(c,x,y,scale,angle,dir,throwing=0){
-    c.save();c.translate(x,y);c.rotate(angle);c.scale(scale*dir,scale);
-    // Faceted black-and-white body, flippers, feet and a trailing ninja band.
-    ninjaPoly(c,[[-17,-7],[-36,2],[-27,9],[-9,4]],"#efa844");
-    ninjaPoly(c,[[5,-6],[30,0],[24,9],[8,6]],"#ffd172");
-    ninjaPoly(c,[[-23,-63],[-16,-86],[9,-88],[24,-70],[28,-31],[14,-5],[-13,-3],[-28,-27]],"#172b40");
-    ninjaPoly(c,[[-23,-63],[-16,-86],[-2,-87],[-7,-15],[-13,-3],[-28,-27]],"#29445a");
-    ninjaPoly(c,[[-11,-62],[10,-65],[21,-39],[12,-13],[-9,-12],[-19,-35]],"#e1f3ed");
-    ninjaPoly(c,[[-11,-62],[1,-64],[-2,-16],[-9,-12],[-19,-35]],"#b2d3d9");
-    ninjaPoly(c,[[-22,-60],[-39,-30],[-28,-23],[-11,-44]],"#213c51");
-    const arm=throwing?24:10;
-    ninjaPoly(c,[[17,-59],[37+arm,-50],[32+arm,-39],[13,-40]],"#172b40");
-    ninjaKunai(c,37+arm,-48,throwing?-.45:-1.1,.62);
-    ninjaPoly(c,[[-22,-77],[21,-78],[24,-67],[-24,-67]],"#70c7da");
-    ninjaPoly(c,[[-22,-72],[-51,-83],[-40,-67],[-55,-60],[-20,-66]],"#4d9aad");
-    ninjaPoly(c,[[9,-70],[28,-64],[12,-58]],"#ffc75a");
-    ninjaPoly(c,[[-2,-77],[18,-76],[17,-71],[-1,-71]],"#101c2c");
-    c.fillStyle="#f4ffff";c.fillRect(9,-76,5,2);
-    c.restore();
-  }
-  function penguinPose(opts,index){
-    const p=opts.progress,dir=(opts.target?.x??700)>=500?1:-1;
-    const bx=500+dir*(index===0?10:index===1?-46:48),by=432+(index===1?9:index===2?-8:0);
-    if(p<.30){
-      const t=clamp((p-index*.045)/.21,0,1);
-      return {x:bx-dir*(1-t)*380,y:by-Math.sin(t*Math.PI)*125,angle:dir*(1-t)*Math.PI*4,dir,alpha:clamp(t*7,0,1),ground:by};
-    }
-    if(index===0&&p>=.44&&p<.84){
-      const t=clamp((p-.44)/.12,0,1);
-      const landing=clamp((p-.74)/.10,0,1);
-      return {x:bx+dir*105*t*(1-landing),y:by-190*t*(1-landing)-Math.sin(t*Math.PI)*65,angle:p<.56?dir*t*Math.PI*2:dir*(p-.56)*Math.PI*18,dir,alpha:1,ground:by};
-    }
-    if(p>=.84){
-      const t=clamp((p-.84)/.16,0,1);
-      return {x:bx+dir*t*380,y:by-Math.sin(t*Math.PI)*105,angle:dir*t*Math.PI*4,dir,alpha:1-t,ground:by};
-    }
-    return {x:bx,y:by+(index?Math.sin(clamp((p-.32)/.12,0,1)*Math.PI)*12:0),angle:index===1?-.22:index===2?.22:0,dir,alpha:1,ground:by};
-  }
-  function penguinDepth(opts,layer){
-    if(layer.startsWith("actor"))return penguinPose(opts,Number(layer.slice(-1))).ground;
-    return layer==="ground"?420:(opts.target?.y??400)+.1;
-  }
-  function drawPenguins(c,opts){
-    const p=opts.progress,target=opts.target;
-    if(!target)return;
-    if(opts.layer==="ground"){
-      for(let i=0;i<3;i++){const b=penguinPose(opts,i);c.save();c.globalAlpha=.20*b.alpha;c.fillStyle="#061522";c.beginPath();c.ellipse(b.x,b.ground,24,7,0,0,Math.PI*2);c.fill();c.restore();}
-      return;
-    }
-    if(opts.layer.startsWith("actor")){
-      const i=Number(opts.layer.slice(-1)),b=penguinPose(opts,i);
-      c.save();c.globalAlpha*=b.alpha;ninjaBody(c,b.x,b.y,.72,b.angle,b.dir,i===0&&p>=.56&&p<.73);c.restore();return;
-    }
-    const dir=(target.x>=500?1:-1),end={x:target.x,y:target.y-65};
-    for(let i=0;i<3;i++){
-      const hit=NINJA_HIT_TIMES[i],launch=hit-.06;
-      const pose=penguinPose({...opts,progress:launch},0),hx=61*.72*dir,hy=-48*.72;
-      const origin={x:pose.x+hx*Math.cos(pose.angle)-hy*Math.sin(pose.angle),y:pose.y+hx*Math.sin(pose.angle)+hy*Math.cos(pose.angle)};
-      if(opts.layer==="kunai"&&p>=launch&&p<hit){
-        const t=(p-launch)/.06,x=origin.x+(end.x-origin.x)*t,y=origin.y+(end.y-origin.y)*t,angle=Math.atan2(end.y-origin.y,end.x-origin.x);
-        c.save();c.strokeStyle="#b5f5ff";c.lineWidth=3;c.beginPath();c.moveTo(x-(end.x-origin.x)*.20,y-(end.y-origin.y)*.20);c.lineTo(x,y);c.stroke();ninjaKunai(c,x,y,angle,.85);c.restore();
-      }
-      const t=(p-hit)/.065;
-      if(opts.layer==="impact"&&t>=0&&t<1){
-        c.save();c.translate(end.x,end.y);c.globalAlpha*=1-t;
-        for(let j=0;j<9;j++){const a=j*Math.PI*2/9+i*.7,r=8+t*48;c.save();c.rotate(a);ninjaPoly(c,[[r,-3],[r+17*(1-t),0],[r,4],[r-5,0]],j%2?"#d5fbff":"#78d9f7");c.restore();}
-        c.strokeStyle="#d5fbff";c.lineWidth=2;c.beginPath();c.arc(0,0,9+t*32,0,Math.PI*2);c.stroke();c.restore();
-      }
-    }
-  }
-  function drawPenguinPortrait(c,w,h){
-    c.save();const s=Math.min(w/260,h/190);c.translate(w/2,h*.90);c.scale(s,s);
-    ninjaBody(c,-68,0,.73,-.22,1);ninjaBody(c,65,0,.73,.22,-1);ninjaBody(c,0,-65,.90,-.45,1,1);c.restore();
-  }
+  function penguinDepth(opts,layer){return window.WIZARDRY_PENGUINS_V103.depthFor(opts,layer);}
+  function drawPenguins(c,opts){window.WIZARDRY_PENGUINS_V103.draw(c,opts);}
+  function drawPenguinPortrait(c,w,h){window.WIZARDRY_PENGUINS_V103.portrait(c,w,h);}
 
   function applyFrostyImpact(a,roll){
     if(!a||a.applied||a.runeResult!=="success")return false;
@@ -2523,6 +2442,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_PENGUINS_V103?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
       observer.observe(ui.hand);

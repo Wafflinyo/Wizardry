@@ -7,8 +7,8 @@ let s;function battle(){s={units:[unit('a',0),unit('b',1),unit('c',1)],humanByTe
 function action(id,source='a',target='b'){const c=card(id);return{card:c,source,target,action:{casterId:source,targetId:target},stage:'summon',duration:c.duration,elapsed:0,runeResult:'success'};}
 function dome(u){api.applySpell(action('winddome',u.id,u.id));}
 function has(u,kind='wind_dome'){return u.statuses.some(st=>st.kind===kind);}
-assert.equal(card('winddome').school,'wind');assert.equal(card('winddome').selfOnly,true);assert.equal(api.featuredCard,'winddome');assert.equal(api.cards.filter(c=>c.school==='wind').length,4);
-battle();api.startHand(s.units[0],true);assert.equal(s.units[0].hand.length,5);assert.ok(s.units[0].hand.includes('winddome'));assert.deepEqual(Array.from(test.targetsFor(card('winddome'),s.units[0]),u=>u.id),['a']);
+assert.equal(card('winddome').school,'wind');assert.equal(card('winddome').selfOnly,true);assert.equal(api.featuredCard,'penguins');assert.equal(api.cards.filter(c=>c.school==='wind').length,4);
+battle();api.startHand(s.units[0],true);assert.equal(s.units[0].hand.length,5);assert.ok(s.units[0].hand.includes('penguins'));assert.deepEqual(Array.from(test.targetsFor(card('winddome'),s.units[0]),u=>u.id),['a']);
 // Recasting leaves exactly one ward on the caster, regardless of a stale target.
 api.applySpell(action('winddome','a','b'));dome(s.units[0]);assert.equal(s.units[0].statuses.filter(st=>st.kind==='wind_dome').length,1);assert.equal(has(s.units[1]),false);
 api.applySpell(action('centaur','b','a'));assert.equal(s.units[0].hp,2000,'entire arrow is blocked, including lethal damage');assert.equal(has(s.units[0]),false);api.applySpell(action('devil','b','a'));assert.equal(s.units[0].hp,1750,'next separate spell deals normal damage');

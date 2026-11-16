@@ -81,7 +81,8 @@
     {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
 ,
     {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."},
-    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."}
+    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."},
+    {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:5000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -603,7 +604,9 @@
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
-    if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.id==="penguins"&&a.runeResult==="success")
+      for(let i=0;i<3;i++)if(a.elapsed>=NINJA_HIT_TIMES[i]*a.card.duration)applyPenguinHit(a,i);
+    if(a.stage==="summon"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="dragon-splash"&&a.runeResult==="success"){
       // Apply the 150 damage when each outward-traveling mini fireball
@@ -1154,6 +1157,109 @@
     return sideUnits(main.team).filter(u=>
       u.hp>0&&Math.abs(u.index-main.index)===1);
   }
+
+  // Kunai arrival times are shared by combat and animation.
+  const NINJA_HIT_TIMES=[.62,.665,.71];
+  function applyPenguinHit(a,index,roll){
+    if(!a||a.runeResult!=="success"||!Number.isInteger(index)||index<0||index>2)return false;
+    const hits=a.penguinHits??=[];
+    if(hits.includes(index))return false;
+    hits.push(index);
+    const caster=getUnit(a.source),target=getUnit(a.target);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    damage(caster,target,a.card.damage,a.card,a);
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]&&!target.statuses.some(s=>s.kind==="frostbite")&&(roll??Math.random())<a.card.frostChance){
+      addStatus(target,"frostbite","❄",a.card.frostDamage);
+      Object.assign(target.statuses.find(s=>s.kind==="frostbite"),{remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
+      flash(target,"FROSTBITE · 3 TURNS","#b6eeff");
+    }
+    paintUI();return true;
+  }
+  function ninjaPoly(c,points,color){
+    c.fillStyle=color;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();
+  }
+  function ninjaKunai(c,x,y,angle,size=1){
+    c.save();c.translate(x,y);c.rotate(angle);c.scale(size,size);
+    ninjaPoly(c,[[-24,-2],[-10,-3],[-9,3],[-24,2]],"#395d77");
+    ninjaPoly(c,[[-10,0],[3,-7],[23,0],[3,7]],"#b9f7ff");
+    ninjaPoly(c,[[3,-7],[23,0],[-10,0]],"#f1ffff");
+    c.strokeStyle="#7be5ff";c.lineWidth=1.5;c.stroke();c.restore();
+  }
+  function ninjaBody(c,x,y,scale,angle,dir,throwing=0){
+    c.save();c.translate(x,y);c.rotate(angle);c.scale(scale*dir,scale);
+    // Faceted black-and-white body, flippers, feet and a trailing ninja band.
+    ninjaPoly(c,[[-17,-7],[-36,2],[-27,9],[-9,4]],"#efa844");
+    ninjaPoly(c,[[5,-6],[30,0],[24,9],[8,6]],"#ffd172");
+    ninjaPoly(c,[[-23,-63],[-16,-86],[9,-88],[24,-70],[28,-31],[14,-5],[-13,-3],[-28,-27]],"#172b40");
+    ninjaPoly(c,[[-23,-63],[-16,-86],[-2,-87],[-7,-15],[-13,-3],[-28,-27]],"#29445a");
+    ninjaPoly(c,[[-11,-62],[10,-65],[21,-39],[12,-13],[-9,-12],[-19,-35]],"#e1f3ed");
+    ninjaPoly(c,[[-11,-62],[1,-64],[-2,-16],[-9,-12],[-19,-35]],"#b2d3d9");
+    ninjaPoly(c,[[-22,-60],[-39,-30],[-28,-23],[-11,-44]],"#213c51");
+    const arm=throwing?24:10;
+    ninjaPoly(c,[[17,-59],[37+arm,-50],[32+arm,-39],[13,-40]],"#172b40");
+    ninjaKunai(c,37+arm,-48,throwing?-.45:-1.1,.62);
+    ninjaPoly(c,[[-22,-77],[21,-78],[24,-67],[-24,-67]],"#70c7da");
+    ninjaPoly(c,[[-22,-72],[-51,-83],[-40,-67],[-55,-60],[-20,-66]],"#4d9aad");
+    ninjaPoly(c,[[9,-70],[28,-64],[12,-58]],"#ffc75a");
+    ninjaPoly(c,[[-2,-77],[18,-76],[17,-71],[-1,-71]],"#101c2c");
+    c.fillStyle="#f4ffff";c.fillRect(9,-76,5,2);
+    c.restore();
+  }
+  function penguinPose(opts,index){
+    const p=opts.progress,dir=(opts.target?.x??700)>=500?1:-1;
+    const bx=500+dir*(index===0?10:index===1?-46:48),by=432+(index===1?9:index===2?-8:0);
+    if(p<.30){
+      const t=clamp((p-index*.045)/.21,0,1);
+      return {x:bx-dir*(1-t)*380,y:by-Math.sin(t*Math.PI)*125,angle:dir*(1-t)*Math.PI*4,dir,alpha:clamp(t*7,0,1),ground:by};
+    }
+    if(index===0&&p>=.44&&p<.84){
+      const t=clamp((p-.44)/.12,0,1);
+      const landing=clamp((p-.74)/.10,0,1);
+      return {x:bx+dir*105*t*(1-landing),y:by-190*t*(1-landing)-Math.sin(t*Math.PI)*65,angle:p<.56?dir*t*Math.PI*2:dir*(p-.56)*Math.PI*18,dir,alpha:1,ground:by};
+    }
+    if(p>=.84){
+      const t=clamp((p-.84)/.16,0,1);
+      return {x:bx+dir*t*380,y:by-Math.sin(t*Math.PI)*105,angle:dir*t*Math.PI*4,dir,alpha:1-t,ground:by};
+    }
+    return {x:bx,y:by+(index?Math.sin(clamp((p-.32)/.12,0,1)*Math.PI)*12:0),angle:index===1?-.22:index===2?.22:0,dir,alpha:1,ground:by};
+  }
+  function penguinDepth(opts,layer){
+    if(layer.startsWith("actor"))return penguinPose(opts,Number(layer.slice(-1))).ground;
+    return layer==="ground"?420:(opts.target?.y??400)+.1;
+  }
+  function drawPenguins(c,opts){
+    const p=opts.progress,target=opts.target;
+    if(!target)return;
+    if(opts.layer==="ground"){
+      for(let i=0;i<3;i++){const b=penguinPose(opts,i);c.save();c.globalAlpha=.20*b.alpha;c.fillStyle="#061522";c.beginPath();c.ellipse(b.x,b.ground,24,7,0,0,Math.PI*2);c.fill();c.restore();}
+      return;
+    }
+    if(opts.layer.startsWith("actor")){
+      const i=Number(opts.layer.slice(-1)),b=penguinPose(opts,i);
+      c.save();c.globalAlpha*=b.alpha;ninjaBody(c,b.x,b.y,.72,b.angle,b.dir,i===0&&p>=.56&&p<.73);c.restore();return;
+    }
+    const dir=(target.x>=500?1:-1),end={x:target.x,y:target.y-65};
+    for(let i=0;i<3;i++){
+      const hit=NINJA_HIT_TIMES[i],launch=hit-.06;
+      const pose=penguinPose({...opts,progress:launch},0),hx=61*.72*dir,hy=-48*.72;
+      const origin={x:pose.x+hx*Math.cos(pose.angle)-hy*Math.sin(pose.angle),y:pose.y+hx*Math.sin(pose.angle)+hy*Math.cos(pose.angle)};
+      if(opts.layer==="kunai"&&p>=launch&&p<hit){
+        const t=(p-launch)/.06,x=origin.x+(end.x-origin.x)*t,y=origin.y+(end.y-origin.y)*t,angle=Math.atan2(end.y-origin.y,end.x-origin.x);
+        c.save();c.strokeStyle="#b5f5ff";c.lineWidth=3;c.beginPath();c.moveTo(x-(end.x-origin.x)*.20,y-(end.y-origin.y)*.20);c.lineTo(x,y);c.stroke();ninjaKunai(c,x,y,angle,.85);c.restore();
+      }
+      const t=(p-hit)/.065;
+      if(opts.layer==="impact"&&t>=0&&t<1){
+        c.save();c.translate(end.x,end.y);c.globalAlpha*=1-t;
+        for(let j=0;j<9;j++){const a=j*Math.PI*2/9+i*.7,r=8+t*48;c.save();c.rotate(a);ninjaPoly(c,[[r,-3],[r+17*(1-t),0],[r,4],[r-5,0]],j%2?"#d5fbff":"#78d9f7");c.restore();}
+        c.strokeStyle="#d5fbff";c.lineWidth=2;c.beginPath();c.arc(0,0,9+t*32,0,Math.PI*2);c.stroke();c.restore();
+      }
+    }
+  }
+  function drawPenguinPortrait(c,w,h){
+    c.save();const s=Math.min(w/260,h/190);c.translate(w/2,h*.90);c.scale(s,s);
+    ninjaBody(c,-68,0,.73,-.22,1);ninjaBody(c,65,0,.73,.22,-1);ninjaBody(c,0,-65,.90,-.45,1,1);c.restore();
+  }
+
   function applyFrostyImpact(a,roll){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
@@ -1280,7 +1386,9 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="winddome"){
+    if(card.kind==="penguins"){
+      for(let i=0;i<3;i++)applyPenguinHit(anim,i);
+    }else if(card.kind==="winddome"){
       addStatus(c,"wind_dome","≋",1);flash(c,"WIND DOME READY","#d1fff1");
       state.log=[c.name+" is protected from the next damaging spell by Wind Dome.",...state.log].slice(0,5);
     }else if(card.kind==="lightningrod"){
@@ -1550,7 +1658,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="winddome"?
+        const effect=k.id==="penguins"?
+          '<span class="spell-effect"><b>3 KUNAI × 100</b><span>10% FROSTBITE EACH · 50×3</span></span>':k.id==="winddome"?
           '<span class="spell-effect"><b>BLOCK NEXT DAMAGE SPELL</b><span>SELF · EXCLUDES DEBUFF DAMAGE</span></span>':k.id==="centaur"?
           '<span class="spell-effect"><b>CHARGED ARROW · 650</b><span>1 ENEMY · NATURE</span></span>':k.id==="undead"?
           '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="rod"?
@@ -1595,13 +1704,13 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          (k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
-            (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+            (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
+          "% accuracy. "+(k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2379,7 +2488,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
+      if(card.id==="penguins")drawPenguinPortrait(c,width,height);
+      else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
       else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
       else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
 
@@ -2627,7 +2737,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2660,6 +2770,11 @@
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
+    }
+    if(action?.card?.id==="penguins"&&action.stage==="summon"){
+      const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target),caster:getUnit(action.source)};
+      for(const layer of ["ground","actor0","actor1","actor2","kunai","impact"])
+        renderables.push({type:"penguins-"+layer,depthY:penguinDepth(opts,layer),priority:2,draw:()=>drawPenguins(g,{...opts,layer})});
     }
     if(action?.card?.id==="centaur"&&action.stage==="summon"){
       const centaur=window.WIZARDRY_CENTAUR_V100,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
@@ -2965,7 +3080,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
     },
-    applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

@@ -11,8 +11,6 @@
     castText: document.getElementById("castButtonText"),
     reset: document.getElementById("resetButton"),
     speed: document.getElementById("speedButton"),
-    sound: document.getElementById("soundButton"),
-    soundLabel: document.getElementById("soundLabel"),
     card: document.getElementById("poseidonCard"),
     golemCard: document.getElementById("stoneGolemCard"),
     spellSchool: document.getElementById("spellSchool"),
@@ -94,9 +92,8 @@
     }
   });
   let selectedSpell = "poseidon", targeted = true, defeated = false;
-  let cast = null, particles = [], speed = 1, sound = true;
+  let cast = null, particles = [], speed = 1;
   let previousTime = performance.now(), totalTime = 0, targetPulse = 0;
-  let audio = null;
 
   const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
   const mix = (a, b, t) => a + (b - a) * t;
@@ -1041,49 +1038,6 @@
     if(defeated)drawCanvasVictory();
   }
 
-  function tone(frequency,durationSecs,type="sine",volume=.13,to=undefined){
-    if(!sound)return;
-    try{
-      const A=window.AudioContext||window.webkitAudioContext;
-      if(!A)return;
-      if(!audio)audio=new A();
-      if(audio.state==="suspended")audio.resume();
-      const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime;
-      oscillator.type=type;oscillator.frequency.setValueAtTime(frequency,now);
-      if(to)oscillator.frequency.exponentialRampToValueAtTime(Math.max(25,to),now+durationSecs);
-      gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume,now+.023);
-      gain.gain.exponentialRampToValueAtTime(.0001,now+durationSecs);
-      oscillator.connect(gain);gain.connect(audio.destination);
-      oscillator.start(now);oscillator.stop(now+durationSecs+.01);
-    }catch(err){console.warn("Sound unavailable",err);}
-  }
-  function noise(durationSecs=.3,volume=.06){
-    if(!sound)return;
-    try{
-      if(!audio){tone(80,.02);if(!audio)return;}
-      const sampleRate=audio.sampleRate,buffer=audio.createBuffer(1,Math.floor(sampleRate*durationSecs),sampleRate);
-      const channel=buffer.getChannelData(0);
-      for(let i=0;i<channel.length;i++)channel[i]=(Math.random()*2-1)*(1-i/channel.length);
-      const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();
-      source.buffer=buffer;filter.type="lowpass";filter.frequency.value=1100;gain.gain.value=volume;
-      source.connect(filter);filter.connect(gain);gain.connect(audio.destination);source.start();
-    }catch(err){console.warn("Sound unavailable",err);}
-  }
-  function playEffect(name){
-    if(name==="cast"){tone(140,1.1,"sawtooth",.08,60);tone(380,.8,"sine",.11,110);noise(.48,.035);}
-    else if(name==="rise"){tone(90,1.5,"triangle",.12,300);tone(180,1.3,"sine",.07,520);}
-    else if(name==="wind"){tone(300,.4,"sawtooth",.075,700);}
-    else if(name==="throw"){tone(800,.5,"sawtooth",.08,125);noise(.3,.065);}
-    else if(name==="hit"){tone(105,.9,"sawtooth",.17,45);tone(620,.35,"square",.05,100);noise(.8,.18);}
-    else if(name==="sink"){tone(300,1.3,"sine",.085,55);noise(.7,.04);}
-    else if(name==="earthCast"){tone(97,.38,"triangle",.095,60);noise(.5,.07);}
-    else if(name==="stoneRise"){tone(80,.48,"sawtooth",.08,125);noise(.60,.10);}
-    else if(name==="stoneLift"){tone(125,.6,"triangle",.065,185);noise(.4,.035);}
-    else if(name==="stoneThrow"){tone(270,.33,"sawtooth",.06,75);noise(.28,.08);}
-    else if(name==="stoneHit"){tone(62,.75,"sawtooth",.15,35);noise(.68,.20);}
-    else if(name==="stoneSink"){tone(138,.6,"triangle",.08,50);noise(.7,.10);}
-  }
-
   function refreshUI() {
     const spell=SPELLS[selectedSpell];
     UI.manaText.textContent=mana+" / 8";
@@ -1157,14 +1111,12 @@
     if(cast||defeated||mana<spell.cost)return;
     if(selectedSpell==="poseidon"&&!poseidonAssetReady)return;
     if(selectedSpell==="stone"&&!golemAssetReady)return;
-    if(sound)tone(440,.04,"sine",.001);
     mana-=spell.cost;
     cast={type:selectedSpell,elapsed:0,stage:"opening",hit:false};
     UI.state.textContent="SUMMONING";
     UI.status.textContent=spell.start;
     UI.caption.textContent=spell.caption;
     UI.hint.textContent="Spell in progress...";
-    playEffect(selectedSpell==="stone"?"earthCast":"cast");
     refreshUI();
   }
 
@@ -1221,20 +1173,7 @@
     };
     UI.state.textContent=stages[stage][0];
     UI.status.textContent=stages[stage][1];
-    if(earth){
-      if(stage==="rise")playEffect("stoneRise");
-      if(stage==="lift")playEffect("stoneLift");
-      if(stage==="slam")playEffect("stoneHit");
-      if(stage==="spikes")playEffect("stoneRise");
-      if(stage==="impact")playEffect("stoneHit");
-      if(stage==="sink")playEffect("stoneSink");
-    }else{
-      if(stage==="rise")playEffect("rise");
-      if(stage==="aim")playEffect("wind");
-      if(stage==="throw")playEffect("throw");
-      if(stage==="impact")playEffect("hit");
-      if(stage==="sink")playEffect("sink");
-    }
+
   }
 
   function completeCast() {
@@ -1315,7 +1254,6 @@
       targeted=true;targetPulse=1;
       UI.status.textContent="Stone Sentinel targeted.";
       UI.hint.textContent="Target acquired. Cast "+SPELLS[selectedSpell].name+"!";
-      tone(640,.17,"sine",.05,350);
     }
   }
   UI.cast.addEventListener("click",startCast);
@@ -1325,11 +1263,6 @@
   UI.winReplay.addEventListener("click",reset);
   UI.speed.addEventListener("click",()=>{
     speed=speed===1?2:1;UI.speed.textContent="Speed: "+speed+"×";
-  });
-  UI.sound.addEventListener("click",()=>{
-    sound=!sound;UI.soundLabel.textContent=sound?"ON":"OFF";
-    UI.sound.setAttribute("aria-pressed",String(sound));
-    if(sound)tone(660,.16,"sine",.03,880);
   });
   canvas.addEventListener("pointerdown",selectEnemy);
   // CSS handles both orientations; no resize observer mutates the Canvas.

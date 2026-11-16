@@ -591,9 +591,6 @@
     // fissure; its animation clock is never reset at a combat stage boundary.
     if(["golem-travel","golem-impact"].includes(a.stage))
       a.golemPostSlamMs=(a.golemPostSlamMs||0)+Math.max(0,deltaMs);
-    if(a.stage==="bender-stomp"&&p>=.68&&!a.benderRumblePlayed){
-      a.benderRumblePlayed=true;window.WIZARDRY_STONE_BENDER_V83?.rumble?.();
-    }
     if(a.stage==="bender-barrage"&&a.elapsed>=90&&!a.applied)applyBenderStrike(a);
     if(a.stage==="reaper-slash"&&p>=.4&&!a.applied)applyReaperStrike(a);
     if(a.stage==="ronin-volley"&&a.runeResult==="success")
@@ -605,7 +602,6 @@
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
-    if(a.card.id==="undead"&&a.stage==="summon"&&!a.undeadScreeched&&a.elapsed>=a.card.duration*.45){a.undeadScreeched=true;window.WIZARDRY_UNDEAD_V99?.screech();}
     if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="dragon-splash"&&a.runeResult==="success"){
@@ -1679,8 +1675,6 @@
     };
     ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
-      window.WIZARDRY_STONE_BENDER_V83?.unlockAudio?.();
-      window.WIZARDRY_UNDEAD_V99?.unlockAudio?.();
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;

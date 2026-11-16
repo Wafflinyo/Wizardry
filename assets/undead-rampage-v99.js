@@ -1,6 +1,6 @@
 /* A gaunt hunter-like undead climbs out, screeches, pounces and claws. */
 (function(root){'use strict';const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2,SIZE=140;
-const images={emerge:new Image(),attack:new Image()},ready={emerge:false,attack:false},listeners=[];let audio=null;
+const images={emerge:new Image(),attack:new Image()},ready={emerge:false,attack:false},listeners=[];
 for(const [atlas,path] of Object.entries({emerge:'undead-emergence-v99b.webp',attack:'undead-action-v99b.webp'})){images[atlas].onload=()=>{ready[atlas]=true;listeners.forEach(fn=>fn());};images[atlas].src='./assets/'+path;}
 const feet={emerge:[309, 309, 309, 308, 281, 281, 281, 281, 254, 254, 254, 254, 272, 271, 271, 271],attack:[316, 316, 316, 316, 301, 301, 301, 301, 297, 291, 260, 228, 290, 291, 290, 290]};
 function bodyScaleAt(y){return L(.60,.90,C((y-288)/235));}
@@ -26,9 +26,6 @@ function draw(c,{progress:p,target,layer='actor'}){if(!target)return;const b=pos
  if(layer==='claws'&&p>=.78&&p<.87){const q=C((p-.78)/.06);c.save();c.globalAlpha=p>.83?( .87-p)/.04:1;c.strokeStyle='#bce3b1';c.shadowColor='#637e9b';c.shadowBlur=5;c.lineWidth=3.5;
  for(let i=0;i<3;i++){const x=target.x-25+i*14,y=target.y-118+i*5;c.beginPath();c.moveTo(x-b.dir*15,y-16);c.lineTo(x+b.dir*40*q,y+48*q);c.stroke();}c.restore();}
 }
-function unlockAudio(){const AC=root.AudioContext||root.webkitAudioContext;if(!AC)return;try{if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume().catch(()=>{});}catch{}}
-function screech(){if(!audio||audio.state!=='running')return;try{const now=audio.currentTime,duration=.48,osc=audio.createOscillator(),gain=audio.createGain(),filter=audio.createBiquadFilter();osc.type='sawtooth';osc.frequency.setValueAtTime(420,now);osc.frequency.exponentialRampToValueAtTime(1100,now+.09);osc.frequency.exponentialRampToValueAtTime(240,now+duration);filter.type='bandpass';filter.frequency.setValueAtTime(1400,now);filter.Q.value=1.1;gain.gain.setValueAtTime(.001,now);gain.gain.exponentialRampToValueAtTime(.038,now+.045);gain.gain.exponentialRampToValueAtTime(.001,now+duration);osc.connect(filter);filter.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+duration);
- const buffer=audio.createBuffer(1,Math.floor(audio.sampleRate*duration),audio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);const noise=audio.createBufferSource(),rasp=audio.createGain();noise.buffer=buffer;rasp.gain.value=.022;noise.connect(rasp);rasp.connect(filter);noise.start(now);noise.stop(now+duration);}catch{}}
 function portrait(c,w,h){c.save();const k=Math.min(w/215,h/215);c.translate(w/2,h*.98);c.scale(k,k);sprite(c,'attack',2,200);c.restore();}
-root.WIZARDRY_UNDEAD_V99={draw,pose,bodyScaleAt,depthFor,sourceRect,portrait,unlockAudio,screech,onReady:fn=>listeners.push(fn)};
+root.WIZARDRY_UNDEAD_V99={draw,pose,bodyScaleAt,depthFor,sourceRect,portrait,onReady:fn=>listeners.push(fn)};
 })(window);

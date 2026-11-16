@@ -36,13 +36,6 @@ function weightTransfer(o){if(o.stage!=='bender-stomp')return{lean:0,squat:0};co
 }
 function impactAge(o){return o.stage==='bender-stomp'?(C(o.progress)-.68)*850:o.stage==='bender-wall'?272+C(o.progress)*650:-1;}
 function cameraShake(o){const age=impactAge(o);if(age<0||age>520)return{x:0,y:0};const fade=(1-age/520)**2;return{x:Math.sin(age*.13)*4.5*fade,y:Math.cos(age*.17)*3*fade};}
-let audio=null;
-function unlockAudio(){const AC=root.AudioContext||root.webkitAudioContext;if(!AC)return;try{if(!audio)audio=new AC();if(audio.state==='suspended')audio.resume().catch(()=>{});}catch{}}
-function rumble(){if(!audio||audio.state!=='running')return;try{
- const now=audio.currentTime,buffer=audio.createBuffer(1,Math.floor(audio.sampleRate*.58),audio.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*(1-i/data.length);
- const noise=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain();noise.buffer=buffer;filter.type='lowpass';filter.frequency.setValueAtTime(160,now);filter.frequency.exponentialRampToValueAtTime(55,now+.5);gain.gain.setValueAtTime(.3,now);gain.gain.exponentialRampToValueAtTime(.001,now+.58);noise.connect(filter);filter.connect(gain);gain.connect(audio.destination);noise.start(now);noise.stop(now+.58);
- const thump=audio.createOscillator(),hitGain=audio.createGain();thump.frequency.setValueAtTime(85,now);thump.frequency.exponentialRampToValueAtTime(30,now+.19);hitGain.gain.setValueAtTime(.09,now);hitGain.gain.exponentialRampToValueAtTime(.001,now+.23);thump.connect(hitGain);hitGain.connect(audio.destination);thump.start(now);thump.stop(now+.24);
- }catch{}}
 function groundShock(c,o,b){const age=impactAge(o);if(age<0||age>650)return;const x=500+b.dir*48*BENDER_SCALE;
  for(let i=0;i<3;i++){const q=(age-i*75)/350;if(q<0||q>1)continue;c.save();c.globalAlpha*=(1-q)*(.65-i*.12);c.strokeStyle='#d4c6a0';c.lineWidth=3-i*.6;c.beginPath();c.ellipse(x,425,12+q*150,4+q*38,0,0,TAU);c.stroke();c.restore();}
  const p=C(age/520);c.save();c.globalAlpha*=(1-p)*.75;
@@ -120,5 +113,5 @@ function drawItem(c,a){c.save();c.translate(a.x,a.y);
   c.globalAlpha*=1-a.p;const r=7+a.p*23,haze=c.createRadialGradient(0,0,0,0,0,r);haze.addColorStop(0,'#b9a78785');haze.addColorStop(1,'#b9a78700');c.fillStyle=haze;c.beginPath();c.ellipse(0,0,r,r*.8,0,0,TAU);c.fill();
   for(let i=0;i<4;i++){const angle=i*2.399+a.seed,rr=5+a.p*31,x=Math.cos(angle)*rr,y=Math.sin(angle)*rr;poly(c,[[x-3,y-2],[x+4,y],[x+1,y+4],[x-3,y+2]],i%2?'#736e5c':'#b8a98c');}
  }c.restore();}
-root.WIZARDRY_STONE_BENDER_V83={pose,draw,items,drawItem,stompFrame,weightTransfer,cameraShake,unlockAudio,rumble,hitAt:()=>HIT_MS};
+root.WIZARDRY_STONE_BENDER_V83={pose,draw,items,drawItem,stompFrame,weightTransfer,cameraShake,hitAt:()=>HIT_MS};
 })(window);

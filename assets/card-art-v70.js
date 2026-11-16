@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='rod'&&root.WIZARDRY_ROD_V98){root.WIZARDRY_ROD_V98.portrait(c,w,h);return true;}
  if(id==='bloom'&&root.WIZARDRY_BLOOM_V97){root.WIZARDRY_BLOOM_V97.portrait(c,w,h);return true;}
  if(id==='devil'&&root.WIZARDRY_DEVIL_V96){root.WIZARDRY_DEVIL_V96.portrait(c,w,h);return true;}
  if(id==='octo'&&root.WIZARDRY_OCTO_V95){root.WIZARDRY_OCTO_V95.portrait(c,w,h);return true;}

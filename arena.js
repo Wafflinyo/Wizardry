@@ -73,6 +73,8 @@
     {id:"octo",name:"Octo Whip",school:"water",cost:4,target:"enemy",kind:"octo",damage:400,flinchChance:.15,accuracy:.85,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"85% ACCURACY",description:"A large blue octopus slams down, flails angrily and whips one enemy for 400 damage. 15% chance to flinch: skips their action this turn only if they have not acted yet. No carryover to the next turn."}
 ,
     {id:"devil",name:"Devil Boy",school:"fire",cost:3,target:"enemy",kind:"damage",damage:250,accuracy:.85,icon:"♨",rarity:"RARE",duration:3800,hit:.60,short:"85% ACCURACY",description:"A small red demon appears in a burst of flames, aims his musket-style pistol and fires a glowing volcanic rock at one enemy for 250 Fire damage, then disappears in another burst of flames."}
+,
+    {id:"bloom",name:"Blooming Spores",school:"nature",cost:4,target:"all_enemies",kind:"spores",damage:100,poisonChance:.30,poisonDamage:50,poisonTurns:5,accuracy:.90,icon:"❀",rarity:"EPIC",duration:4600,hit:.72,short:"90% ACCURACY",description:"A huge spotted closed flower bud bulges with pressure, then bursts open into full bloom and releases spore dust, dealing 100 Nature damage to every enemy. Each enemy hit has an independent 30% chance to be poisoned for 50 HP per turn for 5 turns."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -641,7 +643,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="frosty"){
+      if(a.card.id==="bloom"){
+        a.sporeTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y}));
+        startStage(a,"summon",a.card.duration);
+      }else if(a.card.id==="frosty"){
         const target=getUnit(a.target);a.frostTargetPoint=target?{x:target.x,y:target.y}:null;
         startStage(a,"frost-gust",800);
       }else if(a.card.id==="bender"){
@@ -1210,7 +1215,17 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="aoe"&&card.target==="all_enemies"){
+    if(card.kind==="spores"){
+      for(const enemy of alive(1-c.team)){
+        damage(c,enemy,card.damage,card,anim);
+        if(enemy.hp>0&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
+          addStatus(enemy,"poison","☠",card.poisonDamage);
+          const poison=enemy.statuses.find(st=>st.kind==="poison");
+          poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;
+          flash(enemy,"POISONED · 5 TURNS","#c3e985");
+        }
+      }
+    }else if(card.kind==="aoe"&&card.target==="all_enemies"){
       // The wind-volley stage normally applies hits individually at the
       // precise arrival of each stone. This only resolves remaining hits,
       // never replaying damage on an already impacted enemy.
@@ -1461,7 +1476,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="devil"?
+        const effect=k.id==="bloom"?
+          '<span class="spell-effect"><b>100 TO ALL ENEMIES</b><span>30% POISON EACH · 50×5</span></span>':k.id==="devil"?
           '<span class="spell-effect"><b>VOLCANIC SHOT · 250</b><span>1 ENEMY · FIRE</span></span>':k.id==="octo"?
           '<span class="spell-effect"><b>TENTACLE WHIP · 400</b><span>15% FLINCH · THIS TURN ONLY</span></span>':k.id==="scorpion"?
           '<span class="spell-effect"><b>STING · 340</b><span>30% POISON · 50×3</span></span>':k.id==="freezing"?
@@ -1507,7 +1523,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2117,7 +2133,7 @@
         return {title:"≈ Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
-      case "poison":return {title:"☠ Poison · Earth damage over time",detail:"Loses 50 HP at the start of each turn for "+st.remaining+" more turns. Refreshes without stacking copies. Works alongside burn and Frostbite; preserves spell-only effects."};
+      case "poison":return {title:"☠ Poison · Damage over time",detail:"Loses 50 HP at the start of each turn for "+st.remaining+" more turns. Refreshes without stacking copies. Works alongside burn and Frostbite; preserves spell-only effects."};
       case "freezing_temps":return {title:"❄ Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
       case "frozen":return {title:"❄ Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
       case "healing_aura":return {title:"❀ Healing Aura · Nature healing",detail:"Restores 200 HP at the start of each turn for "+st.remaining+" more turns: 600 HP total. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
@@ -2312,6 +2328,7 @@
     window.WIZARDRY_SCORPION_V94?.onReady(drawCardArts);
     window.WIZARDRY_OCTO_V95?.onReady(drawCardArts);
     window.WIZARDRY_DEVIL_V96?.onReady(drawCardArts);
+    window.WIZARDRY_BLOOM_V97?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
       observer.observe(ui.hand);
@@ -2526,7 +2543,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["scorpion","octo","devil"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2548,6 +2565,11 @@
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
+    }
+    if(action?.card?.id==="bloom"&&action.stage==="summon"){
+      const bloom=window.WIZARDRY_BLOOM_V97,caster=getUnit(action.source),opts={progress:clamp(action.elapsed/action.duration,0,1),targets:action.sporeTargets||alive(1-caster.team).map(t=>({id:t.id,x:t.x,y:t.y}))};
+      if(bloom){renderables.push({type:"bloom-flower",depthY:425,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
+        for(const target of opts.targets)renderables.push({type:"bloom-spores-"+target.id,depthY:bloom.depthFor(opts,target),priority:2,draw:()=>bloom.draw(g,{...opts,target,layer:"spores"})});}
     }
     if(action?.card?.id==="devil"&&action.stage==="summon"){
       const devil=window.WIZARDRY_DEVIL_V96,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};

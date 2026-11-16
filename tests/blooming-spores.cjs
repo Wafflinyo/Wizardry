@@ -1,0 +1,5 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');const ctx={window:{},Image:class{}};vm.runInNewContext(fs.readFileSync('assets/blooming-spores-v97.js','utf8'),ctx);const fx=ctx.window.WIZARDRY_BLOOM_V97;
+for(let i=0;i<57;i++)assert(fx.pose(i/100).frame<10,'bud stays closed before release');
+assert.equal(fx.pose(.56).frame,9,'holds the bulging closed bud');assert.equal(fx.pose(.57).frame,10,'petals open as spores begin');assert(fx.pose(.72).frame>=12,'fully blossomed at impact');assert(fx.pose(1).alpha<1e-12,'summon finishes');
+for(const target of [{x:175,y:340},{x:831,y:488}]){const hit=fx.travel(.72,target);assert.equal(hit.x,target.x);assert(Math.abs(hit.y-(target.y-75))<1e-6);assert(fx.depthFor({progress:.72},target)>target.y);const c=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(()=>{}),set:(o,k,v)=>(o[k]=v,true)});for(let i=0;i<=100;i++)for(const layer of ['flower','spores'])fx.draw(c,{progress:i/100,target,layer});}
+console.log('Closed bulging bud, blossom release, spore arrival, correct target layers and summon exit passed.');

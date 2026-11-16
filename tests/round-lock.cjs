@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'devil');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'bloom');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('devil'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('bloom'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -330,3 +330,10 @@ const devilCard=cards.find(c=>c.id==='devil');assert.equal(devilCard.damage,250)
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:devilCard,stage:'summon',duration:devilCard.duration,elapsed:0,runeResult:'success'};api.set(s);
 api.updateCastSequence(devilCard.duration*devilCard.hit-1);assert.equal(s.units[1].hp,1000,'no damage before rock contact');api.updateCastSequence(1);assert.equal(s.units[1].hp,750,'one 250 damage impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,750,'no duplicate hit');api.updateCastSequence(devilCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'flame exit releases next action');
 console.log('Devil Boy: featured hand, 250 damage once at rock contact and cast completion passed.');
+const bloomCard=cards.find(c=>c.id==='bloom');assert.equal(bloomCard.damage,100);assert.equal(bloomCard.poisonTurns,5);assert.equal(bloomCard.target,'all_enemies');
+s=battle();s.auras={};api.set(s);const bloomCast={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:.299,other:.30}};
+combat.applySpell(bloomCast);combat.applySpell(bloomCast);assert.equal(s.units[0].hp,1000,'no friendly damage');assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900,'all enemies take exactly 100');assert.equal(s.units[1].statuses.find(x=>x.kind==='poison').remaining,5);assert.equal(s.units[2].statuses.some(x=>x.kind==='poison'),false,'independent 30 percent boundary');assert.equal(s.units[0].statuses.some(x=>x.kind==='tailwind'),false,'no wind spell bonus');
+combat.tickBurnsForRound();assert.equal(s.units[1].hp,900,'no poison tick on application turn');for(let r=2;r<=6;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,900-(r-1)*50);assert.equal(s.units[2].hp,900);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false,'expires after exactly five ticks');
+s=battle();s.auras={};s.units[1].hp=100;api.set(s);combat.applySpell({action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:0,other:0}});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].statuses.length,0,'no poison on defeated enemy');const again={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{other:0}};combat.applySpell(again);assert.equal(s.units[2].statuses.filter(x=>x.kind==='poison').length,1,'refresh without stacking');assert.equal(s.units[2].statuses.find(x=>x.kind==='poison').remaining,5);
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:null,action:{casterId:'human',targetId:null},card:bloomCard,stage:'summon',duration:bloomCard.duration,elapsed:0,runeResult:'success',poisonRolls:{cpu:1,other:1}};api.set(s);api.updateCastSequence(bloomCard.duration*bloomCard.hit-1);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900);api.updateCastSequence(bloomCard.duration);assert.equal(s.animation.stage,'lowering');
+console.log('Blooming Spores: 100 to all enemies, independent 30 percent poison, five 50-damage turns, refresh, KO safety and impact timing passed.');

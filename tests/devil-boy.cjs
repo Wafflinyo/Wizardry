@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');const images=[];
-const ctx={window:{},Image:class{constructor(){images.push(this);}}};vm.runInNewContext(fs.readFileSync('assets/devil-boy-v96.js','utf8'),ctx);images[0].naturalWidth=1280;images[0].naturalHeight=1280;images[0].onload();
+const ctx={window:{},Image:class{constructor(){images.push(this);}}};vm.runInNewContext(fs.readFileSync('assets/devil-boy-v96.js','utf8'),ctx);for(const im of images){im.naturalWidth=1280;im.naturalHeight=im.src.includes('flame')?640:1280;im.onload();}
 const fx=ctx.window.WIZARDRY_DEVIL_V96;
 for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(fx.shot(.529,target),null);const start=fx.shot(.53,target),muzzle=fx.pose(.53,target).muzzle;assert.equal(start.x,muzzle.x);assert.equal(start.y,muzzle.y);
@@ -14,3 +14,10 @@ const drawCalls=[],canvas=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...
 fx.draw(canvas,{progress:.5,target:{x:800,y:450},layer:'actor'});const actor=drawCalls.find(c=>c[0]==='drawImage');assert.equal(actor[8],120,'character is 40 percent smaller');
 assert(fx.pose(.565,{x:800,y:450}).x<500,'strong backward recoil after launch');
 console.log('Smaller Devil Boy, 266ms flight, oversized magma and stronger recoil passed.');
+
+assert.equal(fx.pose(.10,{x:800,y:450}).alpha,0,'arrival burst conceals the character until roaring');
+assert.equal(fx.pose(.89,{x:800,y:450}).alpha,0,'exit burst fully engulfs the character');
+const flameCalls=[],flameCanvas=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...args)=>flameCalls.push([k,...args]),set:(o,k,v)=>(o[k]=v,true)});
+for(const progress of [.11,.86])fx.draw(flameCanvas,{progress,target:{x:800,y:450},layer:'actor'});
+assert.equal(flameCalls.filter(x=>x[0]==='drawImage'&&x[1].src.includes('flame-burst')).length,4,'arrival and departure both crossfade rendered fire frames');
+console.log('Rendered flame burst, entrance reveal and exit engulf timing passed.');

@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'rod');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'undead');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('rod'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('undead'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -337,3 +337,7 @@ combat.tickBurnsForRound();assert.equal(s.units[1].hp,900,'no poison tick on app
 s=battle();s.auras={};s.units[1].hp=100;api.set(s);combat.applySpell({action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:0,other:0}});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].statuses.length,0,'no poison on defeated enemy');const again={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{other:0}};combat.applySpell(again);assert.equal(s.units[2].statuses.filter(x=>x.kind==='poison').length,1,'refresh without stacking');assert.equal(s.units[2].statuses.find(x=>x.kind==='poison').remaining,5);
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:null,action:{casterId:'human',targetId:null},card:bloomCard,stage:'summon',duration:bloomCard.duration,elapsed:0,runeResult:'success',poisonRolls:{cpu:1,other:1}};api.set(s);api.updateCastSequence(bloomCard.duration*bloomCard.hit-1);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900);api.updateCastSequence(bloomCard.duration);assert.equal(s.animation.stage,'lowering');
 console.log('Blooming Spores: 100 to all enemies, independent 30 percent poison, five 50-damage turns, refresh, KO safety and impact timing passed.');
+const undeadCard=cards.find(c=>c.id==='undead');assert.equal(undeadCard.damage,200);assert.equal(undeadCard.school,'dark');let screeches=0;context.window.WIZARDRY_UNDEAD_V99={screech:()=>screeches++};
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:undeadCard,stage:'summon',duration:undeadCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(undeadCard.duration*.45);assert.equal(screeches,1);assert.equal(s.units[1].hp,1000);api.updateCastSequence(undeadCard.duration*(undeadCard.hit-.45)-1);assert.equal(s.units[1].hp,1000,'no damage during climb, screech or pounce');api.updateCastSequence(1);assert.equal(s.units[1].hp,800,'200 damage on claw swipe');api.updateCastSequence(200);assert.equal(s.units[1].hp,800);assert.equal(screeches,1,'screech plays only once');api.updateCastSequence(undeadCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'claw follow-through releases next action');
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:undeadCard,stage:'summon',duration:undeadCard.duration,elapsed:undeadCard.duration*.75,runeResult:'success'};s.units[1].hp=0;api.set(s);api.updateCastSequence(undeadCard.duration*.1);assert.equal(s.units[2].hp,1000,'never leaps to a different target after KO');
+console.log('Undead Rampage: featured hand, screech once, 200 only on claw contact, no duplicate or retarget, and cast completion passed.');

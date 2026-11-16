@@ -77,6 +77,8 @@
     {id:"bloom",name:"Blooming Spores",school:"nature",cost:4,target:"all_enemies",kind:"spores",damage:100,poisonChance:.30,poisonDamage:50,poisonTurns:5,accuracy:.90,icon:"❀",rarity:"EPIC",duration:4600,hit:.72,short:"90% ACCURACY",description:"A huge spotted closed flower bud bulges with pressure, then bursts open into full bloom and releases spore dust, dealing 100 Nature damage to every enemy. Each enemy hit has an independent 30% chance to be poisoned for 50 HP per turn for 5 turns."}
 ,
     {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",selfOnly:true,kind:"lightningrod",damage:100,rodTurns:5,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Self-only Lightning rune for the next 5 turns. Each later Lightning cast by you or any ally, even a miss, stores 1 charge. At the end of the fifth turn, discharges 100 damage per charge TOTAL, split among living enemies. Lightning Rod itself never charges it. Recasting refreshes duration without stacking runes or losing stored charges."}
+,
+    {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -601,6 +603,7 @@
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
+    if(a.card.id==="undead"&&a.stage==="summon"&&!a.undeadScreeched&&a.elapsed>=a.card.duration*.45){a.undeadScreeched=true;window.WIZARDRY_UNDEAD_V99?.screech();}
     if(a.stage==="summon"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="dragon-splash"&&a.runeResult==="success"){
@@ -1519,7 +1522,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="rod"?
+        const effect=k.id==="undead"?
+          '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>1 ENEMY · DARK</span></span>':k.id==="rod"?
           '<span class="spell-effect"><b>5 TURNS · 100 × CHARGES</b><span>TOTAL SPLIT BETWEEN ENEMIES</span></span>':k.id==="bloom"?
           '<span class="spell-effect"><b>100 TO ALL ENEMIES</b><span>30% POISON EACH · 50×5</span></span>':k.id==="devil"?
           '<span class="spell-effect"><b>VOLCANIC SHOT · 250</b><span>1 ENEMY · FIRE</span></span>':k.id==="octo"?
@@ -1567,7 +1571,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1658,6 +1662,7 @@
     ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
       window.WIZARDRY_STONE_BENDER_V83?.unlockAudio?.();
+      window.WIZARDRY_UNDEAD_V99?.unlockAudio?.();
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left)*W/rect.width;
       const y=(event.clientY-rect.top)*H/rect.height;
@@ -2376,6 +2381,7 @@
     window.WIZARDRY_DEVIL_V96?.onReady(drawCardArts);
     window.WIZARDRY_BLOOM_V97?.onReady(drawCardArts);
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
+    window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
       observer.observe(ui.hand);
@@ -2590,7 +2596,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom","rod"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom","rod","undead"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2612,6 +2618,10 @@
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
+    }
+    if(action?.card?.id==="undead"&&action.stage==="summon"){
+      const undead=window.WIZARDRY_UNDEAD_V99,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      if(undead)for(const layer of ["ground","actor","claws"])renderables.push({type:"undead-"+layer,depthY:undead.depthFor(opts,layer),priority:2,draw:()=>undead.draw(g,{...opts,layer})});
     }
     if(action?.card?.id==="rod"&&action.stage==="summon"){
       const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source)};

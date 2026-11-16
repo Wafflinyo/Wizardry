@@ -2307,6 +2307,7 @@
     window.WIZARDRY_BABY_DRAGON_V61?.onReady(drawCardArts);
     window.WIZARDRY_CARD_ART_V70?.onReady(drawCardArts);
     window.WIZARDRY_SCORPION_V94?.onReady(drawCardArts);
+    window.WIZARDRY_OCTO_V95?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));
       observer.observe(ui.hand);

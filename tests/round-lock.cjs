@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'undead');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'centaur');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('undead'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('centaur'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -351,3 +351,7 @@ s=fearBattle();api.set(s);fearAPI.applySpell({action:{casterId:'human',targetId:
 s=fearBattle();s.units[1].hp=200;api.set(s);fearAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:undeadCard,runeResult:'success',fearRoll:0});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].fearRound,undefined);
 s=fearBattle();s.round=2;s.units[1].fearRound=1;api.set(s);api.startNextAction();assert.equal(s.animation.source,'cpu','stale prior-round fear cannot skip a new round');
 console.log('Undead fear: 10 percent on hit, only pending enemy action skipped, no mana spent, already-acted immunity, KO/miss safety and no next-round carryover passed.');
+const centaurCard=cards.find(c=>c.id==='centaur');assert.equal(centaurCard.damage,650);assert.equal(centaurCard.school,'nature');assert.equal(cards.filter(c=>c.school==='nature').length,4);
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:centaurCard,stage:'summon',duration:centaurCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(centaurCard.duration*centaurCard.hit-1);assert.equal(s.units[1].hp,1000,'draw and arrow flight do not apply early damage');api.updateCastSequence(1);assert.equal(s.units[1].hp,350,'650 damage on arrow impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,350,'single arrow cannot hit twice');assert.equal(s.units[2].hp,1000,'no splash damage');api.updateCastSequence(centaurCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'centaur departure hands off to next cast');
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:centaurCard,stage:'summon',duration:centaurCard.duration,elapsed:centaurCard.duration*.71,runeResult:'success'};s.units[1].hp=0;api.set(s);api.updateCastSequence(centaurCard.duration*.1);assert.equal(s.units[2].hp,1000,'locked shot never retargets a different enemy');
+console.log('Forrest Centaur: opening hand, 650 once on contact, no friendly/splash or retarget damage, cast completion and fourth Nature card passed.');

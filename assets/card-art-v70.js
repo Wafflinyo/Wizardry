@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='centaur'&&root.WIZARDRY_CENTAUR_V100){root.WIZARDRY_CENTAUR_V100.portrait(c,w,h);return true;}
  if(id==='undead'&&root.WIZARDRY_UNDEAD_V99){root.WIZARDRY_UNDEAD_V99.portrait(c,w,h);return true;}
  if(id==='rod'&&root.WIZARDRY_ROD_V98){root.WIZARDRY_ROD_V98.portrait(c,w,h);return true;}
  if(id==='bloom'&&root.WIZARDRY_BLOOM_V97){root.WIZARDRY_BLOOM_V97.portrait(c,w,h);return true;}

@@ -16,7 +16,7 @@ s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',car
 console.log('Round lock-in and defeated-target regression checks passed.');
 
 const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'octo');
+assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'devil');
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
@@ -44,7 +44,7 @@ console.log('Bear layering checks passed for both sides and front/back targets.'
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
 const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('octo'));
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('devil'));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
@@ -326,3 +326,7 @@ vm.runInNewContext(fs.readFileSync('assets/octo-whip-v95.js','utf8'),context);
 const canvasMock=new Proxy({}, {get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
 for(const target of [{x:175,y:340},{x:831,y:488}])for(let step=0;step<=100;step++)for(const layer of ['body','whip'])context.window.WIZARDRY_OCTO_V95.draw(canvasMock,{progress:step/100,target,layer});
 console.log('Octo impact applies 400 damage and flinch; animation completes for both team directions.');
+const devilCard=cards.find(c=>c.id==='devil');assert.equal(devilCard.damage,250);assert.equal(devilCard.school,'fire');
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:devilCard,stage:'summon',duration:devilCard.duration,elapsed:0,runeResult:'success'};api.set(s);
+api.updateCastSequence(devilCard.duration*.68-1);assert.equal(s.units[1].hp,1000,'no damage before rock contact');api.updateCastSequence(1);assert.equal(s.units[1].hp,750,'one 250 damage impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,750,'no duplicate hit');api.updateCastSequence(devilCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'flame exit releases next action');
+console.log('Devil Boy: featured hand, 250 damage once at rock contact and cast completion passed.');

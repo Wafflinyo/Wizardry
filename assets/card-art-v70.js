@@ -51,6 +51,7 @@ function prepare(id){
  entry.image.src=source;return entry;
 }
 function draw(id,c,w,h){
+ if(id==='devil'&&root.WIZARDRY_DEVIL_V96){root.WIZARDRY_DEVIL_V96.portrait(c,w,h);return true;}
  if(id==='octo'&&root.WIZARDRY_OCTO_V95){root.WIZARDRY_OCTO_V95.portrait(c,w,h);return true;}
  if(id==='scorpion'&&root.WIZARDRY_SCORPION_V94){root.WIZARDRY_SCORPION_V94.portrait(c,w,h);return true;}
  if(id==='freezing'&&root.WIZARDRY_FREEZING_TEMPS_V93){root.WIZARDRY_FREEZING_TEMPS_V93.emblem(c,w/2,h/2,Math.min(w*.78,h*.78));return true;}

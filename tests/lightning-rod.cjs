@@ -15,3 +15,8 @@ for(const caster of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){c
 console.log('Lightning Rod: self-only rune, allied casts including misses, five-turn expiry, shared exact pool, living-target split, no-charge/KO safety and mirrored angled entry passed.');
 const images=[],renderContext={window:{},Image:class{constructor(){images.push(this);}}};vm.runInNewContext(fs.readFileSync('assets/lightning-rod-v98.js','utf8'),renderContext);images[0].naturalWidth=1280;images[0].naturalHeight=640;images[0].onload();const calls=[],canvas=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});renderContext.window.WIZARDRY_ROD_V98.draw(canvas,{progress:.6,caster:{x:175,y:340},layer:'rod'});assert.equal(calls.filter(x=>x[0]==='drawImage').length,2,'rod and high cloud are separate rigid layers');assert.equal(calls.filter(x=>x[0]==='rotate').length,1,'cloud is not tilted with rod');
 console.log('Loaded artwork: thicker cylinder tilts separately from the level, elevated cloud.');
+
+const short=fx.pose(.6,{x:175,y:340});assert(Math.hypot(short.tip.x-500,short.tip.y-425)<110,'rod is over a third shorter');
+const path=fx.lightningPath(short.cloud,short.tip,2);assert.equal(path.length,8);assert.equal(path[0].x,short.cloud.x);assert.equal(path[0].y,short.cloud.y);assert.equal(path[7].x,short.tip.x);assert.equal(path[7].y,short.tip.y);
+assert(fx.cloudStrikeAlpha(.625)>.8);assert(fx.cloudStrikeAlpha(.644)<.05,'main flash has a dark interval');assert(fx.cloudStrikeAlpha(.652)>.8,'restrike flashes again');assert.equal(fx.cloudStrikeAlpha(.70),0);
+console.log('Shorter rod, exact bolt endpoints and separated jagged lightning flashes passed.');

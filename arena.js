@@ -2547,7 +2547,7 @@
     }
     if(action?.card?.id==="octo"&&action.stage==="summon"){
       const octo=window.WIZARDRY_OCTO_V95,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
-      if(octo)for(const layer of ["ground","body","whip"])renderables.push({type:"octo-"+layer,depthY:layer==="ground"?200:layer==="whip"?opts.target.y+.1:425,priority:2,draw:()=>octo.draw(g,{...opts,layer})});
+      if(octo)for(const layer of ["ground","body","whip"])renderables.push({type:"octo-"+layer,depthY:layer==="ground"?200:layer==="whip"?opts.target.y+.1:opts.target.y-.1,priority:2,draw:()=>octo.draw(g,{...opts,layer})});
     }
     if(action?.card?.id==="scorpion"&&action.stage==="summon"){
       const scorpion=window.WIZARDRY_SCORPION_V94,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};

@@ -78,7 +78,7 @@
 ,
     {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",selfOnly:true,kind:"lightningrod",damage:100,rodTurns:5,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Self-only Lightning rune for the next 5 turns. Each later Lightning cast by you or any ally, even a miss, stores 1 charge. At the end of the fifth turn, discharges 100 damage per charge TOTAL, split among living enemies. Lightning Rod itself never charges it. Recasting refreshes duration without stacking runes or losing stored charges."}
 ,
-    {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike."}
+    {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -947,6 +947,10 @@
       if(!c||c.hp<=0||!card)continue;
       // Exactly ONE eligible action is lost, whether the spell struck
       // before this wizard's planned cast or during a prior round.
+      if(c.fearRound===state.round){
+        c.fearRound=null;flash(c,"FEARED · SKIPPED","#d4c0eb");
+        state.log=[c.name+" is feared and loses this round's action to Undead Rampage.",...state.log].slice(0,5);continue;
+      }
       if(isFrozen(c)){state.log=[c.name+" loses their action while frozen.",...state.log].slice(0,5);continue;}
       if(c.flinchRound===state.round){
         c.flinchRound=null;flash(c,"FLINCHED · SKIPPED","#88ddff");
@@ -1034,6 +1038,14 @@
       for(const {target,amount} of shares){if(!amount)continue;target.hp=Math.max(0,target.hp-amount);flash(target,"−"+amount+" · ROD","#bde7ff");if(!target.hp){target.defeatElapsedMs=0;flash(target,"DEFEATED","#ffd5b0");}}
       state.log=[u.name+"'s Lightning Rod releases "+pool+" total damage across "+shares.length+" enemies.",...state.log].slice(0,5);
     }
+  }
+  function attemptUndeadFear(source,target,card,roll=Math.random()){
+    if(card?.id!=="undead"||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
+    if(!(state.sequence||[]).slice(state.queueAt).some(a=>a.casterId===target.id))return false;
+    target.fearRound=state.round;
+    flash(target,"FEARED · THIS ROUND","#d4c0eb");
+    state.log=[target.name+" is feared by Undead Rampage and will miss their pending action this round.",...state.log].slice(0,5);
+    return true;
   }
   function attemptOctoFlinch(target,roll=Math.random()){
     if(!target||target.hp<=0||roll>=.15||state.phase!=="resolving")return false;
@@ -1298,6 +1310,8 @@
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
+        if(anim.runeResult==="success"&&card.id==="undead")
+          attemptUndeadFear(c,t,card,anim.fearRoll??Math.random());
         // The independent 20% stun roll happens ONLY after a successful
         // lightning rune and beam impact against a surviving target.
         if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0)
@@ -1345,6 +1359,7 @@
     paintUI();
   }
   function finishRound(){
+    for(const u of state.units)if(Number.isInteger(u.fearRound)&&u.fearRound<=state.round)u.fearRound=null;
     expireLightningRods();
     for(const team of [0,1]){
       const aura=state.auras[team];
@@ -1523,7 +1538,7 @@
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=k.id==="undead"?
-          '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>1 ENEMY · DARK</span></span>':k.id==="rod"?
+          '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="rod"?
           '<span class="spell-effect"><b>5 TURNS · 100 × CHARGES</b><span>TOTAL SPLIT BETWEEN ENEMIES</span></span>':k.id==="bloom"?
           '<span class="spell-effect"><b>100 TO ALL ENEMIES</b><span>30% POISON EACH · 50×5</span></span>':k.id==="devil"?
           '<span class="spell-effect"><b>VOLCANIC SHOT · 250</b><span>1 ENEMY · FIRE</span></span>':k.id==="octo"?
@@ -2917,7 +2932,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
     },
-    applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

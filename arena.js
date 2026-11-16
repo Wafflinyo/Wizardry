@@ -80,7 +80,8 @@
 ,
     {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
 ,
-    {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."}
+    {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."},
+    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -1066,6 +1067,16 @@
       " for one action!",...state.log].slice(0,5);
     return true;
   }
+  function blockWithWindDome(source,target,base,spell){
+    if(!source||!target||source.team===target.team||target.hp<=0||base<=0)return false;
+    if(spell?.windDomeTargets?.[target.id])return true;
+    if(!consumeStatus(target,"wind_dome"))return false;
+    if(spell){if(!spell.windDomeTargets)spell.windDomeTargets={};spell.windDomeTargets[target.id]=true;}
+    (state.windDomeBursts??=[]).push({targetId:target.id,age:0});
+    flash(target,"WIND DOME · BLOCKED","#d1fff1");
+    state.log=[target.name+"'s Wind Dome blocks "+(spell?.card?.name||"the incoming spell")+" and disperses.",...state.log].slice(0,5);
+    return true;
+  }
   function damage(source,target,base,card,spell=null){
     let raw=base,notes=[];
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
@@ -1081,6 +1092,7 @@
     if(blade){raw*=1+blade.value;notes.push("BLADE");}
     const aura=state.auras[source.team];
     if(aura&&aura.turns>0){raw*=1+aura.value;notes.push("AURA");}
+    if(blockWithWindDome(source,target,base,spell))return 0;
     // Decaying Strength belongs to the next successful SPELL, including every hit.
     let decay=spell?.decayBonusTargets?.[target.id];
     if(decay===undefined){
@@ -1147,7 +1159,7 @@
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
-    if(target.hp>0&&(roll??Math.random())<a.card.frostChance){
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
       addStatus(target,"frostbite","❄",a.card.frostDamage);
       const frost=target.statuses.find(st=>st.kind==="frostbite");frost.remaining=a.card.frostTurns;frost.appliedRound=state.round;frost.lastTickRound=state.round;
       flash(target,"FROSTBITE (3 TURNS)","#b6eeff");
@@ -1165,7 +1177,7 @@
     a.applied=true;const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(target.hp>0){addStatus(target,"decaying_strength","☠",.20);flash(target,"DECAYING STRENGTH","#c89bd8");}
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]){addStatus(target,"decaying_strength","☠",.20);flash(target,"DECAYING STRENGTH","#c89bd8");}
     paintUI();return true;
   }
   function applyRoninHit(a,index){
@@ -1183,7 +1195,7 @@
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
     // One independent burn roll per enemy hit, not per cosmetic arrow.
-    if(target.hp>0&&(roll??Math.random())<a.card.burnChance){
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.burnChance){
       addStatus(target,"burn","🔥",a.card.burnDamage);
       const burn=target.statuses.find(st=>st.kind==="burn");
       burn.remaining=a.card.burnTurns;burn.appliedRound=state.round;burn.lastTickRound=state.round;
@@ -1205,7 +1217,7 @@
     damage(c,target,a.card.damage,a.card,a);
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
-    if(target.hp>0&&a.runeResult==="success"&&roll<a.card.burnChance){
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]&&a.runeResult==="success"&&roll<a.card.burnChance){
       addStatus(target,"burn","🔥",a.card.burnDamage);
       const burn=target.statuses.find(st=>st.kind==="burn");
       burn.remaining=a.card.burnTurns;
@@ -1268,12 +1280,15 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="lightningrod"){
+    if(card.kind==="winddome"){
+      addStatus(c,"wind_dome","≋",1);flash(c,"WIND DOME READY","#d1fff1");
+      state.log=[c.name+" is protected from the next damaging spell by Wind Dome.",...state.log].slice(0,5);
+    }else if(card.kind==="lightningrod"){
       applyLightningRod(c);
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
-        if(enemy.hp>0&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
+        if(enemy.hp>0&&!anim.windDomeTargets?.[enemy.id]&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
           addStatus(enemy,"poison","☠",card.poisonDamage);
           const poison=enemy.statuses.find(st=>st.kind==="poison");
           poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;
@@ -1301,18 +1316,18 @@
           ...state.log].slice(0,5);
       }
     }else if(card.kind==="octo"){
-      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
+      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!anim.windDomeTargets?.[t.id])attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
-        if(t.hp>0&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",card.poisonDamage);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
+        if(t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",card.poisonDamage);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
-        if(anim.runeResult==="success"&&card.id==="undead")
+        if(anim.runeResult==="success"&&card.id==="undead"&&!anim.windDomeTargets?.[t.id])
           attemptUndeadFear(c,t,card,anim.fearRoll??Math.random());
         // The independent 20% stun roll happens ONLY after a successful
         // lightning rune and beam impact against a surviving target.
-        if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0)
+        if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0&&!anim.windDomeTargets?.[t.id])
           attemptVoltStun(c,t,card);
       }
     } else if(card.kind==="heal"&&t&&t.hp>0&&t.team===c.team){
@@ -1438,7 +1453,7 @@
     if(planning)ui.hint.textContent=c?
       (isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(card.selfOnly?"Confirm Lightning Rod on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
+       card?(card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
@@ -1460,7 +1475,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.selfOnly?"Self · 5 turns · allied Lightning casts charge a shared damage pool":allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -1535,7 +1550,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="centaur"?
+        const effect=k.id==="winddome"?
+          '<span class="spell-effect"><b>BLOCK NEXT DAMAGE SPELL</b><span>SELF · EXCLUDES DEBUFF DAMAGE</span></span>':k.id==="centaur"?
           '<span class="spell-effect"><b>CHARGED ARROW · 650</b><span>1 ENEMY · NATURE</span></span>':k.id==="undead"?
           '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="rod"?
           '<span class="spell-effect"><b>5 TURNS · 100 × CHARGES</b><span>TOTAL SPLIT BETWEEN ENEMIES</span></span>':k.id==="bloom"?
@@ -1578,14 +1594,14 @@
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
-          '<span class="spell-combat"><span><b>'+(k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
+          '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
+          (k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="ronin"?450:k.damage).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2162,7 +2178,7 @@
     return {x,y,w,h:43};
   }
   function unitStatuses(u){
-    const list=[...u.statuses].sort((a,b)=>((b.kind==="lightning_rod"?3:b.kind==="decaying_strength"?2:b.kind==="frostbite"?1:0)-(a.kind==="lightning_rod"?3:a.kind==="decaying_strength"?2:a.kind==="frostbite"?1:0))).slice(0,3);
+    const list=[...u.statuses].sort((a,b)=>((b.kind==="wind_dome"?4:b.kind==="lightning_rod"?3:b.kind==="decaying_strength"?2:b.kind==="frostbite"?1:0)-(a.kind==="wind_dome"?4:a.kind==="lightning_rod"?3:a.kind==="decaying_strength"?2:a.kind==="frostbite"?1:0))).slice(0,3);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
   }
@@ -2172,6 +2188,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+((st.stored||0)*100)+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Your casts and allied Lightning casts count, including misses; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
       case "decaying_strength":return {title:"☠ Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
       case "recharge":
@@ -2279,7 +2296,8 @@
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
-      if(st.kind==="lightning_rod"){window.WIZARDRY_ROD_V98?.emblem(g,r.x,r.y,21);g.font="bold 9px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+10,r.y+10);}
+      if(st.kind==="wind_dome")window.WIZARDRY_WIND_DOME_V101?.emblem(g,r.x,r.y,21);
+      else if(st.kind==="lightning_rod"){window.WIZARDRY_ROD_V98?.emblem(g,r.x,r.y,21);g.font="bold 9px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+10,r.y+10);}
       else if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
         for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
@@ -2609,7 +2627,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom","rod","undead","centaur"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2627,6 +2645,17 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    for(const u of sorted){
+      if(u.hp<=0)continue;
+      const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.source===u.id;
+      if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
+        const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
+        for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer})});
+      }
+    }
+    for(const burst of state.windDomeBursts||[]){const u=getUnit(burst.targetId);if(!u||u.hp<=0)continue;
+      for(const layer of ["back","front"])renderables.push({type:"wind-dome-block-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{target:u,time,mode:"block",age:burst.age,layer})});
+    }
     if(action?.stage==="summon"&&["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
@@ -2870,6 +2899,8 @@
         else u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,u.defeatElapsedMs+dt);
       }
     }
+    for(const burst of state.windDomeBursts||[])burst.age+=dt/1000;
+    if(state.windDomeBursts)state.windDomeBursts=state.windDomeBursts.filter(b=>b.age<.62);
     for(const burst of state.rodBursts||[])burst.age+=dt/1000;
     if(state.rodBursts)state.rodBursts=state.rodBursts.filter(b=>b.age<.85);
     for(const f of state.flashes)f.age+=dt/1000;

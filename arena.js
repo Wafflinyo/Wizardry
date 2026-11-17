@@ -91,6 +91,7 @@
   ];
   CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana after casting, or 3 after passing, up to the 15-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   CARDS.push({id:"windfist",name:"Wind Fist Barrage",school:"wind",cost:6,target:"enemy",kind:"windfist",damage:500,hitDamage:50,hits:10,accuracy:.85,icon:"≋",rarity:"EPIC",duration:5400,hit:.98,short:"85% ACCURACY",description:"A monk drops into a three-point crouched landing, stands, claps his hands and bows, then takes an open-palm forward stance. He leaps up and unleashes ten forceful wind fists at one enemy: 50 damage per punch, 500 total. 85% spell accuracy."});
+  CARDS.push({id:"jack",name:"Jack the Lantern",school:"dark",cost:4,target:"enemy",kind:"jack",damage:280,accuracy:.85,icon:"☠",rarity:"EPIC",duration:5200,hit:.73,fearChance:.30,fearTurns:3,short:"85% ACCURACY",description:"A pumpkin-headed scarecrow rises with its head bowed as three crows circle overhead. It lifts its head to face one enemy, sending the crows to swarm for 280 Dark damage. Inflicts Fear for 3 rounds: a 30% chance to skip each turn. Refreshes without stacking."});
   const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.014);
   const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
@@ -447,6 +448,28 @@
     const pending=state.phase==="resolving"&&state.sequence?.slice(state.queueAt).some(a=>a.casterId===target.id);
     frozen.startRound=pending?state.round:state.round+1;frozen.turnsTested=0;frozen.lastTurnRound=null;frozen.releaseRound=null;
     flash(target,"FROZEN","#b8f3ff");return true;
+  }
+  function expireJackFear(u){
+    const fear=u?.statuses.find(st=>st.kind==="fear");
+    if(fear&&(u.hp<=0||state.round>=fear.expiresRound))consumeStatus(u,"fear");
+  }
+  function rollJackFear(u,roll){
+    expireJackFear(u);
+    const fear=u?.statuses.find(st=>st.kind==="fear");
+    if(!fear||state.round<fear.startRound)return false;
+    if(fear.lastRollRound!==state.round){
+      fear.lastRollRound=state.round;
+      fear.skip=(roll??Math.random())<fear.value;
+    }
+    return fear.skip;
+  }
+  function applyJackFear(target,card){
+    const pending=state.phase==="resolving"&&state.sequence?.slice(state.queueAt).some(a=>a.casterId===target.id);
+    const startRound=pending?state.round:state.round+1;
+    addStatus(target,"fear","☠",card.fearChance);
+    Object.assign(target.statuses.find(st=>st.kind==="fear"),{startRound,expiresRound:startRound+card.fearTurns,lastRollRound:null,skip:false});
+    flash(target,"FEAR · 3 ROUNDS","#dfb7f1");
+    state.log=[target.name+" is haunted by Jack the Lantern: 30% chance to skip each of 3 turns.",...state.log].slice(0,5);
   }
   function requiresRest(u){
     return !!u&&u.hp>0&&(isFrozen(u)||isStunned(u)||isRecharging(u)||
@@ -1020,6 +1043,10 @@
         c.fearRound=null;flash(c,"FEARED · SKIPPED","#d4c0eb");
         state.log=[c.name+" is feared and loses this round's action to Undead Rampage.",...state.log].slice(0,5);continue;
       }
+      if(rollJackFear(c)){
+        flash(c,"FEAR · TURN SKIPPED","#dfb7f1");
+        state.log=[c.name+" loses this turn to Jack the Lantern's Fear.",...state.log].slice(0,5);continue;
+      }
       if(isFrozen(c)){state.log=[c.name+" loses their action while frozen.",...state.log].slice(0,5);continue;}
       if(c.flinchRound===state.round){
         c.flinchRound=null;flash(c,"FLINCHED · SKIPPED","#88ddff");
@@ -1549,6 +1576,7 @@
   }
   function tickBurnsForRound(){
     expireGunpowderCoats();
+    for(const u of state.units)expireJackFear(u);
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
     for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
       if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
@@ -1588,7 +1616,12 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="windfist"){
+    if(card.kind==="jack"){
+      if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
+        damage(c,t,card.damage,card,anim);
+        if(t.hp>0&&!anim.windDomeTargets?.[t.id])applyJackFear(t,card);
+      }
+    }else if(card.kind==="windfist"){
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
     }else if(card.kind==="flowstate"){
       addStatus(c,"flow_state","≈",1);
@@ -1868,7 +1901,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="windfist"?
+        const effect=k.id==="jack"?
+          '<span class="spell-effect"><b>CROW SWARM · 280</b><span>FEAR · 30% SKIP · 3 ROUNDS</span></span>':k.id==="windfist"?
           '<span class="spell-effect"><b>10 WIND FISTS × 50</b><span>1 ENEMY · 500 TOTAL</span></span>':k.id==="flowstate"?
           '<span class="spell-effect"><b>+1 EXTRA MANA / TURN</b><span>SELF · NEXT 3 TURNS</span></span>':k.id==="gunpowderkiss"?
           '<span class="spell-effect"><b>GUNPOWDER COAT · 3 TURNS</b><span>FIRE HIT: 150 · UP TO 3 TIMES</span></span>':k.id==="zeus"?
@@ -1927,7 +1961,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2515,6 +2549,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. Reapplying refreshes without stacking."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana after casting, or 3 after passing. Maximum 15 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
       case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
@@ -2711,7 +2746,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="windfist")window.WIZARDRY_WIND_FIST_V123?.portrait(c,width,height);
+      if(card.id==="jack")window.WIZARDRY_JACK_V129?.portrait(c,width,height);
+      else if(card.id==="windfist")window.WIZARDRY_WIND_FIST_V123?.portrait(c,width,height);
       else if(card.id==="flowstate")window.WIZARDRY_FLOW_STATE_V121?.portrait(c,width,height);
       else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
       else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
@@ -2753,6 +2789,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_JACK_V129?.onReady(drawCardArts);
     window.WIZARDRY_WIND_FIST_V123?.onReady(drawCardArts);
     window.WIZARDRY_FLOW_STATE_V121?.onReady(drawCardArts);
     window.WIZARDRY_GUNPOWDER_V120?.onReady(drawCardArts);
@@ -2974,7 +3011,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -3014,6 +3051,12 @@
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
+    }
+    if(action?.card?.id==="jack"&&action.stage==="summon"){
+      const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      const spell=window.WIZARDRY_JACK_V129;
+      if(spell)for(const layer of ["ground","actor","crow0","crow1","crow2","impact"])
+        renderables.push({type:"jack-"+layer,depthY:spell.depthFor(opts,layer),priority:2,draw:()=>spell.draw(g,{...opts,layer})});
     }
     if(action?.card?.id==="windfist"&&action.stage==="summon"){
       const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target),releases:WIND_FIST_RELEASES};
@@ -3364,6 +3407,7 @@
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
+    rollJackFear,applyJackFear,expireJackFear,
     applyWindFistHit,WIND_FIST_RELEASES,WIND_FIST_HIT_TIMES,
     turnOrder,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,
     setBattle,queueSpell,autoFill,resolvePressed,

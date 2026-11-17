@@ -13,6 +13,12 @@
   <link rel="stylesheet" href="./assets/spell-cards-v60.css?v=0.67.0">
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
+<style>
+#initiative{display:flex!important;flex-wrap:wrap;overflow:visible;gap:4px;margin-top:8px}
+#initiative .initiative-slot{font-size:10px;white-space:nowrap}
+#passTurn{margin-left:auto;white-space:nowrap}
+@media(max-width:700px){#initiative .initiative-slot{font-size:8px;padding:3px 5px}.hand-assist{flex-wrap:wrap}#passTurn{font-size:10px}}
+</style>
 </head>
 <body>
 <main class="game" id="game">
@@ -71,6 +77,7 @@
         <strong id="chosenSpell">SELECT A SPELL</strong>
         <span id="chosenTarget">Then tap an enemy on the battlefield</span>
       </div>
+      <button type="button" id="passTurn" class="reset">Pass Turn · Save Mana</button>
       <button type="button" id="confirmTarget" class="confirm-target" hidden>Confirm Target</button>
     </div>
     <details class="customize-menu">
@@ -193,6 +200,7 @@
 <script src="./assets/gunpowder-kiss-atlas-v120-part2.js?v=0.120.0" defer></script>
 <script src="./assets/gunpowder-kiss-atlas-v120-part3.js?v=0.120.0" defer></script>
 <script src="./assets/gunpowder-kiss-v120.js?v=0.120.1" defer></script>
-<script src="./arena.js?v=0.120.0" defer></script>
+<script src="./assets/flow-state-v121.js?v=0.121.0" defer></script>
+<script src="./arena.js?v=0.121.0" defer></script>
 </body>
 </html>

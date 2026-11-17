@@ -1111,6 +1111,39 @@
         text:"-"+entry.total,color,age:0});
     }else entry.message=flash(target,"-"+entry.total,color);
   }
+  function layoutCombatMessages(c,messages){
+    // Lay out every card's messages together using their actual text bounds.
+    // Damage, debuffs and healing keep separate rows even on the same frame.
+    const gap=7,overlaps=(a,b)=>Math.abs(a.x-b.x)<(a.width+b.width)/2+gap&&Math.abs(a.y-b.y)<(a.height+b.height)/2+gap;
+    c.save();
+    for(let fontSize=31;fontSize>=15;fontSize-=2){
+      c.font="800 "+fontSize+"px system-ui,sans-serif";
+      const placed=[];
+      for(const f of messages){
+        const width=c.measureText(f.text).width+12,height=fontSize+12;
+        if(width>W-24)break;
+        const x=clamp(f.x,width/2+12,W-width/2-12),y=clamp(f.y-f.age*67,height/2+12,H-height/2-12);
+        const xs=[x,width/2+12,W-width/2-12],ys=[y,height/2+12,H-height/2-12];
+        for(const b of placed){ys.push(b.y-(b.height+height)/2-gap,b.y+(b.height+height)/2+gap);xs.push(b.x-(b.width+width)/2-gap,b.x+(b.width+width)/2+gap);}
+        const candidates=[];
+        for(const px of xs)for(const py of ys){
+          const box={f,x:px,y:py,width,height,fontSize};
+          if(px-width/2<12||px+width/2>W-12||py-height/2<12||py+height/2>H-12||placed.some(b=>overlaps(box,b)))continue;
+          candidates.push(box);
+        }
+        candidates.sort((a,b)=>(a.x-x)**2*4+(a.y-y)**2-((b.x-x)**2*4+(b.y-y)**2));
+        if(!candidates.length)break;
+        placed.push(candidates[0]);
+      }
+      if(placed.length===messages.length){c.restore();return placed;}
+    }
+    // Dense bursts still fit visibly in ordered rows; never draw over a label.
+    c.font="800 15px system-ui,sans-serif";
+    const placed=messages.map((f,i)=>{c.font="800 15px system-ui,sans-serif";const measured=c.measureText(f.text).width;
+      const fontSize=Math.min(15,15*(W-36)/Math.max(1,measured));
+      return {f,x:W/2,y:26+i*32,width:Math.min(W-24,measured+12),height:27,fontSize};});
+    c.restore();return placed;
+  }
   function addStatus(u,kind,icon,value){
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){existing.value=value;existing.charges=1;return;}
@@ -3300,12 +3333,12 @@
     for(const u of sorted)drawUnitPlate(u);
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
       drawTargetArrow(getUnit(state.selectedTarget),time);
-    for(const f of state.flashes){
+    for(const {f,x,y,fontSize} of layoutCombatMessages(g,state.flashes)){
       const alpha=clamp(1-f.age/.95,0,1);
       g.save();g.globalAlpha=alpha;g.textAlign="center";g.textBaseline="middle";
-      g.font="800 31px system-ui,sans-serif";g.lineWidth=5;g.strokeStyle="#081624";
-      g.strokeText(f.text,f.x,f.y-f.age*67);
-      g.fillStyle=f.color;g.fillText(f.text,f.x,f.y-f.age*67);g.restore();
+      g.font="800 "+fontSize+"px system-ui,sans-serif";g.lineWidth=5;g.strokeStyle="#081624";
+      g.strokeText(f.text,x,y);
+      g.fillStyle=f.color;g.fillText(f.text,x,y);g.restore();
     }
     if(state.phase==="finished"){
       // The defeated wizards remain visible in their held kneeling pose.
@@ -3407,6 +3440,7 @@
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
+    layoutCombatMessages,
     rollJackFear,applyJackFear,expireJackFear,
     applyWindFistHit,WIND_FIST_RELEASES,WIND_FIST_HIT_TIMES,
     turnOrder,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,

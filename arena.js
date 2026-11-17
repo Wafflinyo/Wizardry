@@ -89,6 +89,7 @@
     {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
     {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:3,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
+  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana per turn instead of 1, up to the 10-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.
@@ -295,7 +296,7 @@
     const colors=window.WizardryPalettes;
     const pick=(value,allowed,defaultValue)=>allowed&&Object.hasOwn(allowed,value)?value:defaultValue;
     return {id,team,index,name:d.name,style:d.style,color:d.color,
-      hp:d.hp,maxHp:d.hp,mana:MAX_MANA,speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
+      hp:3000,maxHp:3000,mana:3,speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
       hat:["pointed","wide","hood","scholar"].includes(custom.hat)?custom.hat:"pointed",
       robe:["classic","split","armored"].includes(custom.robe)?custom.robe:"classic",
       robeColor:pick(custom.robeColor,colors?.robeColors,preset.robeColor),
@@ -492,21 +493,54 @@
     autoFill(0);autoFill(1);
     runResolution();
   }
+  // Rotate the fixed interleaved seat ring, then omit defeated wizards.
+  function turnOrder(round=state.round){
+    const seats=[];
+    for(let i=0;i<state.size;i++)for(const team of [0,1]){
+      const u=state.units.find(u=>u.team===team&&u.index===i);if(u)seats.push(u);
+    }
+    const offset=(round-1)%seats.length;
+    return seats.slice(offset).concat(seats.slice(0,offset)).filter(u=>u.hp>0);
+  }
+  function passTurn(){
+    const c=caster();if(state.phase!=="planning"||!c||state.plans[c.id])return;
+    state.plans[c.id]={casterId:c.id,cardId:null,targetId:null,team:c.team,pass:true};
+    clearSelection();resolvePressed();
+  }
+  function grantTurnMana(){
+    for(const u of state.units){
+      if(u.hp<=0)continue;
+      const flow=u.statuses.find(st=>st.kind==="flow_state");
+      const bonus=flow&&flow.remaining>0&&flow.appliedRound<state.round&&flow.lastTickRound!==state.round?1:0;
+      // Guard repeated entry to this turn against duplicate mana awards.
+      if(u.lastManaRound===state.round)continue;
+      u.lastManaRound=state.round;u.mana=Math.min(MAX_MANA,u.mana+1+bonus);
+      if(bonus){flow.lastTickRound=state.round;flow.remaining--;flash(u,"+2 MANA · FLOW STATE","#a7f5ff");
+        if(!flow.remaining)consumeStatus(u,"flow_state");}
+    }
+  }
+  function checkBattleEnd(){
+    if(!state)return false;
+    if(state.phase==="finished")return true;
+    const a=alive(0).length,b=alive(1).length;if(a&&b)return false;
+    state.winner=a?0:b?1:"draw";state.phase="finished";
+    state.animation=null;state.plans={};state.sequence=[];state.queueAt=0;
+    clearSelection();for(const u of state.units)u.armRaise=0;
+    ui.hint.textContent=state.winner==="draw"?"Draw!":(state.winner===0?"Allies":"Enemy team")+" wins!";
+    ui.status.textContent=ui.hint.textContent;paintUI();return true;
+  }
   function runResolution(){
     if(state.phase!=="planning")return;
     // All humans must lock in before any CPU or human action resolves.
     if(state.units.some(u=>u.hp>0&&u.id===state.humanByTeam[u.team]&&
       !requiresRest(u)&&!state.plans[u.id]))return;
     autoFill(0);autoFill(1);
-    const order=Object.values(state.plans)
-      .filter(p=>getUnit(p.casterId)?.hp>0)
-      .sort((a,b)=>getUnit(b.casterId).speed-getUnit(a.casterId).speed||
-        a.casterId.localeCompare(b.casterId));
+    const order=turnOrder().map(u=>state.plans[u.id]).filter(Boolean);
     state.plans=Object.freeze(Object.fromEntries(Object.entries(state.plans)
       .map(([id,plan])=>[id,Object.freeze({...plan})])));
     state.sequence=Object.freeze(order.map(plan=>Object.freeze({...plan})));state.queueAt=0;state.animation=null;state.phase="resolving";
     for(const u of state.units)u.armRaise=0;
-    state.log=["Actions resolve from fastest to slowest.",...state.log].slice(0,5);
+    state.log=["Actions follow the rotating zigzag turn order.",...state.log].slice(0,5);
     paintUI();
     startNextAction();
   }
@@ -958,9 +992,10 @@
     }
   }
   function startNextAction(){
-    if(!state||state.phase!=="resolving")return;
+    if(!state||state.phase!=="resolving"||checkBattleEnd())return;
     while(state.queueAt<state.sequence.length){
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
+      if(checkBattleEnd())return;
       if(!c||c.hp<=0||!card)continue;
       // Exactly ONE eligible action is lost, whether the spell struck
       // before this wizard's planned cast or during a prior round.
@@ -986,6 +1021,7 @@
       const attempt={card};
       if(!triggerThornyWrap(c,attempt)){
         c.mana-=card.cost;
+        if(checkBattleEnd())return;
         continue;
       }
       if(card.target!=="team"&&card.target!=="all_enemies"){
@@ -1494,6 +1530,7 @@
       flash(u,"SOUL DRAIN −"+drained,"#d79ce7");state.log=[u.name+" loses "+drained+" HP to Soul Drain"+(healed?"; "+caster.name+" restores "+healed+" HP":"")+" ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
       if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
       if(!effect.remaining||!u.hp)consumeStatus(u,"soul_drain");
+      if(checkBattleEnd())return;
     }
     // Burn and Frostbite tick independently; neither consumes spell-only marks or shields.
     for(const u of state.units)for(const kind of ["burn","frostbite","poison"]){
@@ -1505,14 +1542,20 @@
       state.log=[u.name+" takes "+amount+" "+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
       if(!effect.remaining||u.hp===0)consumeStatus(u,kind);
+      if(checkBattleEnd())return;
     }
   }
   function applySpell(anim){
-    if(anim.applied)return;
+    if(anim.applied||state.phase==="finished")return;
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="gunpowder"){
+    if(card.kind==="flowstate"){
+      addStatus(c,"flow_state","≈",1);
+      Object.assign(c.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
+      flash(c,"FLOW STATE · 3 TURNS","#a7f5ff");
+      state.log=[c.name+" gains +1 extra mana for the next 3 turns.",...state.log].slice(0,5);
+    }else if(card.kind==="gunpowder"){
       if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card);
     }else if(card.kind==="zeus"){
       applyZeusImpact(anim);
@@ -1620,8 +1663,10 @@
     paintUI();
   }
   function finishRound(){
+    if(checkBattleEnd())return;
     for(const u of state.units)if(Number.isInteger(u.fearRound)&&u.fearRound<=state.round)u.fearRound=null;
     expireLightningRods();
+    if(checkBattleEnd())return;
     for(const team of [0,1]){
       const aura=state.auras[team];
       if(aura&&--aura.turns<=0)state.auras[team]=null;
@@ -1646,7 +1691,6 @@
         consumeStatus(u,"stun");u.stunRound=null;
       }
     }
-    for(const u of state.units)if(u.hp>0)u.mana=Math.min(MAX_MANA,u.mana+6);
     state.round++;
     tickBurnsForRound();
     // A burn that KOs the last enemy ends the match before asking for
@@ -1660,6 +1704,7 @@
         (state.winner===0?"Allies":"Enemy team")+" wins!";
       paintUI();return;
     }
+    grantTurnMana();
     // Complete old round teardown: no queued player actions, target, card,
     // or combat animation may carry into the next planning phase.
     state.plans={};state.sequence=[];state.queueAt=0;state.animation=null;
@@ -1709,6 +1754,7 @@
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
+    const pass=$("passTurn");if(pass){pass.hidden=!planning||!c;pass.disabled=!planning||!c||!!state.plans[c.id];}
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
     ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=
@@ -1723,7 +1769,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.id==="flowstate"?"Self · +1 extra mana for your next 3 turns":card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -1734,20 +1780,21 @@
     ui.confirm.hidden=!canConfirm;
     ui.confirm.disabled=!canConfirm;
     ui.confirm.textContent=card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
-    // Actual initiative preview, ordered by speed. The active resolving
+    // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
+      ui.initiative.hidden=false;
       ui.initiative.innerHTML="";
       const ordered=state.phase==="resolving"?
         state.sequence.map(a=>getUnit(a.casterId)).filter(Boolean):
-        [...state.units].filter(u=>u.hp>0).sort((a,b)=>b.speed-a.speed||a.id.localeCompare(b.id));
+        turnOrder();
       ordered.forEach((u,i)=>{
         const chip=document.createElement("span");
         chip.className="initiative-slot"+(u.team?" enemy":"")+
           (state.animation?.source===u.id?" current":"")+
           (u.hp<=0?" dimmed":"");
-        chip.textContent=(i+1)+". "+u.name+" · "+u.speed;
-        chip.title=u.name+": speed "+u.speed;
+        chip.textContent=(i+1)+". "+(u.team?"B":"A")+(u.index+1)+" · "+u.name;
+        chip.title="Round "+state.round+" · position "+(i+1);
         ui.initiative.appendChild(chip);
       });
     }
@@ -1798,7 +1845,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="gunpowderkiss"?
+        const effect=k.id==="flowstate"?
+          '<span class="spell-effect"><b>+1 EXTRA MANA / TURN</b><span>SELF · NEXT 3 TURNS</span></span>':k.id==="gunpowderkiss"?
           '<span class="spell-effect"><b>GUNPOWDER COAT · 3 TURNS</b><span>FIRE HIT: 150 · UP TO 3 TIMES</span></span>':k.id==="zeus"?
           '<span class="spell-effect"><b>1,350 + 200 ADJACENT</b><span>20% STUN TO EACH HIT</span></span>':k.id==="kineticsand"?
           '<span class="spell-effect"><b>CRUSHING GRIP · 620</b><span>1 ENEMY · EARTH</span></span>':k.id==="thornwrap"?
@@ -1849,13 +1897,13 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
+          (k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -1921,6 +1969,7 @@
     };
     // Card -> appropriate ally/enemy -> explicit confirmation. CPU teammates can receive healing.
     ui.confirm.onclick=confirmTarget;
+    $("passTurn").onclick=passTurn;
     ui.queue.onclick=()=>{};
     ui.auto.onclick=()=>{};
     ui.resolve.onclick=()=>{};
@@ -2442,6 +2491,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana instead of 1. Maximum 10 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
       case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+((st.stored||0)*100)+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Your casts and allied Lightning casts count, including misses; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
@@ -2564,6 +2614,7 @@
       else if(st.kind==="turbulence")window.WIZARDRY_TURBULENCE_V90?.emblem(g,r.x,r.y,18);
       else if(st.kind==="blazing_rage")window.WIZARDRY_BLAZING_RAGE_V89?.emblem(g,r.x,r.y,18);
       else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
+      else if(st.kind==="flow_state")window.WIZARDRY_FLOW_STATE_V121?.emblem(g,r.x,r.y,18);
       else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
       else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
       else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
@@ -2636,7 +2687,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
+      if(card.id==="flowstate")window.WIZARDRY_FLOW_STATE_V121?.portrait(c,width,height);
+      else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
       else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
       else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
       else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
@@ -2769,6 +2821,7 @@
     if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
+    if(card.id==="flowstate"){window.WIZARDRY_FLOW_STATE_V121?.draw(g,{progress:p,target:caster});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
@@ -3192,8 +3245,10 @@
     if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
     updateFacing(dt);
-    if(state.phase==="resolving"&&state.animation)
+    if(state.phase==="resolving"&&state.animation){
       updateCastSequence(dt);
+      checkBattleEnd();
+    }
     // Each fallen wizard gets its own timeline: play the sequence once,
     // then freeze on frame 7 through the rest of the battle and victory.
     for(const u of state.units){
@@ -3273,6 +3328,7 @@
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
+    turnOrder,grantTurnMana,checkBattleEnd,finishRound,passTurn,startNextAction,runResolution,tick,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,

@@ -14,10 +14,15 @@
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 <style>
-#initiative{display:flex!important;flex-wrap:wrap;overflow:visible;gap:4px;margin-top:8px}
-#initiative .initiative-slot{font-size:10px;white-space:nowrap}
-#passTurn{margin-left:auto;white-space:nowrap}
-@media(max-width:700px){#initiative .initiative-slot{font-size:8px;padding:3px 5px}.hand-assist{flex-wrap:wrap}#passTurn{font-size:10px}}
+#initiative{display:none!important}
+.hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
+.hand-assist .spell-choice-info{grid-area:info;min-width:0}
+.hand-assist .spell-choice-info span{white-space:normal;overflow-wrap:anywhere}
+#confirmTarget{grid-area:cast;min-width:0;white-space:normal;width:100%;position:static;margin:0;min-height:38px}
+#passTurn{grid-area:pass;margin:0;position:static;white-space:normal;min-height:38px}
+.hand-assist>[hidden]{display:none!important}
+.customize-menu{position:static!important;margin-top:7px;clear:both}
+@media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
 </style>
 </head>
 <body>
@@ -200,7 +205,15 @@
 <script src="./assets/gunpowder-kiss-atlas-v120-part2.js?v=0.120.0" defer></script>
 <script src="./assets/gunpowder-kiss-atlas-v120-part3.js?v=0.120.0" defer></script>
 <script src="./assets/gunpowder-kiss-v120.js?v=0.120.1" defer></script>
-<script src="./assets/flow-state-v121.js?v=0.121.0" defer></script>
-<script src="./arena.js?v=0.121.0" defer></script>
+<script src="./assets/flow-atlas-v122-part0.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part1.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part2.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part3.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part4.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part5.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part6.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part7.js?v=0.122.0" defer></script>
+<script src="./assets/flow-state-v121.js?v=0.122.0" defer></script>
+<script src="./arena.js?v=0.122.0" defer></script>
 </body>
 </html>

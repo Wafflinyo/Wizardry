@@ -85,7 +85,8 @@
     {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
-    {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:4800,hit:.79,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."}
+    {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:4800,hit:.79,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."},
+    {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.10,accuracy:.75,icon:"⚡",rarity:"LEGENDARY",duration:5600,hit:.565,short:"75% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 10% chance to lose one action to stun."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -607,6 +608,10 @@
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
+    if(a.stage==="summon"&&a.card.id==="zeus"&&a.runeResult==="success"){
+      if(p>=a.card.hit)applyZeusImpact(a);
+      for(const entry of a.zeusChainTargets||[])if(p>=entry.hitAt)applyZeusChain(a,entry);
+    }
     if(a.stage==="summon"&&a.card.id==="blizzard"&&a.runeResult==="success")
       for(const [i,entry] of (a.blizzardTargets||[]).entries())
         if(p>=blizzardHitAt(i,a.blizzardTargets.length))applyBlizzardHit(a,entry);
@@ -970,7 +975,7 @@
       if(isStunned(c)){
         consumeStatus(c,"stun");c.stunRound=null;
         flash(c,"STUNNED · SKIPPED","#88e8ff");
-        state.log=[c.name+" loses their action to Professor Volt's stun.",
+        state.log=[c.name+" loses their action while stunned.",
           ...state.log].slice(0,5);
         continue;
       }
@@ -1073,7 +1078,7 @@
     return true;
   }
   function attemptVoltStun(source,target,card,roll=Math.random()){
-    if(card?.id!=="volt"||!target||target.hp<=0||roll>=card.stunChance)
+    if(!["volt","zeus"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
       return false;
     // If the target is still due to act this round, cancel that cast;
     // otherwise reserve the stun for their next round. Never double-skip.
@@ -1082,7 +1087,7 @@
     target.stunRound=pending?state.round:state.round+1;
     addStatus(target,"stun","⚡",1);
     flash(target,"STUNNED","#96f3ff");
-    state.log=[source.name+"'s Professor Volt stuns "+target.name+
+    state.log=[source.name+"'s "+card.name+" stuns "+target.name+
       " for one action!",...state.log].slice(0,5);
     return true;
   }
@@ -1166,6 +1171,28 @@
     }
     a.applied=true;
   }
+
+  function applyZeusImpact(a,roll){
+    if(!a||a.zeusImpactResolved||a.runeResult!=="success")return false;
+    a.zeusImpactResolved=true;a.applied=true;
+    const caster=getUnit(a.source),target=getUnit(a.target);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    // Snapshot formation neighbors before the primary strike can defeat its target.
+    a.zeusChainTargets=dragonSplashTargets(target,caster).map((u,i)=>({id:u.id,x:u.x,y:u.y,hit:false,hitAt:.645+i*.02}));
+    damage(caster,target,a.card.damage,a.card,a);
+    if(target.hp>0&&!a.windDomeTargets?.[target.id])attemptVoltStun(caster,target,a.card,roll??a.stunRolls?.[target.id]??Math.random());
+    paintUI();return true;
+  }
+  function applyZeusChain(a,entry,roll){
+    if(!a||!entry||entry.hit||!a.zeusImpactResolved||a.runeResult!=="success")return false;
+    entry.hit=true;
+    const caster=getUnit(a.source),target=getUnit(entry.id);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    damage(caster,target,a.card.chainDamage,a.card,a);
+    if(target.hp>0&&!a.windDomeTargets?.[target.id])attemptVoltStun(caster,target,a.card,roll??a.stunRolls?.[target.id]??Math.random());
+    paintUI();return true;
+  }
+
   function dragonSplashTargets(main,caster){
     if(!main||!caster||main.team===caster.team)return [];
     // "Left and right" means immediate formation neighbors: index ±1,
@@ -1454,7 +1481,10 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="thornwrap"){
+    if(card.kind==="zeus"){
+      applyZeusImpact(anim);
+      for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
+    }else if(card.kind==="thornwrap"){
       if(t&&t.hp>0&&t.team!==c.team){
         addStatus(t,"thorny_wrap","❧",.15);
         Object.assign(t.statuses.find(st=>st.kind==="thorny_wrap"),{expiresRound:state.round+3,appliedRound:state.round,attemptDamage:150});
@@ -1735,7 +1765,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="kineticsand"?
+        const effect=k.id==="zeus"?
+          '<span class="spell-effect"><b>1,350 + 200 ADJACENT</b><span>10% STUN TO EACH HIT</span></span>':k.id==="kineticsand"?
           '<span class="spell-effect"><b>CRUSHING GRIP · 620</b><span>1 ENEMY · EARTH</span></span>':k.id==="thornwrap"?
           '<span class="spell-effect"><b>150 PER SPELL ATTEMPT</b><span>−15% ACC · 3 TURNS</span></span>':k.id==="blizzard"?
           '<span class="spell-effect"><b>160 TO ALL ENEMIES</b><span>60% FROSTBITE · 100×5</span></span>':k.id==="penguins"?
@@ -1790,7 +1821,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2386,7 +2417,7 @@
           " after using Poseidon's Wrath. The status expires once that round has passed."};
       case "stun":
         return {title:"⚡ Stunned · 1 action",
-          detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
+          detail:u.name+" is stunned and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
       case "frostbite":return {title:"❄ Frostbite · Ice damage over time",detail:u.name+" takes "+(st.value||50)+" damage at the start of each turn for "+(st.remaining||0)+" more turns ("+((st.value||50)*(st.remaining||0))+" damage remaining). Reapplying refreshes one Frostbite; it does not stack. Does not consume spell shields or Decaying Strength."};
@@ -2569,7 +2600,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
+      if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
+      else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
       else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
       else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
       else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
@@ -2607,6 +2639,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_ZEUS_V119?.onReady(drawCardArts);
     window.WIZARDRY_KINETIC_SAND_V112?.onReady(drawCardArts);
     window.WIZARDRY_PENGUINS_V103?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
@@ -2801,7 +2834,7 @@
   }
   function render(time){
     g.setTransform(1,0,0,1,0,0);
-    const quake=state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
+    const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(background)g.drawImage(background,0,0,W,H);else drawBackground(g);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
@@ -2823,7 +2856,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2881,6 +2914,14 @@
       if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:425,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
+    if(action?.card?.id==="zeus"&&action.stage==="summon"){
+      const zeus=window.WIZARDRY_ZEUS_V119,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source),target:getUnit(action.target)};
+      if(zeus){
+        renderables.push({type:"zeus-cloud",depthY:300,priority:1,draw:()=>zeus.draw(g,{...opts,layer:"actor"})});
+        for(const layer of ["projectile","impact"])renderables.push({type:"zeus-"+layer,depthY:opts.target.y+.1,priority:2,draw:()=>zeus.draw(g,{...opts,layer})});
+        for(const neighbor of action.zeusChainTargets||[])renderables.push({type:"zeus-chain-"+neighbor.id,depthY:neighbor.y+.1,priority:2,draw:()=>zeus.draw(g,{...opts,neighbor,layer:"chain"})});
+      }
+    }
     if(action?.card?.id==="kineticsand"&&action.stage==="summon"){
       const p=clamp(action.elapsed/action.duration,0,1),target=getUnit(action.target);
       if(target)for(const layer of ["back","front"])renderables.push({type:"kinetic-sand-"+layer,depthY:p<.43?425+(layer==="back"?-.1:.1):target.y+(layer==="back"?-.1:.1),priority:2,draw:()=>drawKineticSand(g,p,target,time,layer)});
@@ -3180,7 +3221,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)));
     },
-    thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

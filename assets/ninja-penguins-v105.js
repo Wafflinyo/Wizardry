@@ -1,4 +1,4 @@
-/* Ninja Penguins v105: dedicated low-poly poses; three independent actors. */
+/* Ninja Penguins v106: synchronized release, high toss, upward axial spin. */
 (function(root){"use strict";
 const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,t)=>a+(b-a)*t,E=t=>t*t*(3-2*t),TAU=Math.PI*2;
 const HIT=[.62,.64,.66],FLIGHT=.018,GROUND=432,HOME=500,atlas=new Image(),listeners=[];
@@ -22,7 +22,7 @@ function frameAt(p){
 }
 function pose(p,index,target){
  const dir=target.x>=HOME?1:-1,home=HOME+(index-1)*65;
- const apex={x:target.x-dir*120,y:target.y-205};
+ const apex={x:target.x-dir*170,y:Math.max(100,Math.min(165,target.y-330))};
  const landing={x:target.x-dir*120,y:target.y-48};
  let x=home,y=GROUND-48,angle=0,frame=30,alpha=1,depth=GROUND,facing=dir;
  if(p<.20){
@@ -35,19 +35,22 @@ function pose(p,index,target){
   x=L(home,index===2?HOME:HOME+(index===0?-40:40),q);
   if(index===2){y=GROUND-48-Math.sin(q*Math.PI)*70-q*52;frame=0;}
   else {frame=6;facing=index===0?1:-1;}
- }else if(p<.40){
+ }else if(p<.38){
   x=index===2?HOME:HOME+(index===0?-40:40);
-  const q=local(p,.30,.40);
+  const q=local(p,.30,.38);
+  // The rider stays on their flippers until the shared release beat.
   if(index===2){y=GROUND-100-E(q)*12;frame=0;}
-  else{frame=7+Math.min(4,Math.floor(q*5));facing=index===0?1:-1;}
+  else{frame=7+Math.min(3,Math.floor(q*4));facing=index===0?1:-1;}
  }else if(index===2&&p<.57){
-  const q=E(local(p,.40,.57));x=L(HOME,apex.x,q);y=L(GROUND-112,apex.y,q)-Math.sin(q*Math.PI)*30;
-  frame=p<.46?4:12;depth=L(GROUND,target.y,q);
-  if(p>=.46)angle=Math.atan2(target.y-65-y,Math.abs(target.x-x))*dir;
+  // Lift-off coincides exactly with both throwers' extended release pose.
+  const q=local(p,.38,.57),rise=1-(1-q)*(1-q);
+  x=L(HOME,apex.x,E(q));y=L(GROUND-112,apex.y,rise);
+  frame=p<.46?4:12;depth=L(GROUND,target.y,E(q));
+  angle=-Math.PI/4*dir*E(local(p,.38,.46));
  }else if(index===2&&p<.70){
   x=apex.x;y=apex.y;frame=frameAt(p);depth=target.y;
-  // Frame artwork rolls around the long axis. This angle aims that axis.
-  angle=Math.atan2(target.y-65-y,Math.abs(target.x-x))*dir;
+  // Head points skyward toward the opposing side; kunai aim independently.
+  angle=-Math.PI/4*dir;
  }else if(index===2&&p<.78){
   const q=local(p,.70,.78);x=landing.x;y=L(apex.y,landing.y,q*q);
   frame=q<.65?24:25;depth=target.y;
@@ -55,7 +58,7 @@ function pose(p,index,target){
   const q=local(p,.78,.88);x=L(landing.x,home,E(q));
   y=L(landing.y,GROUND-48,E(q))-Math.sin(q*Math.PI)*100;
   frame=q<.15?27:q<.85?28:29;depth=L(target.y,GROUND,E(q));
- }else if(p>=.40&&p<.88){
+ }else if(p>=.38&&p<.88){
   x=L(HOME+(index===0?-40:40),home,E(local(p,.82,.88)));frame=p<.46?11:30;
  }else if(p>=.88){frame=frameAt(p);}
  return {x,y,dir:facing,angle,frame,alpha,ground:depth,depth,index};

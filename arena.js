@@ -551,6 +551,10 @@
     if(!state)return false;
     if(state.phase==="ending"||state.phase==="finished")return true;
     const a=alive(0).length,b=alive(1).length;if(a&&b)return false;
+    // Lethal damage must not erase the active spell. Its remaining hits,
+    // exit and recovery finish normally; startNextAction checks again once
+    // the animation clears, before another queued action can begin.
+    if(state.phase==="resolving"&&state.animation)return false;
     state.winner=a?0:b?1:"draw";state.phase="ending";state.endingHoldMs=0;
     state.animation=null;state.plans={};state.sequence=[];state.queueAt=0;
     clearSelection();for(const u of state.units)u.armRaise=0;

@@ -20,23 +20,54 @@
    const dir=target.x>=500?1:-1,q=C((p-release)/(hit-release));
    return {x:L(500+dir*75,target.x,q),y:L(285,target.y-85,q)-Math.sin(q*Math.PI)*22,q};
  }
+ // Faceted powder billows expand from the kiss into a full-body smokescreen.
+ function puff(c,x,y,rx,ry,seed,alpha){
+   c.globalAlpha=alpha;c.fillStyle=["#29292f","#38373d","#45434a","#55515a"][seed%4];
+   c.beginPath();
+   for(let k=0;k<9;k++){const a=k*T/9,r=.78+R(seed*17+k)*.30;
+     const px=x+Math.cos(a)*rx*r,py=y+Math.sin(a)*ry*r;
+     if(k)c.lineTo(px,py);else c.moveTo(px,py);}
+   c.closePath();c.fill();
+ }
  function powder(c,p,target){
-   if(p<release||p>hit+.10)return;
+   if(p<release||p>=1)return;
+   const dir=target.x>=500?1:-1,scale=.60+.30*C((target.y-288)/235);
    c.save();
-   if(p<hit){
-     const head=kissPoint(p,target),dir=target.x>=500?1:-1;
-     for(let n=0;n<76;n++){
-       const lag=R(n+13)*.035,point=kissPoint(Math.max(release,p-lag),target),spread=8+R(n+31)*15;
-       c.globalAlpha=.55+R(n+41)*.4;grain(c,point.x+(R(n+54)-.5)*spread-dir*lag*100,point.y+(R(n+91)-.5)*spread,1.5+R(n+115)*2,n%5===0);
+   // A broad, curling plume follows the leading powder instead of a tight pellet.
+   if(p<hit+.055){
+     const arrival=C((p-release)/(hit-release)),tailFade=1-C((p-hit)/.055);
+     for(let n=0;n<72;n++){
+       const lag=R(n+13)*.065,point=kissPoint(Math.max(release,p-lag),target);
+       const age=C((p-release-lag)/.08),spread=(10+arrival*46)*age;
+       const a=n*2.4+arrival*2.1,rad=Math.sqrt(R(n+31))*spread;
+       puff(c,point.x+Math.cos(a)*rad-dir*lag*115,point.y+Math.sin(a)*rad*.75,
+         (7+R(n+41)*10)*age,(6+R(n+91)*9)*age,n,(.34+R(n+54)*.28)*tailFade*age);
      }
-     // The leading kiss is a heart-shaped cluster of powder, not a pink symbol.
-     for(let n=0;n<36;n++){
-       const a=n*T/36,x=16*Math.pow(Math.sin(a),3),y=-(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a));
-       c.globalAlpha=.9;grain(c,head.x+x*.95,head.y+y*.95,2.4,n%6===0);
+     for(let n=0;n<95;n++){
+       const point=kissPoint(Math.max(release,p-R(n+8)*.07),target),spread=12+arrival*58;
+       c.globalAlpha=(.60+R(n+41)*.35)*tailFade;
+       grain(c,point.x+(R(n+54)-.5)*spread*2,point.y+(R(n+91)-.5)*spread*1.4,
+         1.2+R(n+115)*2,n%5===0);
      }
-   }else{
-     const q=C((p-hit)/.10);c.globalAlpha=1-q;
-     for(let n=0;n<65;n++){const a=n*2.4,r=(10+R(n+42)*38)*q;grain(c,target.x+Math.cos(a)*r,target.y-85+Math.sin(a)*r*1.3,1.5+R(n+9)*2,n%5===0);}
+   }
+   // On arrival the plume curls around the whole wizard, rises and slowly disperses.
+   if(p>=hit-.025){
+     const q=C((p-(hit-.025))/(1-hit+.025)),bloom=C(q/.25);
+     const fade=1-C((q-.58)/.42),cx=target.x,cy=target.y-91*scale;
+     for(let n=0;n<64;n++){
+       const a=n*2.4+q*(n%2?1.3:-1.1),r=Math.sqrt(R(n+71));
+       const x=cx+Math.cos(a)*r*(55+q*15)*scale*bloom;
+       const y=cy+Math.sin(a)*r*100*scale*bloom-q*20*scale;
+       puff(c,x,y,(13+R(n+22)*16)*scale*(.5+bloom*.5),
+         (14+R(n+94)*20)*scale,n+83,(.38+R(n+49)*.25)*bloom*fade);
+     }
+     for(let n=0;n<125;n++){
+       const a=n*2.4+q*1.8,r=Math.sqrt(R(n+72));
+       c.globalAlpha=(.65+R(n+14)*.3)*bloom*fade;
+       grain(c,cx+Math.cos(a)*r*(61+q*18)*scale*bloom,
+         cy+Math.sin(a)*r*108*scale*bloom-q*24*scale,
+         (1+R(n+19)*2.5)*scale,n%6===0);
+     }
    }
    c.restore();
  }

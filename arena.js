@@ -2,7 +2,7 @@
    Authoritative multiplayer and accounts are NOT implemented.
    Story = four local players / simulated CPUs. PvP = local hot-seat test. */
 (()=>{"use strict";
-  const W=1000,H=620,MAX_MANA=10,MAX_SLOTS=3;
+  const W=1000,H=620,MAX_MANA=15,MAX_SLOTS=3;
   const canvas=document.getElementById("battleCanvas"),g=canvas.getContext("2d");
   const $=id=>document.getElementById(id);
   const ui={mode:$("modeControls"),sizes:$("sizeControls"),round:$("roundLabel"),phase:$("phaseLabel"),
@@ -89,7 +89,7 @@
     {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
     {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:3,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
-  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana per turn instead of 1, up to the 10-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
+  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana per turn instead of 1, up to the 15-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.
@@ -296,7 +296,7 @@
     const colors=window.WizardryPalettes;
     const pick=(value,allowed,defaultValue)=>allowed&&Object.hasOwn(allowed,value)?value:defaultValue;
     return {id,team,index,name:d.name,style:d.style,color:d.color,
-      hp:3000,maxHp:3000,mana:3,speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
+      hp:3000,maxHp:3000,mana:15,speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
       hat:["pointed","wide","hood","scholar"].includes(custom.hat)?custom.hat:"pointed",
       robe:["classic","split","armored"].includes(custom.robe)?custom.robe:"classic",
       robeColor:pick(custom.robeColor,colors?.robeColors,preset.robeColor),
@@ -1783,7 +1783,7 @@
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
-      ui.initiative.hidden=false;
+      ui.initiative.hidden=true;
       ui.initiative.innerHTML="";
       const ordered=state.phase==="resolving"?
         state.sequence.map(a=>getUnit(a.casterId)).filter(Boolean):
@@ -2491,7 +2491,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
-      case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana instead of 1. Maximum 10 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
+      case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana instead of 1. Maximum 15 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
       case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+((st.stored||0)*100)+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Your casts and allied Lightning casts count, including misses; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
@@ -2728,6 +2728,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_FLOW_STATE_V121?.onReady(drawCardArts);
     window.WIZARDRY_GUNPOWDER_V120?.onReady(drawCardArts);
     window.WIZARDRY_ZEUS_V119?.onReady(drawCardArts);
     window.WIZARDRY_KINETIC_SAND_V112?.onReady(drawCardArts);

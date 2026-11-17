@@ -82,7 +82,8 @@
 ,
     {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."},
     {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."},
-    {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."}
+    {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
+    {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -604,6 +605,9 @@
     if(a.stage==="raising")caster.armRaise=ease(p);
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
+    if(a.stage==="summon"&&a.card.id==="blizzard"&&a.runeResult==="success")
+      for(const [i,entry] of (a.blizzardTargets||[]).entries())
+        if(p>=blizzardHitAt(i,a.blizzardTargets.length))applyBlizzardHit(a,entry);
     if(a.stage==="summon"&&a.card.id==="penguins"&&a.runeResult==="success")
       for(let i=0;i<3;i++)if(a.elapsed>=NINJA_HIT_TIMES[i]*a.card.duration)applyPenguinHit(a,i);
     if(a.stage==="summon"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
@@ -651,7 +655,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.id==="bloom"){
+      if(a.card.id==="blizzard"){
+        a.blizzardTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y,hit:false}));
+        startStage(a,"summon",a.card.duration);
+      }else if(a.card.id==="bloom"){
         a.sporeTargets=alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y}));
         startStage(a,"summon",a.card.duration);
       }else if(a.card.id==="frosty"){
@@ -1179,6 +1186,59 @@
   function drawPenguins(c,opts){window.WIZARDRY_PENGUINS_V103.draw(c,opts);}
   function drawPenguinPortrait(c,w,h){window.WIZARDRY_PENGUINS_V103.portrait(c,w,h);}
 
+
+  function blizzardHitAt(i,count){return .44+i*.18/Math.max(1,count-1);}
+  function applyBlizzardHit(a,entry,roll){
+    if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
+    entry.hit=true;
+    const caster=getUnit(a.source),target=getUnit(entry.id);
+    if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    damage(caster,target,a.card.damage,a.card,a);
+    if(target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
+      addStatus(target,"frostbite","❄",a.card.frostDamage);
+      Object.assign(target.statuses.find(st=>st.kind==="frostbite"),{remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
+      flash(target,"FROSTBITE · 5 TURNS","#b6eeff");
+      state.log=[target.name+" suffers Blizzard Frostbite: 100 HP per turn for 5 turns.",...state.log].slice(0,5);
+    }
+    paintUI();return true;
+  }
+  // World-space gusts mirror with the caster and sort at each victim's depth.
+  function drawBlizzardWind(c,p,caster,target,index){
+    const local=clamp((p-.12-index*.045)/.78,0,1);
+    if(local<=0||local>=1)return;
+    const dir=target.x>=caster.x?1:-1,fade=Math.min(1,local*7,(1-local)*5);
+    const startX=caster.x+dir*38,endX=target.x+dir*125;
+    c.save();c.globalAlpha=fade;c.lineCap="round";c.lineJoin="round";
+    // Long twisting ribbons: a dark icy facet, cyan edge, white whip core.
+    for(let ribbon=0;ribbon<7;ribbon++){
+      const travel=clamp(local*2.1-ribbon*.055,0,1),head=startX+(endX-startX)*travel;
+      const tail=head-dir*(180+85*Math.sin(local*3+ribbon));
+      const y=target.y-58+(ribbon-3)*17;
+      for(let layer=0;layer<3;layer++){
+        c.strokeStyle=["#276b9a","#8cdff4","#eefeff"][layer];
+        c.globalAlpha=fade*[.22,.5,.9][layer];c.lineWidth=[19,8,2.5][layer];
+        c.beginPath();c.moveTo(tail,y+25*Math.sin(local*24+ribbon));
+        c.bezierCurveTo(tail+dir*90,y-50,head-dir*80,y+48,head,y-14*Math.sin(local*28+ribbon));c.stroke();
+      }
+    }
+    // Faceted ice splinters and fast snow spray follow the wind direction.
+    for(let n=0;n<60;n++){
+      const seed=rand(n+index*71),f=(local*3.8+seed)%1;
+      const x=startX+(endX-startX)*f,y=target.y-70+(rand(n+311)*2-1)*95+Math.sin(f*8+n)*14;
+      const size=2+rand(n+52)*6;
+      c.globalAlpha=fade*(.25+seed*.65);c.fillStyle=n%3?"#dbfaff":"#70c5e4";
+      c.beginPath();c.moveTo(x+dir*size*3,y);c.lineTo(x,y-size);c.lineTo(x-dir*size*2,y);c.lineTo(x,y+size*.5);c.closePath();c.fill();
+    }
+    const impact=clamp(1-Math.abs(p-blizzardHitAt(index,4))/.16,0,1);
+    if(impact>0){
+      c.globalAlpha=impact*.8;c.strokeStyle="#e8fcff";c.lineWidth=3;
+      for(let n=0;n<8;n++){const angle=n*Math.PI/4,x=target.x,y=target.y-65;
+        c.beginPath();c.moveTo(x+Math.cos(angle)*15,y+Math.sin(angle)*15);
+        c.lineTo(x+Math.cos(angle)*(30+impact*32),y+Math.sin(angle)*(30+impact*32));c.stroke();}
+    }
+    c.restore();
+  }
+
   function applyFrostyImpact(a,roll){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
@@ -1305,7 +1365,9 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="penguins"){
+    if(card.kind==="blizzard"){
+      for(const entry of anim.blizzardTargets||[])applyBlizzardHit(anim,entry);
+    }else if(card.kind==="penguins"){
       for(let i=0;i<3;i++)applyPenguinHit(anim,i);
     }else if(card.kind==="winddome"){
       addStatus(c,"wind_dome","≋",1);flash(c,"WIND DOME READY","#d1fff1");
@@ -2228,7 +2290,7 @@
           detail:u.name+" is stunned by Professor Volt and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
-      case "frostbite":return {title:"❄ Frostbite · Ice damage over time",detail:u.name+" takes 50 damage at the start of each turn for "+(st.remaining||0)+" more turns. 150 total over 3 turns. Reapplying refreshes the duration; it does not stack. Does not consume Decaying Strength."};
+      case "frostbite":return {title:"❄ Frostbite · Ice damage over time",detail:u.name+" takes "+(st.value||50)+" damage at the start of each turn for "+(st.remaining||0)+" more turns ("+((st.value||50)*(st.remaining||0))+" damage remaining). Reapplying refreshes one Frostbite; it does not stack. Does not consume spell shields or Decaying Strength."};
       case "burn":
         return {title:"🔥 Burning · Fire damage over time",
           detail:u.name+" takes "+(st.value||50)+" damage at the start of each round for "+
@@ -2407,7 +2469,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="penguins")drawPenguinPortrait(c,width,height);
+      if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
+      else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
       else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
       else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
       else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
@@ -2657,7 +2720,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2709,6 +2772,10 @@
       if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:425,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
+    if(action?.card?.id==="blizzard"&&action.stage==="summon"){
+      const caster=getUnit(action.source),progress=clamp(action.elapsed/action.duration,0,1);
+      for(const [i,target] of (action.blizzardTargets||[]).entries())renderables.push({type:"blizzard-"+target.id,depthY:target.y+.1,priority:2,draw:()=>drawBlizzardWind(g,progress,caster,target,i)});
+    }
     if(action?.card?.id==="bloom"&&action.stage==="summon"){
       const bloom=window.WIZARDRY_BLOOM_V97,caster=getUnit(action.source),opts={progress:clamp(action.elapsed/action.duration,0,1),targets:action.sporeTargets||alive(1-caster.team).map(t=>({id:t.id,x:t.x,y:t.y}))};
       if(bloom){renderables.push({type:"bloom-flower",depthY:425,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
@@ -3000,7 +3067,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
     },
-    applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

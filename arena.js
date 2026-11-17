@@ -85,7 +85,7 @@
     {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
-    {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:5400,hit:.76,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."}
+    {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:6400,hit:.79,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -1198,72 +1198,8 @@
 
 
 
-  function sandGripShake(p){
-    const kick=p>=.76?clamp(1-(p-.76)/.085,0,1):0;
-    return {x:Math.sin(p*1400)*6*kick,y:Math.cos(p*1200)*3*kick};
-  }
-  function drawKineticSand(c,p,target,time,layer){
-    if(!target||p<=0||p>=1)return;
-    const colors=["#c39350","#ddb575","#edca89","#ac7b40","#f2d59d"];
-    const facet=(x,y,r,seed,stretch=1,alpha=1)=>{
-      c.globalAlpha=alpha;c.fillStyle=colors[seed%colors.length];c.beginPath();
-      for(let k=0;k<5;k++){const a=k*Math.PI*2/5+seed*.7,xx=x+Math.cos(a)*r*stretch,yy=y+Math.sin(a)*r;if(k)c.lineTo(xx,yy);else c.moveTo(xx,yy);}
-      c.closePath();c.fill();
-      c.fillStyle=colors[(seed+2)%colors.length];c.beginPath();c.moveTo(x,y);c.lineTo(x+r*stretch*.7,y-r*.7);c.lineTo(x-r*stretch*.5,y-r*.5);c.closePath();c.fill();
-    };
-    c.save();
-    const scale=lerp(.60,.90,clamp((target.y-288)/235,0,1)),dir=target.x>=500?1:-1;
-    if(p<.58){
-      const rise=ease((p-.2)/.23),flight=ease((p-.43)/.15),fade=clamp((.59-p)/.06,0,1);
-      for(let n=0;n<130;n++){
-        const seed=rand(n+23),angle=p*24+n*2.4,lane=rand(n+511),radius=35+lane*105;
-        const x=500+Math.cos(angle)*radius*(1-rise*.65),y=425+Math.sin(angle)*radius*.3-rise*(50+lane*155);
-        const arcX=lerp(x,target.x+dir*(lane-.5)*95*scale,flight);
-        const arcY=lerp(y,target.y-65*scale,flight)-Math.sin(flight*Math.PI)*150;
-        if((Math.sin(angle)>0)!==(layer==="front"))continue;
-        const size=(3+seed*10)*clamp(p/.12,0,1)*(1+rise*.65);
-        facet(arcX,arcY,size,n,1.4,fade*(.55+seed*.4));
-      }
-    }
-    if(p>=.52){
-      const encase=ease((p-.52)/.13),squeeze=ease((p-.70)/.06),release=clamp((p-.85)/.15,0,1);
-      const rx=62*scale*(1-squeeze*.30),ry=97*scale*(1+squeeze*.06),cy=target.y-ry+4;
-      for(let row=0;row<11;row++)for(let col=0;col<14;col++){
-        const f=row/10,angle=col*Math.PI*2/14+row*.24;
-        if((Math.sin(angle)>0)!==(layer==="front")||f>encase)continue;
-        const width=Math.sqrt(Math.max(.08,1-Math.pow(f*2-1,2))),scatter=release*release;
-        const x=target.x+Math.cos(angle)*rx*width+(rand(row*14+col+91)-.5)*160*scatter;
-        const y=target.y-f*ry*2+Math.sin(angle)*9*scale+scatter*(80+rand(col+row*11)*100);
-        facet(x,y,(10+rand(row*14+col+9)*6)*scale,row*14+col,1.2,1-release);
-      }
-      if(layer==="front"&&p<.87){
-        const curl=ease((p-.65)/.11);
-        for(let finger=0;finger<5;finger++){
-          const side=finger<3?-1:1,baseY=target.y-(35+finger*22)*scale;
-          for(let j=0;j<11;j++){
-            const t=j/10,x=target.x+side*rx*(1.18-t*(.42+curl*.75));
-            const y=baseY-Math.sin(t*Math.PI)*24*scale+(1-curl)*t*18;
-            facet(x,y,(10-t*3)*scale,j+finger*13,1.2,encase);
-          }
-        }
-      }
-      if(layer==="front"&&p>=.76&&p<.85){
-        const kick=1-(p-.76)/.09;
-        for(let n=0;n<18;n++){
-          const a=n*Math.PI/9,len=(30+rand(n+6)*55)*(1-kick*.5)*scale;
-          facet(target.x+Math.cos(a)*(rx+len),cy+Math.sin(a)*(ry*.6+len*.5),2+kick*4,n,3,kick);
-        }
-        c.globalAlpha=kick*.65;c.strokeStyle="#fff0c1";c.lineWidth=3;
-        c.beginPath();c.ellipse(target.x,cy,rx*(1.2-kick*.3),ry*.65,0,0,Math.PI*2);c.stroke();
-      }
-    }
-    if(layer==="front"&&p>.88){
-      const fade=1-(p-.88)/.12;
-      for(let n=0;n<30;n++)facet(target.x+(rand(n+54)-.5)*160*scale,target.y+Math.sin(n*2.4)*10*scale,(4+rand(n+71)*9)*scale,n,2,fade*.5);
-    }
-    c.restore();
-  }
-
+  function sandGripShake(p){return window.WIZARDRY_KINETIC_SAND_V112?.shake(p)||{x:0,y:0};}
+  function drawKineticSand(c,p,target,time,layer){window.WIZARDRY_KINETIC_SAND_V112?.draw(c,{progress:p,target,layer});}
   function thornAccuracyPenalty(u){
     const vine=u?.statuses.find(st=>st.kind==="thorny_wrap");
     return vine&&u.hp>0&&state.round<vine.expiresRound?.15:0;
@@ -2633,7 +2569,7 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="kineticsand"){c.save();c.scale(width/1000,height/620);drawKineticSand(c,.74,{x:500,y:485},0,"front");c.restore();}
+      if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
       else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
       else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
       else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
@@ -2671,6 +2607,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_KINETIC_SAND_V112?.onReady(drawCardArts);
     window.WIZARDRY_PENGUINS_V103?.onReady(drawCardArts);
     if(typeof ResizeObserver!=="undefined"){
       const observer=new ResizeObserver(()=>requestAnimationFrame(drawCardArts));

@@ -3031,6 +3031,7 @@
     getDefeatFrame:defeatFrame,
     defeatHoldMs:DEFEAT_HOLD_MS
   };
+  window.WIZARDRY_PENGUINS_V103?.onReady(()=>{if(state)drawCardArts();});
   setupControlHandlers();createBackground();setupSprites();setBattle("story",4);
   requestAnimationFrame(tick);
 })();

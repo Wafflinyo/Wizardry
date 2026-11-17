@@ -89,7 +89,7 @@
     {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
     {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:3,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
-  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana per turn instead of 1, up to the 15-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
+  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana after casting, or 3 after passing, up to the 15-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.
@@ -504,6 +504,7 @@
   }
   function passTurn(){
     const c=caster();if(state.phase!=="planning"||!c||state.plans[c.id])return;
+    c.passedRound=state.round;
     state.plans[c.id]={casterId:c.id,cardId:null,targetId:null,team:c.team,pass:true};
     clearSelection();resolvePressed();
   }
@@ -514,8 +515,9 @@
       const bonus=flow&&flow.remaining>0&&flow.appliedRound<state.round&&flow.lastTickRound!==state.round?1:0;
       // Guard repeated entry to this turn against duplicate mana awards.
       if(u.lastManaRound===state.round)continue;
-      u.lastManaRound=state.round;u.mana=Math.min(MAX_MANA,u.mana+1+bonus);
-      if(bonus){flow.lastTickRound=state.round;flow.remaining--;flash(u,"+2 MANA · FLOW STATE","#a7f5ff");
+      const base=u.passedRound===state.round-1?2:1,gain=base+bonus;
+      u.lastManaRound=state.round;u.mana=Math.min(MAX_MANA,u.mana+gain);
+      if(bonus){flow.lastTickRound=state.round;flow.remaining--;flash(u,"+"+gain+" MANA · FLOW STATE","#a7f5ff");
         if(!flow.remaining)consumeStatus(u,"flow_state");}
     }
   }
@@ -1754,7 +1756,7 @@
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+MAX_MANA+" MANA";
-    const pass=$("passTurn");if(pass){pass.hidden=!planning||!c;pass.disabled=!planning||!c||!!state.plans[c.id];}
+    const pass=$("passTurn");if(pass){pass.hidden=!planning||!c;pass.disabled=!planning||!c||!!state.plans[c.id];pass.textContent="Pass Turn · +"+(c?.statuses.some(st=>st.kind==="flow_state"&&st.remaining>0)?3:2)+" Mana";pass.title="Save your cards and regenerate "+(c?.statuses.some(st=>st.kind==="flow_state"&&st.remaining>0)?3:2)+" mana next turn (maximum 15).";}
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
     ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=
@@ -2491,7 +2493,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
-      case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana instead of 1. Maximum 15 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
+      case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 2 mana after casting, or 3 after passing. Maximum 15 mana. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
       case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+((st.stored||0)*100)+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Your casts and allied Lightning casts count, including misses; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};

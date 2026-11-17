@@ -83,7 +83,8 @@
     {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."},
     {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."},
     {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
-    {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."}
+    {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
+    {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -525,7 +526,10 @@
     const a=state?.animation;
     if(!a||a.stage!=="tracing-auto")return false;
     const c=getUnit(a.source);
-    const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),turbulence=consumeStatus(c,"turbulence"),bonus=(used?.value||0)-(shock?.value||0)-(turbulence?.value||0);
+    if(!triggerThornyWrap(c,a)){
+      a.runeResult="failed";startStage(a,"lowering",WIZARD_RECOVERY_MS);paintUI();return false;
+    }
+    const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),turbulence=consumeStatus(c,"turbulence"),bonus=(used?.value||0)-(shock?.value||0)-(turbulence?.value||0)-thornAccuracyPenalty(c);
     a.accuracyBonusUsed=bonus;
     a.effectiveAccuracy=Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const success=spellHitCheck(a.card,Math.random(),bonus);
@@ -645,7 +649,7 @@
     if(a.stage==="raising"){
       caster.armRaise=1;
       startStage(a,"tracing-auto",AUTO_TRACE_MS);
-      const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0)-(caster.statuses.find(st=>st.kind==="turbulence")?.value||0);
+      const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0)-(caster.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(caster);
       ui.hint.textContent=caster.name+" automatically traces the "+a.card.school+
         " rune · "+Math.round(Math.max(0,Math.min(1,a.card.accuracy+nextBonus))*100)+"% accuracy";
       paintUI();
@@ -1187,6 +1191,52 @@
   function drawPenguinPortrait(c,w,h){window.WIZARDRY_PENGUINS_V103.portrait(c,w,h);}
 
 
+
+  function thornAccuracyPenalty(u){
+    const vine=u?.statuses.find(st=>st.kind==="thorny_wrap");
+    return vine&&u.hp>0&&state.round<vine.expiresRound?.15:0;
+  }
+  function triggerThornyWrap(u,a){
+    if(!thornAccuracyPenalty(u)||a.thornTriggered)return u.hp>0;
+    a.thornTriggered=true;
+    u.hp=Math.max(0,u.hp-150);
+    flash(u,"THORNS −150","#b1e781");
+    state.log=[u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for 150 damage.",...state.log].slice(0,5);
+    if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
+    return u.hp>0;
+  }
+  function drawThornyVine(c,u,progress,time,layer){
+    if(progress<=0)return;
+    const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1)),height=150*scale;
+    const total=100,grown=Math.floor(total*progress),turns=3.2;
+    c.save();c.lineJoin="bevel";c.lineCap="round";
+    if(layer==="back"){
+      c.fillStyle="#293e25";c.beginPath();c.ellipse(u.x,u.y+2,29*scale*progress,9*scale*progress,0,0,Math.PI*2);c.fill();
+      for(let n=0;n<7;n++){
+        const angle=n*2.4,r=(12+n%3*8)*scale;
+        c.fillStyle=n%2?"#6b7850":"#424f36";c.beginPath();
+        const x=u.x+Math.cos(angle)*r,y=u.y+Math.sin(angle)*r*.3;
+        c.moveTo(x-5,y+2);c.lineTo(x,y-5*progress);c.lineTo(x+7,y+3);c.closePath();c.fill();
+      }
+    }
+    for(let j=0;j<grown;j++){
+      const t=j/total,next=(j+1)/total,angle=t*Math.PI*2*turns-.8,angle2=next*Math.PI*2*turns-.8;
+      if((Math.sin(angle)>0)!==(layer==="front"))continue;
+      const radius=(30+4*Math.sin(t*8+time*.001))*scale;
+      const x=u.x+Math.cos(angle)*radius,y=u.y-t*height+Math.sin(angle)*8*scale;
+      const xx=u.x+Math.cos(angle2)*radius,yy=u.y-next*height+Math.sin(angle2)*8*scale;
+      c.strokeStyle="#29491c";c.lineWidth=10*scale;c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.stroke();
+      c.strokeStyle=j%4<2?"#669b37":"#81b64b";c.lineWidth=6*scale;c.beginPath();c.moveTo(x-1,y-1);c.lineTo(xx-1,yy-1);c.stroke();
+      if(j%5===0){
+        const side=j%10?1:-1;
+        c.fillStyle="#c7d893";c.beginPath();c.moveTo(x-3*scale,y);c.lineTo(x+side*12*scale,y-10*scale);c.lineTo(x+4*scale,y+3*scale);c.closePath();c.fill();
+        c.fillStyle="#577b2e";c.beginPath();c.moveTo(x,y);c.lineTo(x+side*12*scale,y-10*scale);c.lineTo(x+side*4*scale,y-2*scale);c.closePath();c.fill();
+      }
+      if(j%19===0){const side=Math.cos(angle)>0?1:-1;c.fillStyle="#7eae43";c.beginPath();c.moveTo(x,y);c.lineTo(x+side*19*scale,y-14*scale);c.lineTo(x+side*13*scale,y+2*scale);c.closePath();c.fill();}
+    }
+    c.restore();
+  }
+
   function blizzardHitAt(i,count){return .44+i*.18/Math.max(1,count-1);}
   function applyBlizzardHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
@@ -1359,7 +1409,7 @@
     return true;
   }
   function tickBurnsForRound(){
-    for(const u of state.units)isFrozen(u);
+    for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
     for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
       if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
     for(const u of state.units)for(const kind of ["calming_waters","healing_aura"]){const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
@@ -1396,7 +1446,14 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="blizzard"){
+    if(card.kind==="thornwrap"){
+      if(t&&t.hp>0&&t.team!==c.team){
+        addStatus(t,"thorny_wrap","❧",.15);
+        Object.assign(t.statuses.find(st=>st.kind==="thorny_wrap"),{expiresRound:state.round+3,appliedRound:state.round,attemptDamage:150});
+        flash(t,"THORNY WRAP · 3 TURNS","#b5e989");
+        state.log=[t.name+" is wrapped: 150 damage per spell attempt and −15 accuracy points for 3 turns.",...state.log].slice(0,5);
+      }
+    }else if(card.kind==="blizzard"){
       for(const entry of anim.blizzardTargets||[])applyBlizzardHit(anim,entry);
     }else if(card.kind==="penguins"){
       for(let i=0;i<3;i++)applyPenguinHit(anim,i);
@@ -2340,6 +2397,7 @@
       case "soul_drain":return {title:"☠ Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
       case "blazing_rage":return {title:"♨ Blazing Rage · Fire blessing",detail:"Next successful damaging spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
+      case "thorny_wrap":return {title:"❧ Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};
       case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
       case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores 125 HP at the start of each turn for "+st.remaining+" more turns. 375 total over 3 turns. Refreshes without stacking; cannot revive or exceed maximum HP."};
       case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
@@ -2500,7 +2558,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
+      if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
+      else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
       else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
       else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
       else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
@@ -2751,7 +2810,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2771,6 +2830,12 @@
     }));
     for(const u of sorted){
       if(u.hp<=0)continue;
+      const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
+      const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
+      if(growing||wrapped){
+        const progress=growing?clamp(action.elapsed/action.duration/.85,0,1):1;
+        for(const layer of ["back","front"])renderables.push({type:"thornwrap-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,draw:()=>drawThornyVine(g,u,progress,time,layer)});
+      }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.source===u.id;
       if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
         const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
@@ -3096,9 +3161,9 @@
     getEffectiveAccuracy:(unitId,cardId)=>{
       const u=getUnit(unitId),card=BY_ID[cardId];
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
-        (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)));
+        (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)));
     },
-    applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

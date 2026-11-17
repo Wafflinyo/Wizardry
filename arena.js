@@ -91,8 +91,8 @@
   ];
   CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana after casting, or 3 after passing, up to the 15-mana cap. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   CARDS.push({id:"windfist",name:"Wind Fist Barrage",school:"wind",cost:6,target:"enemy",kind:"windfist",damage:500,hitDamage:50,hits:10,accuracy:.85,icon:"≋",rarity:"EPIC",duration:4800,hit:.98,short:"85% ACCURACY",description:"A monk drops into a three-point crouched landing, stands, claps his hands and bows, then takes an open-palm forward stance. He leaps up and unleashes ten forceful wind fists at one enemy: 50 damage per punch, 500 total. 85% spell accuracy."});
-  const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.024);
-  const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.045);
+  const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.014);
+  const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.

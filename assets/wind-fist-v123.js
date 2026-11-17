@@ -7,20 +7,24 @@ monk.onload=ready;fists.onload=ready;punches.onload=ready;punches.src="./assets/
 // Match the standing wizard at the summon depth, including perspective.
 const wizardScale=.60+.30*((425-288)/235),bodyHeight=220*.80*wizardScale;
 const releases=Array.from({length:10},(_,i)=>.52+i*.014),flight=.032;
-const punchStep=.014;
-function punchAt(p){const t=(p-(releases[0]-punchStep/2))/punchStep,index=Math.floor(t);if(index<0||index>=10)return null;return{index,frame:(index%2)*4+Math.min(3,Math.floor((t-index)*4+1e-8))};}
+const punchStep=.014,volleyEnd=releases[releases.length-1]+punchStep/2,landingEnd=volleyEnd+.09;
+function punchAt(p){if(p>=volleyEnd)return null;const t=(p-(releases[0]-punchStep/2))/punchStep,index=Math.floor(t);if(index<0||index>=10)return null;return{index,frame:(index%2)*4+Math.min(3,Math.floor((t-index)*4+1e-8))};}
 // Atlas landmarks share the same scale/anchor for actor, afterimages and launch points.
 const punchFrames=[{"x":0,"y":0,"w":444,"h":444,"anchorX":225,"anchorY":385,"bodyHeight":328,"handX":280,"handY":165},{"x":444,"y":0,"w":444,"h":444,"anchorX":669,"anchorY":385,"bodyHeight":328,"handX":724,"handY":165},{"x":887,"y":0,"w":444,"h":444,"anchorX":1112,"anchorY":385,"bodyHeight":328,"handX":1303,"handY":165},{"x":1330,"y":0,"w":444,"h":444,"anchorX":1555,"anchorY":385,"bodyHeight":328,"handX":1610,"handY":165},{"x":0,"y":444,"w":444,"h":444,"anchorX":225,"anchorY":829,"bodyHeight":328,"handX":280,"handY":645},{"x":444,"y":444,"w":444,"h":444,"anchorX":669,"anchorY":829,"bodyHeight":328,"handX":724,"handY":645},{"x":887,"y":444,"w":444,"h":444,"anchorX":1112,"anchorY":829,"bodyHeight":328,"handX":1304,"handY":645},{"x":1330,"y":444,"w":444,"h":444,"anchorX":1555,"anchorY":829,"bodyHeight":328,"handX":1610,"handY":645}];
 function punchTransform(frame){const r=punchFrames[frame];return{r,scale:bodyHeight*.79/r.bodyHeight};}
 function drawPunch(c,frame,pos,alpha=1){if(!punches.complete||!punches.naturalWidth)return;const {r,scale}=punchTransform(frame);c.save();c.globalAlpha*=alpha;c.translate(pos.x,pos.y);c.scale(pos.dir,1);c.drawImage(punches,r.x,r.y,r.w,r.h,(r.x-r.anchorX)*scale,(r.y-r.anchorY)*scale,r.w*scale,r.h*scale);c.restore();}
-function frameAt(p){const cuts=[0,.18,.34,.44,.52,.79,.90,1],starts=[0,8,16,24,32,48,56],counts=[8,8,8,8,16,8,8];let k=0;while(k<6&&p>=cuts[k+1])k++;return starts[k]+Math.min(counts[k]-1,Math.floor(C((p-cuts[k])/(cuts[k+1]-cuts[k]))*counts[k]));}
-function actorPose(p,target){let y=425;if(p<.14)y=L(-170,425,E(p/.14));else if(p>=.44&&p<.52)y=L(425,245,E((p-.44)/.08));else if(p>=.52&&p<.79)y=245-Math.sin((p-.52)/.27*Math.PI)*8;else if(p>=.79&&p<.88)y=L(245,425,E((p-.79)/.09));else if(p>.96)y=L(425,-180,E((p-.96)/.04));return{x:500,y,dir:target.x>=500?1:-1};}
+function frameAt(p){
+ // The legacy atlas also contains punches. Never resume those once the
+ // faster alternating volley ends; go directly into recovery and landing.
+ if(p>=volleyEnd&&p<.90)return 49+Math.min(6,Math.floor(C((p-volleyEnd)/(landingEnd-volleyEnd))*7));
+ const cuts=[0,.18,.34,.44,.52,.79,.90,1],starts=[0,8,16,24,32,48,56],counts=[8,8,8,8,16,8,8];let k=0;while(k<6&&p>=cuts[k+1])k++;return starts[k]+Math.min(counts[k]-1,Math.floor(C((p-cuts[k])/(cuts[k+1]-cuts[k]))*counts[k]));}
+function actorPose(p,target){let y=425;if(p<.14)y=L(-170,425,E(p/.14));else if(p>=.44&&p<.52)y=L(425,245,E((p-.44)/.08));else if(p>=.52&&p<volleyEnd)y=245-Math.sin((p-.52)/(volleyEnd-.52)*Math.PI)*8;else if(p>=volleyEnd&&p<landingEnd)y=L(245,425,E((p-volleyEnd)/(landingEnd-volleyEnd)));else if(p>.96)y=L(425,-180,E((p-.96)/.04));return{x:500,y,dir:target.x>=500?1:-1};}
 function actorSprite(c,frame,x,y,size,dir=1){if(!monk.complete||!monk.naturalWidth)return;const r=poses[frame],ratio=size/(monk.naturalWidth/8);
  c.save();c.translate(x,y);c.scale(dir,1);c.drawImage(monk,r.x,r.y,r.w,r.h,(r.x-r.cx)*ratio,-r.h*ratio,r.w*ratio,r.h*ratio);c.restore();}
 function fistPoint(p,target,index){const release=releases[index],q=C((p-release)/flight),pos=actorPose(release,target),{r,scale}=punchTransform(index%2?6:2),sx=pos.x+pos.dir*(r.handX-r.anchorX)*scale,sy=pos.y+(r.handY-r.anchorY)*scale,tx=target.x,ty=target.y-104+(index%3-1)*12;
  return{x:L(sx,tx,q),y:L(sy,ty,q),q,angle:Math.atan2(ty-sy,tx-sx),release,hit:release+flight};}
 function vfx(c,frame,x,y,w,h,angle=0,front=.5){if(!fists.complete||!fists.naturalWidth)return;const cell=fists.naturalWidth/4;c.save();c.translate(x,y);c.rotate(angle);c.drawImage(fists,frame%4*cell,Math.floor(frame/4)*cell,cell,cell,-w*front,-h/2,w,h);c.restore();}
-function ground(c,p){let q=-1;if(p>=.13&&p<.23)q=(p-.13)/.10;else if(p>=.87&&p<.94)q=(p-.87)/.07;if(q<0)return;
+function ground(c,p){let q=-1;if(p>=.13&&p<.23)q=(p-.13)/.10;else if(p>=landingEnd&&p<landingEnd+.07)q=(p-landingEnd)/.07;if(q<0)return;
  c.save();c.globalAlpha=(1-q)*.42;c.fillStyle="#b5d4c5";for(let i=0;i<8;i++){const a=i*Math.PI/4,r=16+q*43,x=500+Math.cos(a)*r,y=425+Math.sin(a)*r*.25;c.beginPath();c.moveTo(x-10,y);c.lineTo(x-4,y-5);c.lineTo(x+8,y-3);c.lineTo(x+12,y+2);c.lineTo(x,y+5);c.closePath();c.fill();}c.restore();}
 function draw(c,{progress:p,target,layer="actor",index=0}){if(!target||p<0||p>=1)return;c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
  if(layer==="ground")ground(c,p);
@@ -36,5 +40,5 @@ function draw(c,{progress:p,target,layer="actor",index=0}){if(!target||p<0||p>=1
  }c.restore();}
 function depthFor({progress:p,target,index=0,layer}){if(!target)return 425;if(layer==="impact")return target.y+.13;return L(425,target.y,fistPoint(p,target,index).q)+.12;}
 function portrait(c,w,h){actorSprite(c,23,w*.48,h*.99,Math.min(w*.92,h*1.02),1);vfx(c,2,w*.73,h*.40,w*.43,h*.36,0,.5);}
-root.WIZARDRY_WIND_FIST_V123={draw,portrait,depthFor,frameAt,actorPose,fistPoint,punchAt,bodyHeight,releases,flight,onReady(fn){if(monk.complete&&monk.naturalWidth&&fists.complete&&fists.naturalWidth&&punches.complete&&punches.naturalWidth)fn();else listeners.push(fn);}};
+root.WIZARDRY_WIND_FIST_V123={draw,portrait,depthFor,frameAt,actorPose,fistPoint,punchAt,bodyHeight,releases,flight,volleyEnd,landingEnd,onReady(fn){if(monk.complete&&monk.naturalWidth&&fists.complete&&fists.naturalWidth&&punches.complete&&punches.naturalWidth)fn();else listeners.push(fn);}};
 })(window);

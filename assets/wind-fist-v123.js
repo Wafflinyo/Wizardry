@@ -39,6 +39,14 @@ function draw(c,{progress:p,target,layer="actor",index=0}){if(!target||p<0||p>=1
   if(layer==="impact"&&p>=pt.hit&&p<pt.hit+.06){const q=(p-pt.hit)/.06;vfx(c,8+Math.min(7,Math.floor(q*8)),target.x,target.y-104+(index%3-1)*12,120,120);}
  }c.restore();}
 function depthFor({progress:p,target,index=0,layer}){if(!target)return 425;if(layer==="impact")return target.y+.13;return L(425,target.y,fistPoint(p,target,index).q)+.12;}
-function portrait(c,w,h){actorSprite(c,23,w*.48,h*.99,Math.min(w*.92,h*1.02),1);vfx(c,2,w*.73,h*.40,w*.43,h*.36,0,.5);}
+function portrait(c,w,h){
+ // Use a closed-fist punch and the same knuckle landmark as the live spell.
+ const {r,scale}=punchTransform(6),fit=Math.min(w*.72/(340*scale),h*.92/(r.bodyHeight*scale));
+ c.save();c.translate(w*.33,h*.98);c.scale(fit,fit);
+ drawPunch(c,6,{x:0,y:0,dir:1});
+ // Anchor the TRAILING edge beyond the knuckles; the effect extends forward.
+ vfx(c,2,(r.handX-r.anchorX)*scale+w*.012/fit,(r.handY-r.anchorY)*scale,w*.24/fit,h*.22/fit,0,0);
+ c.restore();
+}
 root.WIZARDRY_WIND_FIST_V123={draw,portrait,depthFor,frameAt,actorPose,fistPoint,punchAt,bodyHeight,releases,flight,volleyEnd,landingEnd,onReady(fn){if(monk.complete&&monk.naturalWidth&&fists.complete&&fists.naturalWidth&&punches.complete&&punches.naturalWidth)fn();else listeners.push(fn);}};
 })(window);

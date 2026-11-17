@@ -86,7 +86,8 @@
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
     {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:4800,hit:.79,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."},
-    {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."}
+    {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
+    {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:3,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
@@ -1146,7 +1147,9 @@
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
     attemptMarkedFreeze(target,card,spell);
-    return oldHp-target.hp;
+    const directDamage=oldHp-target.hp;
+    triggerGunpowderCoat(source,target,card,spell);
+    return directDamage;
   }
   function applyVampDamage(a){
     if(a.vampDamageResolved)return;
@@ -1170,6 +1173,33 @@
         ...state.log].slice(0,5);
     }
     a.applied=true;
+  }
+
+
+  function applyGunpowderCoat(target,card){
+    const last=target.statuses.find(st=>st.kind==="gunpowder_coat")?.lastTriggerRound??null;
+    addStatus(target,"gunpowder_coat","✺",card.coatDamage);
+    Object.assign(target.statuses.find(st=>st.kind==="gunpowder_coat"),{expiresRound:state.round+card.coatTurns,lastTriggerRound:last,triggers:0});
+    flash(target,"GUNPOWDER COAT · 3 TURNS","#c8b69a");
+    state.log=[target.name+" is coated in gunpowder for 3 turns: Fire hits can ignite it once each turn.",...state.log].slice(0,5);
+  }
+  function triggerGunpowderCoat(source,target,card,spell){
+    const coat=target?.statuses.find(st=>st.kind==="gunpowder_coat");
+    if(!coat||card?.school!=="fire"||card.id==="gunpowderkiss"||spell?.runeResult==="failed"||state.round>=coat.expiresRound||coat.lastTriggerRound===state.round||(coat.triggers||0)>=3)return 0;
+    coat.lastTriggerRound=state.round;coat.triggers=(coat.triggers||0)+1;
+    const wasAlive=target.hp>0,amount=Math.min(target.hp,coat.value||150);
+    target.hp=Math.max(0,target.hp-(coat.value||150));
+    (state.gunpowderBursts??=[]).push({targetId:target.id,x:target.x,y:target.y,age:0});
+    flash(target,"GUNPOWDER −150","#ffd38b");
+    state.log=[target.name+"'s Gunpowder Coat sparks and explodes for "+amount+" damage; the coat remains.",...state.log].slice(0,5);
+    if(wasAlive&&!target.hp){target.defeatElapsedMs=0;flash(target,"DEFEATED","#ffdb9c");}
+    return amount;
+  }
+  function expireGunpowderCoats(){
+    for(const u of state.units){
+      const coat=u.statuses.find(st=>st.kind==="gunpowder_coat");
+      if(coat&&(u.hp<=0||state.round>=coat.expiresRound))consumeStatus(u,"gunpowder_coat");
+    }
   }
 
   function applyZeusImpact(a,roll){
@@ -1444,6 +1474,7 @@
     return true;
   }
   function tickBurnsForRound(){
+    expireGunpowderCoats();
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
     for(const u of state.units){const shock=u.statuses.find(st=>st.kind==="static_shock");
       if(shock&&(u.hp<=0||state.round>=shock.expiresRound))consumeStatus(u,"static_shock");}
@@ -1481,7 +1512,9 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
-    if(card.kind==="zeus"){
+    if(card.kind==="gunpowder"){
+      if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card);
+    }else if(card.kind==="zeus"){
       applyZeusImpact(anim);
       for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
     }else if(card.kind==="thornwrap"){
@@ -1765,7 +1798,8 @@
         b.dataset.card=k.id;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="zeus"?
+        const effect=k.id==="gunpowderkiss"?
+          '<span class="spell-effect"><b>GUNPOWDER COAT · 3 TURNS</b><span>FIRE HIT: 150 · UP TO 3 TIMES</span></span>':k.id==="zeus"?
           '<span class="spell-effect"><b>1,350 + 200 ADJACENT</b><span>20% STUN TO EACH HIT</span></span>':k.id==="kineticsand"?
           '<span class="spell-effect"><b>CRUSHING GRIP · 620</b><span>1 ENEMY · EARTH</span></span>':k.id==="thornwrap"?
           '<span class="spell-effect"><b>150 PER SPELL ATTEMPT</b><span>−15% ACC · 3 TURNS</span></span>':k.id==="blizzard"?
@@ -1815,13 +1849,13 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
+          (k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of actual HP drained, capped at maximum health.":
@@ -2408,6 +2442,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
       case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+((st.stored||0)*100)+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Your casts and allied Lightning casts count, including misses; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
       case "decaying_strength":return {title:"☠ Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
@@ -2517,7 +2552,8 @@
       ellipse(g,r.x,r.y,13,13,"#071d2dec",glow,2);
       g.fillStyle=glow;g.font="bold 19px system-ui,sans-serif";
       g.textAlign="center";g.textBaseline="middle";
-      if(st.kind==="wind_dome")window.WIZARDRY_WIND_DOME_V101?.emblem(g,r.x,r.y,21);
+      if(st.kind==="gunpowder_coat")window.WIZARDRY_GUNPOWDER_V120?.emblem(g,r.x,r.y,20);
+      else if(st.kind==="wind_dome")window.WIZARDRY_WIND_DOME_V101?.emblem(g,r.x,r.y,21);
       else if(st.kind==="lightning_rod"){window.WIZARDRY_ROD_V98?.emblem(g,r.x,r.y,21);g.font="bold 9px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+10,r.y+10);}
       else if(st.kind==="frostbite"){
         g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
@@ -2600,7 +2636,8 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
+      if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
+      else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
       else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
       else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
       else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
@@ -2639,6 +2676,7 @@
     window.WIZARDRY_ROD_V98?.onReady(drawCardArts);
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
+    window.WIZARDRY_GUNPOWDER_V120?.onReady(drawCardArts);
     window.WIZARDRY_ZEUS_V119?.onReady(drawCardArts);
     window.WIZARDRY_KINETIC_SAND_V112?.onReady(drawCardArts);
     window.WIZARDRY_PENGUINS_V103?.onReady(drawCardArts);
@@ -2856,7 +2894,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -2876,6 +2914,7 @@
     }));
     for(const u of sorted){
       if(u.hp<=0)continue;
+      if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time})});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
       if(growing||wrapped){
@@ -2914,6 +2953,14 @@
       if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:425,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
+    for(const burst of state.gunpowderBursts||[])renderables.push({type:"gunpowder-explosion",depthY:burst.y+.15,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.explosion(g,burst)});
+    if(action?.card?.id==="gunpowderkiss"&&action.stage==="summon"){
+      const kiss=window.WIZARDRY_GUNPOWDER_V120,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
+      if(kiss){
+        renderables.push({type:"gunpowder-mistress",depthY:425,priority:1,draw:()=>kiss.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"gunpowder-kiss",depthY:kiss.depthFor(opts),priority:2,draw:()=>kiss.draw(g,{...opts,layer:"powder"})});
+      }
+    }
     if(action?.card?.id==="zeus"&&action.stage==="summon"){
       const zeus=window.WIZARDRY_ZEUS_V119,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source),target:getUnit(action.target)};
       if(zeus){
@@ -3155,6 +3202,8 @@
         else u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,u.defeatElapsedMs+dt);
       }
     }
+    for(const burst of state.gunpowderBursts||[])burst.age+=dt/1000;
+    if(state.gunpowderBursts)state.gunpowderBursts=state.gunpowderBursts.filter(b=>b.age<.85);
     for(const burst of state.windDomeBursts||[])burst.age+=dt/1000;
     if(state.windDomeBursts)state.windDomeBursts=state.windDomeBursts.filter(b=>b.age<.62);
     for(const burst of state.rodBursts||[])burst.age+=dt/1000;
@@ -3221,7 +3270,7 @@
       return !u||!card?null:Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)));
     },
-    applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     setBattle,queueSpell,autoFill,resolvePressed,

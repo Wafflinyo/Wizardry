@@ -1210,27 +1210,33 @@
     const origin=caster.x+dir*25,span=Math.abs(target.x-origin)+200;
     const front=clamp(local*3.5,0,1),back=clamp((local-.62)*2.8,0,1);
     const base=target.y-75;
+    const edgeFade=f=>clamp((f-back)/.13,0,1)*clamp((front-f)/.13,0,1);
     c.save();c.lineJoin="bevel";
     // Continuous flowing volumes, tessellated into lit low-poly facets.
     // The front sweeps through the victim, followed by a sustained snow body.
     for(let band=0;band<6;band++){
       const center=base+(band-2.5)*29,phase=local*12-band*.73+index*.4;
+      // Independent pointed wisps avoid a shared vertical boundary.
+      const bandBack=back-.055-.065*rand(band+index*19+7);
+      const bandFront=front+.035+.09*rand(band+index*31+67);
       const points=[];
       for(let j=0;j<=18;j++){
-        const u=back+(front-back)*j/18,x=origin+dir*span*u;
+        const t=j/18,u=bandBack+(bandFront-bandBack)*t,x=origin+dir*span*u;
         const wave=Math.sin(u*8-phase)*23+Math.sin(u*15-phase*.7)*9;
-        const thickness=(23+12*Math.sin(u*5+phase*.45+band))*(.65+.35*Math.sin(Math.PI*j/18));
+        const taper=Math.pow(Math.max(0,Math.sin(Math.PI*t)),.7);
+        const thickness=(23+12*Math.sin(u*5+phase*.45+band))*taper;
         points.push({x,y:center+wave,w:thickness});
       }
       for(let j=0;j<18;j++){
         const a=points[j],b=points[j+1],midA=a.y-a.w*.18,midB=b.y-b.w*.18;
-        c.globalAlpha=fade*(band%2?.56:.68);
+        const feather=Math.min(1,(j+.5)/3,(18-j-.5)/3);
+        c.globalAlpha=fade*feather*(band%2?.56:.68);
         c.fillStyle=["#72b6d1","#a7deeb","#d1f0f5"][(j+band)%3];
         c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.lineTo(a.x,midA);c.closePath();c.fill();
         c.fillStyle=["#3f82aa","#679fbd","#8ac9dd"][(j+band)%3];
         c.beginPath();c.moveTo(a.x,midA);c.lineTo(b.x,midB);c.lineTo(b.x,b.y+b.w);c.lineTo(a.x,a.y+a.w);c.closePath();c.fill();
         if((j+band)%3===0){
-          c.globalAlpha=fade*.48;c.fillStyle="#eafcff";
+          c.globalAlpha=fade*feather*.48;c.fillStyle="#eafcff";
           c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.closePath();c.fill();
         }
       }
@@ -1239,7 +1245,7 @@
     for(let n=0;n<22;n++){
       const f=(rand(n+index*37)+local*1.5)%1;if(f>front||f<back)continue;
       const x=origin+dir*span*f,y=base+(rand(n+133)-.5)*180+Math.sin(f*9-local*12)*24;
-      const r=16+rand(n+27)*23;c.globalAlpha=fade*.22;c.fillStyle=n%2?"#c9edf4":"#edfaff";
+      const r=16+rand(n+27)*23;c.globalAlpha=fade*edgeFade(f)*.22;c.fillStyle=n%2?"#c9edf4":"#edfaff";
       c.beginPath();
       for(let k=0;k<7;k++){const angle=k*Math.PI*2/7,px=x+Math.cos(angle)*r*1.9,py=y+Math.sin(angle)*r;if(k)c.lineTo(px,py);else c.moveTo(px,py);}
       c.closePath();c.fill();
@@ -1250,7 +1256,7 @@
       if(f>front||f<back)continue;
       const x=origin+dir*span*f,y=base+(rand(n+311)-.5)*224+Math.sin(f*9-local*12)*22;
       const size=1.5+rand(n+52)*4,length=14+rand(n+89)*46;
-      c.globalAlpha=fade*(.3+seed*.6);c.fillStyle="#caeef8";
+      c.globalAlpha=fade*edgeFade(f)*(.3+seed*.6);c.fillStyle="#caeef8";
       c.beginPath();c.moveTo(x-dir*length,y+size);c.lineTo(x+dir*size*3,y-size*.35);c.lineTo(x-dir*size,y-size);c.closePath();c.fill();
       c.fillStyle=n%4?"#f2fdff":"#8dd5ee";
       c.beginPath();c.moveTo(x+dir*size*3,y);c.lineTo(x,y-size*1.6);c.lineTo(x-dir*size*2,y);c.lineTo(x,y+size);c.closePath();c.fill();

@@ -526,9 +526,6 @@
     const a=state?.animation;
     if(!a||a.stage!=="tracing-auto")return false;
     const c=getUnit(a.source);
-    if(!triggerThornyWrap(c,a)){
-      a.runeResult="failed";startStage(a,"lowering",WIZARD_RECOVERY_MS);paintUI();return false;
-    }
     const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),turbulence=consumeStatus(c,"turbulence"),bonus=(used?.value||0)-(shock?.value||0)-(turbulence?.value||0)-thornAccuracyPenalty(c);
     a.accuracyBonusUsed=bonus;
     a.effectiveAccuracy=Math.max(0,Math.min(1,a.card.accuracy+bonus));
@@ -977,6 +974,13 @@
         continue;
       }
       if(c.mana<card.cost||isRecharging(c))continue;
+      // Cast-attempt curses strike before staff raising or rune tracing.
+      // Ineligible/skipped turns above never count as an attempt.
+      const attempt={card};
+      if(!triggerThornyWrap(c,attempt)){
+        c.mana-=card.cost;
+        continue;
+      }
       if(card.target!=="team"&&card.target!=="all_enemies"){
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0||!valid.some(v=>v.id===t.id)){

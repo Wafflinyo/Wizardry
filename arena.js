@@ -1204,37 +1204,62 @@
   }
   // World-space gusts mirror with the caster and sort at each victim's depth.
   function drawBlizzardWind(c,p,caster,target,index){
-    const local=clamp((p-.12-index*.045)/.78,0,1);
+    const local=clamp((p-.09-index*.045)/.86,0,1);
     if(local<=0||local>=1)return;
-    const dir=target.x>=caster.x?1:-1,fade=Math.min(1,local*7,(1-local)*5);
-    const startX=caster.x+dir*38,endX=target.x+dir*125;
-    c.save();c.globalAlpha=fade;c.lineCap="round";c.lineJoin="round";
-    // Long twisting ribbons: a dark icy facet, cyan edge, white whip core.
-    for(let ribbon=0;ribbon<7;ribbon++){
-      const travel=clamp(local*2.1-ribbon*.055,0,1),head=startX+(endX-startX)*travel;
-      const tail=head-dir*(180+85*Math.sin(local*3+ribbon));
-      const y=target.y-58+(ribbon-3)*17;
-      for(let layer=0;layer<3;layer++){
-        c.strokeStyle=["#276b9a","#8cdff4","#eefeff"][layer];
-        c.globalAlpha=fade*[.22,.5,.9][layer];c.lineWidth=[19,8,2.5][layer];
-        c.beginPath();c.moveTo(tail,y+25*Math.sin(local*24+ribbon));
-        c.bezierCurveTo(tail+dir*90,y-50,head-dir*80,y+48,head,y-14*Math.sin(local*28+ribbon));c.stroke();
+    const dir=target.x>=caster.x?1:-1,fade=Math.min(1,local*9,(1-local)*6);
+    const origin=caster.x+dir*25,span=Math.abs(target.x-origin)+200;
+    const front=clamp(local*3.5,0,1),back=clamp((local-.62)*2.8,0,1);
+    const base=target.y-75;
+    c.save();c.lineJoin="bevel";
+    // Continuous flowing volumes, tessellated into lit low-poly facets.
+    // The front sweeps through the victim, followed by a sustained snow body.
+    for(let band=0;band<6;band++){
+      const center=base+(band-2.5)*29,phase=local*12-band*.73+index*.4;
+      const points=[];
+      for(let j=0;j<=18;j++){
+        const u=back+(front-back)*j/18,x=origin+dir*span*u;
+        const wave=Math.sin(u*8-phase)*23+Math.sin(u*15-phase*.7)*9;
+        const thickness=(23+12*Math.sin(u*5+phase*.45+band))*(.65+.35*Math.sin(Math.PI*j/18));
+        points.push({x,y:center+wave,w:thickness});
+      }
+      for(let j=0;j<18;j++){
+        const a=points[j],b=points[j+1],midA=a.y-a.w*.18,midB=b.y-b.w*.18;
+        c.globalAlpha=fade*(band%2?.56:.68);
+        c.fillStyle=["#72b6d1","#a7deeb","#d1f0f5"][(j+band)%3];
+        c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.lineTo(a.x,midA);c.closePath();c.fill();
+        c.fillStyle=["#3f82aa","#679fbd","#8ac9dd"][(j+band)%3];
+        c.beginPath();c.moveTo(a.x,midA);c.lineTo(b.x,midB);c.lineTo(b.x,b.y+b.w);c.lineTo(a.x,a.y+a.w);c.closePath();c.fill();
+        if((j+band)%3===0){
+          c.globalAlpha=fade*.48;c.fillStyle="#eafcff";
+          c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.closePath();c.fill();
+        }
       }
     }
-    // Faceted ice splinters and fast snow spray follow the wind direction.
-    for(let n=0;n<60;n++){
-      const seed=rand(n+index*71),f=(local*3.8+seed)%1;
-      const x=startX+(endX-startX)*f,y=target.y-70+(rand(n+311)*2-1)*95+Math.sin(f*8+n)*14;
-      const size=2+rand(n+52)*6;
-      c.globalAlpha=fade*(.25+seed*.65);c.fillStyle=n%3?"#dbfaff":"#70c5e4";
-      c.beginPath();c.moveTo(x+dir*size*3,y);c.lineTo(x,y-size);c.lineTo(x-dir*size*2,y);c.lineTo(x,y+size*.5);c.closePath();c.fill();
+    // Billowing angular snow pockets break up the ribbons into a thick squall.
+    for(let n=0;n<22;n++){
+      const f=(rand(n+index*37)+local*1.5)%1;if(f>front||f<back)continue;
+      const x=origin+dir*span*f,y=base+(rand(n+133)-.5)*180+Math.sin(f*9-local*12)*24;
+      const r=16+rand(n+27)*23;c.globalAlpha=fade*.22;c.fillStyle=n%2?"#c9edf4":"#edfaff";
+      c.beginPath();
+      for(let k=0;k<7;k++){const angle=k*Math.PI*2/7,px=x+Math.cos(angle)*r*1.9,py=y+Math.sin(angle)*r;if(k)c.lineTo(px,py);else c.moveTo(px,py);}
+      c.closePath();c.fill();
     }
-    const impact=clamp(1-Math.abs(p-blizzardHitAt(index,4))/.16,0,1);
-    if(impact>0){
-      c.globalAlpha=impact*.8;c.strokeStyle="#e8fcff";c.lineWidth=3;
-      for(let n=0;n<8;n++){const angle=n*Math.PI/4,x=target.x,y=target.y-65;
-        c.beginPath();c.moveTo(x+Math.cos(angle)*15,y+Math.sin(angle)*15);
-        c.lineTo(x+Math.cos(angle)*(30+impact*32),y+Math.sin(angle)*(30+impact*32));c.stroke();}
+    // Fast snow blades have long tapered wakes and faceted crystalline tips.
+    for(let n=0;n<112;n++){
+      const seed=rand(n+index*131),f=(seed+local*(2.8+rand(n+73)*1.5))%1;
+      if(f>front||f<back)continue;
+      const x=origin+dir*span*f,y=base+(rand(n+311)-.5)*224+Math.sin(f*9-local*12)*22;
+      const size=1.5+rand(n+52)*4,length=14+rand(n+89)*46;
+      c.globalAlpha=fade*(.3+seed*.6);c.fillStyle="#caeef8";
+      c.beginPath();c.moveTo(x-dir*length,y+size);c.lineTo(x+dir*size*3,y-size*.35);c.lineTo(x-dir*size,y-size);c.closePath();c.fill();
+      c.fillStyle=n%4?"#f2fdff":"#8dd5ee";
+      c.beginPath();c.moveTo(x+dir*size*3,y);c.lineTo(x,y-size*1.6);c.lineTo(x-dir*size*2,y);c.lineTo(x,y+size);c.closePath();c.fill();
+    }
+    const impact=clamp(1-Math.abs(p-blizzardHitAt(index,4))/.15,0,1);
+    if(impact>0)for(let n=0;n<15;n++){
+      const seed=rand(n+index*43),x=target.x+dir*(seed*130-30),y=base+(rand(n+77)-.5)*175;
+      c.globalAlpha=impact*.7;c.fillStyle=n%2?"#f0fdff":"#9cdeef";
+      c.beginPath();c.moveTo(x-dir*35,y+8);c.lineTo(x+dir*42,y-3);c.lineTo(x,y-11);c.closePath();c.fill();
     }
     c.restore();
   }

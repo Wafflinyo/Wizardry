@@ -1068,8 +1068,21 @@
   }
   function flash(unit,text,color="#f8d3a0"){
     if(!unit)return;
-    state.flashes.push({x:unit.x,y:unit.y-108,text,color,age:0});
+    const message={x:unit.x,y:unit.y-108,text,color,age:0};
+    state.flashes.push(message);
     if(state.flashes.length>18)state.flashes.shift();
+    return message;
+  }
+  function flashSpellDamage(target,amount,color,spell){
+    if(!spell){flash(target,"-"+amount,color);return;}
+    // One running number per victim per cast, shared by every direct hit.
+    const displays=spell.damageDisplays??=Object.create(null);
+    const entry=displays[target.id]??={total:0,message:null};
+    entry.total+=amount;
+    if(entry.message&&state.flashes.includes(entry.message)){
+      Object.assign(entry.message,{x:target.x,y:target.y-108,
+        text:"-"+entry.total,color,age:0});
+    }else entry.message=flash(target,"-"+entry.total,color);
   }
   function addStatus(u,kind,icon,value){
     let existing=u.statuses.find(s=>s.kind===kind);
@@ -1195,7 +1208,7 @@
       // This remains independent of the attacker's ongoing summon/trace.
       target.defeatElapsedMs=0;
     }
-    flash(target,"-"+amount,notes.includes("BLOCK")?"#8df2f5":"#f8c49c");
+    flashSpellDamage(target,amount,notes.includes("BLOCK")?"#8df2f5":"#f8c49c",spell);
     state.log=[source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""),...state.log].slice(0,5);
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}

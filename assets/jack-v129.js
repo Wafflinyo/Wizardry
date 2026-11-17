@@ -1,10 +1,10 @@
 /* Jack the Lantern: original low-poly scarecrow poses and three animated crows. */
 (function(root){'use strict';
 const C=t=>Math.max(0,Math.min(1,t)),L=(a,b,t)=>a+(b-a)*t,E=t=>{t=C(t);return t*t*(3-2*t);};
-const atlas=new Image(),listeners=[];atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());atlas.src='./assets/jack-atlas-v129.webp';
+const atlas=new Image(),listeners=[];atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());atlas.src='./assets/jack-cross-atlas-v130.webp';
 const FLOOR=425,SIZE=185,SWARM=.53,HIT=.73;
 function pose(p,target){const dir=target.x>=500?1:-1,rise=E(p/.28),sink=E((p-.86)/.12);let frame=p<.28?Math.min(3,Math.floor(p/.28*4)):p<.48?4+Math.min(3,Math.floor((p-.28)/.20*4)):8+Math.floor((p-.48)*25)%4;return{x:500,y:FLOOR+(1-rise)*SIZE*.94+sink*SIZE,dir,frame,alpha:1-E((p-.92)/.07)};}
-function sprite(c,frame,x,y,size,dir=1,alpha=1,angle=0){if(!atlas.complete||!atlas.naturalWidth)return;const cw=atlas.naturalWidth/4,ch=atlas.naturalHeight/4;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(dir,1);c.drawImage(atlas,frame%4*cw,Math.floor(frame/4)*ch,cw,ch,-size/2,-size*.94,size,size);c.restore();}
+function sprite(c,frame,x,y,size,dir=1,alpha=1,angle=0){if(!atlas.complete||!atlas.naturalWidth)return;const cw=atlas.naturalWidth/4,rows=[[0,330],[330,309],[639,327],[966,295]],row=rows[Math.floor(frame/4)],sy=row[0]*atlas.naturalHeight/1261,ch=row[1]*atlas.naturalHeight/1261;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(dir,1);c.drawImage(atlas,frame%4*cw,sy,cw,ch,-size/2,-size*.94,size,size);c.restore();}
 function orbit(p,i){const a=p*16+i*Math.PI*2/3;return{x:500+Math.cos(a)*76,y:210+Math.sin(a)*17,dir:-Math.sin(a)>=0?1:-1};}
 function crowPose(p,target,i){const release=SWARM+i*.02,start=orbit(release,i);if(p<release)return{...orbit(p,i),size:43,alpha:1,angle:0};
  const q=C((p-release)/.16),a=(p-release)*55+i*Math.PI*2/3,tx=target.x+Math.cos(a)*21,ty=target.y-104+Math.sin(a)*30;
@@ -21,6 +21,6 @@ function draw(c,{progress:p,target,layer='actor'}){if(!target||p<0||p>=1)return;
   for(let i=0;i<5;i++){const a=i*Math.PI*.4+q,cx=target.x+Math.cos(a)*(17+q*26),cy=target.y-104+Math.sin(a)*(17+q*26);c.beginPath();c.moveTo(cx-8,cy-6);c.lineTo(cx,cy);c.lineTo(cx-5,cy+9);c.stroke();}c.restore();}
 }
 function depthFor({progress:p,target},layer){if(layer==='ground')return FLOOR-.2;if(layer==='actor')return FLOOR;if(layer==='impact')return target.y+.3;const i=Number(layer.slice(4));return p<SWARM+i*.02?FLOOR+(Math.sin(p*16+i*Math.PI*2/3)>.1?.1:-.1):L(FLOOR,target.y,C((p-SWARM-i*.02)/.16))+.2;}
-function portrait(c,w,h){const size=Math.min(w*.97,h*.95);sprite(c,10,w*.50,h*.99,size,1);for(let i=0;i<3;i++)sprite(c,12+i,w*(.19+i*.30),h*(.20+(i%2)*.08),w*.30,i===2?-1:1);}
+function portrait(c,w,h){const size=Math.min(w*.97,h*.78);sprite(c,10,w*.50,h*.99,size,1);for(let i=0;i<3;i++)sprite(c,12+i,w*(.19+i*.30),h*(.12+(i%2)*.06),w*.27,i===2?-1:1);}
 root.WIZARDRY_JACK_V129={draw,portrait,pose,crowPose,depthFor,HIT,SWARM,onReady(fn){if(atlas.complete&&atlas.naturalWidth)fn();else listeners.push(fn);}};
 })(window);

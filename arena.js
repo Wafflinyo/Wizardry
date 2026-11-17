@@ -1948,7 +1948,7 @@
     for(const u of state.units){
       const p=state.plans[u.id];if(!p)continue;
       const chip=document.createElement("span");chip.className="action-tag"+(u.team?" enemy":"");
-      chip.textContent=u.name+": "+BY_ID[p.cardId].name+
+      chip.textContent=u.name+": "+(p.pass?"Pass Turn · Save Mana":BY_ID[p.cardId]?.name||"No spell")+
         (p.targetId?" → "+(getUnit(p.targetId)?.name||"target"):"");
       ui.plans.appendChild(chip);
     }

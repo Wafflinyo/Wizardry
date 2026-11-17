@@ -523,13 +523,23 @@
   }
   function checkBattleEnd(){
     if(!state)return false;
-    if(state.phase==="finished")return true;
+    if(state.phase==="ending"||state.phase==="finished")return true;
     const a=alive(0).length,b=alive(1).length;if(a&&b)return false;
-    state.winner=a?0:b?1:"draw";state.phase="finished";
+    state.winner=a?0:b?1:"draw";state.phase="ending";state.endingHoldMs=0;
     state.animation=null;state.plans={};state.sequence=[];state.queueAt=0;
     clearSelection();for(const u of state.units)u.armRaise=0;
-    ui.hint.textContent=state.winner==="draw"?"Draw!":(state.winner===0?"Allies":"Enemy team")+" wins!";
+    ui.hint.textContent="The final wizard falls...";
     ui.status.textContent=ui.hint.textContent;paintUI();return true;
+  }
+  function updateBattleEnding(dt){
+    if(state.phase!=="ending")return;
+    // Finish every active defeat pose before starting the half-second pause.
+    if(state.units.some(u=>u.hp<=0&&(!Number.isFinite(u.defeatElapsedMs)||u.defeatElapsedMs<DEFEAT_HOLD_MS)))return;
+    state.endingHoldMs+=Math.max(0,dt);
+    if(state.endingHoldMs<500)return;
+    state.phase="finished";
+    ui.hint.textContent=state.winner==="draw"?"Draw!":(state.winner===0?"Allies":"Enemy team")+" wins!";
+    ui.status.textContent=ui.hint.textContent;paintUI();
   }
   function runResolution(){
     if(state.phase!=="planning")return;
@@ -1548,7 +1558,7 @@
     }
   }
   function applySpell(anim){
-    if(anim.applied||state.phase==="finished")return;
+    if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
@@ -1673,13 +1683,6 @@
       const aura=state.auras[team];
       if(aura&&--aura.turns<=0)state.auras[team]=null;
     }
-    const allyAlive=alive(0).length,enemyAlive=alive(1).length;
-    if(!allyAlive||!enemyAlive){
-      state.phase="finished";state.winner=allyAlive&&!enemyAlive?0:!allyAlive&&enemyAlive?1:"draw";
-      ui.hint.textContent=state.winner==="draw"?"Draw!":
-        (state.winner===0?"Allies":"Enemy team")+" wins!";
-      paintUI();return;
-    }
     // Consume the REST round at its end, not at the end of the casting
     // round: cast R1 -> skip R2 -> available R3.
     for(const u of state.units){
@@ -1695,17 +1698,7 @@
     }
     state.round++;
     tickBurnsForRound();
-    // A burn that KOs the last enemy ends the match before asking for
-    // another target; burn never carries on past the game-over screen.
-    if(!alive(0).length||!alive(1).length){
-      state.phase="finished";
-      state.animation=null;state.plans={};state.sequence=[];state.queueAt=0;
-      state.winner=alive(0).length&&!alive(1).length?0:
-        !alive(0).length&&alive(1).length?1:"draw";
-      ui.hint.textContent=state.winner==="draw"?"Draw!":
-        (state.winner===0?"Allies":"Enemy team")+" wins!";
-      paintUI();return;
-    }
+    if(checkBattleEnd())return;
     grantTurnMana();
     // Complete old round teardown: no queued player actions, target, card,
     // or combat animation may carry into the next planning phase.
@@ -1740,11 +1733,11 @@
       count=alive(state.planningSide).filter(u=>state.plans[u.id]).length;
     ui.round.textContent="ROUND "+state.round;
     ui.phase.textContent=planning?(state.planningSide?"TEAM B · SELECT":"YOUR MOVE"):
-      state.phase==="finished"?"BATTLE COMPLETE":"RESOLVING SPELLS";
+      state.phase==="finished"?"BATTLE COMPLETE":state.phase==="ending"?"FINAL DEFEAT":"RESOLVING SPELLS";
     ui.badge.textContent=state.size+" vs "+state.size+" · "+
       (state.mode==="story"?"STORY / CPU":"PvP LOCAL TEST");
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
-      state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:"FINISHED";
+      state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
     if(planning)ui.hint.textContent=c?
       (isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
@@ -3252,6 +3245,7 @@
       updateCastSequence(dt);
       checkBattleEnd();
     }
+    updateBattleEnding(dt);
     // Each fallen wizard gets its own timeline: play the sequence once,
     // then freeze on frame 7 through the rest of the battle and victory.
     for(const u of state.units){
@@ -3331,7 +3325,7 @@
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
-    turnOrder,grantTurnMana,checkBattleEnd,finishRound,passTurn,startNextAction,runResolution,tick,
+    turnOrder,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,

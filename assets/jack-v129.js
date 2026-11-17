@@ -2,8 +2,8 @@
 (function(root){'use strict';
 const C=t=>Math.max(0,Math.min(1,t)),L=(a,b,t)=>a+(b-a)*t,E=t=>{t=C(t);return t*t*(3-2*t);};
 const atlas=new Image(),listeners=[];atlas.onload=()=>{buildFaceMasks();listeners.splice(0).forEach(fn=>fn());};atlas.src='./assets/jack-cross-atlas-v130.webp';
-const FLOOR=425,SIZE=185,SWARM=.53,HIT=.73,faceMasks=[];
-function glowStrength(p){return E((p-.43)/.085)*(1-E((p-SWARM)/.035));}
+const FLOOR=425,SIZE=185,SWARM=.62,HIT=.82,faceMasks=[];
+function glowStrength(p){return E((p-.45)/.05)*(1-E((p-SWARM)/.045));}
 function buildFaceMasks(){
  if(typeof document==='undefined')return;
  const cw=atlas.naturalWidth/4,rows=[[0,330],[330,309],[639,327]];
@@ -14,15 +14,16 @@ function buildFaceMasks(){
   // Only the existing bright yellow carvings in the pumpkin face glow.
   for(let y=0;y<ch;y++)for(let x=0;x<mask.width;x++){const i=(y*mask.width+x)*4,r=data[i],green=data[i+1],b=data[i+2];
    if(y>ch*.35||x<cw*.35||x>cw*.83||r<185||green<125||b>110||green<r*.68||green<b*1.8)data[i+3]=0;
-   else{data[i]=255;data[i+1]=232;data[i+2]=112;}
+   else{data[i]=255;data[i+1]=245;data[i+2]=170;}
   }
   g.putImageData(pixels,0,0);faceMasks[frame]=mask;
  }
 }
 function faceGlow(c,b,p){const mask=faceMasks[b.frame],strength=glowStrength(p);if(!mask||strength<=0)return;
  c.save();c.translate(b.x,b.y);c.scale(b.dir,1);c.globalCompositeOperation='lighter';c.globalAlpha*=strength*b.alpha;
- c.shadowColor='#ffb52e';c.shadowBlur=18*strength;c.drawImage(mask,-SIZE/2,-SIZE*.94,SIZE,SIZE);
- c.shadowBlur=7*strength;c.drawImage(mask,-SIZE/2,-SIZE*.94,SIZE,SIZE);c.restore();
+ c.shadowColor='#ff9400';c.shadowBlur=34*strength;c.drawImage(mask,-SIZE/2,-SIZE*.94,SIZE,SIZE);
+ c.shadowBlur=15*strength;c.drawImage(mask,-SIZE/2,-SIZE*.94,SIZE,SIZE);
+ c.shadowColor='#fff6b5';c.shadowBlur=5*strength;c.drawImage(mask,-SIZE/2,-SIZE*.94,SIZE,SIZE);c.restore();
 }
 function pose(p,target){const dir=target.x>=500?1:-1,rise=E(p/.28),sink=E((p-.86)/.12);let frame=p<.28?Math.min(3,Math.floor(p/.28*4)):p<.48?4+Math.min(3,Math.floor((p-.28)/.20*4)):8+Math.floor((p-.48)*25)%4;return{x:500,y:FLOOR+(1-rise)*SIZE*.94+sink*SIZE,dir,frame,alpha:1-E((p-.92)/.07)};}
 function sprite(c,frame,x,y,size,dir=1,alpha=1,angle=0){if(!atlas.complete||!atlas.naturalWidth)return;const cw=atlas.naturalWidth/4,rows=[[0,330],[330,309],[639,327],[966,295]],row=rows[Math.floor(frame/4)],sy=row[0]*atlas.naturalHeight/1261,ch=row[1]*atlas.naturalHeight/1261;c.save();c.globalAlpha*=alpha;c.translate(x,y);c.rotate(angle);c.scale(dir,1);c.drawImage(atlas,frame%4*cw,sy,cw,ch,-size/2,-size*.94,size,size);c.restore();}

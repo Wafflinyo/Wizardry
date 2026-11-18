@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 
 const node = { getContext: () => ({}) }, math = Object.create(Math);
 math.random = () => .5;
-const ctx = { window: {}, Math: math, Image: class {}, document: { getElementById: () => node }, requestAnimationFrame() {} };
+const ctx = { window: {}, Math: math, Image: class { naturalWidth=1024; naturalHeight=1024; }, document: { getElementById: () => node }, requestAnimationFrame() {} };
 vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('assets/grill-master.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
@@ -71,18 +71,19 @@ for (const defense of ['wind_dome','poison','miss','ally','lethal']){
   assert.equal(target.hp,target.maxHp-440,'the regular resolver hits when the fire reaches the target');
 }
 
-const canvas = new Proxy({ globalAlpha:1, createRadialGradient:()=>({addColorStop(){}}) }, {
+const frames=[];
+const canvas = new Proxy({ globalAlpha:1, drawImage:(...args)=>frames.push(args), createRadialGradient:()=>({addColorStop(){}}) }, {
   get:(o,k)=>k in o?o[k]:(()=>{})
 });
 for(const target of [{x:180,y:350},{x:820,y:590}]){
-  assert.equal(fx.pose(.30,target).jaw,0);
+  assert.ok(fx.pose(.30,target).frame<8,"lid stays closed while warming");
   assert.equal(fx.pose(.30,target).y,510);
-  assert.ok(fx.pose(.58,target).jaw>.9);
+  assert.equal(fx.pose(.58,target).frame,10,"lid is fully open during the stream");
   assert.equal(fx.flamePath(.52,target).reach,0);
   assert.equal(fx.flamePath(fx.HIT,target).reach,1);
   assert.equal(fx.flamePath(fx.HIT,target).end.y,target.y-79);
   assert.equal(fx.flamePath(fx.HIT,target).origin.x,fx.pose(fx.HIT,target).muzzle.x);
-  assert.equal(fx.pose(.94,target).jaw,0);
+  assert.equal(fx.pose(.94,target).frame,15,"closed recovery frame");
   for(let i=0;i<=100;i++)for(const layer of ['ground','actor','stream','impact']){
     const opts={progress:i/100,target,layer};
     assert.ok(Number.isFinite(fx.depthFor(opts,layer)));
@@ -90,4 +91,8 @@ for(const target of [{x:180,y:350},{x:820,y:590}]){
   }
 }
 fx.portrait(canvas,240,196);
+const actorFrames=frames.filter(([image])=>image.src.endsWith('grill-master-poses-v151.webp'));
+assert.equal(new Set(actorFrames.map(([,sx,sy])=>sx+','+sy)).size,16,'all actor poses play');
+assert.ok(actorFrames.every(([,sx,sy,sw,sh])=>sx+sw<=1024&&sy+sh<=1024));
+assert.ok(frames.some(([image])=>image.src.endsWith('grill-master-effects-v151.webp')),'fire uses the effects atlas');
 console.log('Grill Master: opening hand, flame contact timing, single 440 base hit, exact Burn roll and ticks, blocked or invalid targets, and mirrored summon animation passed.');

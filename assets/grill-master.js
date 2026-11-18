@@ -1,21 +1,26 @@
-/* A cast-iron creature with a hinged jaw, furnace cheeks and four ember vents. */
+/* Registered low-poly actor frames, with independent smoke and flame atlases. */
 (function(root){
   'use strict';
-  const CENTER_X=500,FLOOR_Y=510,SCALE=.83,RELEASE=.53,HIT=.60,LID_SWING=1.04;
+  const CENTER_X=500,FLOOR_Y=510,TILE=256,ACTOR_SCALE=.79,RELEASE=.53,HIT=.60;
+  const actor=new Image(),effects=new Image();
+  actor.src='./assets/grill-master-poses-v151.webp';
+  effects.src='./assets/grill-master-effects-v151.webp';
+  const starts=[0,.048,.097,.153,.216,.287,.369,.454,.494,.528,.566,.647,.735,.802,.865,.918];
+  const mouth=[[178,171],[177,147],[179,133],[185,108],[183,120],[180,117],[181,118],[186,112],
+    [185,116],[190,114],[187,113],[188,111],[186,128],[178,126],[180,151],[180,176]];
   const clamp=p=>Math.max(0,Math.min(1,p));
   const ease=p=>{p=clamp(p);return p*p*(3-2*p);};
   const lerp=(a,b,p)=>a+(b-a)*p;
 
   function pose(progress,target){
-    const dir=target.x>=CENTER_X?1:-1;
-    const heat=ease((progress-.12)/.41);
-    const planted=ease(progress/.17),close=ease((progress-.75)/.15);
-    const jaw=ease((progress-.49)/.055)*(1-close);
-    const recoil=Math.sin(Math.PI*clamp((progress-.51)/.24))*jaw;
-    const shake=progress<RELEASE?Math.sin(progress*156)*heat*3:0;
-    const x=CENTER_X+dir*(shake-recoil*13),y=FLOOR_Y-95*(1-planted)**2;
-    const muzzle={x:x+dir*62*SCALE,y:y-95*SCALE};
-    return {dir,x,y,heat,jaw,muzzle,alpha:planted*(1-ease((progress-.90)/.10))};
+    const dir=target.x>=CENTER_X?1:-1,frame=starts.findLastIndex(start=>progress>=start);
+    const heat=ease((progress-.12)/.41),planted=ease(progress/.17);
+    const recoil=Math.sin(Math.PI*clamp((progress-.53)/.22));
+    const shake=progress<RELEASE?Math.sin(progress*153)*heat*2.6:0;
+    const x=CENTER_X+dir*(shake-recoil*13),y=FLOOR_Y-84*(1-planted)**2;
+    const [mx,my]=mouth[frame];
+    const muzzle={x:x+dir*(mx-128)*ACTOR_SCALE,y:y+(my-240)*ACTOR_SCALE};
+    return {dir,x,y,frame,heat,muzzle,alpha:planted*(1-ease((progress-.90)/.10))};
   }
 
   function flamePath(progress,target,body=pose(progress,target)){
@@ -24,110 +29,47 @@
     return {origin:body.muzzle,end,reach};
   }
 
-  function poly(c,fill,points){
-    c.fillStyle=fill;c.beginPath();
-    points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
-    c.closePath();c.fill();
+  function sprite(c,image,frame,x,y,w,h){
+    if(!image.naturalWidth)return;
+    c.drawImage(image,frame%4*TILE,Math.floor(frame/4)*TILE,TILE,TILE,x,y,w,h);
   }
   function glow(c,x,y,r,color){
     const light=c.createRadialGradient(x,y,0,x,y,r);
     light.addColorStop(0,color);light.addColorStop(1,'#ff5b1500');
     c.fillStyle=light;c.fillRect(x-r,y-r,r*2,r*2);
   }
-  function leg(c,x,back){
-    c.save();c.translate(x,0);
-    poly(c,back?'#212127':'#353037',[[-15,-55],[12,-52],[16,-24],[10,-10],[-16,-10],[-22,-23]]);
-    poly(c,'#66626b',[[-15,-55],[-7,-49],[-12,-22],[-22,-23]]);
-    poly(c,back?'#303035':'#453b3d',[[-16,-17],[13,-17],[25,-8],[24,0],[-20,0],[-23,-7]]);
-    poly(c,'#8b7771',[[4,-9],[12,-10],[17,-7],[13,-2],[5,-2]]);
-    c.restore();
+  function model(c,frame,x,y,scale){
+    sprite(c,actor,frame,x-128*scale,y-240*scale,TILE*scale,TILE*scale);
   }
-  function body(c,{heat,jaw}){
-    const iron='#30272d',edge='#8b6555',hot=heat>.59?'#ff791c':'#ce4117';
-    leg(c,29,true);leg(c,-43,false);
-    // The hinged lid is the creature's upper jaw. Its claws brace the sides.
-    poly(c,'#211b22',[[-62,-91],[-86,-77],[-78,-49],[-55,-47],[-48,-62],[-63,-67]]);
-    poly(c,'#56464b',[[-62,-91],[-86,-77],[-81,-68],[-55,-78]]);
-    poly(c,'#191822',[[25,-86],[43,-107],[62,-101],[78,-79],[65,-67],[50,-78]]);
-    poly(c,'#776064',[[43,-107],[62,-101],[78,-79],[63,-83]]);
-    poly(c,iron,[[-65,-94],[32,-96],[67,-75],[61,-52],[29,-31],[-39,-34],[-65,-53],[-76,-78]]);
-    poly(c,'#59454a',[[-65,-94],[-39,-81],[-34,-40],[-58,-52],[-76,-78]]);
-    poly(c,'#6c4942',[[-34,-80],[62,-79],[61,-68],[37,-55],[-32,-59]]);
-    poly(c,'#21171b',[[-47,-84],[49,-94],[68,-81],[43,-73],[-34,-74]]);
-    c.save();c.globalAlpha=.22+heat*.78;
-    glow(c,42,-83,31,'#ff6429a3');
-    poly(c,hot,[[-25,-84],[-14,-85],[-8,-76],[-18,-75]]);
-    poly(c,hot,[[0,-85],[11,-86],[17,-77],[7,-76]]);
-    poly(c,hot,[[25,-87],[34,-88],[41,-78],[32,-77]]);
-    poly(c,'#ffd780',[[46,-89],[55,-88],[63,-83],[51,-80]]);
-    c.restore();
-    // Faceted chimney and lid, rotated around the back hinge.
-    c.save();c.translate(-56,-92);c.rotate(-jaw*LID_SWING);
-    poly(c,'#2e272f',[[-8,-8],[1,-34],[22,-51],[75,-57],[107,-42],[123,-19],[119,0],[39,8],[5,3]]);
-    poly(c,'#73636a',[[1,-34],[22,-51],[75,-57],[107,-42],[60,-34],[24,-26]]);
-    poly(c,'#4f434b',[[24,-26],[60,-34],[107,-42],[123,-19],[65,-14],[34,-11]]);
-    poly(c,'#775147',[[5,3],[39,8],[119,0],[121,-6],[41,0],[4,-5]]);
-    poly(c,'#2b272b',[[14,-40],[13,-66],[27,-71],[36,-64],[33,-47]]);
-    poly(c,'#716369',[[11,-67],[28,-73],[39,-66],[23,-60]]);
-    poly(c,'#1c1820',[[53,-26],[73,-26],[71,-13],[59,-9]]);
-    poly(c,'#1c1820',[[86,-31],[108,-37],[103,-20],[91,-15]]);
-    c.save();c.globalAlpha=.78+heat*.22;
-    poly(c,hot,[[56,-23],[70,-23],[67,-15],[60,-13]]);
-    poly(c,'#ffb954',[[90,-28],[104,-33],[100,-23],[93,-19]]);
-    c.restore();
-    poly(c,edge,[[70,-10],[84,-16],[104,-15],[108,-9],[91,-9],[78,-5]]);
-    c.restore();
-    poly(c,'#695659',[[-51,-69],[-43,-63],[-28,-63],[-17,-54],[-22,-45],[-43,-48],[-57,-58]]);
-    poly(c,'#aa8877',[[-41,-61],[-30,-61],[-23,-56],[-25,-51],[-38,-52]]);
-    if(jaw>.08){
-      c.save();c.globalAlpha=jaw;
-      glow(c,47,-91,43,'#ff7919e0');
-      poly(c,'#ffae32',[[17,-84],[30,-95],[55,-103],[72,-95],[58,-84]]);
-      poly(c,'#fff6aa',[[35,-88],[51,-98],[66,-95],[53,-87]]);
-      c.restore();
+  function smoke(c,b,p){
+    const density=b.heat*(1-ease((p-.67)/.25));
+    if(density<=0)return;
+    const width=128+density*64;
+    const animation=lerp(8,13,ease((p-.12)/.42))+2*ease((p-.66)/.23);
+    const frame=Math.floor(animation),mix=animation-frame;
+    const x=lerp(b.x-b.dir*18,b.muzzle.x,density*.61);
+    const y=lerp(b.y-95,b.muzzle.y,density*.6);
+    const opacity=c.globalAlpha*b.alpha*density*.87;
+    c.save();
+    c.globalAlpha=opacity*(1-mix);
+    sprite(c,effects,frame,x-width/2,y-width*.90,width,width);
+    if(mix>0){
+      c.globalAlpha=opacity*mix;
+      sprite(c,effects,frame+1,x-width/2,y-width*.90,width,width);
     }
-  }
-
-  function smoke(c,b,p,scale=SCALE){
-    if(p<.10)return;
-    const heat=b.heat*(1-ease((p-.70)/.25)),angle=-b.jaw*LID_SWING;
-    const sourceX=b.x+b.dir*(-56+24*Math.cos(angle)+67*Math.sin(angle))*scale;
-    const sourceY=b.y+(-92+24*Math.sin(angle)-67*Math.cos(angle))*scale;
-    for(let i=0;i<17;i++){
-      const age=(p*4.7+i*.37)%1;
-      const x=sourceX-b.dir*age*38+Math.sin(i*19+age*4)*age*37;
-      const y=sourceY-age*(49+heat*65);
-      const r=8+age*24+heat*7;
-      c.save();c.globalAlpha=b.alpha*heat*Math.sin(age*Math.PI)*.40;
-      poly(c,i%3===0?'#dccbb6':i%3===1?'#77707a':'#43404b',[[x-r,y],[x-r*.5,y-r*.65],[x+r*.25,y-r*.8],[x+r,y-r*.2],[x+r*.64,y+r*.50],[x-r*.4,y+r*.65]]);
-      c.restore();
-    }
+    c.restore();
   }
 
   function flame(c,p,b,target){
     const {origin,end,reach}=flamePath(p,target,b);
     if(reach<=0)return;
-    const angle=Math.atan2(end.y-origin.y,end.x-origin.x),length=Math.hypot(end.x-origin.x,end.y-origin.y);
+    const angle=Math.atan2(end.y-origin.y,end.x-origin.x);
+    const length=Math.hypot(end.x-origin.x,end.y-origin.y)*reach;
+    const height=(85+Math.sin(p*65)*12)*(.42+.58*reach);
+    const frame=p<HIT?Math.floor(7*clamp((p-RELEASE)/(HIT-RELEASE))):4+Math.floor((p-HIT)*52)%4;
     c.save();c.translate(origin.x,origin.y);c.rotate(angle);
-    const size=Math.min(length,length*reach);
-    for(let row=0;row<3;row++){
-      const outline=[],spread=[42,24,11][row];
-      for(let i=0;i<=13;i++){
-        const q=i/13,width=(4+Math.sin(q*2.2)*spread)*(1-q**7);
-        outline.push([q*size,-width*(.86+.27*Math.sin(i*4.1+p*186+row))]);
-      }
-      for(let i=13;i>=0;i--){
-        const q=i/13,width=(4+Math.sin(q*2.2)*spread)*(1-q**7);
-        outline.push([q*size,width*(.85+.25*Math.sin(i*5.5-p*161+row))]);
-      }
-      c.globalAlpha=[.73,.93,1][row];
-      poly(c,['#e64314','#ff891c','#fff5aa'][row],outline);
-    }
-    for(let i=0;i<19;i++){
-      const q=(p*18+i*.31)%1,x=q*size,y=Math.sin(i*9+q*3)*q*46;
-      c.globalAlpha=(1-q)*.85;
-      poly(c,i%2?'#ffbb44':'#ff6025',[[x-6,y+1],[x+6,y-2],[x+3,y+3]]);
-    }
+    c.globalAlpha*=.84+.16*reach;
+    sprite(c,effects,frame,0,-height/2,length,height);
     c.restore();
   }
 
@@ -136,24 +78,25 @@
     const b=pose(p,target);
     if(layer==='stream'){flame(c,p,b,target);return;}
     if(layer==='impact'){
-      const age=(p-HIT)/.21;
+      const age=(p-HIT)/.17;
       if(age<0||age>=1)return;
-      const {end}=flamePath(p,target,b);
-      c.save();c.globalAlpha=(1-age)**2;
-      glow(c,end.x,end.y,23+age*87,'#ff8d30e0');
-      for(let i=0;i<16;i++){
-        const angle=i*2.4,x=end.x+Math.cos(angle)*age*(48+i%5*12),y=end.y+Math.sin(angle)*age*48-age*26;
-        poly(c,i%2?'#ff9329':'#ffd16c',[[x-5,y+4],[x+2,y-7],[x+4,y+3]]);
-      }
+      const {end}=flamePath(p,target,b),width=52+age*75;
+      c.save();
+      c.globalAlpha*=(1-age)**2;
+      glow(c,end.x,end.y,28+age*61,'#ff8d30df');
+      const frame=Math.min(15,8+Math.floor(age*8));
+      sprite(c,effects,frame,end.x-width/2,end.y-width*.75,width,width);
       c.restore();return;
     }
     if(layer==='ground'){
       c.save();c.globalAlpha*=b.alpha*.45;c.fillStyle='#221722';
-      c.beginPath();c.ellipse(b.x,FLOOR_Y,66,15,0,0,Math.PI*2);c.fill();c.restore();return;
+      c.beginPath();c.ellipse(b.x,FLOOR_Y,72,17,0,0,Math.PI*2);c.fill();c.restore();return;
     }
+    c.save();c.globalAlpha*=b.alpha;
+    c.translate(b.x,b.y);c.scale(b.dir,1);
+    model(c,b.frame,0,0,ACTOR_SCALE);
+    c.restore();
     smoke(c,b,p);
-    c.save();c.globalAlpha*=b.alpha;c.translate(b.x,b.y);c.scale(b.dir*SCALE,SCALE);
-    body(c,b);c.restore();
   }
   function depthFor({target},layer){
     if(layer==='ground')return FLOOR_Y-.2;
@@ -161,11 +104,13 @@
     return target.y+(layer==='impact'?.2:.1);
   }
   function portrait(c,w,h){
-    const scale=Math.min(w/211,h/185);
-    c.save();c.translate(w*.52,h*.93);c.scale(scale,scale);
-    glow(c,0,-76,100,'#ff6b1970');
-    smoke(c,{x:0,y:0,dir:1,heat:1,jaw:.26,alpha:1},.43,1);
-    body(c,{heat:1,jaw:.26});c.restore();
+    const scale=Math.min(w/230,h/238);
+    glow(c,w*.5,h*.55,w*.51,'#e558177e');
+    model(c,10,w*.5,h*.95,scale);
   }
-  root.WIZARDRY_GRILL_MASTER={draw,portrait,pose,flamePath,depthFor,HIT};
+  function onReady(fn){
+    if(actor.naturalWidth)fn();
+    else actor.addEventListener('load',fn,{once:true});
+  }
+  root.WIZARDRY_GRILL_MASTER={draw,portrait,pose,flamePath,depthFor,HIT,onReady};
 })(window);

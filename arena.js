@@ -3003,6 +3003,8 @@
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
+    window.WIZARDRY_GRILL_MASTER?.onReady(drawCardArts);
+    window.WIZARDRY_ELECTRICAL_CHARGE?.onReady(drawCardArts);
     window.WIZARDRY_JACK_V129?.onReady(drawCardArts);
     window.WIZARDRY_WIND_FIST_V123?.onReady(drawCardArts);
     window.WIZARDRY_FLOW_STATE_V121?.onReady(drawCardArts);

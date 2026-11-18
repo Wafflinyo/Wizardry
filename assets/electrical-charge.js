@@ -1,92 +1,44 @@
-/* Electric arcs converge on the caster and seal into a charged rune. */
+/* Frame-animated electrical cage. The caster remains visible inside the arcs. */
 (function(root){
   'use strict';
-  const TAU=Math.PI*2,clamp=n=>Math.max(0,Math.min(1,n));
+  const TILE=256;
+  const atlas=new Image();
+  atlas.src='./assets/electrical-charge-v151.webp';
+  const starts=[0,.049,.103,.158,.217,.280,.342,.403,.468,.525,.587,.649,.713,.771,.838,.916];
+  const clamp=n=>Math.max(0,Math.min(1,n));
 
+  function frame(p){
+    return starts.findLastIndex(time=>p>=time);
+  }
+  function sprite(c,number,x,y,w,h){
+    if(!atlas.naturalWidth)return;
+    c.drawImage(atlas,number%4*TILE,Math.floor(number/4)*TILE,TILE,TILE,x,y,w,h);
+  }
   function emblem(c,x,y,size){
+    if(!atlas.naturalWidth)return;
+    // Sample just the large faceted rune, leaving edge fragments in the cast.
+    c.drawImage(atlas,256+85,3*256+42,90,135,x-size*.35,y-size*.46,size*.70,size*.92);
+  }
+  function draw(c,{target,progress:p}){
+    if(!target)return;
+    const scale=.60+.30*clamp((target.y-288)/235);
+    const width=266*scale,height=285*scale;
     c.save();
-    c.translate(x,y);
-    c.scale(size/50,size/50);
-    c.fillStyle='#102644';
-    c.strokeStyle='#77ceff';
-    c.lineWidth=2;
-    c.beginPath();
-    c.moveTo(0,-22);
-    c.lineTo(20,-10);
-    c.lineTo(20,10);
-    c.lineTo(0,22);
-    c.lineTo(-20,10);
-    c.lineTo(-20,-10);
-    c.closePath();
-    c.fill();
-    c.stroke();
-    c.fillStyle='#e4fbff';
-    c.beginPath();
-    c.moveTo(4,-16);
-    c.lineTo(-10,3);
-    c.lineTo(-2,3);
-    c.lineTo(-5,16);
-    c.lineTo(11,-5);
-    c.lineTo(3,-5);
-    c.closePath();
-    c.fill();
+    c.globalAlpha*=Math.min(1,p/.025,(1-p)/.075);
+    sprite(c,frame(p),target.x-width/2,target.y-height*.91,width,height);
     c.restore();
   }
-
-  function arcs(c,x,y,rx,ry,phase,alpha){
-    c.save();
-    c.translate(x,y);
-    c.globalAlpha*=alpha;
-    for(let i=0;i<7;i++){
-      const angle=i*TAU/7+phase;
-      const dx=Math.cos(angle)*rx,dy=Math.sin(angle)*ry;
-      const bend=Math.sin(i*9+phase*4)*15;
-      c.beginPath();
-      c.moveTo(dx,dy);
-      c.lineTo(dx*.73+bend,dy*.72);
-      c.lineTo(dx*.48-bend,dy*.50);
-      c.lineTo(dx*.24+bend*.4,dy*.28);
-      c.lineTo(0,0);
-      c.strokeStyle='#2581ff';
-      c.lineWidth=5;
-      c.stroke();
-      c.strokeStyle='#c2f8ff';
-      c.lineWidth=1.6;
-      c.stroke();
-    }
-    c.restore();
-  }
-
-  function draw(c,{target,progress:p,time}){
-    const x=target.x,y=target.y-76;
-    const gather=clamp(p/.72),fade=1-clamp((p-.76)/.24);
-    c.save();
-    c.globalAlpha*=fade;
-    const halo=c.createRadialGradient(x,y,0,x,y,90);
-    halo.addColorStop(0,'#6ce9ff80');
-    halo.addColorStop(1,'#153ba800');
-    c.fillStyle=halo;
-    c.fillRect(x-90,y-90,180,180);
-    arcs(c,x,y,91-59*gather,116-82*gather,time/305,clamp(p/.15));
-    if(p>.55){
-      c.globalAlpha*=clamp((p-.55)/.18);
-      emblem(c,x,y,48);
-    }
-    c.restore();
-  }
-
   function portrait(c,w,h){
-    c.save();
-    c.translate(w/2,h/2);
-    c.scale(w/240,h/196);
-    const halo=c.createRadialGradient(0,0,8,0,0,118);
-    halo.addColorStop(0,'#367bd7');
-    halo.addColorStop(1,'#091626');
-    c.fillStyle=halo;
-    c.fillRect(-120,-98,240,196);
-    arcs(c,0,0,114,91,.5,1);
-    emblem(c,0,0,90);
-    c.restore();
+    const size=Math.min(w,h)*.97;
+    const corona=c.createRadialGradient(w/2,h/2,0,w/2,h/2,size*.6);
+    corona.addColorStop(0,'#3756b4cc');
+    corona.addColorStop(1,'#12143e00');
+    c.fillStyle=corona;c.fillRect(0,0,w,h);
+    sprite(c,11,(w-size)/2,(h-size)/2,size,size);
   }
-  root.WIZARDRY_ELECTRICAL_CHARGE={draw,emblem,portrait};
+  function onReady(fn){
+    if(atlas.naturalWidth)fn();
+    else atlas.addEventListener('load',fn,{once:true});
+  }
+  root.WIZARDRY_ELECTRICAL_CHARGE={draw,emblem,portrait,frame,onReady};
 })(window);

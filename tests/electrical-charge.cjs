@@ -3,7 +3,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 
 const node = { getContext: () => ({}) };
-const ctx = { window: {}, Image: class {}, document: { getElementById: () => node }, requestAnimationFrame() {} };
+const ctx = { window: {}, Image: class { naturalWidth=1024; naturalHeight=1024; }, document: { getElementById: () => node }, requestAnimationFrame() {} };
 vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
   '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
@@ -99,4 +99,14 @@ damage(enemy, user, 1, card('thunder'));
 assert.equal(user.mana, 5, 'no mana after expiry');
 api.applySpell(cast(user, user, charge.id));
 assert.ok(status(user), 'can cast again after expiry');
+vm.runInNewContext(fs.readFileSync('assets/electrical-charge.js','utf8'),ctx);
+const fx=ctx.window.WIZARDRY_ELECTRICAL_CHARGE,draws=[];
+const canvas=new Proxy({globalAlpha:1, drawImage:(...args)=>draws.push(args), createRadialGradient:()=>({addColorStop(){}})},{
+  get:(object,key)=>key in object?object[key]:(()=>{})
+});
+for(let i=0;i<=100;i++)fx.draw(canvas,{target:{x:225,y:520},progress:i/100});
+assert.equal(new Set(draws.map(([,sx,sy])=>sx+','+sy)).size,16,'the caster aura plays all sixteen frames');
+fx.emblem(canvas,0,0,32);
+fx.portrait(canvas,220,160);
+assert.ok(draws.every(([asset,sx,sy,sw,sh])=>asset.src.endsWith('electrical-charge-v151.webp')&&sx+sw<=1024&&sy+sh<=1024));
 console.log('Electrical Charge: legal starting-hand card, self debuff, non-stacking, spell/chain/discharge reactions, blocks, cap and expiry passed.');

@@ -187,6 +187,7 @@
   const rand=(seed)=>{let n=(seed*9301+49297)%233280;return n/233280};
   let state=null,background=null,frameLast=0,spriteCache={},handSwipe=null,lastHandArtKey="";
   // User-approved, transparent 12-frame idle + 16-frame casting atlas.
+  const zenPortrait=new Image();
   const wizardAtlas=new Image();
   wizardAtlas.decoding="async";
   wizardAtlas.src="./assets/wizard-approved-animations-v33.png";
@@ -3133,6 +3134,12 @@
       if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
       else if(card.id==="zen"){
+        if(zenPortrait.naturalWidth){
+          const scale=Math.min(width/zenPortrait.naturalWidth,height/zenPortrait.naturalHeight);
+          const w=zenPortrait.naturalWidth*scale,h=zenPortrait.naturalHeight*scale;
+          c.drawImage(zenPortrait,(width-w)/2,(height-h)/2,w,h);
+          return;
+        }
         const scale=Math.min(width,height)/82;
         c.save();c.translate(width/2,height/2);c.scale(scale,scale);
         drawZenShards(c,0,0,.28,"wind");
@@ -3195,6 +3202,8 @@
     }
   }
   function setupSprites(){
+    zenPortrait.onload=drawCardArts;
+    zenPortrait.src="./assets/zen-portrait.webp?v=0.196.0";
     for(const [kind,prop] of [["poseidon","WIZARDRY_POSEIDON_V22_ROWS"],
                                ["golem","WIZARDRY_GOLEM_V23_ROWS"]]){
       const sources=window[prop];

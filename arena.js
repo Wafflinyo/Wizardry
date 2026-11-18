@@ -3375,9 +3375,14 @@
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):510)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
     }
-    if(action?.card?.id==="acidair"&&action.stage==="summon"){
-      const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1);
-      if(target)renderables.push({type:"acid-air",depthY:target.y+.1,priority:2,draw:()=>window.AcidAir?.draw(g,target,p)});
+    for(const target of sorted){
+      if(target.hp<=0)continue;
+      const forming=action?.card?.id==="acidair"&&action.stage==="summon"&&action.target===target.id;
+      const poisoned=target.statuses.some(st=>st.kind==="poison"&&st.extreme);
+      if(!forming&&!poisoned)continue;
+      const progress=forming?clamp(action.elapsed/action.duration,0,1):1;
+      const opacity=forming&&!poisoned?Math.min(1,(1-progress)*5):1;
+      renderables.push({type:"acid-air",depthY:target.y+.1,priority:2,draw:()=>window.AcidAir?.draw(g,target,progress,time,opacity)});
     }
     if(action?.card?.id==="cyclops"&&action.stage==="summon"){
       const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1);

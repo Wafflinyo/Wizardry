@@ -2,8 +2,10 @@
   const atlas=new Image(),listeners=[];
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
   atlas.src='./assets/boulder-weight.webp';
+  const equipped=new Image();equipped.src='./assets/boulder-weight-equipped.webp';
   function piece(g,i,x,y,w,h){
-    if(atlas.naturalWidth)g.drawImage(atlas,i*256,0,256,256,x-w/2,y-h/2,w,h);
+    const source=i<3&&equipped.naturalWidth?equipped:atlas;
+    if(source.naturalWidth)g.drawImage(source,i*256,0,256,256,x-w/2,y-h/2,w,h);
   }
   // Coordinates on the 128px wizard tiles: shoulder, elbow and wrist.
   const idleY=[0,-1,-1,-3,-4,-3,-1,1,1,1,2,2];
@@ -17,14 +19,15 @@
     if(p<=0)return;
     const lift=(1-p)**2;
     g.save();g.translate(20*lift,-35*lift);g.globalAlpha*=Math.min(1,p*3);
+    piece(g,0,sx-2,sy-2,size,size*.76);
     g.save();g.translate(ex+(wx-ex)*.46,ey+(wy-ey)*.46);
     g.rotate(Math.atan2(wy-ey,wx-ex)-Math.PI/2+.32);
-    piece(g,2,0,0,size*.65,Math.hypot(wx-ex,wy-ey)*.96);g.restore();
-    piece(g,0,sx,sy,size,size*.83);g.restore();
+    piece(g,2,0,0,size*.83,Math.max(size*.59,Math.hypot(wx-ex,wy-ey)*1.12));g.restore();
+    g.restore();
   }
   function sprite(g,p,i){
     const y=idleY[i]||0;
-    equip(g,p,...(i<12?[66,64+y,73,75+y,84,72+y]:cast[i-12]),21);
+    equip(g,p,...(i<12?[66,64+y,73,75+y,84,72+y]:cast[i-12]),32);
   }
   window.BoulderWeight={equip,sprite,portrait:(g,w,h)=>piece(g,3,w/2,h/2,Math.min(w,h),Math.min(w,h)),onReady:fn=>atlas.naturalWidth?fn():listeners.push(fn)};
 })();

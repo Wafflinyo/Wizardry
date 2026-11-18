@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const math=Object.create(Math);
 math.random=()=>.5;
 const node={getContext:()=>({})};
-const ctx={window:{},Math:math,Image:class{naturalWidth=2048;},document:{getElementById:()=>node},requestAnimationFrame(){}};
+const ctx={window:{},Math:math,Image:class{naturalWidth=1024;},document:{getElementById:()=>node},requestAnimationFrame(){}};
 const read=p=>fs.readFileSync(p,'utf8');
 vm.runInNewContext(read('assets/wizard-system-v135.js'),ctx);
 vm.runInNewContext(read('assets/venus-trap.js'),ctx);
@@ -19,6 +19,8 @@ assert.equal(api.featuredCard,card.id);
 assert.equal(card.school,'nature');
 assert.equal(card.damage,400);
 assert.equal(card.hit,fx.HIT);
+assert.ok((fx.STRIKE-fx.ROAR)*card.duration>1100);
+assert.ok((fx.HIT-fx.STRIKE)*card.duration<265);
 const catalog=JSON.parse(read('backend/cards.json'));
 assert.equal(catalog.find(c=>c.id===card.id).damage,400);
 assert.equal(card.duration,4200);
@@ -52,7 +54,7 @@ for(const [caster,target] of [
 ]){
   const opts={progress:fx.HIT,caster,target};
   const bite=fx.pose(opts);
-  assert.equal(bite.frame,33);
+  assert.equal(bite.frame,11);
   assert.equal(bite.scale,1.25);
   for(const progress of [.10,.36,.43,fx.HIT,.90]){
     const b=fx.pose({...opts,progress});
@@ -71,6 +73,10 @@ for(const [caster,target] of [
   }
 }
 fx.portrait(canvas,240,196);
-assert.equal(poses.size,46,'all 46 registered poses play');
-assert.ok(frames.every(([image,sx,sy,sw,sh])=>image.src.endsWith('venus-trap-v155.webp')&&sx+sw<=2048&&sy+sh<=1536));
-console.log('Venus Trap: 46 poses, centered roots, mirrored jaw alignment, one 400-damage hit at closure, and Wind Dome blocking passed.');
+assert.equal(poses.size,16,'only the sixteen original artwork poses play');
+assert.ok(frames.every(([image,sx,sy,sw,sh])=>{
+  const lunge=image.src.endsWith('venus-trap-lunge-v156.webp');
+  return (lunge||image.src.endsWith('venus-trap-v154.webp'))&&sx+sw<=1024&&sy+sh<=(lunge?512:1024);
+}));
+assert.ok(frames.some(([image,sx,sy,sw])=>image.src.endsWith('venus-trap-lunge-v156.webp')&&sy>=256&&sw===64),'reach draws the painted stem texture');
+console.log('Venus Trap: crisp poses, longer roar, fast reach, centered roots, mirrored jaw alignment, one 400-damage hit at closure, and Wind Dome blocking passed.');

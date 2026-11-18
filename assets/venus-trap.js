@@ -1,15 +1,14 @@
 /* Low-poly Venus flytrap, registered to its root through every pose. */
 (function(root){
   'use strict';
-  const TILE=256,COLUMNS=8,ROOT_X=86,ROOT_Y=238,CENTER_X=500,FLOOR_Y=510,HIT=.655;
-  const starts=[0,.061,.124,.187,.255,.317,.374,.427,.493,.551,.612,HIT,.737,.801,.867,.931];
+  const TILE=256,COLUMNS=4,ROOT_X=86,ROOT_Y=238,CENTER_X=500,FLOOR_Y=510,ROAR=.31,STRIKE=.594,HIT=.655,RELEASE=.735,RETURN=.826;
+  const starts=[0,.052,.103,.154,.211,.262,ROAR,.375,.458,STRIKE,.634,HIT,RETURN,.873,.918,.957];
   // The opening and closing jaws lead the target-facing side of the sprite.
   const jaws=[[97,180],[127,150],[134,104],[161,73],[154,71],[134,88],[143,84],[142,91],
     [152,98],[168,117],[174,120],[178,116],[155,110],[134,126],[123,181],[93,198]];
-  const frames=starts.flatMap((start,i)=>i===starts.length-1?[start]:
-    [start,(2*start+starts[i+1])/3,(start+2*starts[i+1])/3]);
-  const atlas=new Image();
-  atlas.src='./assets/venus-trap-v155.webp';
+  const atlas=new Image(),lunge=new Image();
+  atlas.src='./assets/venus-trap-v154.webp';
+  lunge.src='./assets/venus-trap-lunge-v156.webp';
   const clamp=t=>Math.max(0,Math.min(1,t));
   const ease=t=>{const q=clamp(t);return q*q*(3-2*q);};
 
@@ -17,18 +16,16 @@
 
   function pose({progress:p,target}){
     const dir=target.x>=CENTER_X?1:-1;
-    const frame=frames.findLastIndex(start=>p>=start);
-    const key=Math.floor(frame/3),blend=(frame%3)/3;
-    const next=jaws[Math.min(key+1,jaws.length-1)];
-    const jawX=lerp(jaws[key][0],next[0],blend);
-    const jawY=lerp(jaws[key][1],next[1],blend);
+    const frame=starts.findLastIndex(start=>p>=start);
+    const [jawX,jawY]=jaws[frame];
     const scale=1.25;
-    const reach=ease((p-.475)/(HIT-.475))*(1-ease((p-.724)/.15));
+    const q=clamp((p-STRIKE)/(HIT-STRIKE));
+    const reach=q*q*(1-ease((p-RELEASE)/(RETURN-RELEASE)));
     const offsetX=((target.x-CENTER_X)*dir-(jawX-ROOT_X)*scale)*reach;
     const offsetY=(target.y-92-FLOOR_Y-(jawY-ROOT_Y)*scale)*reach;
-    const alpha=ease(p/.065)*(1-ease((p-.94)/.06));
+    const sink=66*ease((p-.957)/.043);
     const jaw={x:CENTER_X+dir*((jawX-ROOT_X)*scale+offsetX),y:FLOOR_Y+(jawY-ROOT_Y)*scale+offsetY};
-    return {dir,frame,scale,rootX:CENTER_X,rootY:FLOOR_Y,offsetX,offsetY,reach,alpha,jaw};
+    return {dir,frame,scale,rootX:CENTER_X,rootY:FLOOR_Y,offsetX,offsetY,reach,sink,jaw};
   }
 
   function sprite(c,frame,x,y,scale){
@@ -37,56 +34,50 @@
       x-ROOT_X*scale,y-ROOT_Y*scale,TILE*scale,TILE*scale);
   }
 
-  function extendedStem(c,x,y,amount){
-    const a={x:0,y:-31},d={x,y},b={x:5+x*.07,y:-107},
-      e={x:x*.75,y:y-55-20*amount};
+  function extendedStem(c,x,y,reach){
+    const baseY=-41,controlX=lerp(-58,36,reach),neckControl=x-lerp(36,67,reach);
+    const controlY=lerp(y+12,y-42,reach);
     const center=t=>{
       const v=1-t;
-      return {x:v**3*a.x+3*v*v*t*b.x+3*v*t*t*e.x+t**3*d.x,
-        y:v**3*a.y+3*v*v*t*b.y+3*v*t*t*e.y+t**3*d.y};
+      return {x:3*v*v*t*controlX+3*v*t*t*neckControl+t**3*x,
+        y:v**3*baseY-3*v*v*t*117+3*v*t*t*controlY+t**3*y};
     };
-    const points=[];
-    for(let i=0;i<=18;i++){
-      const t=i/18,p=center(t),prev=center(Math.max(0,t-.015)),next=center(Math.min(1,t+.015));
-      const vx=next.x-prev.x,vy=next.y-prev.y,length=Math.hypot(vx,vy)||1;
-      const radius=lerp(22,14,t)*(1+.11*Math.sin(t*8));
-      points.push({p,x:-vy/length*radius,y:vx/length*radius});
+    c.save();
+    c.strokeStyle='#49582a';
+    c.lineWidth=31;
+    c.lineCap='round';
+    c.beginPath();c.moveTo(0,baseY);
+    c.bezierCurveTo(controlX,-117,neckControl,controlY,x,y);
+    c.stroke();
+    // Lay the original painted stem along the curve in overlapping bands.
+    const strips=24,band=192/strips;
+    for(let i=0;i<strips;i++){
+      const t=i/strips,a=center(t),b=center((i+1)/strips);
+      const length=Math.hypot(a.x-b.x,a.y-b.y),angle=Math.atan2(a.y-b.y,a.x-b.x)-Math.PI/2;
+      const width=lerp(49,40,t);
+      c.save();
+      c.translate((a.x+b.x)/2,(a.y+b.y)/2);c.rotate(angle);
+      c.drawImage(lunge,0,256+192-(i+1)*band,64,band,
+        -width/2,-length/2-1.5,width,length+3);
+      c.restore();
     }
-    const facet=(vertices,fill)=>{
-      c.fillStyle=fill;c.beginPath();
-      vertices.forEach(([vx,vy],i)=>i?c.lineTo(vx,vy):c.moveTo(vx,vy));
-      c.closePath();c.fill();
-    };
-    const side=(point,f)=>[point.p.x+point.x*f,point.p.y+point.y*f];
-    for(let i=1;i<points.length;i++){
-      const p=points[i-1],q=points[i];
-      facet([side(p,-1),side(q,-1),side(q,1),side(p,1)],i%3?'#3f5024':'#4a5b26');
-      facet([side(p,-.63),side(q,-.69),side(q,.31),side(p,.39)],i%3?'#67753b':'#728045');
-      facet([side(p,.39),side(q,.31),side(q,.79),side(p,.86)],i%3?'#84904e':'#939f58');
-      facet([side(p,-.60),side(q,.29),side(p,.12)],'#526131');
-    }
+    c.restore();
   }
 
-  // The center roots and the jaw sprite keep their proportions. Only the
-  // connecting stem grows long enough to cover the distance to the target.
   function plant(c,b){
     if(!atlas.naturalWidth)return;
-    if(b.reach===0){sprite(c,b.frame,0,0,b.scale);return;}
-    const sx=b.frame%COLUMNS*TILE,sy=Math.floor(b.frame/COLUMNS)*TILE;
-    const neck=159,roots=202,baseX=-ROOT_X*b.scale;
-    const drawRegion=(top,height,dx,dy)=>c.drawImage(atlas,sx,sy+top,TILE,height,
-      baseX+dx,(top-ROOT_Y)*b.scale+dy,TILE*b.scale,height*b.scale);
-    const stretch=ease((b.reach-.025)/.19);
-    c.save();
-    c.globalAlpha*=1-stretch;
-    if(stretch<1)drawRegion(neck,roots-neck,b.offsetX*.46,b.offsetY*.46);
-    c.restore();
-    c.save();
-    c.globalAlpha*=stretch;
-    if(stretch>0)extendedStem(c,b.offsetX+16,(neck-ROOT_Y)*b.scale+b.offsetY-7,b.reach);
-    c.restore();
-    drawRegion(roots,TILE-roots,0,0);
-    drawRegion(0,neck,b.offsetX,b.offsetY);
+    if(b.frame<9||b.frame>11||!lunge.naturalWidth){
+      if(b.sink>0){
+        c.beginPath();c.rect(-320,-350,640,357);c.clip();
+      }
+      sprite(c,b.frame,0,b.sink,b.scale);
+      return;
+    }
+    const left=-ROOT_X*b.scale,top=-ROOT_Y*b.scale,size=TILE*b.scale;
+    const neckX=left+80*b.scale+b.offsetX,neckY=top+119*b.scale+b.offsetY;
+    extendedStem(c,neckX,neckY,b.reach);
+    c.drawImage(lunge,3*TILE,0,TILE,TILE,left,top,size,size);
+    c.drawImage(lunge,(b.frame-9)*TILE,0,TILE,TILE,left+b.offsetX,top+b.offsetY,size,size);
   }
 
   function chips(c,x,y,q,count,spread,height,colors){
@@ -104,10 +95,10 @@
     c.restore();
   }
   function roar(c,b,p){
-    if(p<.37||p>=.54)return;
+    if(p<ROAR||p>=STRIKE)return;
     c.save();c.translate(b.jaw.x,b.jaw.y);c.scale(b.dir,1);
     for(let i=0;i<3;i++){
-      const q=clamp((p-.37-i*.026)/.085);
+      const q=clamp((p-ROAR-i*.047)/.17);
       if(q<=0||q>=1)continue;
       c.globalAlpha=Math.sin(q*Math.PI)*.42;
       c.lineWidth=2.5-q;
@@ -121,7 +112,7 @@
     const {progress:p,target,layer}=opts;
     const b=pose(opts);
     if(layer==='ground'){
-      c.save();c.globalAlpha*=b.alpha*.48;
+      c.save();c.globalAlpha*=.48*(1-ease(b.sink/66));
       c.fillStyle='#202019';
       c.beginPath();c.ellipse(b.rootX,b.rootY,58*b.scale,13*b.scale,0,0,Math.PI*2);c.fill();
       c.restore();
@@ -133,7 +124,7 @@
       chips(c,target.x,target.y-92,(p-HIT)/.19,16,83,48,['#b2de72','#6a9b44','#dfeca1','#9eb457']);
       return;
     }
-    c.save();c.globalAlpha*=b.alpha;
+    c.save();
     c.translate(b.rootX,b.rootY);c.scale(b.dir,1);
     plant(c,b);
     c.restore();
@@ -152,11 +143,11 @@
     glow.addColorStop(0,'#91bd4b70');
     glow.addColorStop(1,'#33591b00');
     c.fillStyle=glow;c.fillRect(0,0,w,h);
-    sprite(c,21,w*.39,h*.94,scale);
+    sprite(c,7,w*.39,h*.94,scale);
   }
   function onReady(fn){
     if(atlas.naturalWidth)fn();
     else atlas.addEventListener('load',fn,{once:true});
   }
-  root.WIZARDRY_VENUS_TRAP={draw,portrait,pose,depthFor,HIT,onReady};
+  root.WIZARDRY_VENUS_TRAP={draw,portrait,pose,depthFor,ROAR,STRIKE,HIT,onReady};
 })(window);

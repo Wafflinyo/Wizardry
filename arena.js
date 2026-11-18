@@ -2619,31 +2619,13 @@
     }
     g.restore();
   }
-  // Above-head labels prefer a small inward offset. Search nearby clear
-  // positions when another model or label occupies the preferred space.
+  // Stable labels attached to their own wizard: upper half above the
+  // head, lower half below the feet. No packing, drifting, or regrouping.
   function unitPlateRect(u){
-    const key=state.units.map(v=>v.id+':'+v.x+','+v.y+','+v.statuses.length+','+!!state.auras[v.team]).join('|');
-    if(state.plateLayoutKey!==key){
-      const w=180,placed=[],layout={};let packed=false;
-      const bodies=state.units.map(v=>{const scale=lerp(.60,.90,clamp((v.y-288)/235,0,1));return{x:v.x-74*scale,y:v.y-220*scale,w:148*scale,h:220*scale};});
-      const overlaps=(a,b)=>a.x<b.x+b.w+5&&a.x+a.w+5>b.x&&a.y<b.y+b.h+5&&a.y+a.h+5>b.y;
-      for(const v of [...state.units].sort((a,b)=>a.y-b.y||a.team-b.team)){
-        const scale=lerp(.60,.90,clamp((v.y-288)/235,0,1));
-        const reservedHeight=unitStatuses(v).length?94:52;
-        const idealX=clamp(v.x-w/2+(v.team?-30:30),8,W-w-8),idealY=Math.max(8,v.y-220*scale-reservedHeight-12);
-        let best=null,bestCost=Infinity;
-        for(let rise=0;rise<=300;rise+=20)for(const dx of [0,-40,40,-80,80,-120,120,-180,180,-240,240,-320,320]){
-          const candidate={x:clamp(idealX+dx,8,W-w-8),y:idealY-rise,w,h:reservedHeight};
-          if(candidate.y<8||bodies.some(b=>overlaps(candidate,b))||placed.some(b=>overlaps(candidate,b)))continue;
-          const cost=Math.abs(candidate.x-idealX)+rise*4;if(cost<bestCost){best=candidate;bestCost=cost;}
-        }
-        if(!best){packed=true;break;}
-        placed.push(best);layout[v.id]={x:best.x,y:best.y,w,h:52};
-      }
-      if(packed)state.units.forEach((v,i)=>{layout[v.id]={x:20+(i%4)*245,y:12+Math.floor(i/4)*104,w,h:52};});
-      state.plateLayout=layout;state.plateLayoutKey=key;
-    }
-    return state.plateLayout[u.id];
+    const team=state.units.filter(v=>v.team===u.team).sort((a,b)=>a.y-b.y),index=team.findIndex(v=>v.id===u.id),top=index<Math.ceil(team.length/2),w=160;
+    const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
+    const offset=top&&index===1?(u.team?32:-32):0;
+    return {x:clamp(u.x-w/2+offset,8,W-w-8),y:top?u.y-220*scale-64:u.y+14,w,h:52,above:top};
   }
   function plateIsTarget(u,a){
     if(!a)return false;if(a.target===u.id)return true;
@@ -2670,8 +2652,7 @@
   }
   function statusRuneRect(u,index){
     const p=unitPlateRect(u);
-    const columns=4;
-    return {x:p.x+22+(index%columns)*40,y:p.y+74+Math.floor(index/columns)*40,r:17,hitRadius:30};
+    return {x:p.x+18+index*36,y:p.above?p.y-24:p.y+74,r:17,hitRadius:30};
   }
   function describeStatus(u,st){
     switch(st.kind){
@@ -2760,7 +2741,8 @@
     const {x,y,w}=unitPlateRect(u);
     g.save();
     const disabled=u.hp<=0;
-    g.globalAlpha=(disabled?.66:1)*plateAlpha(u);
+    const opacity=plateAlpha(u);if(opacity<=.001){g.restore();return;}
+    g.globalAlpha=(disabled?.66:1)*opacity;
     const tint=u.team?"#865563":"#3f96a7";
     rounded(g,x,y,w,26,6,"#061621eb",tint,1.3);
     g.fillStyle=disabled?"#ab9e9e":"#e9f6f2";
@@ -3121,8 +3103,11 @@
     const bounds=canvas.getBoundingClientRect(),vw=Math.max(1,bounds.width),vh=Math.max(1,bounds.height),ratio=Math.min(window.devicePixelRatio||1,2);
     const pw=Math.round(vw*ratio),ph=Math.round(vh*ratio);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
     g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#06151f';g.fillRect(0,0,vw,vh);
-    if(background){const cover=Math.max(vw/W,vh/H);g.drawImage(background,(vw-W*cover)/2,(vh-H*cover)/2,W*cover,H*cover);}
-    const fieldHeight=Math.max(1,vh-30),fit=Math.min(vw/W,fieldHeight/H);camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-H*fit)/2};
+    const fieldHeight=Math.max(1,vh-30),sceneHeight=state.size>1?730:H,fit=Math.min(vw/W,fieldHeight/sceneHeight);
+    camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
+    // Keep the painted diamond (image Y=414) under the world summon point
+    // while reserving visible space below front-row feet for attached labels.
+    if(background){const diamondY=camera.y+480*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));g.drawImage(background,(vw-W*cover)/2,diamondY-414*cover,W*cover,H*cover);}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}

@@ -24,21 +24,23 @@
 .customize-menu{position:static!important;margin-top:7px;clear:both}
 @media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
 </style>
+<link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.135.0">
 </head>
-<body>
+<body data-screen="home">
+<section id="portal" aria-label="Wizardry home"></section>
 <main class="game" id="game">
   <header class="mast">
     <div class="brand">
       <span class="brand-gem">✦</span>
       <div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM</small></div>
     </div>
-    <a href="./index.html?v=0.23.0" class="old-duel">Original duel</a>
+    <button id="battleHome" type="button">Home</button><button id="battleFullscreen" type="button">Full screen</button>
   </header>
   <nav class="toolbar" aria-label="Battle settings">
     <div class="toolbar-group"><span class="tool-label">MODE</span>
       <div class="switch-row" id="modeControls">
-        <button type="button" class="chip active" data-mode="story" aria-pressed="true">Story · CPU</button>
-        <button type="button" class="chip" data-mode="pvp" aria-pressed="false">PvP · local</button>
+        <button type="button" class="chip active" data-mode="story" aria-pressed="true">Practice · CPU</button>
+        <button type="button" class="chip" data-mode="pvp" aria-pressed="false">Online lobby</button>
       </div>
     </div>
     <div class="toolbar-group"><span class="tool-label">SIZE</span>
@@ -147,7 +149,7 @@
 <script src="./assets/flaming-arrows-v80.js?v=0.80.1" defer></script>
 <script src="./assets/thunderclap-v79.js?v=0.79.1" defer></script>
 <script src="./assets/card-art-v70.js?v=0.101.0" defer></script>
-<script src="./assets/hand-swipe-v71.js?v=0.72.0" defer></script>
+<script src="./assets/hand-swipe-v71.js?v=0.135.0" defer></script>
 <script src="./assets/solidity-v86.js?v=0.86.1" defer></script>
 <script src="./assets/calming-waters-v87.js?v=0.87.0" defer></script>
 <script src="./assets/static-shock-v88.js?v=0.88.0" defer></script>
@@ -232,6 +234,9 @@
 <script src="./assets/wind-fist-fists-v123-part7.js?v=0.123.0" defer></script>
 <script src="./assets/wind-fist-v123.js?v=0.128.0" defer></script>
 <script src="./assets/jack-v129.js?v=0.132.0" defer></script>
-<script src="./arena.js?v=0.133.0" defer></script>
+<script src="./assets/croc-v134.js?v=0.134.0" defer></script>
+<script src="./assets/wizard-system-v135.js?v=0.135.0" defer></script>
+<script src="./arena.js?v=0.135.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.135.0" defer></script>
 </body>
 </html>

@@ -7,10 +7,10 @@ function attach(hand){
    .sort((a,b)=>Number(a.style.order)-Number(b.style.order));
  function focus(index){
   const held=cards();if(!held.length)return;
-  index=Math.max(0,Math.min(held.length-1,index));browseId=held[index].dataset.card;
+  index=Math.max(0,Math.min(held.length-1,index));browseId=held[index];
   for(const b of hand.children)b.classList.toggle('browsed',b===held[index]);
  }
- function focusCard(id){const index=cards().findIndex(b=>b.dataset.card===id);if(index>=0)focus(index);}
+ function focusCard(id,copy=0){const index=cards().findIndex(b=>b.dataset.card===id&&(Number(b.dataset.copy)||0)===copy);if(index>=0)focus(index);}
  function reset(){browseId=null;hand.classList.remove('is-browsing');for(const b of hand.children)b.classList.remove('browsed');}
  hand.addEventListener('pointerdown',event=>{
   if(event.isPrimary===false||event.button!==0)return;
@@ -52,7 +52,7 @@ function attach(hand){
  },true);
  hand.addEventListener('keydown',event=>{
   if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
-  const held=cards(),index=held.findIndex(b=>b.dataset.card===browseId);
+  const held=cards(),index=held.indexOf(browseId);
   event.preventDefault();focus((index<0?Math.floor((held.length-1)/2):index)+(event.key==='ArrowRight'?1:-1));
  });
  return {reset,focusCard};

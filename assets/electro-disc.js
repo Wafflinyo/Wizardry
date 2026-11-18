@@ -6,10 +6,10 @@
   const clamp=p=>Math.max(0,Math.min(1,p));
   const mix=(a,b,p)=>a+(b-a)*p;
   const tau=Math.PI*2;
-  const size=157;
+  const size=169;
   const revealTimes=[0,.062,.112,.165,.215,.268,.367,.409];
   const flipTimes=[.43,.46,.49,.54,.60,.67,.73,.79,.83,.88,.94];
-  const releaseOffsets=[[60,34],[66,-38],[56,26]];
+  const releaseOffsets=[[60,34],[66,-38],[56,26]].map(pair=>pair.map(value=>value*size/157));
   function frame(g,sheet,index,x,y,width){
     if(!sheet.naturalWidth)return;
     const tile=sheet.naturalWidth/4;
@@ -54,9 +54,58 @@
     const q=clamp((p-releases[index])/(hits[index]-releases[index]));
     return {
       x:mix(start.x+dir*ox,target.x,q),
-      y:mix(start.y+oy,target.y-71,q)-Math.sin(Math.PI*q)*(13+index*5),
+      y:mix(start.y+oy,target.y-71,q),
       depth:mix(510,target.y,q)+.25
     };
+  }
+  function lightningTrail(g,opts,index,x,y){
+    const elapsed=opts.progress-opts.releases[index];
+    const tail=trajectory({...opts,progress:opts.progress-Math.min(elapsed,.035)},index);
+    const dx=x-tail.x,dy=y-tail.y,length=Math.hypot(dx,dy);
+    if(length<2)return;
+    const nx=-dy/length,ny=dx/length;
+    const phase=opts.progress*630;
+    const points=Array.from({length:10},(_,i)=>{
+      const t=i/9;
+      const offset=Math.sin(i*9.7+phase)*Math.sin(Math.PI*t)*Math.min(11,length*.25);
+      return [x-dx*t+nx*offset,y-dy*t+ny*offset];
+    });
+    const glow=g.createLinearGradient(x,y,tail.x,tail.y);
+    glow.addColorStop(0,'#1bdcff');
+    glow.addColorStop(.58,'#0779ffb0');
+    glow.addColorStop(1,'#0779ff00');
+    g.beginPath();
+    g.moveTo(x,y);
+    for(const [px,py] of points.slice(1))g.lineTo(px,py);
+    g.strokeStyle=glow;g.lineWidth=7;g.stroke();
+    const core=g.createLinearGradient(x,y,tail.x,tail.y);
+    core.addColorStop(0,'#edffff');
+    core.addColorStop(.52,'#9cfaff');
+    core.addColorStop(1,'#3ecaff00');
+    g.strokeStyle=core;g.lineWidth=1.8;g.stroke();
+    for(const i of [2,4,6]){
+      const [px,py]=points[i];
+      const fork=10*Math.sin(phase*1.3+i);
+      g.globalAlpha=.48;
+      g.beginPath();g.moveTo(px,py);
+      g.lineTo(px-dx*.10+nx*fork,py-dy*.10+ny*fork);
+      g.lineTo(px-dx*.21+nx*fork*.7,py-dy*.21+ny*fork*.7);
+      g.stroke();
+    }
+    // Sparks peel away from the bolt and race back along its wake.
+    for(let i=0;i<7;i++){
+      const t=(elapsed*65+i/7)%1;
+      const offset=(i%2===0?1:-1)*t*(6+i*1.8);
+      const px=x-dx*t+nx*offset,py=y-dy*t+ny*offset;
+      g.globalAlpha=(1-t)*.82;
+      g.strokeStyle=i%2===0?'#e4ffff':'#49bfff';
+      g.lineWidth=1.2;
+      g.beginPath();
+      g.moveTo(px,py);
+      g.lineTo(px-dx*(.05+t*.08)+nx*offset*.36,py-dy*(.05+t*.08)+ny*offset*.36);
+      g.stroke();
+    }
+    g.globalAlpha=1;
   }
   function projectile(g,opts,index){
     const {progress:p,releases,hits}=opts;
@@ -64,17 +113,11 @@
     const {x,y}=trajectory(opts,index);
     g.save();
     if(p<hits[index]){
-      for(let i=4;i>0;i--){
-        const trail=trajectory({...opts,progress:p-i*.006},index);
-        g.globalAlpha=(5-i)*.10;
-        disk(g,trail.x,trail.y,12-i*.9,p*92-i*.6);
-      }
-      g.globalAlpha=1;
-      disk(g,x,y,15,p*92);
+      lightningTrail(g,opts,index,x,y);
+      disk(g,x,y,17,p*92);
     }else{
       const q=clamp((p-hits[index])/.10);
       g.globalAlpha=1-q;
-      disk(g,x,y,13+40*q,q*8);
       g.strokeStyle='#8efaff';g.lineWidth=2.3*(1-q);
       for(let i=0;i<8;i++){
         const angle=i*tau/8+index*.5,dx=Math.cos(angle),dy=Math.sin(angle);

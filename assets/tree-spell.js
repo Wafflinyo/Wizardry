@@ -1,39 +1,34 @@
 (()=>{
-  const atlas=new Image(),inbetweens=new Image(),log=new Image(),listeners=[];
+  const atlas=new Image(),log=new Image(),listeners=[];
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  atlas.src='./assets/tree-monster.webp?v=0.201.0';
-  inbetweens.src='./assets/tree-inbetweens.webp?v=0.202.0';
+  atlas.src='./assets/tree-sequence.webp?v=0.203.0';
   log.src='./assets/tree-projectile.webp?v=0.201.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,t)=>a+(b-a)*t;
-  const release=.65;
-  const poses=[
-    [0,0],[.105,0,true],[.18,1],[.241,1,true],[.30,2],[.35,2,true],
-    [.41,3],[.485,3,true],[.53,4,true],[.56,4],[.612,5,true],
-    [release,5],[.686,6,true],[.72,6],[.81,7,true],[.89,7]
-  ];
+  const release=.70;
+  const poses=[0,.09,.16,.23,.29,.35,.40,.46,.52,.586,.644,.672,release,.735,.81,.89];
   const size=326,treeWidth=252;
-  function frame(g,sheet,index,x,y,w,h){
-    if(!sheet.naturalWidth)return;
-    const tile=sheet.naturalWidth/4;
-    g.drawImage(sheet,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,w,h);
+  function frame(g,index,x,y,w,h){
+    if(!atlas.naturalWidth)return;
+    const tile=atlas.naturalWidth/4;
+    g.drawImage(atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,w,h);
   }
   function actor(g,{target,progress}){
     const dir=target.x>=500?1:-1;
-    const [,pose,between]=poses.findLast(([time,,isBetween])=>progress>=time&&(!isBetween||inbetweens.naturalWidth));
+    const pose=poses.findLastIndex(time=>progress>=time);
     const push=12*Math.sin(Math.PI*clamp((progress-.55)/.35));
     g.save();
     g.translate(500+dir*push,510);
     g.scale(dir,1);
     g.globalAlpha=clamp(progress/.10)*clamp((1-progress)/.085);
-    frame(g,between?inbetweens:atlas,pose,-size/2,-size,size,size);
+    frame(g,pose,-size/2,-size,size,size);
     g.restore();
   }
   function position(target,q){
     const direction=target.x>=500?1:-1;
     return {
-      x:mix(500+direction*(90*size/254+9),target.x,q),
-      y:mix(510-(510-365)*size/254,target.y-71,q)-22*Math.sin(Math.PI*q)
+      x:mix(500+direction*118,target.x,q),
+      y:mix(510-size*.55,target.y-71,q)-22*Math.sin(Math.PI*q)
     };
   }
   function shard(g,x,y,angle,size,color){
@@ -98,7 +93,7 @@
     onReady(fn){if(atlas.naturalWidth)fn();else listeners.push(fn);},
     portrait(g,w,h){
       const side=Math.min(w,h);
-      frame(g,atlas,3,(w-side)/2,(h-side)/2,side,side);
+      frame(g,6,(w-side)/2,(h-side)/2,side,side);
     }
   };
 })();

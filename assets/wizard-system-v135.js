@@ -25,7 +25,7 @@ function effectText(card,p){
  if(card.healPerTurn)return Math.round(card.healPerTurn*boost)+' HP × '+card.healTurns+' TURNS · '+healing(card,p)+' TOTAL';
  if(card.heal)return 'RESTORE '+healing(card,p)+' HP';
  if(card.id==='rod')return span(card.damage)+' DAMAGE / CHARGE · 5 TURNS';
- return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+label+' · '+span(base)+' × '+turns).join(' · ');
+ return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+(base===100&&turns===5?'EXTREME ':'')+label+' · '+span(base)+' × '+turns).join(' · ');
 }
 function rollVariant(r=Math.random()){return [.9,1,1.1][Math.min(2,Math.floor(Math.max(0,r)*3))];}
 function range(card,p,total=true){let base=card.damage||card.coatDamage||(card.id==='thornwrap'?150:0);if(!(base>0))return null;let hits=1;if(total&&card.id==='windfist'){base=card.hitDamage;hits=card.hits;}if(total&&(card.id==='penguins'||card.id==='ronin'))hits=3;

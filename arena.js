@@ -103,6 +103,7 @@
   CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits. If status damage lands first, that damage event gains 20% and spends the mark."});
   CARDS.push({"id": "burningpheonix", "name": "Burning Pheonix", "school": "fire", "cost": 9, "target": "enemy", "kind": "damage", "damage": 1100, "accuracy": 0.7, "rarity": "LEGENDARY", "duration": 5100, "hit": 0.88, "short": "70% ACCURACY", "description": "A blazing ground flame rises into a phoenix. It beats its wings high above the arena and dives into one enemy for 1,100 base Fire damage."});
   CARDS.push({"id":"electrodisc","name":"Electro Disc","school":"lightning","cost":4,"target":"enemy","kind":"electrodisc","damage":360,"hitDamage":120,"hits":3,"accuracy":0.9,"icon":"ϟ","rarity":"EPIC","duration":4200,"hit":0.94,"short":"90% ACCURACY","description":"Three electro discs deal 120 damage each to one enemy."});
+  CARDS.push({"id":"zen","name":"Zen","school":"wind","cost":2,"target":"ally","kind":"zen","accuracy":1,"icon":"≋","rarity":"RARE","duration":1300,"hit":0.48,"short":"100% ACCURACY","description":"Choose one negative rune on yourself or an ally to remove."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -369,6 +370,8 @@
         fitTesterTarget(u,testerTargetType);
       }else{
         Object.assign(u,{testerDeck:true,hp:Math.round(u.maxHp*.55),hand:[],drawPile:[...TEST_CARD_ORDER],discardPile:[]});
+        addStatus(u,"trap",null,.25);
+        addStatus(u,"decay_mark",null,.20);
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
@@ -376,7 +379,7 @@
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
       humanByTeam:{0:"a0",1:mode==="pvp"?"e0":null},
-      selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,
+      selectedCaster:units[0]?.id,selectedCard:null,selectedTarget:null,selectedRune:null,
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
     handSwipe?.reset();
@@ -396,6 +399,7 @@
   function currentCard(){return state.selectedCard?BY_ID[state.selectedCard]||null:null;}
   function targetsFor(card,c){
     if(!card||!c)return[];
+    if(card.kind==="zen")return alive(c.team).filter(u=>zenRunes(u).length);
     if(card.selfOnly)return c.hp>0?[c]:[];
     if(card.target==="team")return alive(c.team);
     if(card.target==="all_enemies")return alive(1-c.team);
@@ -415,7 +419,7 @@
   function clearSelection(){
     handSwipe?.reset();
     state.selectedCard=null;state.selectedHandCopy=0;
-    state.selectedTarget=null;
+    state.selectedTarget=null;state.selectedRune=null;
   }
   function nearestAvailableCaster(){
     state.selectedCaster=state.humanByTeam[state.planningSide]||null;
@@ -433,6 +437,7 @@
        !targetsFor(card,c).some(v=>v.id===u.id))return;
     // Allies can be targeted for healing; enemies for damaging spells.
     // No spell queues until the explicit confirmation is pressed.
+    if(state.selectedTarget!==id)state.selectedRune=null;
     state.selectedTarget=id;
     paintUI();
   }
@@ -446,11 +451,18 @@
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
     if(!caster().hand.includes(id))return;
     if(state.plans[caster().id])return;
-    state.selectedCard=id;
+    state.selectedCard=id;state.selectedRune=null;
     const card=BY_ID[id],u=caster();
-    state.selectedTarget=card.selfOnly?u.id:null;
+    state.selectedTarget=card.selfOnly||(card.kind==="zen"&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
       state.selectedTarget=targetsFor(card,u)[0]?.id??null;
+    paintUI();
+  }
+  function selectZenRune(kind){
+    if(state.phase!=="planning"||currentCard()?.kind!=="zen")return;
+    const target=correctTarget();
+    if(!zenRunes(target).some(st=>st.kind===kind))return;
+    state.selectedRune=kind;
     paintUI();
   }
   function confirmTarget(){
@@ -459,14 +471,19 @@
     if(queueSpell())resolvePressed();
   }
   function queueSpell(){
-    if(window.WizardrySession?.active){const c=caster(),card=currentCard(),t=correctTarget();if(!c||!card)return false;return window.WizardrySession.plan({cardId:card.id,targetId:t?.id||null,round:state.round});}
     const c=caster(),card=currentCard(),target=correctTarget();
+    const runeKind=card?.kind==="zen"?state.selectedRune:null;
+    if(card?.kind==="zen"&&!zenRunes(target).some(st=>st.kind===runeKind))return false;
+    if(window.WizardrySession?.active){
+      if(!c||!card)return false;
+      return window.WizardrySession.plan({cardId:card.id,targetId:target?.id||null,runeKind,round:state.round});
+    }
     const area=["team","all_enemies"].includes(card?.target);
     if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
        c.mana<card.cost||!c.hand.includes(card.id)||(!target&&!area)||
        (area&&!alive(card.target==="team"?c.team:1-c.team).length))return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
-      targetId:area?null:target.id,team:c.team,auto:false};
+      targetId:area?null:target.id,runeKind,team:c.team,auto:false};
     playHandCard(c,card.id);
     state.log=[c.name+" played "+card.name+" against "+(area?(card.target==="team"?"ALL ALLIES":"ALL ENEMIES"):target.name),
       ...state.log].slice(0,5);
@@ -540,17 +557,18 @@
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
-      (card.kind!=="electricalcharge"||canReceiveDebuff(u,"electrical_charge")));
+      (card.kind!=="electricalcharge"||canReceiveDebuff(u,"electrical_charge"))&&
+      (card.kind!=="zen"||targetsFor(card,u).length>0));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
     const target=["team","all_enemies"].includes(card.target)?null:
-      card.selfOnly?u:card.kind==="heal"?
+      card.kind==="zen"?targetsFor(card,u)[0]:card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
         card.target==="ally"?alive(u.team)[Math.floor(Math.random()*alive(u.team).length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
     if(!target&&!["team","all_enemies"].includes(card.target))return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
-      team:u.team,auto:true};
+      runeKind:card.kind==="zen"?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
   }
   function autoFill(team){
     if(state.phase!=="planning")return;
@@ -1170,6 +1188,10 @@
           continue;
         }
       }
+      if(card.kind==="zen"&&!zenRunes(getUnit(action.targetId)).some(st=>st.kind===action.runeKind)){
+        flash(c,"RUNE ALREADY GONE","#d1edaa");
+        continue;
+      }
       c.armRaise=0;
       state.animation={action,card,stage:"raising",elapsed:0,duration:ARM_RAISE_MS,
         applied:false,traceMs:0,source:c.id,target:action.targetId,
@@ -1235,6 +1257,9 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const DEBUFFS=new Set(['decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','turbulence','static_shock','electrical_charge','trap']);
+  function zenRunes(u){
+    return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&DEBUFFS.has(st.kind)):[];
+  }
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
@@ -1802,7 +1827,17 @@
     if(!c||c.hp<=0)return;
     if(anim.runeResult==="failed")return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="heizmann"){
+    if(card.kind==="zen"){
+      const rune=zenRunes(t).find(st=>st.kind===action.runeKind);
+      if(!rune||t.team!==c.team)return;
+      const origin=statusRuneRect(t,unitStatuses(t).indexOf(rune));
+      const school=statusSchool(rune,t);
+      anim.zenBurst={...origin,school};
+      consumeStatus(t,rune.kind);
+      if(rune.kind==="stun")t.stunRound=null;
+      if(rune.kind==="fear_turn"){t.fearRound=null;t.fearSource=null;}
+      flash(t,"RUNE CLEANSED","#e1f6a5");
+    }else if(card.kind==="heizmann"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
         if(t.hp>0&&!anim.windDomeTargets?.[t.id]){
@@ -2065,17 +2100,24 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.id==="electricalcharge"?"Self · +1 mana per incoming Lightning spell":card?.id==="flowstate"?"Self · +1 extra mana for your next 3 turns":card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · successful allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.id==="electricalcharge"?"Self · +1 mana per incoming Lightning spell":card?.id==="flowstate"?"Self · +1 extra mana for your next 3 turns":card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · successful allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
+    const runePicker=$("zenRunePicker");
+    const runes=card?.kind==="zen"?zenRunes(target):[];
+    runePicker.hidden=!planning||!runes.length;
+    const options='<option value="">Choose a rune</option>'+runes.map(st=>
+      '<option value="'+st.kind+'">'+escapeHtml(describeStatus(target,st).title)+'</option>').join("");
+    if(runePicker.innerHTML!==options)runePicker.innerHTML=options;
+    runePicker.value=state.selectedRune||"";
     const canConfirm=planning&&!!c&&!!card&&
       (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
-      c.mana>=card.cost&&!state.plans[c.id];
-    ui.confirm.hidden=!canConfirm;
+      c.mana>=card.cost&&!state.plans[c.id]&&(card.kind!=="zen"||runes.some(st=>st.kind===state.selectedRune));
+    ui.confirm.hidden=!canConfirm&&!(planning&&card?.kind==="zen"&&runes.length);
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -2141,7 +2183,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
+        const effect=k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?
@@ -2196,11 +2238,11 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
+          (k.kind==="zen"?"CLEANSE":k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"self debuff granting one mana per Lightning spell received":k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
+          (k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"self debuff granting one mana per Lightning spell received":k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
           "% accuracy. "+(k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
@@ -2278,6 +2320,7 @@
     };
     // Card -> appropriate ally/enemy -> explicit confirmation. CPU teammates can receive healing.
     ui.confirm.onclick=confirmTarget;
+    $("zenRunePicker").onchange=e=>selectZenRune(e.target.value);
     $("passTurn").onclick=passTurn;
     $("discardCard").onclick=discardSelected;
     ui.queue.onclick=()=>{};
@@ -2917,7 +2960,14 @@
         if(d<=r.hitRadius&&d<distance){closest={u,st};distance=d;}
       }
     }
-    if(!closest)return false;showStatusInfo(closest.u,closest.st);return true;
+    if(!closest)return false;
+    if(state.phase==="planning"&&currentCard()?.kind==="zen"&&
+       targetsFor(currentCard(),caster()).includes(closest.u)&&zenRunes(closest.u).includes(closest.st)){
+      selectTarget(closest.u.id);
+      selectZenRune(closest.st.kind);
+      return true;
+    }
+    showStatusInfo(closest.u,closest.st);return true;
   }
   const statusSchools={
     boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
@@ -2945,6 +2995,48 @@
     window.WIZARDRY_ELEMENT_TRACE_V45?.drawSymbol(ctx,school,0,0,22);
     ctx.restore();
   }
+  const runeColors={water:'#65d9f2',earth:'#d7ba8c',lightning:'#f8df79',nature:'#8ce4a2',wind:'#c8f6ed',dark:'#c5a2ff',fire:'#ffaf81',ice:'#c3f5ff'};
+  function drawZenShards(ctx,x,y,p,school){
+    const spread=1-(1-p)**3;
+    ctx.save();ctx.translate(x,y);
+    ctx.globalAlpha=(1-p)**1.25;
+    ctx.strokeStyle="#c7f4cf";ctx.lineWidth=2*(1-p)+.5;
+    ctx.beginPath();ctx.ellipse(0,0,8+spread*42,7+spread*35,-.35,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<11;i++){
+      const angle=i*2.39996,range=27+(i%5)*7;
+      const dx=Math.cos(angle),dy=Math.sin(angle);
+      ctx.save();
+      ctx.translate(dx*range*spread,dy*range*spread+14*p*p);
+      ctx.rotate(angle+p*(i%2?4:-4));
+      const size=(3+i%4)*(1-p*.68);
+      pathPoly(ctx,[[size*1.7,0],[-size,-size*.64],[-size*.58,size]],
+        i%3===0?runeColors[school]||"#c8fae0":i%3===1?"#e5ffef":"#708b8d");
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function drawZenCast(anim){
+    if(anim?.stage!=="summon"||anim.card.kind!=="zen")return;
+    const p=clamp(anim.elapsed/anim.duration,0,1);
+    if(anim.zenBurst){
+      const {x,y,school}=anim.zenBurst;
+      drawZenShards(g,x,y,clamp((p-anim.card.hit)/(1-anim.card.hit),0,1),school);
+      return;
+    }
+    const target=getUnit(anim.target);
+    if(!target||p>=anim.card.hit)return;
+    const index=unitStatuses(target).findIndex(st=>st.kind===anim.action.runeKind);
+    if(index<0)return;
+    const {x,y}=statusRuneRect(target,index),charge=p/anim.card.hit;
+    g.save();g.translate(x,y);
+    g.strokeStyle="#d6f9db";g.lineWidth=1.9;
+    for(let i=0;i<3;i++){
+      const angle=charge*9+i*Math.PI*2/3,r=30-12*charge;
+      g.globalAlpha=charge*(1-i*.17);
+      g.beginPath();g.ellipse(0,0,r,r*.72,-.35,angle,angle+.95);g.stroke();
+    }
+    g.restore();
+  }
   function drawUnitPlate(u){
     const {x,y,w}=unitPlateRect(u);
     g.save();
@@ -2958,8 +3050,8 @@
     g.textAlign="center";g.textBaseline="middle";
     const masteries=u.masteries||[],iconSpace=masteries.length*23;
     g.fillText(u.name,x+(w-iconSpace)/2,y+13,w-iconSpace-10);
-    const colors={water:'#65d9f2',earth:'#d7ba8c',lightning:'#f8df79',nature:'#8ce4a2',wind:'#c8f6ed',dark:'#c5a2ff',fire:'#ffaf81',ice:'#c3f5ff'};
-    masteries.forEach((school,i)=>{g.strokeStyle=colors[school]||'#fff';window.WIZARDRY_ELEMENT_TRACE_V45?.drawSymbol(g,school,x+w-iconSpace+12+i*23,y+13,20);});
+
+    masteries.forEach((school,i)=>{g.strokeStyle=runeColors[school]||'#fff';window.WIZARDRY_ELEMENT_TRACE_V45?.drawSymbol(g,school,x+w-iconSpace+12+i*23,y+13,20);});
     rounded(g,x+2,y+30,w-4,12,4,"#101b27eb");
     if(u.hp>0)rounded(g,x+3,y+31,(w-6)*clamp(u.hp/u.maxHp,0,1),
       10,3,u.team?"#cc7364":"#66d8a0");
@@ -2976,7 +3068,7 @@
     symbols.forEach((st,i)=>{
       const r=statusRuneRect(u,i);
       const school=statusSchool(st,u);
-      drawStatusStone(g,r,school,colors[school]);
+      drawStatusStone(g,r,school,runeColors[school]);
       if(st.kind==="lightning_rod"){
         g.font="bold 10px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+12,r.y+11);
       }
@@ -3035,6 +3127,12 @@
   function paintCardPortrait(card,c,width,height){
       if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
+      else if(card.id==="zen"){
+        const scale=Math.min(width,height)/82;
+        c.save();c.translate(width/2,height/2);c.scale(scale,scale);
+        drawZenShards(c,0,0,.28,"wind");
+        c.restore();
+      }
       else if(card.id==="electrodisc")window.ElectroDisc?.portrait(c,width,height);
       else if(card.id==="burningpheonix")window.BurningPheonix?.portrait(c,width,height);
       else if(card.id==="cyclops")window.Cyclops?.portrait(c,width,height);
@@ -3371,7 +3469,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -3719,6 +3817,7 @@
     }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
+    drawZenCast(state.animation);
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
       drawTargetArrow(getUnit(state.selectedTarget),time);
     for(const {f,x,y,fontSize} of layoutCombatMessages(g,state.flashes)){
@@ -3783,15 +3882,15 @@
     switchTesterTarget,
     startCardTester:()=>{activeRoster=null;setBattle('tester',1);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
-    receiveSnapshot:snapshot=>{const previous=caster(),discard=previous?.discardedRound===state.round?previous.discardedCard:null,previousRound=state.round;const local=state?.selectedCard,copy=state?.selectedHandCopy||0,target=state?.selectedTarget;state=snapshot;state.selectedHandCopy=copy;const mine=state.units.find(u=>u.peerId===window.WizardrySession?.peerId);if(discard&&snapshot.round===previousRound&&snapshot.phase==='planning'&&mine&&!state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);state.planningSide=mine?.team||0;state.humanByTeam={0:null,1:null};if(mine)state.humanByTeam[mine.team]=mine.id;if(mine&&window.WizardrySession?.pendingPlan){const pending=window.WizardrySession.pendingPlan;if(state.phase!=='planning'||pending.round!==state.round||state.plans[mine.id])window.WizardrySession.pendingPlan=null;else state.plans[mine.id]={casterId:mine.id,...pending};}state.selectedCard=mine?.hand.includes(local)&&!state.plans[mine.id]?local:null;state.selectedTarget=state.selectedCard?target:null;paintUI();},
+    receiveSnapshot:snapshot=>{const previous=caster(),discard=previous?.discardedRound===state.round?previous.discardedCard:null,previousRound=state.round;const local=state?.selectedCard,copy=state?.selectedHandCopy||0,target=state?.selectedTarget,rune=state?.selectedRune;state=snapshot;state.selectedHandCopy=copy;const mine=state.units.find(u=>u.peerId===window.WizardrySession?.peerId);if(discard&&snapshot.round===previousRound&&snapshot.phase==='planning'&&mine&&!state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);state.planningSide=mine?.team||0;state.humanByTeam={0:null,1:null};if(mine)state.humanByTeam[mine.team]=mine.id;if(mine&&window.WizardrySession?.pendingPlan){const pending=window.WizardrySession.pendingPlan;if(state.phase!=='planning'||pending.round!==state.round||state.plans[mine.id])window.WizardrySession.pendingPlan=null;else state.plans[mine.id]={casterId:mine.id,...pending};}state.selectedCard=mine?.hand.includes(local)&&!state.plans[mine.id]?local:null;state.selectedTarget=state.selectedCard?target:null;state.selectedRune=state.selectedCard==="zen"?rune:null;paintUI();},
     submitRemotePlan:(peerId,p)=>{const u=state?.units.find(u=>u.peerId===peerId);if(state.phase!=='planning'||!u||u.hp<=0||p.round!==state.round||state.plans[u.id])return false;
       const needsDiscard=p.discardId&&u.discardedRound!==state.round;
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
       if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
-      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
+      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(card.kind==="zen"&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
-       if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,team:u.team};}
+       if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:card.kind==="zen"?p.runeKind:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);if(state.phase==='resolving'&&state.animation){updateCastSequence(dt);checkBattleEnd();}for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look)=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);drawWizardSprite(c,'idle',0,0,performance.now(),null,look);c.restore();},
@@ -3860,7 +3959,7 @@
     applyWindFistHit,WIND_FIST_RELEASES,WIND_FIST_HIT_TIMES,
     applyVampDamage,applyVampHeal,canReceiveDebuff,addStatus,consumeStatus,statusRuneRect,hitStatusRune,discardSelected,discardFromHand,resolveAutoRune,turnOrder,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,
     setBattle,queueSpell,autoFill,resolvePressed,
-    chooseCard,selectCaster,selectTarget,confirmTarget,unitPlateRect,
+    chooseCard,selectCaster,selectTarget,selectZenRune,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,
     getGolemTravelInfo:()=>state?.animation?.stage==="golem-travel"?
       {start:state.animation.travelStart,end:state.animation.travelEnd,

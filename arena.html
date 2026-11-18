@@ -20,6 +20,8 @@
 .hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
 .hand-assist .spell-choice-info{grid-area:info;min-width:0}
 .hand-assist .spell-choice-info span{white-space:normal;overflow-wrap:anywhere}
+#zenRunePicker{grid-column:1/-1;grid-row:2;min-width:0;background:#122b36;color:#f1f8e6;border:1px solid #638a7c;border-radius:6px;padding:6px}
+.hand-assist:has(#zenRunePicker:not([hidden])){grid-template-areas:"info info" ". ." "cast pass"}
 #confirmTarget{grid-area:cast;min-width:0;white-space:normal;width:100%;position:static;margin:0;min-height:38px}
 #passTurn{grid-area:pass;margin:0;position:static;white-space:normal;min-height:38px}
 .hand-assist>[hidden]{display:none!important}
@@ -91,6 +93,7 @@
         <strong id="chosenSpell">SELECT A SPELL</strong>
         <span id="chosenTarget">Then tap an enemy on the battlefield</span>
       </div>
+      <select id="zenRunePicker" aria-label="Negative rune to remove" hidden></select>
       <button type="button" id="discardCard" class="reset" disabled>Discard selected</button>
       <button type="button" id="passTurn" class="reset">Pass Turn · +2 Mana</button>
       <button type="button" id="confirmTarget" class="confirm-target" hidden>Confirm Target</button>
@@ -254,7 +257,7 @@
 <script src="./assets/heizmann.js?v=0.180.0" defer></script>
 <script src="./assets/venus-trap.js?v=0.180.0" defer></script>
 <script src="./assets/electro-disc.js?v=0.193.0" defer></script>
-<script src="./arena.js?v=0.190.0" defer></script>
+<script src="./arena.js?v=0.194.0" defer></script>
 <script src="./assets/wizard-home-v135.js?v=0.180.0" defer></script>
 </body>
 </html>

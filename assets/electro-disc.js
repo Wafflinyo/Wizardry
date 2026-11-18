@@ -1,17 +1,19 @@
 (()=>{
-  const atlas=new Image(),listeners=[];
-  atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  const atlas=new Image(),reveal=new Image(),listeners=[];
+  reveal.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  reveal.src='./assets/electro-disc-reveal.webp?v=0.191.0';
   atlas.src='./assets/electro-disc.webp?v=0.190.0';
   const clamp=p=>Math.max(0,Math.min(1,p));
   const mix=(a,b,p)=>a+(b-a)*p;
   const tau=Math.PI*2;
   const size=157;
-  const poseTimes=[0,.10,.17,.23,.36,.43,.46,.49,.54,.60,.67,.73,.79,.83,.88,.94];
+  const revealTimes=[0,.062,.112,.165,.215,.268,.367,.409];
+  const flipTimes=[.43,.46,.49,.54,.60,.67,.73,.79,.83,.88,.94];
   const releaseOffsets=[[60,34],[66,-38],[56,26]];
-  function frame(g,index,x,y,width){
-    if(!atlas.naturalWidth)return;
-    const tile=atlas.naturalWidth/4;
-    g.drawImage(atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,width,width);
+  function frame(g,sheet,index,x,y,width){
+    if(!sheet.naturalWidth)return;
+    const tile=sheet.naturalWidth/4;
+    g.drawImage(sheet,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,width,width);
   }
   function position(p,dir){
     const jump=clamp((p-.46)/.42);
@@ -36,12 +38,13 @@
   function actor(g,{progress:p,target}){
     const dir=target.x>=500?1:-1;
     const {x,y}=position(p,dir);
-    const pose=poseTimes.findLastIndex(time=>p>=time);
+    const revealing=p<flipTimes[0];
+    const pose=revealing?revealTimes.findLastIndex(time=>p>=time):5+flipTimes.findLastIndex(time=>p>=time);
     g.save();
     g.translate(x,y);
     g.scale(dir,1);
     g.globalAlpha=Math.min(clamp(p/.055),clamp((1-p)/.055));
-    frame(g,pose,-size/2,-size/2,size);
+    frame(g,revealing?reveal:atlas,pose,-size/2,-size/2,size);
     g.restore();
   }
   function trajectory({progress:p,target,releases,hits},index){
@@ -87,10 +90,10 @@
   }
   window.ElectroDisc={
     actor,projectile,depth:(opts,index)=>trajectory(opts,index).depth,
-    onReady(fn){if(atlas.naturalWidth)fn();else listeners.push(fn);},
+    onReady(fn){if(reveal.naturalWidth)fn();else listeners.push(fn);},
     portrait(g,w,h){
       const width=Math.min(w,h)*1.17;
-      frame(g,3,(w-width)/2,(h-width)/2,width);
+      frame(g,reveal,5,(w-width)/2,(h-width)/2,width);
     }
   };
 })();

@@ -2821,6 +2821,34 @@
   }
   // Both artworks are literal frames from the approved summon animation.
   // Poseidon frame 7 shows him gripping the raised trident.
+  function portraitBounds(pixels,width,height){
+    let left=width,top=height,right=-1,bottom=-1;
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>12){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+    return right<left?null:{x:left,y:top,w:right-left+1,h:bottom-top+1};
+  }
+  function drawContainedPortrait(output,width,height,paint){
+    const art=document.createElement('canvas');art.width=art.height=320;const ctx=art.getContext('2d');
+    paint(ctx,320,320);
+    let bounds;try{bounds=portraitBounds(ctx.getImageData(0,0,320,320).data,320,320);}catch{bounds={x:0,y:0,w:320,h:320};}
+    if(!bounds)return;
+    const scale=Math.min(Math.max(1,width-6)/bounds.w,Math.max(1,height-6)/bounds.h),w=bounds.w*scale,h=bounds.h*scale;
+    output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
+  }
+  function paintCardPortrait(card,c,width,height){
+      if(card.id==="croc")window.WIZARDRY_CROC_V134?.portrait(c,width,height);
+      else if(card.id==="jack")window.WIZARDRY_JACK_V129?.portrait(c,width,height);
+      else if(card.id==="windfist")window.WIZARDRY_WIND_FIST_V123?.portrait(c,width,height);
+      else if(card.id==="flowstate")window.WIZARDRY_FLOW_STATE_V121?.portrait(c,width,height);
+      else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
+      else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
+      else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
+      else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
+      else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
+      else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
+      else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
+      else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
+      else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
+  }
   function drawCardArts(){
     const cards=[...ui.hand.children];
     for(const b of cards){
@@ -2851,19 +2879,7 @@
       c.restore();
       // All card artwork shares the same visible-bounds contain fit.
       // The battlefield renderers keep their independent sprite anchors.
-      if(card.id==="croc")window.WIZARDRY_CROC_V134?.portrait(c,width,height);
-      else if(card.id==="jack")window.WIZARDRY_JACK_V129?.portrait(c,width,height);
-      else if(card.id==="windfist")window.WIZARDRY_WIND_FIST_V123?.portrait(c,width,height);
-      else if(card.id==="flowstate")window.WIZARDRY_FLOW_STATE_V121?.portrait(c,width,height);
-      else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
-      else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
-      else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
-      else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
-      else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
-      else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
-      else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
-      else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
-      else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
+      drawContainedPortrait(c,width,height,(art,w,h)=>paintCardPortrait(card,art,w,h));
 
     }
   }
@@ -3477,7 +3493,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},

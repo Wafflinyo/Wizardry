@@ -49,3 +49,13 @@
 #game #cardHand.cards>button.spell.card-ornate::before{display:none!important}
 #game #cardHand.cards>button.spell.card-ornate .spell-header{display:flex;align-items:center;justify-content:flex-start;color:#baf3f2}
 #game #cardHand.cards>button.spell.card-ornate .spell-header svg{display:block;width:26px;height:26px;flex:none}
+/* Artwork takes the space freed by the compact title and overlaid badges. */
+#game #cardHand.cards>button.spell.card-ornate{grid-template-rows:0 minmax(45px,1fr) 28px 34px 48px}
+#game #cardHand.cards>button.spell.card-ornate .spell-header{position:absolute;top:5px;left:6px;z-index:5;width:27px;height:27px;min-height:0;background:#0b253bbd;border-radius:4px}
+#game #cardHand.cards>button.spell.card-ornate .spell-mana-cost{z-index:5}
+#game #cardHand.cards>button.spell.card-ornate .spell-name{padding:1px 3px!important}
+#game #cardHand.cards>button.spell.card-ornate:is(.chosen,.browsed){grid-template-rows:0 minmax(65px,1fr) 32px 38px 58px}
+@media(orientation:landscape) and (max-height:620px){
+#game #cardHand.cards>button.spell.card-ornate{grid-template-rows:0 minmax(20px,1fr) 26px 28px 40px}
+#game #cardHand.cards>button.spell.card-ornate:is(.chosen,.browsed){grid-template-rows:0 minmax(40px,1fr) 32px 34px 52px}
+}

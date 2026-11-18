@@ -23,22 +23,20 @@
     const strength=mix(.82,1,smooth(clamp(q/.14)));
     const phase=q*tau*3.4;
     const point=(t,strand)=>{
-      const a=t*tau*2.6-phase+strand*tau/4;
-      // Cup the beak, wrap the full wingspan, then flare beyond the tail.
-      const body=smooth(clamp(t/.20));
-      const flare=smooth(clamp((t-.67)/.33));
-      const radius=mix(24,120,body)*(1+.07*Math.sin(t*19-phase))+27*flare;
-      return {x:44-386*t,y:-14*body+Math.sin(a)*radius,front:Math.cos(a)>=0};
+      const a=t*tau*3.7-phase+strand*tau/4;
+      const body=smooth(clamp(t/.43))*smooth(clamp((1-t)/.49));
+      const radius=mix(20,73,body)*(1+.05*Math.sin(t*19-phase));
+      return {x:23-306*t,y:mix(-20,-31,body)+Math.sin(a)*radius,front:Math.cos(a)>=0};
     };
     g.save();
     g.globalAlpha=strength;
     for(let strand=0;strand<4;strand++){
-      for(let i=0;i<32;i++){
-        const t=i/32,next=t+.045;
+      for(let i=0;i<44;i++){
+        const t=i/44,next=t+.031;
         const a=point(t,strand),b=point(next,strand);
         if(a.front!==front)continue;
         const pulse=.65+.35*Math.sin(t*38-phase*1.7+strand);
-        const width=(4+16*Math.sin(Math.PI*t))*pulse*(1-t*.66);
+        const width=(4+12*Math.sin(Math.PI*t))*pulse*(1-t*.66);
         flame(g,a.x,a.y,b.x,b.y,width*1.7,front?'#f13e10':'#9f260d');
         flame(g,a.x+5,a.y,b.x,b.y,width,front?'#ff9b18':'#f96811');
         if(front)flame(g,a.x+8,a.y,b.x+9,b.y,width*.35,'#fff4ad');
@@ -46,7 +44,7 @@
     }
     for(let i=0;i<42;i++){
       const t=(i*.618+q*1.25)%1;
-      const a=point(t,i%4),b=point(t+.066,i%4);
+      const a=point(t,i%4),b=point(t+.047,i%4);
       if(a.front!==front)continue;
       g.globalAlpha=strength*Math.sin(Math.PI*t);
       flame(g,a.x,a.y,b.x-13,b.y,2+i%4,front?'#ffdf64':'#ed5916');

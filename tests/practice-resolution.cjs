@@ -38,6 +38,20 @@ api.startPractice(1);
    runeResult:'success',damageVariant:1,seedRoll:1});
  assert.equal(target.hp,target.maxHp-903,'903.6 damage rounds down');
 }
+const bullet=api.cards.find(c=>c.id==='bulletseed');
+for(const [roll,blocked] of [[.399,false],[.40,false],[.10,true]]){
+ api.startPractice(1);
+ const [caster,target]=api.getState().units;
+ caster.skills.nature=0;
+ if(blocked)api.addStatus(target,'wind_dome',null,1);
+ const cast={card:bullet,action:{casterId:caster.id,targetId:target.id},runeResult:'success',
+   damageVariant:1,seedRoll:roll};
+ api.applySpell(cast);
+ api.applySpell(cast);
+ assert.equal(target.hp,target.maxHp-(blocked?0:150));
+ assert.equal(cast.repeatedHits.filter(Boolean).length,5);
+ assert.equal(target.statuses.some(st=>st.kind==='healing_seed'),!blocked&&roll<.40);
+}
 for(const lethal of [false,true]){
  api.startPractice(2);const s=api.getState(),u=s.units[1],enemy=s.units.find(x=>x.team!==u.team);
  u.hp=lethal?100:2000;u.mana=16;u.statuses=[{kind:'thorny_wrap',expiresRound:4,attemptDamage:198}];

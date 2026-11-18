@@ -106,6 +106,7 @@
   CARDS.push({"id":"zen","name":"Zen","school":"wind","cost":2,"target":"ally","kind":"zen","accuracy":1,"icon":"≋","rarity":"RARE","duration":1300,"hit":0.48,"short":"100% ACCURACY","description":"Choose one negative rune on yourself or an ally to remove."});
   CARDS.push({"id":"scaldingair","name":"Scalding Air","school":"wind","cost":4,"target":"enemy","kind":"scaldingair","damage":140,"burnChance":0.4,"burnDamage":100,"burnTurns":5,"accuracy":0.9,"icon":"≋","rarity":"RARE","duration":1350,"hit":0.57,"short":"90% ACCURACY","description":"140 damage. 40% chance of Extreme Burn: 100 damage per round for 5 rounds."});
   CARDS.push({"id":"tree","name":"TREE!","school":"nature","cost":7,"target":"enemy","kind":"tree","damage":720,"seedChance":0.3,"seedDamage":75,"seedTurns":3,"accuracy":0.8,"icon":"❧","rarity":"EPIC","duration":4100,"hit":0.8,"short":"80% ACCURACY","description":"720 damage. 30% chance to plant a Healing Seed that transfers up to 75 HP to the caster each round for 3 rounds."});
+  CARDS.push({"id":"bulletseed","name":"Bullet Seed","school":"nature","cost":3,"target":"enemy","kind":"bulletseed","damage":150,"hitDamage":30,"hits":5,"seedChance":0.4,"seedDamage":75,"seedTurns":3,"accuracy":0.9,"icon":"❧","rarity":"RARE","duration":4400,"hit":0.91,"short":"90% ACCURACY","description":"Five seeds deal 30 damage each. 40% chance per cast to apply Healing Seed for 3 rounds."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -114,6 +115,8 @@
   const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
   const ELECTRO_DISC_RELEASES=[.54,.67,.79];
   const ELECTRO_DISC_HIT_TIMES=ELECTRO_DISC_RELEASES.map(p=>p+.075);
+  const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
+  const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.
@@ -797,6 +800,9 @@
     if(a.stage==="summon"&&a.card.id==="electrodisc"&&a.runeResult==="success")
       for(let i=0;i<ELECTRO_DISC_HIT_TIMES.length;i++)
         if(p>=ELECTRO_DISC_HIT_TIMES[i])applyRepeatedHit(a,i);
+    if(a.stage==="summon"&&a.card.id==="bulletseed"&&a.runeResult==="success")
+      for(let i=0;i<BULLET_SEED_HITS.length;i++)
+        if(p>=BULLET_SEED_HITS[i])applyRepeatedHit(a,i);
     if(a.stage==="summon"&&a.card.id==="zeus"&&a.runeResult==="success"){
       if(p>=a.card.hit)applyZeusImpact(a);
       for(const entry of a.zeusChainTargets||[])if(p>=entry.hitAt)applyZeusChain(a,entry);
@@ -1495,7 +1501,21 @@
     a.repeatedHits??=[];if(a.repeatedHits[index])return false;a.repeatedHits[index]=true;
     const source=getUnit(a.source||a.action.casterId),target=getUnit(a.target||a.action.targetId);
     if(!source||source.hp<=0||!target||target.hp<=0||source.team===target.team)return false;
-    damage(source,target,a.card.hitDamage,a.card,a);return true;
+    damage(source,target,a.card.hitDamage,a.card,a);
+    if(a.card.kind==="bulletseed"&&index===a.card.hits-1)tryHealingSeed(source,target,a);
+    return true;
+  }
+  function tryHealingSeed(source,target,cast){
+    const card=cast.card;
+    if(cast.windDomeTargets?.[target.id]||!canReceiveDebuff(target,"healing_seed")||
+       (cast.seedRoll??Math.random())>=card.seedChance)return;
+    const transfer=Builds?.healAmount(card.seedDamage,source,card.school)??card.seedDamage;
+    addStatus(target,"healing_seed","❧",transfer,card.school);
+    Object.assign(target.statuses.find(st=>st.kind==="healing_seed"),{
+      sourceId:source.id,remaining:card.seedTurns,appliedRound:state.round,lastTickRound:state.round
+    });
+    cast.seedAttached=true;
+    flash(target,"HEALING SEED · "+card.seedTurns+" ROUNDS","#a4f5a8");
   }
   function applyGunpowderCoat(target,card,source,spell){
     if(!target||target.hp<=0)return false;
@@ -1864,16 +1884,7 @@
     }else if(card.kind==="tree"){
       if(anim.runeResult==="success"&&t?.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
-        if(!anim.windDomeTargets?.[t.id]&&canReceiveDebuff(t,"healing_seed")&&
-           (anim.seedRoll??Math.random())<card.seedChance){
-          const transfer=Builds?.healAmount(card.seedDamage,c,card.school)??card.seedDamage;
-          addStatus(t,"healing_seed","❧",transfer,card.school);
-          Object.assign(t.statuses.find(st=>st.kind==="healing_seed"),{
-            sourceId:c.id,remaining:card.seedTurns,appliedRound:state.round,lastTickRound:state.round
-          });
-          anim.seedAttached=true;
-          flash(t,"HEALING SEED · 3 ROUNDS","#a4f5a8");
-        }
+        tryHealingSeed(c,t,anim);
       }
     }else if(card.kind==="grillmaster"||card.kind==="scaldingair"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
@@ -1892,7 +1903,7 @@
       }
     }else if(card.kind==="windfist"){
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
-    }else if(card.kind==="electrodisc"){
+    }else if(card.kind==="electrodisc"||card.kind==="bulletseed"){
       for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
     }else if(card.kind==="flowstate"){
       addStatus(c,"flow_state","≈",1);
@@ -2213,7 +2224,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 3 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
+        const effect=k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 3 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 3 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?
@@ -2274,7 +2285,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"self debuff granting one mana per Lightning spell received":k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of mastery-adjusted base damage without a damage-variant roll, capped at maximum health.":
@@ -3158,6 +3169,7 @@
   function paintCardPortrait(card,c,width,height){
       if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
+      else if(card.id==="bulletseed")window.BulletSeed?.portrait(c,width,height);
       else if(card.id==="tree")window.TreeSpell?.portrait(c,width,height);
       else if(card.id==="scaldingair")window.ScaldingAir?.portrait(c,width,height);
       else if(card.id==="zen"){
@@ -3229,6 +3241,7 @@
     }
   }
   function setupSprites(){
+    window.BulletSeed?.onReady(drawCardArts);
     window.TreeSpell?.onReady(drawCardArts);
     window.ScaldingAir?.onReady(drawCardArts);
     zenPortrait.onload=drawCardArts;
@@ -3512,7 +3525,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -3609,6 +3622,15 @@
       const spell=window.WIZARDRY_JACK_V129;
       if(spell)for(const layer of ["ground","actor","crow0","crow1","crow2","impact"])
         renderables.push({type:"jack-"+layer,depthY:spell.depthFor(opts,layer),priority:2,draw:()=>spell.draw(g,{...opts,layer})});
+    }
+    if(action?.card?.id==="bulletseed"&&action.stage==="summon"){
+      const spell=window.BulletSeed,target=getUnit(action.target),caster=getUnit(action.source);
+      if(spell&&target&&caster){
+        const progress=clamp(action.elapsed/action.duration,0,1);
+        const opts={target,caster,progress,releases:BULLET_SEED_RELEASES,hits:BULLET_SEED_HITS,seed:action.seedAttached};
+        renderables.push({type:"bamboo-ranger",depthY:510,priority:2,draw:()=>spell.actor(g,opts)});
+        renderables.push({type:"bullet-seed-volley",depthY:target.y+.15,priority:2,draw:()=>spell.volley(g,opts)});
+      }
     }
     if(action?.card?.id==="tree"&&action.stage==="summon"){
       const spell=window.TreeSpell,target=getUnit(action.target);

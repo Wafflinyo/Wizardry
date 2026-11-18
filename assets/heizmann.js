@@ -62,14 +62,14 @@
       const lift=320*(1-drop*drop),cycle=(p-.24)/.13;
       const breathing=p>.24&&p<.50?Math.sin(cycle*tau)*1.6:0;
       g.globalAlpha=clamp((1-p)/.12);
-      sprite(g,n,x,y-lift,196,d,196+breathing);
-      for(const start of [.275,.405])breath(g,x+5*d,y-112-breathing,(p-start)/.12,d);
+      sprite(g,n,x,y-lift,246,d,246+breathing);
+      for(const start of [.275,.405])breath(g,x+6*d,y-141-breathing,(p-start)/.12,d);
       shards(g,500,y,(p-.136)/.14,26,80);
       shards(g,x+20*d,y,(p-.642)/.12,20,75);
       shards(g,x,y-76,(p-.86)/.14,38,100);
     }else if(layer==='slash'){
       if(p>=.659&&p<.748){
-        const u=(p-.659)/(.748-.659),px=x+(target.x-x)*u+d*Math.min(100,Math.abs(target.x-x)*.55)*(1-u),py=y-87+(target.y-88-(y-87))*u;
+        const u=(p-.659)/(.748-.659),px=x+(target.x-x)*u+d*Math.min(126,Math.abs(target.x-x)*.55)*(1-u),py=y-87+(target.y-88-(y-87))*u;
         g.translate(px,py);g.scale(d,1);g.rotate(-.24);
         const ice=g.createLinearGradient(-30,0,30,0);
         ice.addColorStop(0,'rgba(88,175,239,.16)');ice.addColorStop(.55,'#63baef');ice.addColorStop(.84,'#bdffff');ice.addColorStop(1,'#ffffff');

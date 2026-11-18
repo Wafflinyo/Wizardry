@@ -1,7 +1,7 @@
 (()=>{
   const atlas=new Image(),reveal=new Image(),listeners=[];
   reveal.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  reveal.src='./assets/electro-disc-reveal.webp?v=0.191.0';
+  reveal.src='./assets/electro-disc-reveal.webp?v=0.192.0';
   atlas.src='./assets/electro-disc.webp?v=0.190.0';
   const clamp=p=>Math.max(0,Math.min(1,p));
   const mix=(a,b,p)=>a+(b-a)*p;

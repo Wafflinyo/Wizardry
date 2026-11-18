@@ -46,6 +46,24 @@ for (const [roll, expected] of [[.199, true], [.20, false]]){
   assert.equal(target.statuses.some(st => st.kind === 'burn'), false);
 }
 
+const scalding=api.cards.find(c=>c.id==='scaldingair');
+for(const [roll,expected] of [[.399,true],[.40,false]]){
+  const {state,caster,target,neighbor}=setup();
+  const cast={card:scalding,action:{casterId:caster.id,targetId:target.id},
+    runeResult:'success',damageVariant:1,burnRoll:roll};
+  api.applySpell(cast);
+  api.applySpell(cast);
+  assert.equal(target.hp,target.maxHp-140);
+  assert.equal(neighbor.hp,neighbor.maxHp);
+  assert.equal(target.statuses.find(st=>st.kind==='burn')?.extreme,expected?true:undefined);
+  for(let round=2;round<=6;round++){
+    state.round=round;
+    api.tickBurnsForRound();
+  }
+  assert.equal(target.hp,target.maxHp-140-(expected?500:0));
+  assert.equal(target.statuses.some(st=>st.kind==='burn'),false);
+}
+
 for(const activeExtreme of [false,true]){
   const {state,caster,target}=setup();
   target.hp=10000;

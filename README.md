@@ -1,6 +1,6 @@
 # Wizardry
 
-Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.177.0.
+Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.178.0.
 
 The original duel has been retired. `index.html` opens the current game.
 
@@ -43,4 +43,4 @@ The host simulates combat and validates every submitted action; guests receive s
 
 Browser QA covers wizard creation/save/load, practice, responsive portrait/landscape layout, two-player lobby joining/readiness/teams and shared combat. Live transport tests cover unauthorized actions, CPU seats, session-secret isolation, locking and stale-action rejection.
 
-Only one harmful debuff can be active on a wizard. Reapplications cannot refresh or replace it; the next debuff becomes eligible after removal/expiry. Beneficial buffs are separate. Percentage effects (including Solidity, accuracy penalties and proc chances) retain their original values.
+A wizard can carry four harmful debuff runes. At four, a targeted debuff spell fizzles. Beneficial buffs use separate slots. Percentage effects (including Solidity, accuracy penalties and proc chances) retain their original values.

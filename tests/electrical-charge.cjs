@@ -54,7 +54,7 @@ api.applySpell(cast(enemy, user, 'volt', 'failed'));
 assert.equal(user.mana, 5);
 api.applySpell(cast(enemy, user, 'static'));
 assert.equal(user.mana, 6, 'a successful Lightning curse reaches the charged wizard');
-assert.ok(!user.statuses.some(st => st.kind === 'static_shock'), 'only one debuff slot');
+assert.ok(user.statuses.some(st => st.kind === 'static_shock'), 'two distinct debuffs coexist');
 api.applySpell(cast(user, user, 'rod'));
 assert.equal(user.mana, 7, 'later self-cast Lightning counts');
 damage(enemy, user, 1, card('golem'));

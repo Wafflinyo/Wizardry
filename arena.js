@@ -103,7 +103,7 @@
   CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits. If status damage lands first, that damage event gains 20% and spends the mark."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
-    card.description+=' Only one harmful debuff can be active. Repeat applications cannot refresh it.';
+    card.description+=' Each wizard can carry four debuff runes.';
   }
   const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.014);
   const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
@@ -495,7 +495,7 @@
     return freezeTarget(target);
   }
   function freezeTarget(target){
-    if(!canReceiveDebuff(target))return false;
+    if(!canReceiveDebuff(target,"frozen"))return false;
     addStatus(target,"frozen","❄",1);const frozen=target.statuses.find(st=>st.kind==="frozen");
     const pending=state.phase==="resolving"&&state.sequence?.slice(state.queueAt).some(a=>a.casterId===target.id);
     frozen.startRound=pending?state.round:state.round+1;frozen.turnsTested=0;frozen.lastTurnRound=null;frozen.releaseRound=null;
@@ -516,7 +516,7 @@
     return fear.skip;
   }
   function applyJackFear(target,card){
-    if(!canReceiveDebuff(target))return false;
+    if(!canReceiveDebuff(target,"fear"))return false;
     const pending=state.phase==="resolving"&&state.sequence?.slice(state.queueAt).some(a=>a.casterId===target.id);
     const startRound=pending?state.round:state.round+1;
     addStatus(target,"fear","☠",card.fearChance);
@@ -536,7 +536,7 @@
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
-      (card.kind!=="electricalcharge"||canReceiveDebuff(u)));
+      (card.kind!=="electricalcharge"||canReceiveDebuff(u,"electrical_charge")));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
     const target=["team","all_enemies"].includes(card.target)?null:
@@ -681,7 +681,9 @@
     a.accuracyBonusUsed=bonus;
     const testing=state.mode==="tester";
     a.effectiveAccuracy=testing?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
-    const success=testing||spellHitCheck(a.card,Math.random(),bonus);
+    const target=getUnit(a.target);
+    const full=target?.hp>0&&DEBUFF_SPELLS.has(a.card.kind)&&!canReceiveDebuff(target);
+    const success=!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");state.log=[c.name+" uses up Turbulence (−50 accuracy points).",...state.log].slice(0,5);}
     a.runeResult=success?"success":"failed";
     if(used){
@@ -693,7 +695,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     if(success){
       c.mana=Math.max(0,c.mana-a.card.cost);
       recordLightningRodCast(c,a.card);
@@ -711,7 +713,7 @@
       // Keep the FAILED glyph on screen until its own darkening/crumbling
       // animation has finished. No generic red X or premature fizzle.
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,"MISS","#f6a7a2");
+      flash(c,full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=markedStatusDamage(c,shock.damage||100);c.hp=Math.max(0,c.hp-amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         state.log=[c.name+" takes 100 damage from Static Shock; the curse expires.",...state.log].slice(0,5);
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -1223,13 +1225,18 @@
       return {f,x:W/2,y:26+i*32,width:Math.min(W-24,measured+12),height:27,fontSize};});
     c.restore();return placed;
   }
-  const DEBUFFS=new Set(['boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','turbulence','static_shock','electrical_charge','trap']);
-  function canReceiveDebuff(u){return !!u&&u.hp>0&&!u.statuses.some(st=>DEBUFFS.has(st.kind))&&u.fearRound!==state.round&&u.flinchRound!==state.round;}
+  const MAX_DEBUFF_RUNES=4;
+  const DEBUFF_SPELLS=new Set(['gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFFS=new Set(['decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','turbulence','static_shock','electrical_charge','trap']);
+  function canReceiveDebuff(u,kind){
+    return !!u&&u.hp>0&&u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES&&
+      (!kind||!u.statuses.some(st=>st.kind===kind));
+  }
   function addStatus(u,kind,icon,value,school){
     if(DEBUFFS.has(kind)&&!canReceiveDebuff(u))return false;
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){existing.value=value;existing.charges=1;return;}
-    if(u.statuses.length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="lightning_rod"&&st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
+    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="lightning_rod"&&st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
   }
   function consumeStatus(u,kind){
@@ -1287,7 +1294,7 @@
   function attemptUndeadFear(source,target,card,roll=Math.random()){
     if(!["undead","croc"].includes(card?.id)||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
     if(!(state.sequence||[]).slice(state.queueAt).some(a=>a.casterId===target.id))return false;
-    if(!canReceiveDebuff(target))return false;
+    if(!canReceiveDebuff(target,"fear_turn"))return false;
     addStatus(target,"fear_turn","☠",1,card.school);target.statuses.find(st=>st.kind==="fear_turn").round=state.round;
     target.fearRound=state.round;target.fearSource=card.name;
     flash(target,"FEARED · THIS ROUND","#d4c0eb");
@@ -1309,7 +1316,7 @@
     // otherwise reserve the stun for their next round. Never double-skip.
     const pending=state.phase==="resolving"&&state.sequence
       .slice(state.queueAt).some(a=>a.casterId===target.id);
-    if(!canReceiveDebuff(target))return false;
+    if(!canReceiveDebuff(target,"stun"))return false;
     target.stunRound=pending?state.round:state.round+1;
     addStatus(target,"stun","⚡",1);
     flash(target,"STUNNED","#96f3ff");
@@ -1430,10 +1437,11 @@
     damage(source,target,a.card.hitDamage,a.card,a);return true;
   }
   function applyGunpowderCoat(target,card,source,spell){
+    if(!target||target.hp<=0)return false;
     if(!canReceiveDebuff(target))return false;
-    const last=target.statuses.find(st=>st.kind==="gunpowder_coat")?.lastTriggerRound??null;
-    addStatus(target,"gunpowder_coat","✺",effectDamage(source,card,card.coatDamage,spell));
-    Object.assign(target.statuses.find(st=>st.kind==="gunpowder_coat"),{expiresRound:state.round+card.coatTurns,lastTriggerRound:last,triggers:0});
+    const lastTriggerRound=target.statuses.find(st=>st.kind==="gunpowder_coat")?.lastTriggerRound??null;
+    addStatus(target,"gunpowder_coat",null,effectDamage(source,card,card.coatDamage,spell),"fire");
+    Object.assign(target.statuses.find(st=>st.kind==="gunpowder_coat"),{expiresRound:state.round+card.coatTurns,lastTriggerRound,triggers:0});
     flash(target,"GUNPOWDER COAT · 3 TURNS","#c8b69a");
     state.log=[target.name+" is coated in gunpowder for 3 turns: Fire hits can ignite it once each turn.",...state.log].slice(0,5);
   }
@@ -1495,7 +1503,7 @@
     const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target)&&target.hp>0&&!a.windDomeTargets?.[target.id]&&!target.statuses.some(s=>s.kind==="frostbite")&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&!target.statuses.some(s=>s.kind==="frostbite")&&(roll??Math.random())<a.card.frostChance){
       addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
       Object.assign(target.statuses.find(s=>s.kind==="frostbite"),{extreme:a.card.frostDamage===100&&a.card.frostTurns===5,remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
       flash(target,"FROSTBITE · 3 TURNS","#b6eeff");
@@ -1569,7 +1577,7 @@
     const caster=getUnit(a.source),target=getUnit(entry.id);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target)&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
       addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
       Object.assign(target.statuses.find(st=>st.kind==="frostbite"),{extreme:a.card.frostDamage===100&&a.card.frostTurns===5,remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
       flash(target,"EXTREME FROSTBITE · 5 TURNS","#b6eeff");
@@ -1650,7 +1658,7 @@
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target)&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
       addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
       const frost=target.statuses.find(st=>st.kind==="frostbite");frost.remaining=a.card.frostTurns;frost.appliedRound=state.round;frost.lastTickRound=state.round;
       flash(target,"FROSTBITE (3 TURNS)","#b6eeff");
@@ -1668,7 +1676,7 @@
     a.applied=true;const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target)&&target.hp>0&&!a.windDomeTargets?.[target.id]){addStatus(target,"decaying_strength","☠",.20);flash(target,"DECAYING STRENGTH","#c89bd8");}
+    if(canReceiveDebuff(target,"decaying_strength")&&target.hp>0&&!a.windDomeTargets?.[target.id]){addStatus(target,"decaying_strength","☠",.20);flash(target,"DECAYING STRENGTH","#c89bd8");}
     paintUI();return true;
   }
   function applyRoninHit(a,index){
@@ -1680,7 +1688,7 @@
     damage(c,target,a.card.damage,a.card,a);paintUI();return true;
   }
   function trySpellBurn(caster,target,card,spell,roll){
-    if(!canReceiveDebuff(target)||spell.windDomeTargets?.[target.id]||(roll??Math.random())>=card.burnChance)return;
+    if(!canReceiveDebuff(target,"burn")||spell.windDomeTargets?.[target.id]||(roll??Math.random())>=card.burnChance)return;
     addStatus(target,"burn","🔥",effectDamage(caster,card,card.burnDamage,spell));
     const burn=target.statuses.find(st=>st.kind==="burn");
     Object.assign(burn,{remaining:card.burnTurns,appliedRound:state.round,lastTickRound:state.round});
@@ -1710,7 +1718,7 @@
     damage(c,target,a.card.damage,a.card,a);
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
-    if(canReceiveDebuff(target)&&target.hp>0&&!a.windDomeTargets?.[target.id]&&a.runeResult==="success"&&roll<a.card.burnChance){
+    if(canReceiveDebuff(target,"burn")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&a.runeResult==="success"&&roll<a.card.burnChance){
       addStatus(target,"burn","🔥",effectDamage(getUnit(a.source),a.card,a.card.burnDamage,a));
       const burn=target.statuses.find(st=>st.kind==="burn");
       burn.remaining=a.card.burnTurns;
@@ -1812,30 +1820,30 @@
       flash(c,"FLOW STATE · 3 TURNS","#a7f5ff");
       state.log=[c.name+" gains +1 extra mana for the next 3 turns.",...state.log].slice(0,5);
     }else if(card.kind==="gunpowder"){
-      if(canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card,c,anim);
+      if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card,c,anim);
     }else if(card.kind==="zeus"){
       applyZeusImpact(anim);
       for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
     }else if(card.kind==="decaystrength"){
-      if(t&&t.team!==c.team&&t.hp>0){
+      if(t&&t.team!==c.team&&canReceiveDebuff(t)){
         addStatus(t,"decay_mark",null,card.boost);
         flash(t,"DECAY OF STRENGTH","#ddb7ff");
       }
     }else if(card.kind==="acidair"){
-      if(t&&t.team!==c.team&&canReceiveDebuff(t)){
+      if(t&&t.team!==c.team&&canReceiveDebuff(t,"poison")){
         addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
         Object.assign(t.statuses.find(st=>st.kind==="poison"),{extreme:true,remaining:card.poisonTurns,appliedRound:state.round,lastTickRound:state.round});
         flash(t,"EXTREME POISON","#b9e878");
       }
     }else if(card.kind==="boulderweight"){
-      if(t&&t.team!==c.team&&canReceiveDebuff(t)){
+      if(t&&t.team!==c.team&&canReceiveDebuff(t,"boulder_weight")){
         addStatus(t,"boulder_weight","⛰",card.penalty);
         const pending=state.sequence?.slice(state.queueAt).some(a=>a.casterId===t.id);
         t.statuses.find(st=>st.kind==="boulder_weight").expiresRound=state.round+card.turns+(pending?0:1);
         flash(t,"BOULDER WEIGHT","#e6c38a");
       }
     }else if(card.kind==="thornwrap"){
-      if(canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team){
+      if(canReceiveDebuff(t,"thorny_wrap")&&t&&t.hp>0&&t.team!==c.team){
         addStatus(t,"thorny_wrap","❧",.15);
         Object.assign(t.statuses.find(st=>st.kind==="thorny_wrap"),{expiresRound:state.round+3,appliedRound:state.round,attemptDamage:effectDamage(c,card,150,anim)});
         flash(t,"THORNY WRAP · 3 TURNS","#b5e989");
@@ -1849,7 +1857,7 @@
       addStatus(c,"wind_dome","≋",1);flash(c,"WIND DOME READY","#d1fff1");
       state.log=[c.name+" is protected from the next damaging spell by Wind Dome.",...state.log].slice(0,5);
     }else if(card.kind==="electricalcharge"){
-      if(t===c&&canReceiveDebuff(c)){
+      if(t===c&&canReceiveDebuff(c,"electrical_charge")){
         addStatus(c,"electrical_charge",card.icon,1);
         c.statuses.find(st=>st.kind==="electrical_charge").expiresRound=state.round+card.chargeTurns+1;
         flash(c,"ELECTRICAL CHARGE READY","#a5ebff");
@@ -1862,7 +1870,7 @@
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
-        if(canReceiveDebuff(enemy)&&enemy.hp>0&&!anim.windDomeTargets?.[enemy.id]&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
+        if(canReceiveDebuff(enemy,"poison")&&enemy.hp>0&&!anim.windDomeTargets?.[enemy.id]&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
           addStatus(enemy,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
           const poison=enemy.statuses.find(st=>st.kind==="poison");
           poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;
@@ -1893,7 +1901,7 @@
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!anim.windDomeTargets?.[t.id])attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
-        if(canReceiveDebuff(t)&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
+        if(canReceiveDebuff(t,"poison")&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
@@ -1910,20 +1918,20 @@
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
-    } else if(card.kind==="freezing"&&canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team){
+    } else if(card.kind==="freezing"&&canReceiveDebuff(t,"freezing_temps")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"freezing_temps","❄",.5);flash(t,"FREEZING TEMPS","#b8f3ff");state.log=[t.name+" is marked: the next Ice spell has a 50% freeze chance.",...state.log].slice(0,5);
     } else if(card.kind==="teamregen"){
       for(const ally of alive(c.team)){addStatus(ally,"healing_aura","❀",Math.round(card.healPerTurn*Builds.multiplier(c,card.school)));const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
       state.log=[c.name+" blesses the entire team: 200 HP per turn for 3 turns each.",...state.log].slice(0,5);
-    } else if(card.kind==="souldrain"&&canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team){
+    } else if(card.kind==="souldrain"&&canReceiveDebuff(t,"soul_drain")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"soul_drain","☠",effectDamage(c,card,card.damage,anim));const curse=t.statuses.find(st=>st.kind==="soul_drain");
       curse.healValue=Math.round(card.damage*Builds.multiplier(c,card.school));curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
       flash(t,"SOUL DRAIN","#d79ce7");state.log=[c.name+" curses "+t.name+" with Soul Drain: 100 HP per turn for 3 turns.",...state.log].slice(0,5);
-    } else if(card.kind==="turbulence"&&canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team){
+    } else if(card.kind==="turbulence"&&canReceiveDebuff(t,"turbulence")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"turbulence","≋",.5);flash(t,"TURBULENCE","#b8efdc");state.log=[t.name+" loses 50 accuracy points on their next spell.",...state.log].slice(0,5);
     } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"blazing_rage","♨",card.boost);flash(t,"BLAZING RAGE +20%","#ffbb76");state.log=[t.name+" gains +20% damage on their next damaging Fire spell.",...state.log].slice(0,5);
-    } else if(card.kind==="static"&&canReceiveDebuff(t)&&t&&t.hp>0&&t.team!==c.team){
+    } else if(card.kind==="static"&&canReceiveDebuff(t,"static_shock")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"static_shock","ϟ",.30);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=effectDamage(c,card,100,anim);
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");state.log=[t.name+" is cursed with Static Shock for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
@@ -1936,7 +1944,7 @@
     } else if(card.kind==="blade"&&t&&t.hp>0){
       addStatus(t,"blade","✦",.50);flash(t,"+50%","#f8db94");
       state.log=["Blade attached to "+t.name,...state.log].slice(0,5);
-    } else if(card.kind==="trap"&&canReceiveDebuff(t)&&t&&t.hp>0){
+    } else if(card.kind==="trap"&&canReceiveDebuff(t,"trap")&&t&&t.hp>0){
       addStatus(t,"trap","◈",.35);flash(t,"TRAP","#e8ba91");
       state.log=["Trap attached to "+t.name,...state.log].slice(0,5);
     } else if(card.kind==="aura"){
@@ -2816,7 +2824,7 @@
   function plateAlpha(){return 1;}
   function unitStatuses(u){
     const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
-    const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,3);
+    const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
   }
@@ -2830,7 +2838,7 @@
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. Reapplication is blocked until this debuff expires."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Self debuff",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
-      case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
+      case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+Math.round((st.stored||0)*100*(st.power||1))+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Only successful casts by you or allies count; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
       case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell or status tick deals 20% more damage. All hits of a triggering spell qualify."};

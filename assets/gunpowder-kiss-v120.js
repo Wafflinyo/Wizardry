@@ -74,9 +74,9 @@
  function drawCoat(c,{target,time=0}){
    const scale=.60+.30*C((target.y-288)/235);
    c.save();c.globalAlpha=.92;
-   for(let n=0;n<42;n++){
+   for(let n=0;n<60;n++){
      const y=target.y-(27+R(n+12)*151)*scale,width=(y<target.y-125*scale?18:33)*scale;
-     grain(c,target.x+(R(n+44)-.5)*width*2,y,(1.5+R(n+67)*2)*scale,n%7===0);
+     grain(c,target.x+(R(n+44)-.5)*width*2,y,(2.1+R(n+67)*2.7)*scale,n%4===0);
    }
    c.restore();
  }

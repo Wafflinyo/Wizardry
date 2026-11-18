@@ -52,7 +52,7 @@ for (const defense of ['wind_dome','poison','miss','ally','lethal']){
   if(defense==='lethal')target.hp=150;
   const victim = defense==='ally' ? ally : target;
   api.applySpell({card,action:{casterId:caster.id,targetId:victim.id},runeResult:defense==='miss'?'failed':'success',damageVariant:1,burnRoll:0});
-  assert.equal(victim.statuses.some(st=>st.kind==='burn'),false);
+  assert.equal(victim.statuses.some(st=>st.kind==='burn'),defense==='poison');
   assert.equal(victim.hp,defense==='lethal'?0:defense==='poison'?victim.maxHp-440:victim.maxHp);
 }
 

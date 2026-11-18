@@ -20,12 +20,15 @@
     g.fill();
   }
   function vortex(g,q,front){
-    const strength=smooth(clamp(q/.16));
+    const strength=mix(.82,1,smooth(clamp(q/.14)));
     const phase=q*tau*3.4;
     const point=(t,strand)=>{
       const a=t*tau*2.6-phase+strand*tau/4;
-      const radius=(8+76*t)*(.85+.15*Math.sin(t*19-phase));
-      return {x:-12-280*t,y:Math.sin(a)*radius,front:Math.cos(a)>=0};
+      // Cup the beak, wrap the full wingspan, then flare beyond the tail.
+      const body=smooth(clamp(t/.20));
+      const flare=smooth(clamp((t-.67)/.33));
+      const radius=mix(24,120,body)*(1+.07*Math.sin(t*19-phase))+27*flare;
+      return {x:44-386*t,y:-14*body+Math.sin(a)*radius,front:Math.cos(a)>=0};
     };
     g.save();
     g.globalAlpha=strength;

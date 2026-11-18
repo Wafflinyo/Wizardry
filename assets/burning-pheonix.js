@@ -1,7 +1,7 @@
 (()=>{
   const atlas=new Image(),ready=[];
   atlas.onload=()=>ready.splice(0).forEach(fn=>fn());
-  atlas.src='./assets/pheonix-sequence.webp?v=0.184.0';
+  atlas.src='./assets/pheonix-sequence.webp?v=0.185.0';
   const clamp=x=>Math.max(0,Math.min(1,x)),mix=(a,b,q)=>a+(b-a)*q;
   const smooth=x=>x*x*(3-2*x),tau=Math.PI*2;
   function frame(g,i,size,anchor=.5){

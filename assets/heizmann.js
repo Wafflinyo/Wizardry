@@ -1,7 +1,7 @@
 (()=>{
   const image=new Image(),ready=[];
   image.onload=()=>ready.splice(0).forEach(fn=>fn());
-  image.src='./assets/heizmann.webp';
+  image.src='./assets/heizmann.webp?v=158';
   const clamp=x=>Math.max(0,Math.min(1,x)),tau=Math.PI*2;
   const times=[0,.136,.195,.24,.31,.50,.555,.602,.642,.659,.69,.85];
   // Register each stance to the planted boot pair, including the low follow-through.
@@ -49,7 +49,13 @@
         const point=j=>[x+(target.x-x)*j/18,y+(target.y-y)*j/18+Math.sin(j*4.4)*4*Math.sin(Math.PI*j/18)];
         const a=point(i),b=point(Math.min(i+1,18*advance));
         line(g,[a,b],'#274f71',6);line(g,[a,b],'#defaff',2);
-        if(i%3===1)line(g,[a,[a[0]+d*7,a[1]+(i%2?9:-11)]],'#acecff',2);
+        if(i%3===1){
+          const side=i%2?1:-1, extension=clamp(advance*18-i);
+          const fork=[a[0]+d*9*extension,a[1]+side*8*extension];
+          const tip=[fork[0]+d*14*extension,fork[1]+side*5*extension];
+          line(g,[a,fork,tip],'#223e58',4);line(g,[a,fork,tip],'#a7eaff',1.4);
+          line(g,[fork,[fork[0]-d*4*extension,fork[1]+side*7*extension]],'#d8ffff',1);
+        }
       }
     }else if(layer==='actor'){
       const n=times.filter(t=>p>=t).length-1,drop=clamp(p/.136);
@@ -63,9 +69,15 @@
       shards(g,x,y-76,(p-.86)/.14,38,100);
     }else if(layer==='slash'){
       if(p>=.659&&p<.748){
-        const u=(p-.659)/(.748-.659),px=x+(target.x-x)*u,py=y-87+(target.y-88-(y-87))*u;
+        const u=(p-.659)/(.748-.659),px=x+(target.x-x)*u+d*Math.min(100,Math.abs(target.x-x)*.55)*(1-u),py=y-87+(target.y-88-(y-87))*u;
         g.translate(px,py);g.scale(d,1);g.rotate(-.24);
-        g.beginPath();g.moveTo(-18,-58);g.quadraticCurveTo(67,0,-22,58);g.quadraticCurveTo(30,0,-18,-58);g.fillStyle='#80e2ff';g.fill();g.strokeStyle='#efffff';g.lineWidth=2;g.stroke();
+        const ice=g.createLinearGradient(-30,0,30,0);
+        ice.addColorStop(0,'rgba(88,175,239,.16)');ice.addColorStop(.55,'#63baef');ice.addColorStop(.84,'#bdffff');ice.addColorStop(1,'#ffffff');
+        for(let j=0;j<9;j++){
+          const h=(j-4)*11,edge=20-h*h/75;
+          line(g,[[edge-7,h],[edge-22-j%3*8,h+3]],'rgba(174,241,255,.68)',1+j%2);
+        }
+        g.beginPath();g.moveTo(-18,-58);g.quadraticCurveTo(67,0,-22,58);g.quadraticCurveTo(30,0,-18,-58);g.fillStyle=ice;g.fill();g.strokeStyle='#efffff';g.lineWidth=2;g.stroke();
       }else shards(g,target.x,target.y-88,(p-.748)/.14,44,107);
     }g.restore();
   }

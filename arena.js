@@ -2027,10 +2027,7 @@
           k.id==="vampire"?
           '<span class="spell-effect"><b>DRAIN 550 HP</b><span>HEAL HALF</span></span>':
           '<span class="spell-effect"><b>650 + 150 SPLASH</b><span>25% BURN · 50×3</span></span>';
-        const rarity=k.rarity||(water?"LEGENDARY":
-          k.id==="golem"||k.id==="estel"||k.id==="wind"?"EPIC":
-          k.id==="vampire"||k.id==="dragon"?"LEGENDARY":"RARE");
-        b.innerHTML='<span class="spell-tier">'+rarity+' · '+k.school.toUpperCase()+'</span>'+
+        b.innerHTML='<span class="spell-header" aria-hidden="true">'+window.WIZARDRY_ELEMENT_TRACE_V45.svgFor(k.school)+'</span>'+
           '<span class="spell-mana-cost" aria-label="'+k.cost+' mana">'+k.cost+'</span>'+
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+

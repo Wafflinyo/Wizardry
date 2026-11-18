@@ -331,6 +331,19 @@
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
+  let testerTargetType="wood";
+  function fitTesterTarget(u,type){
+    u.wizardDummy=type==="wizard";
+    if(!u.wizardDummy){u.name="Training Dummy";return;}
+    const look=createUnit(ENEMIES[0],1,0,true);
+    for(const key of ["name","hat","robe","robeColor","hatColor","skinColor"])u[key]=look[key];
+  }
+  function switchTesterTarget(type){
+    if(state?.mode!=="tester"||state.phase!=="planning"||!["wood","wizard"].includes(type))return;
+    testerTargetType=type;
+    fitTesterTarget(state.units.find(u=>u.dummy),type);
+    paintUI();
+  }
   function setBattle(mode="story",size=4){
     const testing=mode==="tester";
     if(testing)size=1;
@@ -342,6 +355,7 @@
       if(!testing){startHand(u,u.isHuman||(!activeRoster&&u.id==="a0"));continue;}
       if(u.team===1){
         Object.assign(u,{name:"Training Dummy",dummy:true,hp:12000,maxHp:12000,mana:0,hand:[],drawPile:[],discardPile:[]});
+        fitTesterTarget(u,testerTargetType);
       }else{
         Object.assign(u,{testerDeck:true,hp:Math.round(u.maxHp*.55),hand:[],drawPile:[...TEST_CARD_ORDER],discardPile:[]});
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
@@ -1967,6 +1981,9 @@
     const testing=state.mode==="tester";
     ui.badge.textContent=testing?"NEW CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
       (state.mode==="story"?"PRACTICE":"ONLINE LOBBY");
+    $("testerTargetRow").hidden=!testing;
+    $("testerTarget").disabled=!planning;
+    $("testerTarget").value=testerTargetType;
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
@@ -2688,7 +2705,7 @@
         state.animation.source===u.id?"#94e9f6":"#f6be9a",3);
     }
     g.scale(scale,scale);
-    if(u.dummy){
+    if(u.dummy&&!u.wizardDummy){
       drawTrainingDummy(g,u);
       g.restore();return;
     }
@@ -3675,6 +3692,7 @@
     getState:()=>state,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
+    switchTesterTarget,
     startCardTester:()=>{activeRoster=null;setBattle('tester',1);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     receiveSnapshot:snapshot=>{const previous=caster(),discard=previous?.discardedRound===state.round?previous.discardedCard:null,previousRound=state.round;const local=state?.selectedCard,copy=state?.selectedHandCopy||0,target=state?.selectedTarget;state=snapshot;state.selectedHandCopy=copy;const mine=state.units.find(u=>u.peerId===window.WizardrySession?.peerId);if(discard&&snapshot.round===previousRound&&snapshot.phase==='planning'&&mine&&!state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);state.planningSide=mine?.team||0;state.humanByTeam={0:null,1:null};if(mine)state.humanByTeam[mine.team]=mine.id;if(mine&&window.WizardrySession?.pendingPlan){const pending=window.WizardrySession.pendingPlan;if(state.phase!=='planning'||pending.round!==state.round||state.plans[mine.id])window.WizardrySession.pendingPlan=null;else state.plans[mine.id]={casterId:mine.id,...pending};}state.selectedCard=mine?.hand.includes(local)&&!state.plans[mine.id]?local:null;state.selectedTarget=state.selectedCard?target:null;paintUI();},

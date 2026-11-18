@@ -76,6 +76,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  }catch(err){error(err.message);}});
 document.getElementById('battleHome').onclick=()=>{if(session.active)closeSession();screen(active?'hub':'home');};document.getElementById('battleFullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{}};
 // Keep practice reset tied to the saved build, never the retired duel.
+document.getElementById('testerTarget').onchange=e=>api.switchTesterTarget(e.target.value);
 document.getElementById('resetTester').onclick=startCardTester;
 document.getElementById('resetButton').onclick=()=>{if(!session.active){if(api.getState().mode==='tester')startCardTester();else startBattle(api.getState().size);}};
 screen('home');

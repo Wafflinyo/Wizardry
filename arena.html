@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 <style>
+.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.6rem;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
 #initiative{display:none!important}
 #resetTester{margin-left:6px;background:#102b37;border:1px solid var(--line);color:var(--ink);padding:5px 7px;border-radius:6px;font-size:10px;white-space:nowrap}
 .hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
@@ -36,8 +37,12 @@
       <span class="brand-gem">✦</span>
       <div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM</small></div>
     </div>
+  <label id="testerTargetRow" hidden><span class="tester-target-label">Target</span>
+    <select id="testerTarget"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option></select>
+  </label>
     <button id="battleHome" type="button">Home</button><button id="resetTester" type="button" hidden>Reset Tester</button><button id="battleFullscreen" type="button">Full screen</button>
   </header>
+
   <nav class="toolbar" aria-label="Battle settings">
     <div class="toolbar-group"><span class="tool-label">MODE</span>
       <div class="switch-row" id="modeControls">
@@ -161,10 +166,10 @@
 <script src="./assets/soul-drain-v91.js?v=0.143.0" defer></script>
 <script src="./assets/healing-aura-v92.js?v=0.143.0" defer></script>
 <script src="./assets/freezing-temps-v93.js?v=0.143.0" defer></script>
-<script src="./assets/scorpion-sting-v94.js?v=0.165.0" defer></script>
+<script src="./assets/scorpion-sting-v94.js?v=0.166.0" defer></script>
 <script src="./assets/octo-whip-v95.js?v=0.147.0" defer></script>
 <script src="./assets/devil-boy-v96.js?v=0.147.0" defer></script>
-<script src="./assets/blooming-spores-v97.js?v=0.165.0" defer></script>
+<script src="./assets/blooming-spores-v97.js?v=0.166.0" defer></script>
 <script src="./assets/lightning-rod-bolt-atlas-v118-part0.js?v=0.118.0" defer></script>
 <script src="./assets/lightning-rod-bolt-atlas-v118-part1.js?v=0.118.0" defer></script>
 <script src="./assets/lightning-rod-bolt-atlas-v118-part2.js?v=0.118.0" defer></script>
@@ -173,8 +178,8 @@
 <script src="./assets/lightning-rod-bolt-atlas-v118-part5.js?v=0.118.0" defer></script>
 <script src="./assets/lightning-rod-bolt-v118.js?v=0.118.0" defer></script>
 <script src="./assets/lightning-rod-v118.js?v=0.148.0" defer></script>
-<script src="./assets/undead-rampage-v99.js?v=0.165.0" defer></script>
-<script src="./assets/forrest-centaur-v100.js?v=0.165.0" defer></script>
+<script src="./assets/undead-rampage-v99.js?v=0.166.0" defer></script>
+<script src="./assets/forrest-centaur-v100.js?v=0.166.0" defer></script>
 <script src="./assets/wind-dome-v101.js?v=0.101.0" defer></script>
 <script src="./assets/ninja-penguins-v105.js?v=0.147.0" defer></script>
 <script src="./assets/kinetic-sand-atlas-v117-part0.js?v=0.117.0" defer></script>
@@ -241,11 +246,11 @@
 <script src="./assets/wizard-system-v135.js?v=0.143.0" defer></script>
 <script src="./assets/electrical-charge.js?v=0.151.0" defer></script>
 <script src="./assets/grill-master.js?v=0.153.0" defer></script>
-<script src="./assets/cyclops.js?v=0.165.0" defer></script>
-<script src="./assets/boulder-weight.js?v=0.165.0" defer></script>
-<script src="./assets/heizmann.js?v=0.165.0" defer></script>
-<script src="./assets/venus-trap.js?v=0.165.0" defer></script>
-<script src="./arena.js?v=0.165.0" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.150.0" defer></script>
+<script src="./assets/cyclops.js?v=0.166.0" defer></script>
+<script src="./assets/boulder-weight.js?v=0.166.0" defer></script>
+<script src="./assets/heizmann.js?v=0.166.0" defer></script>
+<script src="./assets/venus-trap.js?v=0.166.0" defer></script>
+<script src="./arena.js?v=0.166.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.166.0" defer></script>
 </body>
 </html>

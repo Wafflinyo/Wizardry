@@ -45,6 +45,10 @@ const assert = require('node:assert/strict');
   api.autoFill(1);
   assert.equal(Object.keys(state.plans).length,0);
 
+  const opening=[...wizard.hand];
+  element('testerTarget').onchange({target:{value:'wizard'}});
+  assert.equal(dummy.wizardDummy,true);assert.notEqual(dummy.name,'Training Dummy');
+  assert.deepEqual([...wizard.hand],opening);
   api.chooseCard('cyclops');
   assert.equal(state.selectedTarget,dummy.id);
   api.confirmTarget();
@@ -76,6 +80,8 @@ const assert = require('node:assert/strict');
   assert.equal(wizard.hand.at(-1),recycled[0]);
   assert.deepEqual([...wizard.drawPile],recycled.slice(1));
 
+  element('testerTarget').onchange({target:{value:'wood'}});
+  assert.equal(dummy.name,'Training Dummy');
   const firstName = wizard.name;
   math.random = () => .01;
   element('resetTester').onclick();

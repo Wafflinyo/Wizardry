@@ -15,7 +15,6 @@ vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
 const api = ctx.window.WIZARDRY_ARENA_TEST, fx = ctx.window.WIZARDRY_GRILL_MASTER;
 const card = api.cards.find(c => c.id === 'grillmaster');
 const builds = ctx.window.WizardryBuilds;
-assert.equal(api.featuredCard, card.id);
 assert.equal(card.damage, 440);
 assert.equal(card.burnChance, .20);
 assert.equal(card.hit, fx.HIT);
@@ -28,7 +27,6 @@ api.configureProfile(profile);
 function setup(){
   api.startPractice(2);
   const state = api.getState(), [caster, ally, target, neighbor] = state.units;
-  assert.equal(caster.hand[0], card.id);
   return {state, caster, ally, target, neighbor};
 }
 
@@ -110,4 +108,4 @@ assert.equal(frames.length,3,'two side tongues fan out from the core flame');
 assert.ok(frames.every(([, , , , ,x])=>x===0),'all three tongues start from the mouth origin');
 assert.ok(frames.at(-1)[8]>=130,'the core reaches full visual width at impact');
 
-console.log('Grill Master: opening hand, flame contact timing, single 440 base hit, exact Burn roll and ticks, blocked or invalid targets, and mirrored summon animation passed.');
+console.log('Grill Master: flame contact timing, single 440 base hit, exact Burn roll and ticks, blocked or invalid targets, and mirrored summon animation passed.');

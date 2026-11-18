@@ -1,6 +1,6 @@
 # Wizardry
 
-Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.153.0.
+Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.154.0.
 
 The original duel has been retired. `index.html` opens the current game.
 
@@ -21,6 +21,8 @@ Practice supports 1v1, 2v2, 3v3 and 4v4. A five-card hand draws one card per rou
 **Electrical Charge** is a 2-mana self debuff. It grants 1 mana per Lightning spell that reaches you, once per cast and up to your mana capacity, for the rest of the cast round and the next three rounds. It occupies your debuff slot and cannot refresh or stack.
 
 **Grill Master** is a 5-mana single-target Fire spell with 85% accuracy. Its flamethrower deals 440 base damage with a 20% chance to Burn for 50 damage per round for three rounds.
+
+**Venus Trap** is a 4-mana single-target Nature spell with 90% accuracy. The flytrap grows, roars and engulfs one enemy for 400 base damage.
 
 The full-viewport HUD supports desktop, phone portrait and landscape, keeps the hand and casting controls visible, and offers full screen where supported. Combat messages avoid overlapping. A final knockout waits for the active spell's entire animation/exit and the defeat animation, followed by the half-second result pause.
 

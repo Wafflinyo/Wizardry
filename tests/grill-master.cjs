@@ -60,7 +60,7 @@ for(const activeExtreme of [false,true]){
     assert.equal(effect.remaining,matches?turns:1);
     assert.equal(effect.value,73);
     assert.equal(target.statuses.length,4);
-    assert.equal(state.flashes.some(f=>f.text.includes('RESET')),matches);
+    assert.equal(state.flashes.some(f=>f.text==='Burn reset • '+turns+' Rounds'),matches);
   }
 }
 

@@ -1255,7 +1255,8 @@
     }
     Object.assign(effect,{extreme,remaining:turns,appliedRound:state.round,lastTickRound:state.round});
     const label=(extreme?"EXTREME ":"")+kind.toUpperCase();
-    flash(target,label+(refresh?" RESET · ":" · ")+turns+" TURNS",kind==="burn"?"#ffb178":kind==="poison"?"#b9e878":"#b6eeff");
+    const message=refresh?kind[0].toUpperCase()+kind.slice(1)+" reset • "+turns+" Rounds":label+" · "+turns+" TURNS";
+    flash(target,message,kind==="burn"?"#ffb178":kind==="poison"?"#b9e878":"#b6eeff");
     return true;
   }
   function consumeStatus(u,kind){

@@ -93,7 +93,7 @@
   CARDS.push({id:"windfist",name:"Wind Fist Barrage",school:"wind",cost:6,target:"enemy",kind:"windfist",damage:500,hitDamage:50,hits:10,accuracy:.85,icon:"≋",rarity:"EPIC",duration:5400,hit:.98,short:"85% ACCURACY",description:"A monk drops into a three-point crouched landing, stands, claps his hands and bows, then takes an open-palm forward stance. He leaps up and unleashes ten forceful wind fists at one enemy: 50 damage per punch, 500 total. 85% spell accuracy."});
   CARDS.push({id:"jack",name:"Jack the Lantern",school:"dark",cost:4,target:"enemy",kind:"jack",damage:280,accuracy:.85,icon:"☠",rarity:"EPIC",duration:5200,hit:.82,fearChance:.30,fearTurns:3,short:"85% ACCURACY",description:"A pumpkin-headed scarecrow rises with its head bowed as three crows circle overhead. It lifts its head to face one enemy, sending the crows to swarm for 280 Dark damage. Inflicts Fear for 3 rounds: a 30% chance to skip each turn. Refreshes without stacking."});
   CARDS.push({id:"croc",name:"Creeping Croc",school:"water",cost:6,target:"enemy",kind:"croc",damage:800,accuracy:.85,icon:"♆",rarity:"EPIC",duration:4500,hit:.62,fearChance:.10,short:"85% ACCURACY",description:"A crocodile floats almost completely submerged toward one enemy, showing only its eyes, the top of its head and its ridged back. It suddenly lunges from the water and snaps for 800 damage. On hit: 10% chance to Fear, skipping the target only if they have not acted yet this round. Never carries into the next round."});
-  CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",selfOnly:true,kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself immediately through the next 3 rounds. Gain 1 mana each time a Lightning spell reaches you, once per cast, up to your mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not charge you. Uses your debuff slot and cannot refresh or stack."});
+  CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",selfOnly:true,kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself immediately through the next 3 rounds. Gain 1 mana each time a Lightning spell reaches you, once per cast, up to your mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not charge you. Recasting resets the duration."});
   CARDS.push({"id":"grillmaster","name":"Grill Master","school":"fire","cost":5,"target":"enemy","kind":"grillmaster","damage":440,"burnChance":0.2,"burnDamage":50,"burnTurns":3,"accuracy":0.85,"icon":"♨","rarity":"RARE","duration":4200,"hit":0.6,"short":"85% ACCURACY","description":"A living cast-iron grill heats up under a closed lid, then snaps its jaws open and blasts one enemy for 440 base Fire damage. A successful hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   CARDS.push({"id":"venustrap","name":"Venus Trap","school":"nature","cost":4,"target":"enemy","kind":"damage","damage":400,"accuracy":0.9,"icon":"❀","rarity":"RARE","duration":4200,"hit":0.655,"short":"90% ACCURACY","description":"A giant Venus flytrap sprouts at the center of the arena, rears up and roars, then stretches out to engulf one enemy for 400 base Nature damage."});
   CARDS.push({"id": "heizmann", "name": "Heizmann", "school": "ice", "cost": 8, "target": "enemy", "kind": "heizmann", "damage": 600, "freezeChance": 0.2, "accuracy": 0.75, "icon": "❄", "rarity": "RARE", "duration": 4800, "hit": 0.748, "short": "75% ACCURACY", "description": "Slash one enemy for 600 base Ice damage. A 20% Freeze chance seals them in ice. If they remain unfrozen, the shell shatters for another 350 base Ice damage.", "shatterDamage": 350, "shatterAt": 0.922});
@@ -1229,15 +1229,34 @@
   const DEBUFF_SPELLS=new Set(['gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const DEBUFFS=new Set(['decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','turbulence','static_shock','electrical_charge','trap']);
   function canReceiveDebuff(u,kind){
-    return !!u&&u.hp>0&&u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES&&
-      (!kind||!u.statuses.some(st=>st.kind===kind));
+    return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
   function addStatus(u,kind,icon,value,school){
-    if(DEBUFFS.has(kind)&&!canReceiveDebuff(u))return false;
+    if(DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
     let existing=u.statuses.find(s=>s.kind===kind);
-    if(existing){existing.value=value;existing.charges=1;return;}
+    if(existing){
+      if(existing.expiresRound!=null||existing.remaining!=null||existing.turnsTested!=null){
+        flash(u,kind.replaceAll("_"," ").toUpperCase()+" · TIMER RESET","#ffdf98");
+      }
+      existing.value=value;existing.charges=1;return;}
     if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="lightning_rod"&&st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
+  }
+  function applyPeriodicStatus(target,kind,caster,card,spell){
+    const prefix=kind==="frostbite"?"frost":kind;
+    const base=card[prefix+"Damage"],turns=card[prefix+"Turns"];
+    const extreme=base===100&&turns===5;
+    let effect=target.statuses.find(st=>st.kind===kind);
+    if(!canReceiveDebuff(target,kind)||(effect&&Boolean(effect.extreme)!==extreme))return false;
+    const refresh=Boolean(effect);
+    if(!effect){
+      addStatus(target,kind,null,effectDamage(caster,card,base,spell),card.school);
+      effect=target.statuses.find(st=>st.kind===kind);
+    }
+    Object.assign(effect,{extreme,remaining:turns,appliedRound:state.round,lastTickRound:state.round});
+    const label=(extreme?"EXTREME ":"")+kind.toUpperCase();
+    flash(target,label+(refresh?" RESET · ":" · ")+turns+" TURNS",kind==="burn"?"#ffb178":kind==="poison"?"#b9e878":"#b6eeff");
+    return true;
   }
   function consumeStatus(u,kind){
     const at=u.statuses.findIndex(s=>s.kind===kind);
@@ -1503,10 +1522,8 @@
     const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&!target.statuses.some(s=>s.kind==="frostbite")&&(roll??Math.random())<a.card.frostChance){
-      addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
-      Object.assign(target.statuses.find(s=>s.kind==="frostbite"),{extreme:a.card.frostDamage===100&&a.card.frostTurns===5,remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
-      flash(target,"FROSTBITE · 3 TURNS","#b6eeff");
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
+      applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a);
     }
     paintUI();return true;
   }
@@ -1578,10 +1595,7 @@
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
     if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
-      addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
-      Object.assign(target.statuses.find(st=>st.kind==="frostbite"),{extreme:a.card.frostDamage===100&&a.card.frostTurns===5,remaining:a.card.frostTurns,appliedRound:state.round,lastTickRound:state.round});
-      flash(target,"EXTREME FROSTBITE · 5 TURNS","#b6eeff");
-      state.log=[target.name+" suffers Extreme Frostbite: 100 HP per turn for 5 turns.",...state.log].slice(0,5);
+      if(applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a))state.log=[target.name+" suffers Extreme Frostbite: 100 HP per turn for 5 turns.",...state.log].slice(0,5);
     }
     paintUI();return true;
   }
@@ -1659,9 +1673,7 @@
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
     if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&(roll??Math.random())<a.card.frostChance){
-      addStatus(target,"frostbite","❄",effectDamage(getUnit(a.source),a.card,a.card.frostDamage,a));
-      const frost=target.statuses.find(st=>st.kind==="frostbite");frost.remaining=a.card.frostTurns;frost.appliedRound=state.round;frost.lastTickRound=state.round;
-      flash(target,"FROSTBITE (3 TURNS)","#b6eeff");
+      applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a);
     }
     paintUI();return true;
   }
@@ -1689,10 +1701,7 @@
   }
   function trySpellBurn(caster,target,card,spell,roll){
     if(!canReceiveDebuff(target,"burn")||spell.windDomeTargets?.[target.id]||(roll??Math.random())>=card.burnChance)return;
-    addStatus(target,"burn","🔥",effectDamage(caster,card,card.burnDamage,spell));
-    const burn=target.statuses.find(st=>st.kind==="burn");
-    Object.assign(burn,{remaining:card.burnTurns,appliedRound:state.round,lastTickRound:state.round});
-    flash(target,"BURNED ("+card.burnTurns+" TURNS)","#ffb178");
+    applyPeriodicStatus(target,"burn",caster,card,spell);
   }
   function applyRainHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
@@ -1719,15 +1728,10 @@
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
     if(canReceiveDebuff(target,"burn")&&target.hp>0&&!a.windDomeTargets?.[target.id]&&a.runeResult==="success"&&roll<a.card.burnChance){
-      addStatus(target,"burn","🔥",effectDamage(getUnit(a.source),a.card,a.card.burnDamage,a));
-      const burn=target.statuses.find(st=>st.kind==="burn");
-      burn.remaining=a.card.burnTurns;
-      burn.appliedRound=state.round;
-      burn.lastTickRound=state.round;
-      flash(target,"BURNED (3 TURNS)","#ffb178");
+      if(applyPeriodicStatus(target,"burn",getUnit(a.source),a.card,a)){
       state.log=[target.name+" is burned: 50 damage at the start of the next 3 rounds.",
         ...state.log].slice(0,5);
-      a.dragonBurned=true;
+      a.dragonBurned=true;}
     }
     paintUI();return true;
   }
@@ -1831,9 +1835,7 @@
       }
     }else if(card.kind==="acidair"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t,"poison")){
-        addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
-        Object.assign(t.statuses.find(st=>st.kind==="poison"),{extreme:true,remaining:card.poisonTurns,appliedRound:state.round,lastTickRound:state.round});
-        flash(t,"EXTREME POISON","#b9e878");
+        applyPeriodicStatus(t,"poison",c,card,anim);
       }
     }else if(card.kind==="boulderweight"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t,"boulder_weight")){
@@ -1871,10 +1873,7 @@
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
         if(canReceiveDebuff(enemy,"poison")&&enemy.hp>0&&!anim.windDomeTargets?.[enemy.id]&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
-          addStatus(enemy,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
-          const poison=enemy.statuses.find(st=>st.kind==="poison");
-          poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;
-          flash(enemy,"POISONED · 3 TURNS","#c3e985");
+          applyPeriodicStatus(enemy,"poison",c,card,anim);
         }
       }
     }else if(card.kind==="aoe"&&card.target==="all_enemies"){
@@ -1901,7 +1900,7 @@
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!anim.windDomeTargets?.[t.id])attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
-        if(canReceiveDebuff(t,"poison")&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
+        if(canReceiveDebuff(t,"poison")&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",c,card,anim);}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
@@ -2835,7 +2834,7 @@
   function describeStatus(u,st){
     switch(st.kind){
       case "fear_turn":return {title:"Fear · This round only",detail:"Creeping Croc frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
-      case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. Reapplication is blocked until this debuff expires."};
+      case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Self debuff",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};

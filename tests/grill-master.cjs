@@ -46,6 +46,24 @@ for (const [roll, expected] of [[.199, true], [.20, false]]){
   assert.equal(target.statuses.some(st => st.kind === 'burn'), false);
 }
 
+for(const activeExtreme of [false,true]){
+  const {state,caster,target}=setup();
+  target.hp=10000;
+  const effect={kind:'burn',extreme:activeExtreme,remaining:1,value:73};
+  target.statuses=[effect,{kind:'stun'},{kind:'static_shock'},{kind:'boulder_weight'}];
+  for(const incomingExtreme of [!activeExtreme,activeExtreme]){
+    state.flashes=[];
+    const turns=incomingExtreme?5:3;
+    api.applySpell({card:{...card,burnTurns:turns,burnDamage:incomingExtreme?100:50},
+      action:{casterId:caster.id,targetId:target.id},runeResult:'success',damageVariant:1,burnRoll:0});
+    const matches=incomingExtreme===activeExtreme;
+    assert.equal(effect.remaining,matches?turns:1);
+    assert.equal(effect.value,73);
+    assert.equal(target.statuses.length,4);
+    assert.equal(state.flashes.some(f=>f.text.includes('RESET')),matches);
+  }
+}
+
 for (const defense of ['wind_dome','poison','miss','ally','lethal']){
   const { caster, ally, target } = setup();
   if(defense==='wind_dome'||defense==='poison')api.addStatus(target,defense,'',1);

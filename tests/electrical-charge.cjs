@@ -46,7 +46,7 @@ assert.equal(user.mana, 5, 'setup does not charge itself');
 assert.equal(status(user).expiresRound, 5);
 s.round = 2;
 api.applySpell(cast(user, user, charge.id));
-assert.equal(status(user).expiresRound, 5, 'recast does not refresh');
+assert.equal(status(user).expiresRound, 6, 'recast refreshes');
 api.applySpell(cast(user, ally, charge.id));
 assert.equal(status(ally), undefined);
 
@@ -92,7 +92,7 @@ user.mana = 4;
 s.round = 4;
 damage(enemy, user, 1, card('thunder'));
 assert.equal(user.mana, 5, 'active through the third following round');
-s.round = 5;
+s.round = 6;
 api.tickBurnsForRound();
 assert.equal(status(user), undefined);
 damage(enemy, user, 1, card('thunder'));

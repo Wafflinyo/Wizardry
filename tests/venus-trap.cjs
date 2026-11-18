@@ -15,7 +15,7 @@ vm.runInNewContext(read('arena.js').replace(
 ),ctx);
 const api=ctx.window.WIZARDRY_ARENA_TEST,fx=ctx.window.WIZARDRY_VENUS_TRAP;
 const card=api.cards.find(c=>c.id==='venustrap');
-assert.equal(api.featuredCard,'bulletseed');
+assert.equal(api.featuredCard,'yeti');
 assert.equal(card.school,'nature');
 assert.equal(card.damage,400);
 assert.equal(card.hit,fx.HIT);

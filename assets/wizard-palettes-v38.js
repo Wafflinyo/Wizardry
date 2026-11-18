@@ -25,14 +25,20 @@
     // metallic yellow trim, boots, hair, and cyan crystals.
     return a>12&&b>r*1.17&&b>g*1.18&&r>g*.90&&r>20;
   }
-  function isSkin(r,g,b,a,x,y,top){
-    // Only exposed face and hands on the front of the sprite. The
-    // spatial restriction protects boots and the wooden staff.
-    return a>12&&r>155&&g>110&&b>55&&r>g*1.07&&r<g*1.58&&
-      g>b*1.08&&b>g*.64&&x>CELL*.48&&
-      y>=top+CELL*.27&&y<CELL*.96;
+  // The approved sprite uses orange/tan skin, not the pale beige that
+  // the original color threshold expected. Limit recoloring to exposed
+  // face/hand areas so gold cuffs, trim, beard and staff keep their colors.
+  const handCenters=[[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],[84,77],
+    [84,77],[84,73],[84,66],[83,59],[81,53],[79,49],[78,45],[76,43],[78,46],[81,54],[83,64],[84,73],[84,77],[84,77],[84,77],[84,77]];
+  function isSkin(r,g,b,a,x,y,top,frame,kind){
+    const face=x>=64&&x<=85&&y>=top+34&&y<=top+51;
+    const hand=kind==='wizard'?handCenters[frame]:null;
+    const exposedHand=hand&&Math.hypot(x-hand[0],y-hand[1])<=7;
+    const defeatHand=kind==='defeat'&&x>=65&&x<=94&&y>=top+46&&y<=top+78;
+    return a>12&&(face||exposedHand||defeatHand)&&r>100&&g>55&&b>25&&
+      r>g*1.20&&r<g*1.95&&g>b*1.12&&b>g*.38;
   }
-  function analyze(source){
+  function analyze(source,kind){
     let found=sources.get(source);if(found)return found;
     if(!source.complete||!source.naturalWidth)return null;
     const width=source.naturalWidth,height=source.naturalHeight;
@@ -59,7 +65,7 @@
       const yy=y%CELL,xx=x%CELL,hatTop=top[n]===CELL?0:top[n];
       if(isPurple(r,g,b,a)){
         positions[yy<hatTop+CELL*.39?0:1].push(at);
-      }else if(isSkin(r,g,b,a,xx,yy,hatTop)){
+      }else if(isSkin(r,g,b,a,xx,yy,hatTop,n,kind)){
         positions[2].push(at);
       }
     }
@@ -75,7 +81,7 @@
     if(colored.has(key)){
       const v=colored.get(key);colored.delete(key);colored.set(key,v);return v;
     }
-    const base=analyze(source);if(!base)return source;
+    const base=analyze(source,kind);if(!base)return source;
     const out=document.createElement("canvas");out.width=base.width;out.height=base.height;
     const ctx=out.getContext("2d");if(!ctx)return source;
     const pixels=ctx.createImageData(base.width,base.height);

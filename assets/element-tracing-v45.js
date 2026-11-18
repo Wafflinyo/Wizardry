@@ -418,6 +418,7 @@ function drawOutcome(ctx,options){
 
 root.WIZARDRY_ELEMENT_TRACE_V45={
   draw,drawOutcome,
+  svgFor:school=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${(PATHS[school]||PATHS.arcane).map(points=>`<polyline points="${points.map(p=>p.join(',')).join(' ')}"/>`).join('')}</svg>`,
   pathFor:school=>(PATHS[school]||PATHS.arcane)[0].map(p=>p.slice()),
   pointAt:(school,t)=>pointAlong(GEOMETRY[PATHS[school]?school:"arcane"],t),
   schools:Object.keys(PATHS)

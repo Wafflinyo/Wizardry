@@ -1,7 +1,7 @@
 /* Registered low-poly actor frames, with independent smoke and flame atlases. */
 (function(root){
   'use strict';
-  const CENTER_X=500,FLOOR_Y=510,TILE=256,ACTOR_SCALE=.79,RELEASE=.53,HIT=.60;
+  const CENTER_X=500,FLOOR_Y=510,TILE=256,ACTOR_SCALE=.79,RELEASE=.53,HIT=.60,FADE_START=.69,STREAM_END=.785;
   const actor=new Image(),effects=new Image();
   actor.src='./assets/grill-master-poses-v151.webp';
   effects.src='./assets/grill-master-effects-v151.webp';
@@ -24,9 +24,10 @@
   }
 
   function flamePath(progress,target,body=pose(progress,target)){
-    const reach=ease((progress-RELEASE)/(HIT-RELEASE))*(1-ease((progress-.69)/.095));
+    const reach=ease((progress-RELEASE)/(HIT-RELEASE));
+    const opacity=1-ease((progress-FADE_START)/(STREAM_END-FADE_START));
     const end={x:target.x,y:target.y-79};
-    return {origin:body.muzzle,end,reach};
+    return {origin:body.muzzle,end,reach,opacity};
   }
 
   function sprite(c,image,frame,x,y,w,h){
@@ -89,8 +90,8 @@
   }
 
   function flame(c,p,b,target){
-    const {origin,end,reach}=flamePath(p,target,b);
-    if(reach<=0)return;
+    const {origin,end,reach,opacity}=flamePath(p,target,b);
+    if(reach<=0||opacity<=0)return;
     const angle=Math.atan2(end.y-origin.y,end.x-origin.x);
     const length=Math.hypot(end.x-origin.x,end.y-origin.y)*reach;
     const height=(128+Math.sin(p*65)*17)*(.42+.58*reach);
@@ -98,8 +99,8 @@
     c.save();
     c.translate(origin.x,origin.y);
     c.rotate(angle);
-    const alpha=c.globalAlpha;
-    const spread=ease((p-RELEASE)/.065)*(1-ease((p-.70)/.085));
+    const alpha=c.globalAlpha*opacity;
+    const spread=ease((p-RELEASE)/.065);
     // Side tongues flare from the same mouth, while the core tracks the hit.
     for(const [direction,wingLength,wingHeight] of [[-1,.81,.76],[1,.74,.68]]){
       c.save();

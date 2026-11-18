@@ -81,6 +81,9 @@ for(const target of [{x:180,y:350},{x:820,y:590}]){
   assert.equal(fx.pose(.58,target).frame,10,"lid is fully open during the stream");
   assert.equal(fx.flamePath(.52,target).reach,0);
   assert.equal(fx.flamePath(fx.HIT,target).reach,1);
+  assert.equal(fx.flamePath(.74,target).reach,1,'the stream remains extended as it fades');
+  assert.ok(fx.flamePath(.74,target).opacity>0&&fx.flamePath(.74,target).opacity<1);
+  assert.equal(fx.flamePath(.785,target).opacity,0,'the stream disappears at the cutoff');
   assert.equal(fx.flamePath(fx.HIT,target).end.y,target.y-79);
   assert.equal(fx.flamePath(fx.HIT,target).origin.x,fx.pose(fx.HIT,target).muzzle.x);
   assert.equal(fx.pose(.94,target).frame,15,"closed recovery frame");

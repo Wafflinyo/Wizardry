@@ -2637,13 +2637,7 @@
       if((a[key]||[]).some(v=>(typeof v==='string'?v:v.id)===u.id))return true;
     return false;
   }
-  function plateAlpha(u){
-    const a=state.animation;if(!a||state.phase!=='resolving'||plateIsTarget(u,a))return 1;
-    if(['raising','tracing-auto','rune-fail'].includes(a.stage))return 1;
-    if(a.stage==='rune-success')return 1-ease(a.elapsed/220);
-    if(a.stage==='lowering')return ease(a.elapsed/280);
-    return 0;
-  }
+  function plateAlpha(){return 1;}
   function unitStatuses(u){
     const rank=st=>DEBUFFS.has(st.kind)?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,3);
@@ -2755,9 +2749,13 @@
     rounded(g,x+2,y+30,w-4,12,4,"#101b27eb");
     if(u.hp>0)rounded(g,x+3,y+31,(w-6)*clamp(u.hp/u.maxHp,0,1),
       10,3,u.team?"#cc7364":"#66d8a0");
-    g.font="700 14px system-ui,sans-serif";
-    g.fillStyle=disabled?"#f2b4aa":"#d4e3d8";
-    g.fillText(disabled?"K.O.":u.hp+" / "+u.maxHp+" HP",x+w/2,y+50,w-4);
+    g.save();
+    g.font="900 15px system-ui,sans-serif";
+    g.fillStyle="#ffffff";g.strokeStyle="#06121b";g.lineWidth=3;g.lineJoin="round";
+    const hpText=disabled?"K.O.":u.hp+" / "+u.maxHp+" HP";
+    g.strokeText(hpText,x+w/2,y+50,w-4);
+    g.fillText(hpText,x+w/2,y+50,w-4);
+    g.restore();
     // Persistent magic runes sit BELOW the HP plate, never over the
     // fighter's face. Each rune is independently tappable for details.
     const symbols=unitStatuses(u);

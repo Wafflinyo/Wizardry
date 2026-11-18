@@ -36,9 +36,9 @@
   }
   function shake(p,dir){
     // Give the planted foot a vertical impulse, then kick along the slash on contact.
-    const stomp=(p-.642)/.043,hit=(p-.748)/.055;
+    const stomp=(p-.642)/.065,hit=(p-.748)/.055;
     const pulse=t=>t>=0&&t<1?Math.cos(t*tau*1.65)*(1-t)**2:0;
-    const x=dir*(2*pulse(stomp)+8*pulse(hit)),y=8*pulse(stomp)-3*pulse(hit);
+    const x=dir*(5*pulse(stomp)+8*pulse(hit)),y=17*pulse(stomp)-3*pulse(hit);
     return x||y?{x,y}:null;
   }
   function frostBurst(g,x,y,t,d){

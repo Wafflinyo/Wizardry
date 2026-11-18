@@ -3227,9 +3227,18 @@
     camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
-    if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));g.drawImage(background,(vw-W*cover)/2,diamondY-414*cover,W*cover,H*cover);}
+    const heizmannShake=state.animation?.card?.id==="heizmann"&&state.animation.stage==="summon"?window.Heizmann?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1):null;
+    if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(heizmannShake?.x||0)*fit,dy=(heizmannShake?.y||0)*fit;
+      const margin=Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh)*2;
+      g.save();g.translate(vw/2+dx,vh/2+dy);g.scale(1+margin,1+margin);g.translate(-vw/2,-vh/2);
+      g.drawImage(background,(vw-W*cover)/2,diamondY-414*cover,W*cover,H*cover);g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
-    const quake=state.animation?.card?.id==="heizmann"&&state.animation.stage==="summon"?window.Heizmann?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1):state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
+    if(heizmannShake){
+      const dx=heizmannShake.x*fit,dy=heizmannShake.y*fit;
+      const zoom=1+2*Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh);
+      g.setTransform(ratio*fit*zoom,0,0,ratio*fit*zoom,ratio*(vw/2+dx+(camera.x-vw/2)*zoom),ratio*(vh/2+dy+(camera.y-vh/2)*zoom));
+    }
+    const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(!background)drawBackground(g);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);

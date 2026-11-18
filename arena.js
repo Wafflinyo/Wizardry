@@ -370,8 +370,6 @@
         fitTesterTarget(u,testerTargetType);
       }else{
         Object.assign(u,{testerDeck:true,hp:Math.round(u.maxHp*.55),hand:[],drawPile:[...TEST_CARD_ORDER],discardPile:[]});
-        addStatus(u,"trap",null,.25);
-        addStatus(u,"decay_mark",null,.20);
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
@@ -417,6 +415,7 @@
     return selected;
   }
   function clearSelection(){
+    if(state.selectedRune)closeStatusInfo();
     handSwipe?.reset();
     state.selectedCard=null;state.selectedHandCopy=0;
     state.selectedTarget=null;state.selectedRune=null;
@@ -437,7 +436,10 @@
        !targetsFor(card,c).some(v=>v.id===u.id))return;
     // Allies can be targeted for healing; enemies for damaging spells.
     // No spell queues until the explicit confirmation is pressed.
-    if(state.selectedTarget!==id)state.selectedRune=null;
+    if(state.selectedTarget!==id&&state.selectedRune){
+      closeStatusInfo();
+      state.selectedRune=null;
+    }
     state.selectedTarget=id;
     paintUI();
   }
@@ -451,6 +453,7 @@
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
     if(!caster().hand.includes(id))return;
     if(state.plans[caster().id])return;
+    if(state.selectedRune)closeStatusInfo();
     state.selectedCard=id;state.selectedRune=null;
     const card=BY_ID[id],u=caster();
     state.selectedTarget=card.selfOnly||(card.kind==="zen"&&zenRunes(u).length)?u.id:null;
@@ -461,14 +464,16 @@
   function selectZenRune(kind){
     if(state.phase!=="planning"||currentCard()?.kind!=="zen")return;
     const target=correctTarget();
-    if(!zenRunes(target).some(st=>st.kind===kind))return;
-    state.selectedRune=kind;
+    const rune=zenRunes(target).find(st=>st.kind===kind);
+    state.selectedRune=rune?.kind??null;
+    if(rune)showStatusInfo(target,rune);
+    else closeStatusInfo();
     paintUI();
   }
   function confirmTarget(){
     if(state.phase!=="planning"||!caster()||!currentCard())return;
     if(!["team","all_enemies"].includes(currentCard().target)&&!correctTarget())return;
-    if(queueSpell())resolvePressed();
+    if(queueSpell()){closeStatusInfo();resolvePressed();}
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();

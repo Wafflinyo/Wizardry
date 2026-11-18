@@ -86,6 +86,18 @@
     g.moveTo(r,0);g.lineTo(-r*.5,-r*.43);g.lineTo(-r,0);g.lineTo(-r*.45,r*.43);
     g.closePath();g.fill();g.restore();
   }
+  function drawSeed(g,x,y,angle){
+    g.save();g.translate(x,y);g.rotate(angle);
+    g.fillStyle='#648834';g.strokeStyle='#d9f392';g.lineWidth=1.3;
+    g.beginPath();g.ellipse(0,0,10,5.4,0,0,Math.PI*2);g.fill();g.stroke();
+    g.fillStyle='#a4c756';
+    g.beginPath();g.ellipse(.7,-1.15,8.4,3.35,0,0,Math.PI*2);g.fill();
+    g.strokeStyle='#465b2b';g.lineWidth=1.15;
+    g.beginPath();g.moveTo(-8,1.4);g.quadraticCurveTo(-.4,-2.4,8,-.4);g.stroke();
+    g.fillStyle='#efffc0';
+    g.beginPath();g.ellipse(1,-2.85,3.3,.85,-.10,0,Math.PI*2);g.fill();
+    g.restore();
+  }
   function volley(g,{target,progress:p,releases,hits,seed}){
     const dir=target.x>=500?1:-1;
     const tx=target.x,ty=target.y-72;
@@ -100,7 +112,7 @@
         g.strokeStyle='#c7fa83';g.lineWidth=3;g.globalAlpha=.64;
         g.beginPath();g.moveTo(x,y);g.lineTo(mix(sx,tx,Math.max(0,q-.24)),mix(sy,ty,Math.max(0,q-.24)));g.stroke();
         g.globalAlpha=1;
-        chip(g,x,y,angle,10,'#93cd4d');chip(g,x+Math.cos(angle)*2,y+Math.sin(angle)*2,angle,5,'#e4ff9c');
+        drawSeed(g,x,y,angle);
       }else{
         const age=clamp((p-hits[i])/.084);
         g.globalAlpha=1-age;

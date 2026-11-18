@@ -18,15 +18,15 @@ for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,
  assert.equal(target.hp,target.maxHp-(blocked?0:damage));
  const seeded=!blocked&&roll<.30;
  assert.equal(target.statuses.some(st=>st.kind==='healing_seed'),seeded);
- assert.equal(B.effectText(tree,caster),'30% HEALING SEED · '+transfer+' HP × 3 ROUNDS');
+ assert.equal(B.effectText(tree,caster),'30% HEALING SEED · '+transfer+' HP × 5 ROUNDS');
  const startingHp=caster.hp;
- for(let round=2;round<=5;round++){
+ for(let round=2;round<=7;round++){
    state.round=round;
    api.tickBurnsForRound();
    api.tickBurnsForRound();
  }
- assert.equal(caster.hp,startingHp+(seeded?transfer*3:0));
- assert.equal(target.hp,target.maxHp-(blocked?0:damage)-(seeded?transfer*3:0));
+ assert.equal(caster.hp,startingHp+(seeded?transfer*5:0));
+ assert.equal(target.hp,target.maxHp-(blocked?0:damage)-(seeded?transfer*5:0));
  assert(!target.statuses.some(st=>st.kind==='healing_seed'));
 }
 api.startPractice(1);
@@ -50,7 +50,7 @@ for(const [roll,blocked] of [[.399,false],[.40,false],[.10,true]]){
  api.applySpell(cast);
  assert.equal(target.hp,target.maxHp-(blocked?0:150));
  assert.equal(cast.repeatedHits.filter(Boolean).length,5);
- assert.equal(target.statuses.some(st=>st.kind==='healing_seed'),!blocked&&roll<.40);
+ assert.equal(target.statuses.find(st=>st.kind==='healing_seed')?.remaining,!blocked&&roll<.40?5:undefined);
 }
 for(const lethal of [false,true]){
  api.startPractice(2);const s=api.getState(),u=s.units[1],enemy=s.units.find(x=>x.team!==u.team);

@@ -1469,7 +1469,7 @@
     const c=getUnit(a.source),t=getUnit(a.target);
     a.vampDrained=c&&c.hp>0&&t&&t.hp>0&&t.team!==c.team?
       damage(c,t,a.card.damage,a.card,a):0;
-    a.vampPotentialHeal=a.vampDrained>0?Math.floor(a.card.damage*(a.card.leech||.5)*Builds.multiplier(c,a.card.school)):0;
+    a.vampPotentialHeal=a.vampDrained>0?Builds.healAmount(a.card.damage*(a.card.leech||.5),c,a.card.school):0;
     state.log=["Vampire siphons "+a.vampDrained+" actual HP.",
       ...state.log].slice(0,5);
   }
@@ -1866,7 +1866,8 @@
         damage(c,t,card.damage,card,anim);
         if(!anim.windDomeTargets?.[t.id]&&canReceiveDebuff(t,"healing_seed")&&
            (anim.seedRoll??Math.random())<card.seedChance){
-          addStatus(t,"healing_seed","❧",card.seedDamage,card.school);
+          const transfer=Builds?.healAmount(card.seedDamage,c,card.school)??card.seedDamage;
+          addStatus(t,"healing_seed","❧",transfer,card.school);
           Object.assign(t.statuses.find(st=>st.kind==="healing_seed"),{
             sourceId:c.id,remaining:card.seedTurns,appliedRound:state.round,lastTickRound:state.round
           });
@@ -1995,11 +1996,11 @@
     } else if(card.kind==="freezing"&&canReceiveDebuff(t,"freezing_temps")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"freezing_temps","❄",.5);flash(t,"FREEZING TEMPS","#b8f3ff");state.log=[t.name+" is marked: the next Ice spell has a 50% freeze chance.",...state.log].slice(0,5);
     } else if(card.kind==="teamregen"){
-      for(const ally of alive(c.team)){addStatus(ally,"healing_aura","❀",Math.floor(card.healPerTurn*Builds.multiplier(c,card.school)));const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
+      for(const ally of alive(c.team)){addStatus(ally,"healing_aura","❀",Builds.healAmount(card.healPerTurn,c,card.school));const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
       state.log=[c.name+" blesses the entire team: 200 HP per turn for 3 turns each.",...state.log].slice(0,5);
     } else if(card.kind==="souldrain"&&canReceiveDebuff(t,"soul_drain")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"soul_drain","☠",effectDamage(c,card,card.damage,anim));const curse=t.statuses.find(st=>st.kind==="soul_drain");
-      curse.healValue=Math.floor(card.damage*Builds.multiplier(c,card.school));curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
+      curse.healValue=Builds.healAmount(card.damage,c,card.school);curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
       flash(t,"SOUL DRAIN","#d79ce7");state.log=[c.name+" curses "+t.name+" with Soul Drain: 100 HP per turn for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="turbulence"&&canReceiveDebuff(t,"turbulence")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"turbulence","≋",.5);flash(t,"TURBULENCE","#b8efdc");state.log=[t.name+" loses 50 accuracy points on their next spell.",...state.log].slice(0,5);
@@ -2009,7 +2010,7 @@
       addStatus(t,"static_shock","ϟ",.30);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=effectDamage(c,card,100,anim);
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");state.log=[t.name+" is cursed with Static Shock for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
-      addStatus(t,"calming_waters","≈",Math.floor(card.healPerTurn*Builds.multiplier(c,card.school)));const effect=t.statuses.find(st=>st.kind==="calming_waters");
+      addStatus(t,"calming_waters","≈",Builds.healAmount(card.healPerTurn,c,card.school));const effect=t.statuses.find(st=>st.kind==="calming_waters");
       effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;
       flash(t,"CALMING WATERS","#a8f1ee");state.log=[t.name+" gains Calming Waters: 125 HP per turn for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="shield"&&t&&t.hp>0&&t.team===c.team){
@@ -2950,7 +2951,7 @@
       case "freezing_temps":return {title:"Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
       case "frozen":return {title:"Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
       case "healing_aura":return {title:"Healing Aura · Nature healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns: "+(st.value*st.remaining)+" HP remaining. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
-      case "healing_seed":return {title:"Healing Seed · Nature debuff",detail:"Transfers up to 75 HP to "+(getUnit(st.sourceId)?.name||"the caster")+" at the start of each round. "+st.remaining+" rounds remaining. Refreshes without stacking."};
+      case "healing_seed":return {title:"Healing Seed · Nature debuff",detail:"Transfers up to "+st.value+" HP to "+(getUnit(st.sourceId)?.name||"the caster")+" at the start of each round. "+st.remaining+" rounds remaining. Refreshes without stacking."};
       case "soul_drain":return {title:"Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
       case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
@@ -3882,7 +3883,7 @@
       g.save();g.globalAlpha=alpha;g.textAlign="center";g.textBaseline="middle";
       g.font="800 "+fontSize+"px system-ui,sans-serif";g.lineWidth=5;g.strokeStyle="#081624";
       g.strokeText(f.text,x,y);
-      g.fillStyle=f.color;g.fillText(f.text,x,y);g.restore();
+      g.fillStyle=/(?:^|\s|[+·])[-−]\s*\d/.test(f.text)?"#ff7272":f.color;g.fillText(f.text,x,y);g.restore();
     }
     if(state.phase==="finished"){
       // The defeated wizards remain visible in their held kneeling pose.

@@ -6,26 +6,27 @@ const api=ctx.window.WIZARDRY_ARENA_TEST,B=ctx.window.WizardryBuilds;
 assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).low,620);
 assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).high,757);
 const tree=api.cards.find(c=>c.id==='tree');
-for(const [roll,blocked] of [[.299,false],[.30,false],[.10,true]]){
+for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,false,0,720,75],[.10,true,0,720,75],[.10,false,3,763,79]]){
  api.startPractice(1);
  const state=api.getState(),[caster,target]=state.units;
- caster.skills.nature=0;
+ caster.skills.nature=mastery;
  caster.hp=caster.maxHp-400;
  if(blocked)api.addStatus(target,'wind_dome',null,1);
  const cast={card:tree,action:{casterId:caster.id,targetId:target.id},
    runeResult:'success',damageVariant:1,seedRoll:roll};
  api.applySpell(cast);
- assert.equal(target.hp,target.maxHp-(blocked?0:720));
+ assert.equal(target.hp,target.maxHp-(blocked?0:damage));
  const seeded=!blocked&&roll<.30;
  assert.equal(target.statuses.some(st=>st.kind==='healing_seed'),seeded);
+ assert.equal(B.effectText(tree,caster),'30% HEALING SEED · '+transfer+' HP × 3 ROUNDS');
  const startingHp=caster.hp;
  for(let round=2;round<=5;round++){
    state.round=round;
    api.tickBurnsForRound();
    api.tickBurnsForRound();
  }
- assert.equal(caster.hp,startingHp+(seeded?225:0));
- assert.equal(target.hp,target.maxHp-(blocked?0:720)-(seeded?225:0));
+ assert.equal(caster.hp,startingHp+(seeded?transfer*3:0));
+ assert.equal(target.hp,target.maxHp-(blocked?0:damage)-(seeded?transfer*3:0));
  assert(!target.statuses.some(st=>st.kind==='healing_seed'));
 }
 api.startPractice(1);

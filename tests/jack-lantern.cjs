@@ -5,7 +5,7 @@ const api=ctx.window.WIZARDRY_ARENA_TEST,test=ctx.window.test,card=api.cards.fin
 const unit=(id,team)=>({id,team,index:0,name:id,hp:2000,maxHp:2000,mana:10,statuses:[],x:team?800:200,y:450,hand:[],drawPile:[],discardPile:[]});
 let s;function battle(pending=true){s={units:[unit('a',0),unit('b',1)],round:1,phase:'resolving',auras:{},log:[],flashes:[],humanByTeam:{0:'a'},sequence:pending?[{casterId:'b',targetId:'a',cardId:'devil'}]:[],queueAt:0,animation:null};test.set(s);return s;}
 const action=()=>({card,action:{casterId:'a',targetId:'b'},source:'a',target:'b',runeResult:'success'}),fear=()=>s.units[1].statuses.find(x=>x.kind==='fear');
-assert.equal(card.school,'dark');assert.equal(card.damage,280);assert.equal(api.cards.filter(c=>c.school==='dark').length,6);assert.equal(api.cards.length,53);
+assert.equal(card.school,'dark');assert.equal(card.damage,280);assert.equal(api.cards.filter(c=>c.school==='dark').length,6);assert.equal(api.cards.length,54);
 battle();api.startHand(s.units[0],true);assert.equal(s.units[0].hand.length,5);
 let a=action();api.applySpell(a);api.applySpell(a);assert.equal(s.units[1].hp,1720);assert.equal(fear().startRound,1);assert.equal(fear().expiresRound,4);assert.match(test.describeStatus(s.units[1],fear()).detail,/30%/);
 assert.equal(api.rollJackFear(s.units[1],.299),true);assert.equal(api.rollJackFear(s.units[1],.99),true,'one cached roll per turn');s.round=2;assert.equal(api.rollJackFear(s.units[1],.30),false);s.round=3;assert.equal(api.rollJackFear(s.units[1],0),true);s.round=4;assert.equal(api.rollJackFear(s.units[1],0),false);assert.equal(fear(),undefined);

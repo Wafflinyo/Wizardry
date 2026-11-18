@@ -2,8 +2,8 @@
   const image=new Image(),listeners=[];
   const art=new Image();
   art.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  art.src="./assets/acid-air-card.webp";
-  image.src='./assets/acid-air-cloud.webp';
+  art.src="./assets/acid-air-card.webp?v=174";
+  image.src='./assets/acid-air-faceted.webp';
   function frame(g,i,size){
     if(image.naturalWidth)g.drawImage(image,(i%4)*192,Math.floor(i/4)*192,192,192,-size/2,-size/2,size,size);
   }

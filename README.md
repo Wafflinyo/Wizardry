@@ -1,6 +1,6 @@
 # Wizardry
 
-Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.176.0.
+Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.177.0.
 
 The original duel has been retired. `index.html` opens the current game.
 

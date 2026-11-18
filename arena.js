@@ -1225,12 +1225,12 @@
   }
   const DEBUFFS=new Set(['boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','turbulence','static_shock','electrical_charge','trap']);
   function canReceiveDebuff(u){return !!u&&u.hp>0&&!u.statuses.some(st=>DEBUFFS.has(st.kind))&&u.fearRound!==state.round&&u.flinchRound!==state.round;}
-  function addStatus(u,kind,icon,value){
+  function addStatus(u,kind,icon,value,school){
     if(DEBUFFS.has(kind)&&!canReceiveDebuff(u))return false;
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){existing.value=value;existing.charges=1;return;}
     if(u.statuses.length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="lightning_rod"&&st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
-    u.statuses.push({kind,icon,value,charges:1});
+    u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
   }
   function consumeStatus(u,kind){
     const at=u.statuses.findIndex(s=>s.kind===kind);
@@ -1288,7 +1288,7 @@
     if(!["undead","croc"].includes(card?.id)||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
     if(!(state.sequence||[]).slice(state.queueAt).some(a=>a.casterId===target.id))return false;
     if(!canReceiveDebuff(target))return false;
-    addStatus(target,"fear_turn","☠",1);target.statuses.find(st=>st.kind==="fear_turn").round=state.round;
+    addStatus(target,"fear_turn","☠",1,card.school);target.statuses.find(st=>st.kind==="fear_turn").round=state.round;
     target.fearRound=state.round;target.fearSource=card.name;
     flash(target,"FEARED · THIS ROUND","#d4c0eb");
     state.log=[target.name+" is feared by "+card.name+" and will miss their pending action this round.",...state.log].slice(0,5);
@@ -1767,7 +1767,7 @@
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       effect.lastTickRound=state.round;const amount=Math.min(u.hp,markedStatusDamage(u,effect.value||50));u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
-      flash(u,(effect.extreme?"EXTREME "+kind.toUpperCase()+" −":kind==="burn"?"🔥 -":kind==="poison"?"POISON −":"❄ -")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
+      flash(u,(effect.extreme?"EXTREME "+kind.toUpperCase()+" −":kind==="burn"?"BURN −":kind==="poison"?"POISON −":"FROSTBITE −")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       state.log=[u.name+" takes "+amount+" "+(effect.extreme?"Extreme ":"")+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
       if(!effect.remaining||u.hp===0)consumeStatus(u,kind);
@@ -1818,12 +1818,12 @@
       for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
     }else if(card.kind==="decaystrength"){
       if(t&&t.team!==c.team&&t.hp>0){
-        addStatus(t,"decay_mark","⬇",card.boost);
+        addStatus(t,"decay_mark",null,card.boost);
         flash(t,"DECAY OF STRENGTH","#ddb7ff");
       }
     }else if(card.kind==="acidair"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t)){
-        addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim));
+        addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
         Object.assign(t.statuses.find(st=>st.kind==="poison"),{extreme:true,remaining:card.poisonTurns,appliedRound:state.round,lastTickRound:state.round});
         flash(t,"EXTREME POISON","#b9e878");
       }
@@ -1863,7 +1863,7 @@
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
         if(canReceiveDebuff(enemy)&&enemy.hp>0&&!anim.windDomeTargets?.[enemy.id]&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
-          addStatus(enemy,"poison","☠",effectDamage(c,card,card.poisonDamage,anim));
+          addStatus(enemy,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);
           const poison=enemy.statuses.find(st=>st.kind==="poison");
           poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;
           flash(enemy,"POISONED · 3 TURNS","#c3e985");
@@ -1893,7 +1893,7 @@
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!anim.windDomeTargets?.[t.id])attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
-        if(canReceiveDebuff(t)&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim));const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
+        if(canReceiveDebuff(t)&&t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.poisonRoll??Math.random())<card.poisonChance){addStatus(t,"poison","☠",effectDamage(c,card,card.poisonDamage,anim),card.school);const poison=t.statuses.find(st=>st.kind==="poison");poison.remaining=card.poisonTurns;poison.appliedRound=state.round;poison.lastTickRound=state.round;flash(t,"POISONED","#b9e878");}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
@@ -2083,7 +2083,7 @@
         (c?.id===u.id?" is-caster":"")+
         (target?.id===u.id?" is-target":"")+
         (u.hp<=0?" dead":"");
-      const tags=u.statuses.map(s=>s.icon).join(" ")+(state.auras[u.team]?" ◎":"")+
+      const tags=u.statuses.map(st=>escapeHtml(describeStatus(u,st).title.split(" · ")[0])).join(" · ")+(state.auras[u.team]?" ◎":"")+
         (state.plans[u.id]?" ✓":"");
       b.innerHTML='<span class="unit-name">'+escapeHtml(u.name)+'</span>'+
         '<span class="meter"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></span>'+
@@ -2815,7 +2815,7 @@
   }
   function plateAlpha(){return 1;}
   function unitStatuses(u){
-    const rank=st=>DEBUFFS.has(st.kind)?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
+    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,3);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
@@ -2831,50 +2831,50 @@
       case "electrical_charge":return {title:"ϟ Electrical Charge · Self debuff",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. Reapplying refreshes the coat without stacking."};
-      case "wind_dome":return {title:"≋ Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
+      case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+Math.round((st.stored||0)*100*(st.power||1))+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Only successful casts by you or allies count; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
       case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell or status tick deals 20% more damage. All hits of a triggering spell qualify."};
-      case "decaying_strength":return {title:"☠ Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
+      case "decaying_strength":return {title:"Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
       case "recharge":
-        return {title:"⧖ Recharge · Debuff",
+        return {title:"Recharge · Debuff",
           detail:u.name+" must skip Round "+u.rechargeRound+
           " after using Poseidon's Wrath. The status expires once that round has passed."};
       case "stun":
-        return {title:"⚡ Stunned · 1 action",
+        return {title:"Stunned · 1 action",
           detail:u.name+" is stunned and will lose their next eligible action"+
             (u.stunRound===state.round?" this round.":" next round.")+
             " A stun does not alter spell accuracy or deal additional damage."};
-      case "frostbite":return {title:"❄ "+(st.extreme?"Extreme ":"")+"Frostbite · Ice damage over time",detail:u.name+" takes "+(st.value||50)+" damage at the start of each turn for "+(st.remaining||0)+" more turns ("+((st.value||50)*(st.remaining||0))+" damage remaining). Cannot be reapplied or combined with another debuff until it expires. Does not consume spell shields or Decaying Strength."};
+      case "frostbite":return {title:""+(st.extreme?"Extreme ":"")+"Frostbite · Ice damage over time",detail:u.name+" takes "+(st.value||50)+" damage at the start of each turn for "+(st.remaining||0)+" more turns ("+((st.value||50)*(st.remaining||0))+" damage remaining). Cannot be reapplied or combined with another debuff until it expires. Does not consume spell shields or Decaying Strength."};
       case "burn":
-        return {title:"🔥 Burning · Fire damage over time",
+        return {title:"Burning · Fire damage over time",
           detail:u.name+" takes "+(st.value||50)+" damage at the start of each round for "+
             (st.remaining||0)+" more ticks. Cannot be reapplied until this debuff expires."};
       case "tailwind":
-         return {title:"≋ Tailwind · Accuracy buff",
+         return {title:"Tailwind · Accuracy buff",
            detail:u.name+"'s next spell of ANY element gets +10 percentage points of accuracy (70% becomes 80%). Consumed on the next cast attempt, even on a miss. Does not stack."};
        case "tidal_echo":
-        return {title:"≈ Tidal Echo · Water buff",
+        return {title:"Tidal Echo · Water buff",
           detail:"The next SUCCESSFUL damaging Water spell from "+u.name+
           " deals +30% damage (1.30×). Earth spells do not use it; misses do not consume it. This bonus does not stack."};
-      case "poison":return {title:"☠ "+(st.extreme?"Extreme ":"")+"Poison · Damage over time",detail:"Loses "+st.value+" HP at the start of each turn for "+st.remaining+" more turns. Cannot be reapplied or combined with another debuff until it expires."};
-      case "freezing_temps":return {title:"❄ Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
-      case "frozen":return {title:"❄ Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
-      case "healing_aura":return {title:"❀ Healing Aura · Nature healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns: "+(st.value*st.remaining)+" HP remaining. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
-      case "soul_drain":return {title:"☠ Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
-      case "turbulence":return {title:"≋ Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
-      case "blazing_rage":return {title:"♨ Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
+      case "poison":return {title:""+(st.extreme?"Extreme ":"")+"Poison · Damage over time",detail:"Loses "+st.value+" HP at the start of each turn for "+st.remaining+" more turns. Cannot be reapplied or combined with another debuff until it expires."};
+      case "freezing_temps":return {title:"Freezing Temps · Ice mark",detail:"Next successful damaging Ice spell consumes this mark for a 50% freeze chance. Misses, other elements and damage-over-time ticks preserve it."};
+      case "frozen":return {title:"Frozen · Cannot cast",detail:"Skips up to 3 turns. Thaw rolls: 20%, then 40%, then 60% before each turn. Automatically thaws after the third frozen turn. Turns tested: "+(st.turnsTested||0)+"."};
+      case "healing_aura":return {title:"Healing Aura · Nature healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns: "+(st.value*st.remaining)+" HP remaining. Capped at maximum HP; cannot revive. Works alongside Calming Waters."};
+      case "soul_drain":return {title:"Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
+      case "turbulence":return {title:"Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
+      case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};
-      case "thorny_wrap":return {title:"❧ Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};
+      case "thorny_wrap":return {title:"Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};
       case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
-      case "calming_waters":return {title:"≈ Calming Waters · Healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns. "+(st.value*st.remaining)+" HP remaining. Refreshes without stacking; cannot revive or exceed maximum HP."};
-      case "solidity":return {title:"◆ Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
-      case "shield":return {title:"⬡ Shield",detail:"Reduces the next incoming hit by "+
+      case "calming_waters":return {title:"Calming Waters · Healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns. "+(st.value*st.remaining)+" HP remaining. Refreshes without stacking; cannot revive or exceed maximum HP."};
+      case "solidity":return {title:"Solidity · Earth protection",detail:"Reduces all hits of the next successful damaging spell by 25%. Misses, burn and Frostbite do not consume it. Does not stack."};
+      case "shield":return {title:"Shield",detail:"Reduces the next incoming hit by "+
         Math.round(st.value*100)+"%, then disappears."};
-      case "blade":return {title:"✦ Damage boost",detail:"The next successful attack deals "+
+      case "blade":return {title:"Damage boost",detail:"The next successful attack deals "+
         Math.round(st.value*100)+"% bonus damage."};
-      case "trap":return {title:"◈ Trap",detail:"The next damaging hit against this combatant deals "+
+      case "trap":return {title:"Trap",detail:"The next damaging hit against this combatant deals "+
         Math.round(st.value*100)+"% bonus damage."};
-      case "aura":return {title:"◎ Team aura",detail:"Team damage is boosted by "+
+      case "aura":return {title:"Team aura",detail:"Team damage is boosted by "+
         Math.round(st.value*100)+"% while the aura remains."};
       default:return {title:st.kind,detail:"Active magical effect."};
     }
@@ -2901,14 +2901,31 @@
     }
     if(!closest)return false;showStatusInfo(closest.u,closest.st);return true;
   }
-  function drawDeathRune(ctx,x,y,color){
-    ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.lineCap="round";
-    // A drawn death seal stays legible on mobile without depending on an emoji font.
-    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(-8,side*8);ctx.lineTo(8,-side*8);ctx.stroke();}
-    pathPoly(ctx,[[-6,-6],[-3,-9],[3,-9],[6,-6],[6,0],[3,3],[3,7],[-3,7],[-3,3],[-6,0]],color);
-    ctx.fillStyle="#151023";ctx.beginPath();ctx.ellipse(-2.7,-2,1.6,2,-.2,0,Math.PI*2);ctx.ellipse(2.7,-2,1.6,2,.2,0,Math.PI*2);ctx.fill();
-    pathPoly(ctx,[[0,0],[-1.4,3],[1.4,3]],"#151023");
-    ctx.strokeStyle="#38233d";ctx.lineWidth=1;for(const dx of [-1,1]){ctx.beginPath();ctx.moveTo(dx,4);ctx.lineTo(dx,7);ctx.stroke();}ctx.restore();
+  const statusSchools={
+    boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
+    burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
+    fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",
+    frostbite:"ice",freezing_temps:"ice",frozen:"ice",
+    thorny_wrap:"nature",healing_aura:"nature",
+    turbulence:"wind",wind_dome:"wind",tailwind:"wind",
+    stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
+    recharge:"water",tidal_echo:"water",calming_waters:"water",flow_state:"water"
+  };
+  function statusSchool(st,u){
+    if(st.school)return st.school;
+    if(st.kind==="poison")return st.extreme?"wind":st.remaining>3?"nature":"earth";
+    if(st.kind==="fear_turn")return u.fearSource==="Creeping Croc"?"water":"dark";
+    return statusSchools[st.kind]||"arcane";
+  }
+  function drawStatusStone(ctx,r,school,color){
+    ctx.save();ctx.translate(r.x,r.y);
+    const outline=[[-15,-7],[-8,-15],[4,-17],[13,-11],[17,-1],[13,11],[4,16],[-7,15],[-16,7]];
+    pathPoly(ctx,outline,"#48515b","#11191e",2);
+    pathPoly(ctx,[outline[0],outline[1],outline[2],outline[3],[8,-8],[-5,-10],[-11,-4]],"#849096");
+    pathPoly(ctx,[outline[4],outline[5],outline[6],outline[7],[-5,10],[8,8]],"#28313a");
+    ctx.strokeStyle=color||"#ede5ce";
+    window.WIZARDRY_ELEMENT_TRACE_V45?.drawSymbol(ctx,school,0,0,22);
+    ctx.restore();
   }
   function drawUnitPlate(u){
     const {x,y,w}=unitPlateRect(u);
@@ -2940,31 +2957,11 @@
     const symbols=unitStatuses(u);
     symbols.forEach((st,i)=>{
       const r=statusRuneRect(u,i);
-      const glow=st.kind==="lightning_rod"?"#91d8ff":st.kind==="tidal_echo"?"#44dbee":
-        st.kind==="stun"?"#98dfff":
-        st.kind==="recharge"?"#e6b75b":
-        st.kind==="burn"?"#ff9258":st.kind==="decaying_strength"?"#d39bd5":st.kind==="frostbite"?"#99e9ff":"#b4eac2";
-      ellipse(g,r.x,r.y,17,17,"#071d2dec",glow,2);
-      g.fillStyle=glow;g.font="bold 23px system-ui,sans-serif";
-      g.textAlign="center";g.textBaseline="middle";
-      if(st.kind==="gunpowder_coat")window.WIZARDRY_GUNPOWDER_V120?.emblem(g,r.x,r.y,20);
-      else if(st.kind==="wind_dome")window.WIZARDRY_WIND_DOME_V101?.emblem(g,r.x,r.y,21);
-      else if(st.kind==="electrical_charge")window.WIZARDRY_ELECTRICAL_CHARGE?.emblem(g,r.x,r.y,32);
-      else if(st.kind==="lightning_rod"){window.WIZARDRY_ROD_V98?.emblem(g,r.x,r.y,21);g.font="bold 9px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+10,r.y+10);}
-      else if(st.kind==="frostbite"){
-        g.save();g.translate(r.x,r.y);g.strokeStyle="#b6eeff";g.lineWidth=1.5;
-        for(let arm=0;arm<6;arm++){g.save();g.rotate(arm*Math.PI/3);g.beginPath();g.moveTo(0,0);g.lineTo(0,-9);g.moveTo(0,-5);g.lineTo(-3,-7);g.moveTo(0,-5);g.lineTo(3,-7);g.stroke();g.restore();}g.restore();
-      }else if(st.kind==="freezing_temps"||st.kind==="frozen")window.WIZARDRY_FREEZING_TEMPS_V93?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="healing_aura")window.WIZARDRY_HEALING_AURA_V92?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="soul_drain")window.WIZARDRY_SOUL_DRAIN_V91?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="turbulence")window.WIZARDRY_TURBULENCE_V90?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="blazing_rage")window.WIZARDRY_BLAZING_RAGE_V89?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="static_shock")window.WIZARDRY_STATIC_SHOCK_V88?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="flow_state")window.WIZARDRY_FLOW_STATE_V121?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="calming_waters")window.WIZARDRY_CALMING_WATERS_V87?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="solidity")window.WIZARDRY_SOLIDITY_V86?.emblem(g,r.x,r.y,18);
-      else if(st.kind==="decaying_strength")drawDeathRune(g,r.x,r.y,glow);
-      else g.fillText(st.icon,r.x,r.y+1);
+      const school=statusSchool(st,u);
+      drawStatusStone(g,r,school,colors[school]);
+      if(st.kind==="lightning_rod"){
+        g.font="bold 10px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+12,r.y+11);
+      }
     });
     g.restore();
   }

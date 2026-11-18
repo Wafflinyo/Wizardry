@@ -3494,8 +3494,8 @@
     camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
-    const impactFx=state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:null;
-    const impactShake=impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1):null;
+    const impactFx=state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
+    const impactShake=impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
     if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(impactShake?.x||0)*fit,dy=(impactShake?.y||0)*fit;
       const margin=Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh)*2;
       g.save();g.translate(vw/2+dx,vh/2+dy);g.scale(1+margin,1+margin);g.translate(-vw/2,-vh/2);
@@ -3631,6 +3631,7 @@
       if(spell&&target){
         const progress=clamp(action.elapsed/action.duration,0,1);
         const opts={target,progress,hit:action.card.hit};
+        spell.ground(g,opts);
         renderables.push({type:"ice-yeti",depthY:spell.depth(opts),priority:2,draw:()=>spell.draw(g,opts)});
         renderables.push({type:"ice-yeti-impact",depthY:target.y+.16,priority:2,draw:()=>spell.impact(g,opts)});
       }

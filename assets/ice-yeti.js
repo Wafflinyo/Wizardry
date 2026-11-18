@@ -69,6 +69,40 @@
     if(p>=.16&&p<.43)breath(g,p);
     g.restore();
   }
+  function shake(p,dir,hit){
+    const age=(p-hit)/.103;
+    if(age<0||age>=1)return null;
+    const force=(1-age)**2;
+    return {x:dir*11*Math.sin(age*27)*force,y:-16*Math.cos(age*23)*force};
+  }
+  function ground(g,{target,progress:p,hit}){
+    if(p<hit)return;
+    const q=clamp((p-hit)/(1-hit)),growth=clamp(q/.29),spread=1-(1-growth)**3;
+    g.save();g.translate(target.x,target.y-2);
+    g.globalAlpha=clamp((1-q)/.24);
+    g.beginPath();
+    for(let ray=0;ray<8;ray++){
+      const angle=ray*2.39996,dx=Math.cos(angle),dy=Math.sin(angle);
+      const distance=(45+ray%5*17)*spread;
+      let prevX=0,prevY=0;
+      g.moveTo(0,0);
+      for(let segment=1;segment<=5;segment++){
+        const along=segment/5;
+        const offset=Math.sin(ray*5+segment*7.2)*12*along*spread;
+        const x=dx*distance*along-dy*offset,y=(dy*distance*along+dx*offset)*.32;
+        g.lineTo(x,y);
+        if(segment===3){
+          const fork=(ray%2?1:-1)*19*spread;
+          g.lineTo(x+dx*distance*.24-dy*fork,y+(dy*distance*.24+dx*fork)*.32);
+          g.moveTo(prevX,prevY);g.lineTo(x,y);
+        }
+        prevX=x;prevY=y;
+      }
+    }
+    g.strokeStyle='#9ce6ff';g.lineWidth=5;g.stroke();
+    g.strokeStyle='#162b3e';g.lineWidth=2.7;g.stroke();
+    g.restore();
+  }
   function impact(g,{target,progress:p,hit}){
     if(p<hit)return;
     const q=clamp((p-hit)/(1-hit)),spread=1-(1-q)**3;
@@ -82,6 +116,23 @@
       g.globalAlpha=(1-q)**1.25*(.45+i%3*.16);
       crystal(g,Math.cos(a)*r,Math.sin(a)*r*.62-42*q,
         (15+i%5*5)*(1+q*.40),a+q,['#f4fdff','#d7f2ff','#abd9f0'][i%3]);
+    }
+    for(let i=0;i<13;i++){
+      const a=i*2.39996,r=(22+i%6*11)*spread;
+      const x=Math.cos(a)*r,y=42+Math.sin(a)*r*.27-137*q+86*q*q;
+      g.globalAlpha=(1-q)**1.25*.73;
+      crystal(g,x,y,(13+i%4*5)*(1+q*.35),-Math.PI/2+a*.11,'#f5fcff');
+    }
+    // Large crystals split into smaller facets on the way out.
+    for(let i=0;i<10;i++){
+      const a=i*2.39996,r=(37+i%5*18)*spread;
+      const x=Math.cos(a)*r,y=Math.sin(a)*r*.61-95*q+69*q*q;
+      const split=clamp((q-.15)*3);
+      for(let j=0;j<3;j++){
+        g.globalAlpha=(1-q)**1.1;
+        crystal(g,x+split*(j-1)*24,y-split*j*14,
+          (15-j*3)*(1-q*.65),a+q*(j+2),['#8fd7ff','#c6f2ff','#f3fdff'][j]);
+      }
     }
     for(let i=0;i<32;i++){
       const a=i*2.39996,r=(31+i%9*15)*spread;
@@ -102,7 +153,7 @@
     g.restore();
   }
   window.IceYeti={
-    draw,impact,depth:({target,progress})=>position(target,progress).floor,
+    draw,impact,ground,shake,depth:({target,progress})=>position(target,progress).floor,
     onReady(fn){if(atlas.naturalWidth)fn();else listeners.push(fn);},
     portrait(g,w,h){const side=Math.min(w,h);frame(g,8,(w-side)/2,(h-side)/2,side);}
   };

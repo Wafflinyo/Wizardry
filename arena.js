@@ -3287,14 +3287,15 @@
     camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
-    const heizmannShake=state.animation?.card?.id==="heizmann"&&state.animation.stage==="summon"?window.Heizmann?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1):null;
-    if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(heizmannShake?.x||0)*fit,dy=(heizmannShake?.y||0)*fit;
+    const impactFx=state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:null;
+    const impactShake=impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1):null;
+    if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(impactShake?.x||0)*fit,dy=(impactShake?.y||0)*fit;
       const margin=Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh)*2;
       g.save();g.translate(vw/2+dx,vh/2+dy);g.scale(1+margin,1+margin);g.translate(-vw/2,-vh/2);
       g.drawImage(background,(vw-W*cover)/2,diamondY-414*cover,W*cover,H*cover);g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
-    if(heizmannShake){
-      const dx=heizmannShake.x*fit,dy=heizmannShake.y*fit;
+    if(impactShake){
+      const dx=impactShake.x*fit,dy=impactShake.y*fit;
       const zoom=1+2*Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh);
       g.setTransform(ratio*fit*zoom,0,0,ratio*fit*zoom,ratio*(vw/2+dx+(camera.x-vw/2)*zoom),ratio*(vh/2+dy+(camera.y-vh/2)*zoom));
     }

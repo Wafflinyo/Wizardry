@@ -1,4 +1,4 @@
-/* Wizardry 0.135 — 2.5D battles, level-20 builds and host-authoritative test lobbies. */
+/* Wizardry 0.136 — 2.5D battles, level-20 builds and host-authoritative test lobbies. */
 (()=>{"use strict";
   const W=1000,H=620,MAX_MANA=16,MAX_SLOTS=3;
   const Builds=window.WizardryBuilds;
@@ -151,15 +151,15 @@
     {name:"Crimson Witch",style:"flame",color:"#f2a28d",hp:1260,speed:69},
     {name:"Astral Seer",style:"astral",color:"#e5d49b",hp:1260,speed:89}
   ];
-  // Side-on 3/4 arc seating. Allies LEFT, enemies RIGHT, never front/back.
-  // Y offsets provide depth; preserve the same camera and ground plane
-  // for 1v1, 2v2, 3v3 and 4v4.
+  // Opposing parenthesis arcs: back/front seats curve inward while the
+  // middle seats sit farther out. Vertical spacing preserves 2.5D depth
+  // and leaves a clear casting lane plus room for outward-facing HP plates.
   const scenePositions={
-    1:[[[235,435]],[[769,376]]],
-    2:[[[194,390],[297,480]],[[709,346],[816,450]]],
-    3:[[[178,359],[239,433],[319,495]],[[681,320],[760,395],[834,465]]],
-    4:[[[175,340],[205,404],[270,461],[341,508]],
-       [[667,315],[742,370],[802,428],[831,488]]]
+    1:[[[250,440]],[[750,405]]],
+    2:[[[250,330],[250,515]],[[750,305],[750,490]]],
+    3:[[[280,290],[205,415],[280,540]],[[720,265],[795,390],[720,515]]],
+    4:[[[295,255],[195,350],[215,445],[295,540]],
+       [[705,235],[805,330],[785,425],[705,520]]]
   };
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -1417,10 +1417,12 @@
   }
   function triggerThornyWrap(u,a){
     if(!thornAccuracyPenalty(u)||a.thornTriggered)return u.hp>0;
+    const vine=u.statuses.find(st=>st.kind==="thorny_wrap");
     a.thornTriggered=true;
-    u.hp=Math.max(0,u.hp-(vine.attemptDamage||150));
-    flash(u,"THORNS −"+(vine.attemptDamage||150),"#b1e781");
-    state.log=[u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for 150 damage.",...state.log].slice(0,5);
+    const amount=vine.attemptDamage||150;
+    u.hp=Math.max(0,u.hp-amount);
+    flash(u,"THORNS −"+amount,"#b1e781");
+    state.log=[u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for "+amount+" damage.",...state.log].slice(0,5);
     if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
     return u.hp>0;
   }

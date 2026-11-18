@@ -4,7 +4,10 @@ for(const im of images){im.naturalWidth=1280;im.naturalHeight=im.src.includes('s
 const fx=ctx.window.WIZARDRY_OCTO_V95;
 for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  const root=fx.pose(.2,target);
- for(let i=20;i<=86;i++){const b=fx.pose(i/100,target);assert.equal(b.x,root.x,'body stays planted');assert.equal(b.y,target.y,'same ground plane throughout slam');}
+ assert.equal(root.x,500);
+ assert.equal(root.groundY,510);
+ for(let i=20;i<=86;i++){const b=fx.pose(i/100,target);assert.equal(b.y,b.groundY,'body stays grounded while sliding to and from the target');}
+ assert.equal(fx.pose(.70,target).groundY,target.y,'whip reaches target depth at contact');
  const sourceFrames=[];
  for(const p of [.46,.52,.59,.66,.71,.76,.81,.85]){
   const calls=[],c=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});
@@ -12,7 +15,7 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
   const draws=calls.filter(x=>x[0]==='drawImage');assert.equal(draws.length,1,'one complete rendered pose, no arm strips');
   const d=draws[0];assert(d[1].src.includes('octo-slam-v97'));assert(Math.abs(d[8]/d[4]-d[9]/d[5])<1e-9,'equal X and Y scale: no stretch');
   sourceFrames.push(d[2]+','+d[3]);
-  assert(calls.some(x=>x[0]==='translate'&&x[1]===root.x&&x[2]===root.y),'fixed actor origin');
+  const pose=fx.pose(p,target);assert(calls.some(x=>x[0]==='translate'&&x[1]===pose.x&&x[2]===pose.y),'whip atlas stays on the sliding actor anchor');
  }
  assert.equal(new Set(sourceFrames).size,8,'all eight redrawn attack poses play');
  assert.equal(fx.pose(.69,target).slamFrame,3,'descending tentacle precedes damage');

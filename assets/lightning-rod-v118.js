@@ -1,8 +1,14 @@
 /* A thin metal rod falls, stormclouds gather high above, and lightning transfers a rune. */
-(function(root){'use strict';const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2,SIZE=380,ROD_SIZE=240,ROD_LENGTH=166*ROD_SIZE/SIZE;
+(function(root){'use strict';const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2,SIZE=380,ROD_SIZE=240,ROD_LENGTH=166*ROD_SIZE/SIZE,FLOOR={x:500,y:510};
 const image=new Image(),listeners=[];let ready=false;image.onload=()=>{ready=true;listeners.forEach(fn=>fn());};image.src='./assets/lightning-rod-v98.webp';
 const feet=[313, 313, 313, 313, 313, 313, 313, 313];
-function pose(p,caster={x:175}){const drop=C(p/.08),side=caster.x<500?-1:1,angle=side*(.26+Math.min(.18,Math.abs(caster.x-500)/1200)),flight=(1-drop)*(1-drop),frame=p<.12?0:p<.22?1:p<.32?2:p<.42?3:p<.51?4:p<.62?5:p<.72?6:7,x=500+side*500*flight,y=510-900*flight,tip={x:500+Math.sin(angle)*ROD_LENGTH,y:510-Math.cos(angle)*ROD_LENGTH};return{frame,x,y,angle,alpha:1-C((p-.88)/.12),tip,cloud:{x:tip.x,y:227}};}
+function pose(p,caster={x:175}){
+ const drop=C(p/.08),side=caster.x<FLOOR.x?-1:1,angle=side*(.26+Math.min(.18,Math.abs(caster.x-FLOOR.x)/1200)),flight=(1-drop)*(1-drop);
+ const frame=p<.12?0:p<.22?1:p<.32?2:p<.42?3:p<.51?4:p<.62?5:p<.72?6:7;
+ const x=FLOOR.x+side*500*flight,y=FLOOR.y-900*flight;
+ const tip={x:x+Math.sin(angle)*ROD_LENGTH,y:y-Math.cos(angle)*ROD_LENGTH};
+ return {frame,x,y,angle,alpha:1-C((p-.88)/.12),tip,cloud:{x:FLOOR.x,y:FLOOR.y-255}};
+}
 function poly(c,pts,color){c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();}
 function lightningPath(a,b,seed=0){
  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,nx=-dy/length,ny=dx/length,amplitude=Math.min(29,length*.16),steps=[0,.13,.29,.37,.55,.70,.84,1],zig=[0,.62,-.83,.73,-.68,.81,-.42,0];
@@ -14,10 +20,14 @@ function emblem(c,x,y,size,alpha=1){c.save();c.translate(x,y);c.scale(size/100,s
 function sprite(c,frame,size=SIZE,part='all'){if(!ready)return;const w=image.naturalWidth/4,h=image.naturalHeight/2,cut=h*.45,sy=part==='rod'?cut:0,sh=part==='rod'?h-cut:part==='cloud'?cut:h,k=size/w;c.drawImage(image,frame%4*w,Math.floor(frame/4)*h+sy,w,sh,-size/2,(-feet[frame]+sy)*k,size,sh*k);}
 function draw(c,{progress:p,caster,layer='rod'}){if(!caster)return;const b=pose(p,caster);
  if(layer==='rod'){
- c.save();c.globalAlpha*=b.alpha;c.beginPath();c.rect(0,-1000,1000,1480);c.clip();c.translate(b.x,b.y);c.rotate(b.angle);sprite(c,b.frame,ROD_SIZE,'rod');c.restore();
- if(p>=.22){c.save();c.globalAlpha*=b.alpha;c.translate(b.tip.x,510);sprite(c,b.frame,SIZE,'cloud');c.restore();}
+ if(p>=.08){
+  c.save();c.globalAlpha*=b.alpha*.6;c.fillStyle='#0c2035';
+  c.beginPath();c.ellipse(FLOOR.x,FLOOR.y,16,5,0,0,T);c.fill();c.restore();
+ }
+ c.save();c.globalAlpha*=b.alpha;c.translate(b.x,b.y);c.rotate(b.angle);sprite(c,b.frame,ROD_SIZE,'rod');c.restore();
+ if(p>=.22){c.save();c.globalAlpha*=b.alpha;c.translate(b.cloud.x,FLOOR.y);sprite(c,b.frame,SIZE,'cloud');c.restore();}
  if(p<.08){c.save();c.globalAlpha=.7;c.strokeStyle='#a5deff';c.lineWidth=3;c.translate(b.x,b.y);c.rotate(b.angle);for(let i=0;i<5;i++){c.beginPath();c.moveTo(-7+i*3,-190-i*9);c.lineTo(-7+i*3,-105);c.stroke();}c.restore();}
- if(p>=.08&&p<.22){const q=(p-.08)/.14;c.save();c.globalAlpha=1-q;for(let i=0;i<24;i++){const a=i*2.399,r=20+q*(20+i%5*12),x=500+Math.cos(a)*r,y=510+Math.sin(a)*r*.2-Math.sin(q*Math.PI)*(i%4*9);poly(c,[[x-3,y],[x,y-5],[x+5,y+1],[x,y+3]],i%2?'#9aa3ad':'#535e6a');}c.restore();}
+ if(p>=.08&&p<.22){const q=(p-.08)/.14;c.save();c.globalAlpha=1-q;for(let i=0;i<24;i++){const a=i*2.399,r=20+q*(20+i%5*12),x=FLOOR.x+Math.cos(a)*r,y=FLOOR.y+Math.sin(a)*r*.2-Math.sin(q*Math.PI)*(i%4*9);poly(c,[[x-3,y],[x,y-5],[x+5,y+1],[x,y+3]],i%2?'#9aa3ad':'#535e6a');}c.restore();}
  if(p>=.62&&p<.70){const q=(p-.62)/.08,flash=cloudStrikeAlpha(p);bolt(c,b.cloud,b.tip,C((p-.62)/.08),flash);
  c.save();c.globalAlpha=flash*.8;c.strokeStyle='#e4f8ff';c.lineWidth=1.8;
  for(let i=0;i<6;i++){const a=i*T/6,r=5+flash*12;c.beginPath();c.moveTo(b.tip.x+Math.cos(a)*3,b.tip.y+Math.sin(a)*3);c.lineTo(b.tip.x+Math.cos(a)*r,b.tip.y+Math.sin(a)*r);c.stroke();}

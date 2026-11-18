@@ -1,53 +1,41 @@
 (()=>{
-  const art=new Image(),ready=[];
+  const art=new Image(),gust=new Image(),ready=[];
   art.onload=()=>ready.splice(0).forEach(fn=>fn());
   art.src='./assets/scalding-air.webp?v=0.197.0';
+  gust.src='./assets/scalding-gust.webp?v=0.198.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
-  function ribbon(g,x,y,length,width,phase,color){
-    g.fillStyle=color;
-    g.beginPath();
-    g.moveTo(x,y);
-    g.bezierCurveTo(x-length*.24,y-width*1.6,x-length*.59,y+phase,x-length,y+phase*.6);
-    g.bezierCurveTo(x-length*.66,y+phase*.92+width,x-length*.23,y+width*.82,x,y);
-    g.fill();
-  }
+  const poses=[
+    {time:0,tip:.65}, {time:.13,tip:.72}, {time:.26,tip:.86}, {time:.35,tip:.95},
+    {time:.53,tip:.96}, {time:.67,tip:.97}, {time:.78,tip:.94}, {time:.90,tip:.95}
+  ];
   function draw(g,{caster,target,progress:p,hit}){
-    const travel=clamp((p-.40)/.29);
-    const contact=(hit-.40)/.29;
+    const start=hit-.19,end=hit+.34;
+    if(p<start||p>=end||!gust.naturalWidth)return;
+    const travel=clamp((p-start)/(end-start));
+    const frame=poses.findLastIndex(pose=>travel>=pose.time);
     const dir=target.x>=caster.x?1:-1;
-    const distance=Math.min(265,Math.max(148,Math.abs(target.x-caster.x)*.67));
-    const head=(travel/contact-1)*distance;
-    const height=target.y-72;
+    const distance=clamp((Math.abs(target.x-caster.x)-110)/450)*93+153;
+    const head=p<hit?(p-hit)/.19*distance:(p-hit)/.34*distance*1.35;
+    const fade=clamp((p-start)/.024)*clamp((end-p)/.105);
+    const width=250+travel*44,height=146+travel*16;
+    const tile=gust.naturalWidth/4;
     g.save();
-    g.translate(target.x,height);
+    g.translate(target.x,target.y-72);
     g.scale(dir,1);
-    if(p>=.40&&p<.79){
-      g.globalAlpha=clamp((p-.40)/.035)*clamp((.79-p)/.12);
-      for(let i=0;i<9;i++){
-        const phase=p*143+i*1.7;
-        const y=(i-4)*6+Math.sin(phase)*5;
-        const x=head-i%3*18;
-        const length=108+(i%4)*28;
-        ribbon(g,x,y,length,4+(i%3)*2,Math.sin(phase)*10,i%2?'#ff6d22c4':'#f73d22a0');
-        ribbon(g,x-10,y,length*.74,2.3,Math.sin(phase)*7,i%2?'#ffce68':'#ff923b');
-      }
-      for(let i=0;i<11;i++){
-        const drift=(i*.618+p*7)%1;
-        const x=head-27-drift*206;
-        const y=(i%5-2)*10-drift*19+Math.sin(p*110+i)*4;
-        ribbon(g,x,y,24+drift*53,2.5+drift*4,-8-drift*12,'#ffe3c899');
-      }
-    }
-    if(p>=hit){
-      const age=clamp((p-hit)/(1-hit));
-      for(let i=0;i<15;i++){
-        const spread=1-(1-age)**2;
-        const x=(17+i%6*17)*spread;
-        const y=(i%7-3)*13*spread-33*age;
-        g.globalAlpha=(1-age)**2;
-        ribbon(g,x,y,15+(i%3)*8,2+i%4,(i%5-2)*7,i%3?'#ffad49':'#fff1d8');
-      }
-    }
+    g.globalAlpha=fade;
+    g.drawImage(gust,frame%4*tile,Math.floor(frame/4)*tile,tile,tile,
+      head-poses[frame].tip*width,-height*.53,width,height);
+
+    // Follow the white-hot leading edge with local light, peaking on contact.
+    const flash=1-clamp(Math.abs(p-hit)/.084);
+    const light=g.createRadialGradient(head-21,0,1,head-21,0,44+flash*21);
+    light.addColorStop(0,"#fff1b5a0");
+    light.addColorStop(.36,"#ff9b3780");
+    light.addColorStop(1,"#ff4c0800");
+    g.globalCompositeOperation="lighter";
+    g.globalAlpha=fade*(.45+flash*.55);
+    g.fillStyle=light;
+    g.fillRect(head-90,-65,138,130);
     g.restore();
   }
   window.ScaldingAir={

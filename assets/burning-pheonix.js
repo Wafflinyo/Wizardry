@@ -10,67 +10,116 @@
     const tile=atlas.naturalWidth/5;
     g.drawImage(atlas,i%5*tile,Math.floor(i/5)*tile,tile,tile,-size*anchor,-size/2,size,size);
   }
+  function flame(g,x,y,tailX,tailY,width,color){
+    g.fillStyle=color;
+    g.beginPath();
+    g.moveTo(x,y-width);
+    g.quadraticCurveTo((x+tailX)/2,y-width*1.6,tailX,tailY);
+    g.quadraticCurveTo((x+tailX)/2,y+width*.8,x,y+width);
+    g.quadraticCurveTo(x+width,y,x,y-width);
+    g.fill();
+  }
   function vortex(g,q,front){
-    // Split each winding into front and rear facets so flames pass around the body.
-    for(let strand=0;strand<3;strand++){
-      for(let i=0;i<40;i++){
-        const t=i/40,u=(i+1)/40;
-        const angle=t*tau*2.1-q*tau*3+strand*tau/3;
-        if((Math.cos(angle)>0)!==front)continue;
-        const next=angle+tau*2.1/40;
-        const radius=t=>5+44*Math.sin(t*Math.PI*.75);
-        const y=Math.sin(angle)*radius(t),endY=Math.sin(next)*radius(u);
-        const width=2+9*Math.sin(t*Math.PI);
-        g.fillStyle=(front?['#ffdc52','#ff981c','#ffbe35']:['#c4320d','#e65910','#cb3b0e'])[strand];
-        g.beginPath();g.moveTo(-10-190*t,y-width);g.lineTo(-10-190*u,endY-width);
-        g.lineTo(-10-190*u,endY+width);g.lineTo(-10-190*t,y+width);g.fill();
-        if(front&&i%3===0){
-          g.fillStyle='#fff1a0';g.beginPath();g.moveTo(-10-190*t,y-width);
-          g.lineTo(-10-190*u,endY-width);g.lineTo(-10-190*u,endY);g.fill();
-        }
+    const strength=smooth(clamp(q/.16));
+    const phase=q*tau*3.4;
+    const point=(t,strand)=>{
+      const a=t*tau*2.6-phase+strand*tau/4;
+      const radius=(8+76*t)*(.85+.15*Math.sin(t*19-phase));
+      return {x:-12-280*t,y:Math.sin(a)*radius,front:Math.cos(a)>=0};
+    };
+    g.save();
+    g.globalAlpha=strength;
+    for(let strand=0;strand<4;strand++){
+      for(let i=0;i<32;i++){
+        const t=i/32,next=t+.045;
+        const a=point(t,strand),b=point(next,strand);
+        if(a.front!==front)continue;
+        const pulse=.65+.35*Math.sin(t*38-phase*1.7+strand);
+        const width=(4+16*Math.sin(Math.PI*t))*pulse*(1-t*.66);
+        flame(g,a.x,a.y,b.x,b.y,width*1.7,front?'#f13e10':'#9f260d');
+        flame(g,a.x+5,a.y,b.x,b.y,width,front?'#ff9b18':'#f96811');
+        if(front)flame(g,a.x+8,a.y,b.x+9,b.y,width*.35,'#fff4ad');
       }
     }
+    for(let i=0;i<42;i++){
+      const t=(i*.618+q*1.25)%1;
+      const a=point(t,i%4),b=point(t+.066,i%4);
+      if(a.front!==front)continue;
+      g.globalAlpha=strength*Math.sin(Math.PI*t);
+      flame(g,a.x,a.y,b.x-13,b.y,2+i%4,front?'#ffdf64':'#ed5916');
+    }
+    g.restore();
   }
-  function spark(g,x,y,r,color){
-    g.fillStyle=color;g.beginPath();g.moveTo(x,y-r*1.7);g.lineTo(x+r,y);
-    g.lineTo(x,y+r);g.lineTo(x-r,y);g.closePath();g.fill();
+  function burst(g,x,y,floor,q){
+    const wave=1-(1-q)**3;
+    const flash=1-clamp(q/.20);
+    g.save();
+    g.translate(x,y);
+    g.globalAlpha=(1-q)**1.4;
+    frame(g,20+Math.min(4,Math.floor(q*5)),mix(178,455,wave));
+    if(flash>0){
+      const radius=32+135*wave;
+      const light=g.createRadialGradient(0,0,0,0,0,radius);
+      light.addColorStop(0,'#ffffe8');
+      light.addColorStop(.24,'#fff2a4');
+      light.addColorStop(.58,'#ff6c2980');
+      light.addColorStop(1,'#ff3d0000');
+      g.globalAlpha=flash;
+      g.fillStyle=light;
+      g.fillRect(-radius,-radius,2*radius,2*radius);
+    }
+    for(let i=0;i<56;i++){
+      const angle=i*2.39996;
+      const range=64+(i%13)*13;
+      const dx=Math.cos(angle)*range,dy=Math.sin(angle)*range*.74;
+      const px=dx*wave,py=dy*wave-35*q+65*q*q;
+      g.globalAlpha=(1-q)*(i%3===0?.78:1);
+      flame(g,px,py,px-dx*.22*(1-q),py-dy*.22*(1-q),
+        (2+i%8)*(1-q),['#fff7ae','#ff9a26','#ff4c12'][i%3]);
+    }
+    g.restore();
+    g.save();
+    for(let i=0;i<2;i++){
+      const age=clamp((q-i*.14)/(1-i*.14));
+      if(q<i*.14)continue;
+      const radius=8+175*(1-(1-age)**2);
+      g.globalAlpha=(1-age)**2;
+      g.strokeStyle=i===0?'#ffb136':'#ff5c18';
+      g.lineWidth=10*(1-age)+1;
+      g.beginPath();
+      g.ellipse(x,floor,radius,radius*.25,0,0,tau);
+      g.stroke();
+    }
+    g.restore();
   }
   function draw(g,target,p){
     const dir=target.x>=500?1:-1;
     const x=target.x,y=target.y-72,impact=clamp((p-.88)/.12);
-    const flightY=164;
+    const flightY=174,flightSize=292;
     g.save();
-    if(p<.34){
-      const q=clamp(p/.34);
-      const ascent=smooth(clamp((q-.17)/.83));
-      g.translate(500,mix(510-128*.45,flightY,ascent));g.scale(dir,1);
-      frame(g,Math.min(4,Math.floor(q*5)),mix(128,214,ascent));
-    }else if(p<.75){
-      const q=(p-.34)/.41,cycle=q*2;
-      g.translate(500+dir*40*q,flightY-16*Math.sin(q*Math.PI)-8*Math.sin(cycle*tau));
-      g.scale(dir,1);frame(g,5+Math.floor(cycle*10)%10,214);
+    if(p<.40){
+      const q=clamp(p/.40);
+      const ascent=smooth(clamp((q-.63)/.37));
+      const size=mix(182,flightSize,smooth(clamp(q/.63)));
+      g.translate(500,mix(510-size*.415,flightY,ascent));
+      g.scale(dir,1);
+      frame(g,Math.min(4,Math.floor(q*5)),size);
+    }else if(p<.73){
+      const q=(p-.40)/.33,cycle=q*2;
+      g.translate(500+dir*26*q,flightY-16*Math.sin(q*Math.PI)-8*Math.sin(cycle*tau));
+      g.scale(dir,1);
+      frame(g,5+Math.floor(cycle*10)%10,flightSize);
     }else if(p<.88){
-      const q=clamp((p-.75)/.13),startX=500+dir*40,startY=flightY;
-      const dx=Math.abs(x-startX),dy=y-startY,length=Math.hypot(dx,dy);
+      const q=clamp((p-.73)/.15),startX=500+dir*26,startY=flightY;
+      const dx=x-startX,dy=y-startY,length=Math.hypot(dx,dy);
       const ux=dx/length,uy=dy/length;
-      // Orient the whole flight path once. The longitudinal roll and flare wraps are drawn poses.
-      const travel=.32*q+.68*q*q;
-      const beakStart=78;
-      const nose=mix(beakStart,length,travel);
-      g.transform(dir*ux,uy,-dir*uy,ux,startX+dir*ux*nose,startY+uy*nose);
+      const nose=mix(108,length,.32*q+.68*q*q);
+      g.transform(ux,uy,-dir*uy,dir*ux,startX+ux*nose,startY+uy*nose);
       vortex(g,q,false);
-      frame(g,15+Math.floor(q*15)%5,206,.96);
+      frame(g,15+Math.floor(q*20)%5,278,.96);
       vortex(g,q,true);
     }else{
-      const q=impact;
-      g.save();g.translate(x,y);frame(g,20+Math.min(4,Math.floor(q*5)),mix(105,290,Math.sqrt(q)));g.restore();
-      g.globalAlpha=1-q;
-      for(let i=0;i<38;i++){
-        const a=i*2.4,r=(28+i%8*12)*Math.sqrt(q);
-        spark(g,x+Math.cos(a)*r,y+Math.sin(a)*r*.78+28*q*q,(3+i%6)*(1-q),['#fff59e','#ffac27','#f64611'][i%3]);
-      }
-      g.lineWidth=6*(1-q)+1;g.strokeStyle='#ffc34f';g.beginPath();
-      g.ellipse(x,y,3+63*q,3+44*q,0,0,tau);g.stroke();
+      burst(g,x,y,target.y,impact);
     }
     g.restore();
   }

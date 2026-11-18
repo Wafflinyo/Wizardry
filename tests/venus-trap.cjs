@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const math=Object.create(Math);
 math.random=()=>.5;
 const node={getContext:()=>({})};
-const ctx={window:{},Math:math,Image:class{naturalWidth=1024;},document:{getElementById:()=>node},requestAnimationFrame(){}};
+const ctx={window:{},Math:math,Image:class{naturalWidth=2048;},document:{getElementById:()=>node},requestAnimationFrame(){}};
 const read=p=>fs.readFileSync(p,'utf8');
 vm.runInNewContext(read('assets/wizard-system-v135.js'),ctx);
 vm.runInNewContext(read('assets/venus-trap.js'),ctx);
@@ -21,6 +21,8 @@ assert.equal(card.damage,400);
 assert.equal(card.hit,fx.HIT);
 const catalog=JSON.parse(read('backend/cards.json'));
 assert.equal(catalog.find(c=>c.id===card.id).damage,400);
+assert.equal(card.duration,4200);
+assert.equal(catalog.find(c=>c.id===card.id).duration,card.duration);
 
 for(const blocked of [false,true]){
   api.startPractice(2);
@@ -40,7 +42,7 @@ for(const blocked of [false,true]){
   assert.equal(neighbor.hp,neighbor.maxHp,'only the selected enemy is hit');
 }
 
-const frames=[];
+const frames=[],poses=new Set();
 const canvas=new Proxy({globalAlpha:1,drawImage:(...args)=>frames.push(args),createRadialGradient:()=>({addColorStop(){}})},{
   get:(obj,key)=>key in obj?obj[key]:(()=>{})
 });
@@ -50,14 +52,25 @@ for(const [caster,target] of [
 ]){
   const opts={progress:fx.HIT,caster,target};
   const bite=fx.pose(opts);
-  assert.equal(bite.frame,11);
+  assert.equal(bite.frame,33);
+  assert.equal(bite.scale,1.25);
+  for(const progress of [.10,.36,.43,fx.HIT,.90]){
+    const b=fx.pose({...opts,progress});
+    assert.deepEqual([b.rootX,b.rootY],[500,510],'the plant roots stay in the middle');
+  }
+  assert.equal(fx.pose({...opts,progress:.43}).reach,0);
+  assert.equal(fx.pose({...opts,progress:.92}).reach,0);
+  assert.equal(fx.depthFor({...opts,progress:.4},'plant'),510);
   assert.ok(Math.abs(bite.jaw.x-target.x)<.01);
   assert.ok(Math.abs(bite.jaw.y-(target.y-92))<.01);
   assert.ok(fx.depthFor(opts,'plant')>target.y,'closed jaws render over the target');
-  for(let i=0;i<=100;i++)for(const layer of ['ground','plant','bite'])
-    fx.draw(canvas,{...opts,progress:i/100,layer});
+  for(let i=0;i<=500;i++){
+    const progress=i/500;
+    poses.add(fx.pose({...opts,progress}).frame);
+    for(const layer of ['ground','plant','bite'])fx.draw(canvas,{...opts,progress,layer});
+  }
 }
 fx.portrait(canvas,240,196);
-assert.equal(new Set(frames.map(([,sx,sy])=>sx+','+sy)).size,16);
-assert.ok(frames.every(([image,sx,sy,sw,sh])=>image.src.endsWith('venus-trap-v154.webp')&&sx+sw<=1024&&sy+sh<=1024));
-console.log('Venus Trap: all 16 poses, mirrored jaw alignment, one 400-damage hit at closure, and Wind Dome blocking passed.');
+assert.equal(poses.size,46,'all 46 registered poses play');
+assert.ok(frames.every(([image,sx,sy,sw,sh])=>image.src.endsWith('venus-trap-v155.webp')&&sx+sw<=2048&&sy+sh<=1536));
+console.log('Venus Trap: 46 poses, centered roots, mirrored jaw alignment, one 400-damage hit at closure, and Wind Dome blocking passed.');

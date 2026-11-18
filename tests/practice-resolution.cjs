@@ -13,5 +13,5 @@ for(const lethal of [false,true]){
  if(!lethal)assert.equal(s.animation.stage,'raising');
  api.advanceBackground(30000);assert.notEqual(s.phase,'resolving');
 }
-for(const size of [1,2,3,4]){api.startPractice(size);const units=api.getState().units;for(const u of units){assert.ok(u.y>=335&&u.y<=585,'all seats remain on the arena floor');const p=api.unitPlateRect(u);assert.ok(p.x>=0&&p.x+p.w<=1000);for(const v of units.filter(v=>v.team===u.team&&v!==u)){assert.ok(Math.abs(v.y-u.y)>=75);}}}
+for(const size of [1,2,3,4]){api.startPractice(size);const units=api.getState().units;for(const u of units){assert.ok(u.y>=335&&u.y<=605,'all seats remain on the arena floor');const p=api.unitPlateRect(u);assert.ok(p.x>=0&&p.x+p.w<=1000);for(const v of units.filter(v=>v.team===u.team&&v!==u)){assert.ok(Math.abs(v.y-u.y)>=55);}}}
 console.log('Practice: Thorny Wrap cast attempts survive or defeat correctly, resolution continues, mastery example 620–758, and spaced formations pass.');

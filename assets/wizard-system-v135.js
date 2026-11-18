@@ -19,6 +19,14 @@ function normalize(input,cards){
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+100*(p.skills.hp||0),mana:b.mana+(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}
+function healing(card,p){const boost=multiplier(p,card.school);return card.healPerTurn?Math.round(card.healPerTurn*boost)*(card.healTurns||1):Math.round((card.heal||0)*boost);}
+function effectText(card,p){
+ const boost=multiplier(p,card.school),span=base=>{const a=Math.round(base*boost*.9),b=Math.round(base*boost*1.1);return a===b?String(a):a+'–'+b;};
+ if(card.healPerTurn)return Math.round(card.healPerTurn*boost)+' HP × '+card.healTurns+' TURNS · '+healing(card,p)+' TOTAL';
+ if(card.heal)return 'RESTORE '+healing(card,p)+' HP';
+ if(card.id==='rod')return span(card.damage)+' DAMAGE / CHARGE · 5 TURNS';
+ return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+label+' · '+span(base)+' × '+turns).join(' · ');
+}
 function rollVariant(r=Math.random()){return [.9,1,1.1][Math.min(2,Math.floor(Math.max(0,r)*3))];}
 function range(card,p,total=true){let base=card.damage||card.coatDamage||(card.id==='thornwrap'?150:0);if(!(base>0))return null;let hits=1;if(total&&card.id==='windfist'){base=card.hitDamage;hits=card.hits;}if(total&&(card.id==='penguins'||card.id==='ronin'))hits=3;
  const boost=multiplier(p,card.school);return {low:Math.round(base*boost*.9)*hits,high:Math.round(base*boost*1.1)*hits};}
@@ -27,5 +35,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<20;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level:20,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,baseline,normalize,stats,multiplier,rollVariant,range,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,baseline,normalize,stats,multiplier,healing,effectText,rollVariant,range,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

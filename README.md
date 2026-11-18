@@ -10,11 +10,11 @@ Create a wizard or load a locally saved wizard. Choose a name, robe/hat/skin col
 
 Grimoires contain **exactly 24 cards**, with **up to 3 copies of each spell**, drawn only from the wizard's two masteries. CPU wizards follow the same rules and receive randomized builds, grimoires and colors. Wizard saves stay in this browser on this device; this test does not provide accounts or global name reservation.
 
-Each damaging spell rolls one of three equally likely variants: 90%, 100%, or 110% of base damage, then applies elemental mastery and existing combat modifiers. One variant is shared across every hit/target of the cast. Cards display their damage ranges including mastery. Healing is unchanged. Damage-over-time effects capture the cast's multiplier when applied.
+Each damaging spell rolls one of three equally likely variants: 90%, 100%, or 110% of base damage, then applies elemental mastery and existing combat modifiers. One variant is shared across every hit/target of the cast. Cards display their damage ranges including mastery. Healing scales with elemental mastery and never rolls the damage variants. Damage-over-time effects capture the cast's multiplier when applied.
 
 ## Battles
 
-Practice supports 1v1, 2v2, 3v3 and 4v4. A five-card hand draws one card per round when there is room; discarded cards reshuffle when the draw pile is empty. New spells appear in a human player's starting hand if included in that player's grimoire. Passing gains 2 mana next turn, subject to that wizard's capacity.
+Practice supports 1v1, 2v2, 3v3 and 4v4. A five-card hand draws one card per round when there is room; played cards reshuffle when the draw pile is empty. Once per planning turn, optionally discard one card to the bottom of the draw pile, then cast or pass without an immediate replacement draw. New spells appear in a human player's starting hand if included in that player's grimoire. Consecutive voluntary passes gain 2, then 3, then 4 mana and so on next turn, capped by the build’s capacity; a non-pass turn resets the streak. Failed spells cost no mana. Lightning Rod charges only from successful allied Lightning spells (excluding the rod itself).
 
 The newest spell, **Creeping Croc**, creeps toward its target mostly submerged, lunges and snaps for **800 base Water damage**. On a successful unblocked hit, a **10%** Fear roll skips the target's pending action only if it has not acted this round. There is no carryover. Water now has 6 spells; every other element has 5 (41 total).
 
@@ -36,3 +36,5 @@ The host simulates combat and validates every submitted action; guests receive s
 - `node backend/test-lobby.cjs` runs a manual live lobby integration check, creates an ephemeral test room, and closes it afterward.
 
 Browser QA covers wizard creation/save/load, practice, responsive portrait/landscape layout, two-player lobby joining/readiness/teams and shared combat. Live transport tests cover unauthorized actions, CPU seats, session-secret isolation, locking and stale-action rejection.
+
+Only one harmful debuff can be active on a wizard. Reapplications cannot refresh or replace it; the next debuff becomes eligible after removal/expiry. Beneficial buffs are separate. Percentage effects (including Solidity, accuracy penalties and proc chances) retain their original values.

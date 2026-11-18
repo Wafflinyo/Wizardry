@@ -21,3 +21,31 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr) minmax(2
 #portal input,#portal select{font-size:16px}
 .mastery-tile i{display:block;width:36px;height:36px;margin:0 auto 8px;color:var(--accent)}
 .mastery-tile i svg{display:block;width:100%;height:100%}
+
+/* The fan and action details occupy separate rows, including tilted corners. */
+#game .cards{overflow:hidden;isolation:isolate}
+#game .hand-assist{position:relative;z-index:5;background:#071b25;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;grid-template-areas:"info info" "discard discard" "cast pass";gap:5px;padding:8px 3px}
+#game .hand-assist .spell-choice-info{grid-area:info;min-height:24px}
+#game #discardCard{grid-area:discard;min-height:30px;font-size:11px;touch-action:manipulation}
+#game #confirmTarget{grid-area:cast}#game #passTurn{grid-area:pass}
+@media(max-width:700px) and (orientation:portrait){
+body[data-screen=battle] #game.game{grid-template-rows:32px minmax(0,1fr) clamp(300px,40dvh,370px)}
+#game .hand{grid-template-rows:24px minmax(0,1fr) 110px}
+#game #cardHand.cards{--card-height:clamp(112px,17dvh,155px);padding-bottom:16px}
+#game .hand-assist{grid-template-rows:26px 30px 34px}
+}
+@media(orientation:landscape) and (max-height:620px){
+#game .hand{grid-template-rows:23px minmax(0,1fr) 105px}
+#game #cardHand.cards{--card-height:clamp(90px,34dvh,140px)}
+#game .hand-assist{grid-template-rows:24px 26px 28px;padding:3px}
+#game #discardCard{min-height:26px;font-size:9px}
+}
+
+@media(max-width:700px) and (orientation:portrait){
+body[data-portal-view=create] aside.wizard-display{position:sticky;top:-18px;z-index:10;display:grid;grid-template-columns:110px minmax(0,1fr);grid-template-rows:auto auto;gap:4px;padding:8px;background:#0a222df5;min-height:132px;box-shadow:0 8px 16px #0005}
+body[data-portal-view=create] aside.wizard-display canvas{grid-column:1;grid-row:1/4;width:110px;height:128px}
+body[data-portal-view=create] aside.wizard-display h2{font-size:19px;align-self:end;margin:0}
+body[data-portal-view=create] aside.wizard-display>.portal-note{display:none}
+body[data-portal-view=create] aside.wizard-display .stats-strip{margin:0;padding:5px;gap:12px;border:0;align-self:start}
+body[data-portal-view=create] aside.wizard-display .stats-strip b{font-size:17px}
+}

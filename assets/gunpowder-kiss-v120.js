@@ -13,12 +13,12 @@
  function actor(c,p,target){
    if(!image.complete||!image.naturalWidth)return;
    const i=frameAt(p),cw=image.naturalWidth/4,ch=image.naturalHeight/4,dir=target.x>=500?1:-1,size=210;
-   c.save();c.translate(500,480);c.scale(dir,1);c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
+   c.save();c.translate(500,510);c.scale(dir,1);c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
    c.drawImage(image,i%4*cw,Math.floor(i/4)*ch,cw,ch,-size/2,-size*.97,size,size);c.restore();
  }
  function kissPoint(p,target){
    const dir=target.x>=500?1:-1,q=C((p-release)/(hit-release));
-   return {x:L(500+dir*75,target.x,q),y:L(285,target.y-85,q)-Math.sin(q*Math.PI)*22,q};
+   return {x:L(500+dir*75,target.x,q),y:L(315,target.y-85,q)-Math.sin(q*Math.PI)*22,q};
  }
  // Faceted powder billows expand from the kiss into a full-body smokescreen.
  function puff(c,x,y,rx,ry,seed,alpha){
@@ -100,7 +100,7 @@
    for(let n=0;n<14;n++){const a=n*2.4,r=3+R(n+12)*7;grain(c,Math.cos(a)*r,Math.sin(a)*r,2,n%4===0);}
    c.fillStyle="#ffbb62";c.beginPath();c.moveTo(2,-10);c.lineTo(5,-16);c.lineTo(4,-9);c.lineTo(10,-11);c.lineTo(5,-6);c.closePath();c.fill();c.restore();
  }
- function depthFor({progress:p,target}){const q=C((p-release)/(hit-release));return L(480,target?.y||480,q)+.1;}
+ function depthFor({progress:p,target}){const q=C((p-release)/(hit-release));return L(510,target?.y||510,q)+.1;}
  function draw(c,{progress:p,target,layer="actor"}){if(!target||p<0||p>=1)return;if(layer==="actor")actor(c,p,target);if(layer==="powder")powder(c,p,target);}
  function portrait(c,w,h){
    if(!image.complete||!image.naturalWidth)return;

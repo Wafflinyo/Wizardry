@@ -12,7 +12,7 @@ function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let f
  if(s==='bender-punch'){frame=p<.45?6:7;wall=1;if(p>=.62){wall=0;burst=p*250-155;}}
  if(s==='bender-barrage'){frame=p<.45?8:9;burst=95+p*550;}
  if(s==='bender-exit'){frame=p<.5?10:11;alpha=1-p;}
- return{x:500,y:480,dir:t.x>=500?1:-1,frame,alpha,wall,burst};}
+ return{x:500,y:510,dir:t.x>=500?1:-1,frame,alpha,wall,burst};}
 // Dedicated articulated poses, registered to the stationary rear sole.
 const stompImage=new Image();stompImage.src='./assets/stone-bender-stomp-v84.webp?v=0.83.3';
 let stompAnchors;
@@ -37,9 +37,9 @@ function weightTransfer(o){if(o.stage!=='bender-stomp')return{lean:0,squat:0};co
 function impactAge(o){return o.stage==='bender-stomp'?(C(o.progress)-.68)*850:o.stage==='bender-wall'?272+C(o.progress)*650:-1;}
 function cameraShake(o){const age=impactAge(o);if(age<0||age>520)return{x:0,y:0};const fade=(1-age/520)**2;return{x:Math.sin(age*.13)*4.5*fade,y:Math.cos(age*.17)*3*fade};}
 function groundShock(c,o,b){const age=impactAge(o);if(age<0||age>650)return;const x=500+b.dir*48*BENDER_SCALE;
- for(let i=0;i<3;i++){const q=(age-i*75)/350;if(q<0||q>1)continue;c.save();c.globalAlpha*=(1-q)*(.65-i*.12);c.strokeStyle='#d4c6a0';c.lineWidth=3-i*.6;c.beginPath();c.ellipse(x,480,12+q*150,4+q*38,0,0,TAU);c.stroke();c.restore();}
+ for(let i=0;i<3;i++){const q=(age-i*75)/350;if(q<0||q>1)continue;c.save();c.globalAlpha*=(1-q)*(.65-i*.12);c.strokeStyle='#d4c6a0';c.lineWidth=3-i*.6;c.beginPath();c.ellipse(x,510,12+q*150,4+q*38,0,0,TAU);c.stroke();c.restore();}
  const p=C(age/520);c.save();c.globalAlpha*=(1-p)*.75;
- for(let i=0;i<15;i++){const a=i*2.399,r=12+p*105,px=x+Math.cos(a)*r,py=480+Math.sin(a)*r*.23-Math.sin(p*Math.PI)*(15+i%3*8);poly(c,[[px-3,py-3],[px+4,py-2],[px+3,py+3],[px-2,py+4]],i%2?'#928a73':'#c3b495');}
+ for(let i=0;i<15;i++){const a=i*2.399,r=12+p*105,px=x+Math.cos(a)*r,py=510+Math.sin(a)*r*.23-Math.sin(p*Math.PI)*(15+i%3*8);poly(c,[[px-3,py-3],[px+4,py-2],[px+3,py+3],[px-2,py+4]],i%2?'#928a73':'#c3b495');}
  c.restore();
 }
 function actor(c,o,b,w,h){
@@ -50,7 +50,7 @@ function actor(c,o,b,w,h){
 }
 const noise=n=>{const x=Math.sin(n*127.1+41.7)*43758.5453;return x-Math.floor(x);};
 function stoneWall(c,b){
- const h=b.wall*205;c.save();c.beginPath();c.rect(0,0,1000,480);c.clip();c.translate(500,480+205-h);c.scale(b.dir,1);
+ const h=b.wall*205;c.save();c.beginPath();c.rect(0,0,1000,510);c.clip();c.translate(500,510+205-h);c.scale(b.dir,1);
  const face=[[50,0],[140,0],[143,-42],[138,-76],[141,-119],[138,-171],[134,-202],[120,-206],[109,-201],[84,-205],[63,-201],[50,-194],[48,-146],[52,-109],[49,-64]];
  poly(c,[[140,0],[158,-12],[157,-56],[155,-92],[160,-143],[153,-207],[134,-202],[138,-171],[141,-119],[138,-76],[143,-42]],'#4e574f');
  poly(c,[[50,-194],[63,-201],[84,-205],[109,-201],[120,-206],[134,-202],[153,-207],[133,-217],[112,-214],[99,-217],[71,-213]],'#a6aa9c');
@@ -78,13 +78,13 @@ function dust(c,x,y,p,strength=1){if(p<0||p>1)return;c.save();c.globalAlpha*=str
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   groundShock(c,o,b);
-  c.save();c.globalAlpha*=b.alpha*.3;c.fillStyle='#12212a';c.beginPath();c.ellipse(500,427,30*BENDER_SCALE,8*BENDER_SCALE,0,0,TAU);c.fill();c.restore();
-  if(s==='bender-stomp'&&p>=.68)dust(c,500+b.dir*48*BENDER_SCALE,480,(p-.68)/.32*.3,1);
-  if(s==='bender-wall')dust(c,500+b.dir*38,480,.3+p*.7,1);
-  if(s==='bender-punch'&&p>=.62)dust(c,500+b.dir*95,480,(p-.62)*.7,.8);
-  if(s==='bender-barrage'&&p<.5)dust(c,500+b.dir*95,480,.27+p*1.4,.7);
+  c.save();c.globalAlpha*=b.alpha*.3;c.fillStyle='#12212a';c.beginPath();c.ellipse(500,510,30*BENDER_SCALE,8*BENDER_SCALE,0,0,TAU);c.fill();c.restore();
+  if(s==='bender-stomp'&&p>=.68)dust(c,500+b.dir*48*BENDER_SCALE,510,(p-.68)/.32*.3,1);
+  if(s==='bender-wall')dust(c,500+b.dir*38,510,.3+p*.7,1);
+  if(s==='bender-punch'&&p>=.62)dust(c,500+b.dir*95,510,(p-.62)*.7,.8);
+  if(s==='bender-barrage'&&p<.5)dust(c,500+b.dir*95,510,.27+p*1.4,.7);
  }
- if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,480);c.scale(b.dir*BENDER_SCALE,BENDER_SCALE);
+ if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,510);c.scale(b.dir*BENDER_SCALE,BENDER_SCALE);
   actor(c,o,b,w,h);c.restore();
  }
  if(o.layer==='wall'&&b.wall>0)stoneWall(c,b);
@@ -93,9 +93,9 @@ function items(o){const b=pose(o),target=o.target||{x:800,y:450},out=[];if(b.bur
  // Thick blocks launch in a closely staggered burst and cross the arena in about 0.2 seconds.
  for(let i=0;i<24;i++){
   const col=i%4,row=Math.floor(i/4),delay=i===0?0:Math.floor(noise(i+431)*155)+(i%5===1?35:0),flight=185+(i%3)*12,age=b.burst-delay;
-  const start={x:500+b.dir*(50+(col+.5)*22.5),y:480-(row+.5)*34},end={x:target.x+Math.sin(i*7.1)*22,y:target.y-95+Math.cos(i*3.7)*26};
+  const start={x:500+b.dir*(50+(col+.5)*22.5),y:510-(row+.5)*34},end={x:target.x+Math.sin(i*7.1)*22,y:target.y-95+Math.cos(i*3.7)*26};
   const q=C(age/flight),dx=end.x-start.x,dy=end.y-start.y,len=Math.max(1,Math.hypot(dx,dy));
-  if(age<=flight)out.push({type:'rock',x:L(start.x,end.x,q),y:L(start.y,end.y,q),size:L(18,13,q),angle:q*(i%2?.55:-.55),seed:i,vx:dx/len,vy:dy/len,depthY:L(480,target.y,q)-.1});
+  if(age<=flight)out.push({type:'rock',x:L(start.x,end.x,q),y:L(start.y,end.y,q),size:L(18,13,q),angle:q*(i%2?.55:-.55),seed:i,vx:dx/len,vy:dy/len,depthY:L(510,target.y,q)-.1});
   if(age>flight&&age<flight+240)out.push({type:'impact',x:end.x,y:end.y,p:(age-flight)/240,seed:i,depthY:target.y+.1});
  }return out;}
 function drawItem(c,a){c.save();c.translate(a.x,a.y);

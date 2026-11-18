@@ -160,7 +160,7 @@ function draw(ctx,options){
   const stage=options.stage||"estel-summon";
   if(!PHASES.includes(stage))return false;
   const p=clamp(options.progress||0),time=Number(options.time)||0,target=options.target;
-  const cx=500,groundY=469;
+  const cx=500,groundY=510;
   const dir=(target?.x??320)>=cx?1:-1;
   const source=options.start||{x:cx+dir*88,y:204};
   const destination=options.end||{x:target?.x??320,y:(target?.y??400)-82};

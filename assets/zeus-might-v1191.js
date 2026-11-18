@@ -8,7 +8,7 @@
  function frameAt(p){let i=0;while(i<15&&p>=poseTimes[i+1])i++;return i*6;}
  function actorPose(p,target){
    const d=target.x>=500?1:-1;
-   return {x:500,y:L(-230,360,E(p/.18))+Math.sin(p*24)*2-E((p-.82)/.175)*650,dir:d,alpha:1};
+   return {x:500,y:L(-200,390,E(p/.18))+Math.sin(p*24)*2-E((p-.82)/.175)*650,dir:d,alpha:1};
  }
  function actor(c,p,target){
    if(!image.complete||!image.naturalWidth)return;
@@ -28,7 +28,7 @@
  }
  function projectile(c,p,target){
    if(p<release||p>=impact)return;
-   const dir=target.x>=500?1:-1,from={x:500+dir*112.5,y:215},to={x:target.x,y:target.y-85};
+   const dir=target.x>=500?1:-1,from={x:500+dir*112.5,y:245},to={x:target.x,y:target.y-85};
    const dx=to.x-from.x,dy=to.y-from.y,distance=Math.hypot(dx,dy)||1,ux=dx/distance,uy=dy/distance;
    const length=Math.min(104,distance*.70),q=C((p-release)/(impact-release)),travel=L(length*.5,distance-length*.5,q);
    const angle=Math.atan2(dy,dx),x=from.x+ux*travel,y=from.y+uy*travel;

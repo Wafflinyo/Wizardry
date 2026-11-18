@@ -23,7 +23,7 @@ img.onload=()=>callbacks.splice(0).forEach(fn=>{try{fn()}catch(e){}});
 img.src="./assets/baby-dragon-fire-v62.webp?v=0.62.0";
 function ready(){return img.complete&&img.naturalWidth===1024&&img.naturalHeight===1024}
 function onReady(fn){if(typeof fn==="function"){if(ready())fn();else callbacks.push(fn)}}
-const HOME={x:500,groundY:480,size:226};
+const HOME={x:500,groundY:510,size:226};
 function sprite(c,index,x,y,size=HOME.size,alpha=1,direction=1){
  if(!ready()||alpha<=0)return false;
  c.save();c.globalAlpha*=C(alpha);c.translate(x,y);c.scale(direction<0?-1:1,1);
@@ -113,14 +113,14 @@ function smoke(c,p){
  const fade=1-E((p-.10)/.9);c.save();c.globalAlpha*=fade*.85;
  for(let i=0;i<21;i++){
    const a=i*2.39996,r=(12+rand(i*8)*78)*E(p),size=11+i%4*5+15*E(p);
-   circle(c,500+Math.cos(a)*r,417+Math.sin(a)*r*.24-18*E(p),size,
+   circle(c,500+Math.cos(a)*r,510+Math.sin(a)*r*.24-18*E(p),size,
      i%3===0?"#b3aaa0a8":i%2?"#7d706fba":"#8b8181b0");
  }
  c.restore();
 }
 // A distinct puff on the ARENA FLOOR. The atlas's flight frames 14/15
 // contain no ground smoke; all the particles below stay at x=500,
-// y=480 regardless of the dragon's moving actor position.
+// y=510 regardless of the dragon's moving actor position.
 function takeoffGroundDust(c,p){
  const time=C(p),fade=(1-E(time/.72))*.75;
  if(fade<=.001)return;

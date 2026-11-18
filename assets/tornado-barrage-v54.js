@@ -68,7 +68,7 @@ function fallbackFunnel(c,cx,base,p,time){
  c.restore();
 }
 function funnel(c,stage,p,time,targets){
- const cx=500,base=468;
+ const cx=500,base=510;
  const fade=stage==="wind-dissolve"?1-smooth(p):stage==="wind-summon"?smooth(p/.2):1;
  const scale=stage==="wind-summon"?.56+.44*smooth(p/.66):1;
  // Flip the right-facing artwork only for a left-side opposing team.
@@ -109,7 +109,7 @@ function rockTrajectory(i,k,target,count,progress){
  const finish=hitAt(i,count)+k*ROCK_FAN_INTERVAL;
  const t=clamp((progress-begin)/(finish-begin));
  const dir=target.x>=500?1:-1;
- const start={x:500+dir*(35+k*7),y:468-168-(i%3)*13-k*7};
+ const start={x:500+dir*(35+k*7),y:510-168-(i%3)*13-k*7};
  const end={x:target.x+(k-1.5)*8,
             y:target.y-82+(k%3-1)*11};
  return {t,start,end,point:rockPosition(start,end,t),
@@ -175,7 +175,7 @@ function draw(c,opts){
    // The rocks already hit one by one during wind-volley. Do not
    // replay a false simultaneous blast after the final target.
    c.globalAlpha=.25*(1-p);
-   ellipse(c,500,468,82+p*56,23+p*16,null,"#b0dfd1",3);
+   ellipse(c,500,510,82+p*56,23+p*16,null,"#b0dfd1",3);
  }
  c.restore();return true;
 }
@@ -192,7 +192,7 @@ function drawForeground(c,opts){
 function drawCardArt(c,w,h){
  if(!c)return false;
  c.save();c.translate(w/2,h*.99);c.scale(.54,.52);
- c.translate(-500,-468);
+ c.translate(-500,-510);
  funnel(c,"wind-volley",.17,900,[{x:750,y:352}]);
  c.restore();return true;
 }

@@ -2941,7 +2941,7 @@
   function beginGolemTravel(anim){
     const target=getUnit(anim.target);
     const direction=(target?.x??700)>=500?1:-1;
-    const start={x:500+direction*112,y:462};
+    const start={x:500+direction*112,y:502};
     const end=target?{x:target.x,y:target.y+8}:start;
     const distance=Math.hypot(end.x-start.x,end.y-start.y);
     const duration=clamp(distance/GOLEM_SPEED_PX_PER_MS,
@@ -2954,7 +2954,7 @@
     const target=getUnit(anim.target);
     const direction=(target?.x??320)>=500?1:-1;
     // The orb forms beside Lady Estel's extended hand.
-    const start={x:500+direction*88,y:204};
+    const start={x:500+direction*88,y:245};
     const end=target?{x:target.x,y:target.y-82}:start;
     const pixels=Math.hypot(end.x-start.x,end.y-start.y);
     anim.estelOrbStart=start;anim.estelOrbEnd=end;
@@ -2966,7 +2966,7 @@
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
     if(!caster)return;
-    const baseX=500,baseY=470;
+    const baseX=500,baseY=510;
     g.save();
     if(card.id==="dragon"){
       window.WIZARDRY_BABY_DRAGON_V61?.draw(g,{
@@ -3013,7 +3013,7 @@
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
-      const done=renderSprite(card.id,idx,500,470,310,target,p);
+      const done=renderSprite(card.id,idx,500,510,310,target,p);
       if(!done){
         const col=card.id==="poseidon"?"#66daf0":"#96b97e";
         ellipse(g,500,392,65+Math.sin(time*.006)*6,18,col+"66",col,3);
@@ -3051,7 +3051,7 @@
     const release=POSEIDON_KEY_TIMES[10];
     if(p<release||p>=anim.card.hit)return null;
     const t=ease((p-release)/(anim.card.hit-release));
-    const originX=target.x>=500?550:450,originY=284;
+    const originX=target.x>=500?550:450,originY=324;
     const direction=target.x>=500?1:-1;
     return {
       x:lerp(originX,target.x,t),
@@ -3060,7 +3060,7 @@
       direction,
       // Follow the projectile's projected arena floor depth, not a
       // permanent background layer or its elevated screen Y coordinate.
-      depthY:lerp(471,target.y+12,t)
+      depthY:lerp(511,target.y+12,t)
     };
   }
   function drawPoseidonProjectile(p){
@@ -3086,7 +3086,7 @@
     // All sparks stop IMMEDIATELY when rune success/failure resolves.
     window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
       school:a.card.school,elapsed:a.elapsed,duration:a.duration,
-      centerX:500,centerY:410,scale:5.55
+      centerX:500,centerY:440,scale:5.55
     });
   }
   function drawRuneOutcome(a){
@@ -3095,14 +3095,14 @@
       school:a.card.school,
       result:a.stage==="rune-success"?"success":"fail",
       elapsed:a.elapsed,duration:a.duration,
-      centerX:500,centerY:410,scale:5.55
+      centerX:500,centerY:440,scale:5.55
     });
   }
   function drawFizzle(a){
     if(!a||a.stage!=="fizzle")return;
     const c=getUnit(a.source);if(!c)return;
     const progress=a.elapsed/a.duration;
-    const centerX=500,centerY=410;
+    const centerX=500,centerY=440;
     g.save();g.globalAlpha=Math.max(0,1-progress);
     ellipse(g,centerX,centerY,17+progress*77,17+progress*29,
       null,"#ef9e9f",3);
@@ -3180,7 +3180,7 @@
     }
     if(action?.stage==="summon"&&["flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
-      const depth=(targets.length?Math.max(...targets.map(t=>t.y)):480)+.1;
+      const depth=(targets.length?Math.max(...targets.map(t=>t.y)):510)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
     }
     if(action?.card?.id==="croc"&&action.stage==="summon"){
@@ -3199,7 +3199,7 @@
       const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target),releases:WIND_FIST_RELEASES};
       const spell=window.WIZARDRY_WIND_FIST_V123;
       if(spell){
-        for(const layer of ["ground","actor"])renderables.push({type:"wind-fist-"+layer,depthY:layer==="ground"?479.8:480,priority:2,draw:()=>spell.draw(g,{...opts,layer})});
+        for(const layer of ["ground","actor"])renderables.push({type:"wind-fist-"+layer,depthY:layer==="ground"?509.8:510,priority:2,draw:()=>spell.draw(g,{...opts,layer})});
         for(let i=0;i<10;i++)for(const layer of ["fist","impact"])renderables.push({type:"wind-fist-"+layer+i,depthY:spell.depthFor({...opts,index:i,layer}),priority:2,draw:()=>spell.draw(g,{...opts,index:i,layer})});
       }
     }
@@ -3218,14 +3218,14 @@
     }
     if(action?.card?.id==="rod"&&action.stage==="summon"){
       const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source)};
-      if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:480,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
+      if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:510,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
     for(const burst of state.gunpowderBursts||[])renderables.push({type:"gunpowder-explosion",depthY:burst.y+.15,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.explosion(g,burst)});
     if(action?.card?.id==="gunpowderkiss"&&action.stage==="summon"){
       const kiss=window.WIZARDRY_GUNPOWDER_V120,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
       if(kiss){
-        renderables.push({type:"gunpowder-mistress",depthY:480,priority:1,draw:()=>kiss.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"gunpowder-mistress",depthY:510,priority:1,draw:()=>kiss.draw(g,{...opts,layer:"actor"})});
         renderables.push({type:"gunpowder-kiss",depthY:kiss.depthFor(opts),priority:2,draw:()=>kiss.draw(g,{...opts,layer:"powder"})});
       }
     }
@@ -3239,7 +3239,7 @@
     }
     if(action?.card?.id==="kineticsand"&&action.stage==="summon"){
       const p=clamp(action.elapsed/action.duration,0,1),target=getUnit(action.target);
-      if(target)for(const layer of ["back","front"])renderables.push({type:"kinetic-sand-"+layer,depthY:p<.43?480+(layer==="back"?-.1:.1):target.y+(layer==="back"?-.1:.1),priority:2,draw:()=>drawKineticSand(g,p,target,time,layer)});
+      if(target)for(const layer of ["back","front"])renderables.push({type:"kinetic-sand-"+layer,depthY:p<.43?510+(layer==="back"?-.1:.1):target.y+(layer==="back"?-.1:.1),priority:2,draw:()=>drawKineticSand(g,p,target,time,layer)});
     }
     if(action?.card?.id==="blizzard"&&action.stage==="summon"){
       const caster=getUnit(action.source),progress=clamp(action.elapsed/action.duration,0,1);
@@ -3247,7 +3247,7 @@
     }
     if(action?.card?.id==="bloom"&&action.stage==="summon"){
       const bloom=window.WIZARDRY_BLOOM_V97,caster=getUnit(action.source),opts={progress:clamp(action.elapsed/action.duration,0,1),targets:action.sporeTargets||alive(1-caster.team).map(t=>({id:t.id,x:t.x,y:t.y}))};
-      if(bloom){renderables.push({type:"bloom-flower",depthY:480,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
+      if(bloom){renderables.push({type:"bloom-flower",depthY:510,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
         for(const target of opts.targets)renderables.push({type:"bloom-spores-"+target.id,depthY:bloom.depthFor(opts,target),priority:2,draw:()=>bloom.draw(g,{...opts,target,layer:"spores"})});}
     }
     if(action?.card?.id==="devil"&&action.stage==="summon"){
@@ -3332,8 +3332,8 @@
     }
     if(action?.card?.id==="frosty"&&action.stage.startsWith("frost-")){
       const frosty=window.WIZARDRY_FROSTY_V85,opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.frostTargetPoint||getUnit(action.target)};
-      if(frosty){frosty.draw(g,{...opts,layer:"ground"});renderables.push({type:"frosty",depthY:424,priority:0,draw:()=>frosty.draw(g,{...opts,layer:"actor"})});
-        renderables.push({type:"frosty-snow-veil",depthY:480,priority:1,draw:()=>frosty.drawVeil(g,opts)});
+      if(frosty){frosty.draw(g,{...opts,layer:"ground"});renderables.push({type:"frosty",depthY:510,priority:0,draw:()=>frosty.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"frosty-snow-veil",depthY:510,priority:1,draw:()=>frosty.drawVeil(g,opts)});
         const ball=frosty.projectile(opts);if(ball)renderables.push({type:"frosty-snowball",depthY:ball.depthY,priority:1,draw:()=>frosty.drawBall(g,ball)});
         renderables.push({type:"frosty-impact",depthY:(opts.target?.y||450)+.1,priority:2,draw:()=>frosty.drawImpact(g,opts)});
       }
@@ -3342,8 +3342,8 @@
       const bender=window.WIZARDRY_STONE_BENDER_V83;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.benderTargetPoint||getUnit(action.target)};
       if(bender){bender.draw(g,{...opts,layer:"ground"});
-        renderables.push({type:"stone-bender",depthY:417,priority:0,draw:()=>bender.draw(g,{...opts,layer:"actor"})});
-        renderables.push({type:"stone-wall",depthY:480,priority:1,draw:()=>bender.draw(g,{...opts,layer:"wall"})});
+        renderables.push({type:"stone-bender",depthY:510,priority:0,draw:()=>bender.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"stone-wall",depthY:510,priority:1,draw:()=>bender.draw(g,{...opts,layer:"wall"})});
         for(const item of bender.items(opts))renderables.push({type:"bender-"+item.type,depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>bender.drawItem(g,item)});
       }
     }
@@ -3358,7 +3358,7 @@
       const ronin=window.WIZARDRY_WIND_SLASHES_V81;
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.slashTargetPoint||getUnit(action.target)};
       if(ronin){ronin.draw(g,{...opts,layer:"ground"});
-        renderables.push({type:"ronin",depthY:417,priority:0,draw:()=>ronin.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"ronin",depthY:510,priority:0,draw:()=>ronin.draw(g,{...opts,layer:"actor"})});
         for(const item of ronin.items(opts))renderables.push({type:"wind-slash",depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>ronin.drawItem(g,item)});
       }
     }

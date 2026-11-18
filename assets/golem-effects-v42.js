@@ -3,7 +3,7 @@
    impact are separate exported transparent textures. No procedural spikes,
    repeated slam frames as rocks, or model substitutions. */
 (function(root){"use strict";
-  const GROUND={x:500,y:470},SLAM_FRAMES=16,TRAVEL_FRAMES=8,IMPACT_FRAMES=8;
+  const GROUND={x:500,y:510},SLAM_FRAMES=16,TRAVEL_FRAMES=8,IMPACT_FRAMES=8;
   const slamKeyframes=[
     [0,0],[115,1],[230,2],[345,3], // original emergence
     [465,4],[615,5],                // ORIGINAL clasped hands

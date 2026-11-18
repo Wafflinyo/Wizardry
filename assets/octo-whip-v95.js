@@ -6,7 +6,7 @@ image.onload=()=>{ready=true;listeners.forEach(fn=>fn());};image.src='./assets/o
 slam.onload=()=>{slamReady=true;listeners.forEach(fn=>fn());};slam.src='./assets/octo-slam-v97.webp';
 const slamFeet=[298, 298, 299, 300, 274, 274, 270, 270],SLAM_SCALE=300/420;
 function pose(p,target){
- const dir=target.x>=500?1:-1,land=C(p/.20),exit=C((p-.87)/.11),reach=C((p-.40)/.10)*(1-C((p-.82)/.06)),floor=L(480,target.y,reach);
+ const dir=target.x>=500?1:-1,land=C(p/.20),exit=C((p-.87)/.11),reach=C((p-.40)/.10)*(1-C((p-.82)/.06)),floor=L(510,target.y,reach);
  const frame=p<.20?Math.min(3,Math.floor(p/.20*4)):p<.45?4+Math.min(3,Math.floor((p-.20)/.25*4)):15;
  const slamFrame=p<.50?0:p<.57?1:p<.64?2:p<.70?3:p<.74?4:p<.79?5:p<.84?6:7;
  return {dir,frame,slamFrame,exit,x:L(500,target.x-dir*300,reach),y:floor-470*(1-land)*(1-land),groundY:floor,alpha:1,tip:{x:target.x,y:target.y},attack:p>=.45&&p<.87};

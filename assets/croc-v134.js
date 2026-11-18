@@ -7,7 +7,7 @@ const LUNGE=.56,HIT=.62,VISUAL_HIT=.74,SIZE=270;
 function timeline(p){return p<.56?p:p<.64?.56+(p-.56)*3:p<.85?.80+(p-.64)*(.20/.21):1;}
 function pose(p,target){
  p=timeline(p);
- const dir=target.x>=500?1:-1,creep=E(p/LUNGE),waterY=L(480,target.y,creep),startX=500-dir*120,readyX=target.x-dir*130;
+ const dir=target.x>=500?1:-1,creep=E(p/LUNGE),waterY=L(510,target.y,creep),startX=500-dir*120,readyX=target.x-dir*130;
  let x=L(startX,readyX,creep),y=waterY-12,frame=Math.floor(p*12)%4,clip=true;
  if(p>=LUNGE&&p<.70){const q=E((p-LUNGE)/.14);x=L(readyX,target.x-dir*104,q);y=L(target.y-12,target.y-54,q);frame=4+Math.min(3,Math.floor((p-LUNGE)/.14*4));}
  else if(p>=.70&&p<.80){x=target.x-dir*104;y=target.y-54;frame=8+Math.min(3,Math.floor((p-.70)/.065*4));}

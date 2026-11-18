@@ -2,7 +2,7 @@
 (function(root){'use strict';
 const C=t=>Math.max(0,Math.min(1,t)),L=(a,b,t)=>a+(b-a)*t,E=t=>{t=C(t);return t*t*(3-2*t);};
 const atlas=new Image(),listeners=[];atlas.onload=()=>{buildFaceMasks();listeners.splice(0).forEach(fn=>fn());};atlas.src='./assets/jack-cross-atlas-v130.webp';
-const FLOOR=480,SIZE=185,SWARM=.62,HIT=.82,faceMasks=[];
+const FLOOR=510,SIZE=185,SWARM=.62,HIT=.82,faceMasks=[];
 function glowStrength(p){return E((p-.45)/.05)*(1-E((p-SWARM)/.045));}
 function buildFaceMasks(){
  if(typeof document==='undefined')return;

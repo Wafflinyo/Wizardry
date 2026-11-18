@@ -86,7 +86,7 @@ function draw(ctx,options){
   const target=options.target;
   const tx=target?.x??760,ty=(target?.y??390)-100;
   const direction=tx>=500?1:-1;
-  const cy=469,cx=500;
+  const cy=510,cx=500;
   ctx.save();
   // The summoning disk/boots exist on the SAME floor as existing wizards.
   ctx.beginPath();ctx.ellipse(cx,cy+4,47,12,0,0,TWO);

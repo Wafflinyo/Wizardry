@@ -159,11 +159,11 @@
   // middle seats sit farther out. Vertical spacing preserves 2.5D depth
   // and leaves a clear casting lane plus room for outward-facing HP plates.
   const scenePositions={
-    1:[[[285,520]],[[715,500]]],
-    2:[[[285,445],[340,590]],[[715,425],[660,570]]],
-    3:[[[335,420],[265,515],[350,600]],[[665,400],[735,495],[650,580]]],
-    4:[[[335,410],[265,475],[275,550],[350,605]],
-       [[665,390],[735,455],[725,530],[650,590]]]
+    1:[[[225,520]],[[775,500]]],
+    2:[[[210,445],[285,590]],[[790,425],[715,570]]],
+    3:[[[245,420],[135,515],[305,600]],[[755,400],[865,495],[695,580]]],
+    4:[[[265,410],[130,475],[180,550],[330,605]],
+       [[735,390],[870,455],[820,530],[670,590]]]
   };
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -2619,19 +2619,47 @@
     }
     g.restore();
   }
-  // Small plates sit OUTSIDE each character silhouette: allies on the
-  // left, enemies on the right. Shared placements also inform tap hitboxes.
+  // Above-head labels prefer a small inward offset. Search nearby clear
+  // positions when another model or label occupies the preferred space.
   function unitPlateRect(u){
-    // Narrow side plates avoid the adjacent front-row character silhouettes
-    // in dense 4v4 seating, particularly the two rightmost enemies.
-    const w=180;
-    const x=u.team?W-w-8:8;
-    let y=0;
-    for(const seat of state.units.filter(v=>v.team===u.team).sort((a,b)=>a.y-b.y)){
-      const desired=seat.y-((seat.x<220||seat.x>780)?178:175);
-      y=Math.max(desired,y?y+96:desired);if(seat.id===u.id)break;
+    const key=state.units.map(v=>v.id+':'+v.x+','+v.y+','+v.statuses.length+','+!!state.auras[v.team]).join('|');
+    if(state.plateLayoutKey!==key){
+      const w=180,placed=[],layout={};
+      const bodies=state.units.map(v=>{const scale=lerp(.60,.90,clamp((v.y-288)/235,0,1));return{x:v.x-74*scale,y:v.y-220*scale,w:148*scale,h:220*scale};});
+      const overlaps=(a,b)=>a.x<b.x+b.w+5&&a.x+a.w+5>b.x&&a.y<b.y+b.h+5&&a.y+a.h+5>b.y;
+      for(const v of [...state.units].sort((a,b)=>a.y-b.y||a.team-b.team)){
+        const scale=lerp(.60,.90,clamp((v.y-288)/235,0,1));
+        const reservedHeight=unitStatuses(v).length?94:52;
+        const idealX=clamp(v.x-w/2+(v.team?-30:30),8,W-w-8),idealY=Math.max(8,v.y-220*scale-reservedHeight-12);
+        let best=null,bestCost=Infinity;
+        for(let rise=0;rise<=300;rise+=20)for(const dx of [0,-40,40,-80,80,-120,120,-180,180,-240,240,-320,320]){
+          const candidate={x:clamp(idealX+dx,8,W-w-8),y:idealY-rise,w,h:reservedHeight};
+          if(candidate.y<8||bodies.some(b=>overlaps(candidate,b))||placed.some(b=>overlaps(candidate,b)))continue;
+          const cost=Math.abs(candidate.x-idealX)+rise*4;if(cost<bestCost){best=candidate;bestCost=cost;}
+        }
+        if(!best)best={x:idealX,y:8,w,h:reservedHeight};
+        placed.push(best);layout[v.id]={x:best.x,y:best.y,w,h:52};
+      }
+      state.plateLayout=layout;state.plateLayoutKey=key;
     }
-    return {x,y,w,h:52};
+    return state.plateLayout[u.id];
+  }
+  function plateIsTarget(u,a){
+    if(!a)return false;if(a.target===u.id)return true;
+    const source=getUnit(a.source);
+    if(a.card.target==='all_enemies'&&u.team!==source?.team)return true;
+    if(a.card.target==='team'&&u.team===source?.team)return true;
+    if(a.card.selfOnly&&u.id===a.source)return true;
+    for(const key of ['dragonSplashIds','zeusChainTargets','rainTargets','sporeTargets','blizzardTargets','windImpactTargets'])
+      if((a[key]||[]).some(v=>(typeof v==='string'?v:v.id)===u.id))return true;
+    return false;
+  }
+  function plateAlpha(u){
+    const a=state.animation;if(!a||state.phase!=='resolving'||plateIsTarget(u,a))return 1;
+    if(['raising','tracing-auto','rune-fail'].includes(a.stage))return 1;
+    if(a.stage==='rune-success')return 1-ease(a.elapsed/220);
+    if(a.stage==='lowering')return ease(a.elapsed/280);
+    return 0;
   }
   function unitStatuses(u){
     const rank=st=>DEBUFFS.has(st.kind)?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
@@ -2710,7 +2738,7 @@
   }
   function hitStatusRune(x,y){
     let closest=null,distance=Infinity;
-    for(const u of state.units){if(u.hp<=0)continue;
+    for(const u of state.units){if(u.hp<=0||plateAlpha(u)<.1)continue;
       for(const [i,st] of unitStatuses(u).entries()){
         const r=statusRuneRect(u,i),d=Math.hypot(x-r.x,y-r.y);
         if(d<=r.hitRadius&&d<distance){closest={u,st};distance=d;}
@@ -2731,7 +2759,7 @@
     const {x,y,w}=unitPlateRect(u);
     g.save();
     const disabled=u.hp<=0;
-    g.globalAlpha=disabled?.66:1;
+    g.globalAlpha=(disabled?.66:1)*plateAlpha(u);
     const tint=u.team?"#865563":"#3f96a7";
     rounded(g,x,y,w,26,6,"#061621eb",tint,1.3);
     g.fillStyle=disabled?"#ab9e9e":"#e9f6f2";
@@ -3468,7 +3496,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},

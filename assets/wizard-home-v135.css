@@ -49,3 +49,20 @@ body[data-portal-view=create] aside.wizard-display>.portal-note{display:none}
 body[data-portal-view=create] aside.wizard-display .stats-strip{margin:0;padding:5px;gap:12px;border:0;align-self:start}
 body[data-portal-view=create] aside.wizard-display .stats-strip b{font-size:17px}
 }
+
+/* Desktop keeps the full arena width, with a broad hand underneath. */
+@media(min-width:1000px) and (min-height:621px){
+body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-template-rows:40px minmax(0,1fr) clamp(250px,30vh,320px);grid-template-areas:'head' 'arena' 'hand'}
+#game .hand{grid-template-columns:minmax(0,1fr) 310px;grid-template-rows:27px minmax(0,1fr);column-gap:20px}
+#game .hand-head{grid-column:1/-1}
+#game #cardHand.cards{grid-column:1;grid-row:2;--card-height:clamp(150px,18vh,200px);--card-width:calc(var(--card-height)*.65);--fan-step:clamp(80px,9vw,125px)}
+#game .hand-assist{grid-column:2;grid-row:2;display:grid!important;align-content:center;grid-template-rows:auto 34px 40px;padding:10px;gap:8px}
+#game .hand-assist .spell-choice-info{grid-area:info;min-height:45px}
+}
+
+@media(min-width:1000px) and (min-height:621px){
+#game .hand{display:grid!important;gap:5px 20px;padding:4px 10px;border-left:0;border-top:1px solid var(--line)}
+#game #cardHand.cards{min-height:0!important;height:100%;align-self:stretch}
+#game #cardHand.cards>button.spell.card-ornate{top:6px}
+#game .hand-assist{min-height:0!important}
+}

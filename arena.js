@@ -2624,7 +2624,7 @@
   function unitPlateRect(u){
     const key=state.units.map(v=>v.id+':'+v.x+','+v.y+','+v.statuses.length+','+!!state.auras[v.team]).join('|');
     if(state.plateLayoutKey!==key){
-      const w=180,placed=[],layout={};
+      const w=180,placed=[],layout={};let packed=false;
       const bodies=state.units.map(v=>{const scale=lerp(.60,.90,clamp((v.y-288)/235,0,1));return{x:v.x-74*scale,y:v.y-220*scale,w:148*scale,h:220*scale};});
       const overlaps=(a,b)=>a.x<b.x+b.w+5&&a.x+a.w+5>b.x&&a.y<b.y+b.h+5&&a.y+a.h+5>b.y;
       for(const v of [...state.units].sort((a,b)=>a.y-b.y||a.team-b.team)){
@@ -2637,9 +2637,10 @@
           if(candidate.y<8||bodies.some(b=>overlaps(candidate,b))||placed.some(b=>overlaps(candidate,b)))continue;
           const cost=Math.abs(candidate.x-idealX)+rise*4;if(cost<bestCost){best=candidate;bestCost=cost;}
         }
-        if(!best)best={x:idealX,y:8,w,h:reservedHeight};
+        if(!best){packed=true;break;}
         placed.push(best);layout[v.id]={x:best.x,y:best.y,w,h:52};
       }
+      if(packed)state.units.forEach((v,i)=>{layout[v.id]={x:20+(i%4)*245,y:12+Math.floor(i/4)*104,w,h:52};});
       state.plateLayout=layout;state.plateLayoutKey=key;
     }
     return state.plateLayout[u.id];

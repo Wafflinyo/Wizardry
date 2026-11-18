@@ -74,7 +74,7 @@
     g.restore();
     if(burst)frostBurst(g,target.x,target.y-95*scale,burst,d);
   }
-  function draw(g,p,target,layer){
+  function draw(g,p,target,layer,blocked=false){
     const d=target.x>=500?1:-1,step=clamp((p-.625)/.04),x=500+24*d*step,y=510;
     g.save();
     if(layer==='floor'&&p>=.136){
@@ -118,8 +118,8 @@
         const u=(p-.659)/(.748-.659),px=x+(target.x-x)*u+d*Math.min(126,Math.abs(target.x-x)*.55)*(1-u),py=y-87+(target.y-88-(y-87))*u;
         g.translate(px,py);g.scale(d,1);g.rotate(-.24);
         iceFrame(g,Math.min(3,Math.floor(u*4)),-67,-74,94,148);
-      }else if(p>=.748)encase(g,p,target,d);
+      }else if(p>=.748&&!blocked)encase(g,target.statuses?.some(st=>st.kind==="frozen")?Math.min(p,.803):p,target,d);
     }g.restore();
   }
-  window.Heizmann={draw,shake,onReady:fn=>image.naturalWidth?fn():ready.push(fn),portrait:(g,w,h)=>sprite(g,9,w*.38,h*.97,Math.min(w,h*1.32),1)};
+  window.Heizmann={draw,shake,frozenShell:(g,target)=>encase(g,.803,target,1),onReady:fn=>image.naturalWidth?fn():ready.push(fn),portrait:(g,w,h)=>sprite(g,9,w*.38,h*.97,Math.min(w,h*1.32),1)};
 })();

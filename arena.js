@@ -96,7 +96,7 @@
   CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",selfOnly:true,kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself immediately through the next 3 rounds. Gain 1 mana each time a Lightning spell reaches you, once per cast, up to your mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not charge you. Uses your debuff slot and cannot refresh or stack."});
   CARDS.push({"id":"grillmaster","name":"Grill Master","school":"fire","cost":5,"target":"enemy","kind":"grillmaster","damage":440,"burnChance":0.2,"burnDamage":50,"burnTurns":3,"accuracy":0.85,"icon":"♨","rarity":"RARE","duration":4200,"hit":0.6,"short":"85% ACCURACY","description":"A living cast-iron grill heats up under a closed lid, then snaps its jaws open and blasts one enemy for 440 base Fire damage. A successful hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   CARDS.push({"id":"venustrap","name":"Venus Trap","school":"nature","cost":4,"target":"enemy","kind":"damage","damage":400,"accuracy":0.9,"icon":"❀","rarity":"RARE","duration":4200,"hit":0.655,"short":"90% ACCURACY","description":"A giant Venus flytrap sprouts at the center of the arena, rears up and roars, then stretches out to engulf one enemy for 400 base Nature damage."});
-  CARDS.push({"id": "heizmann", "name": "Heizmann", "school": "ice", "cost": 8, "target": "enemy", "kind": "heizmann", "damage": 860, "freezeChance": 0.2, "accuracy": 0.75, "icon": "❄", "rarity": "RARE", "duration": 4800, "hit": 0.748, "short": "75% ACCURACY", "description": "Heizmann cleaves the icy ground and sends a frozen arc at one enemy for 860 base Ice damage with a 20% chance to Freeze."});
+  CARDS.push({"id": "heizmann", "name": "Heizmann", "school": "ice", "cost": 8, "target": "enemy", "kind": "heizmann", "damage": 600, "freezeChance": 0.2, "accuracy": 0.75, "icon": "❄", "rarity": "RARE", "duration": 4800, "hit": 0.748, "short": "75% ACCURACY", "description": "Slash one enemy for 600 base Ice damage. A 20% Freeze chance seals them in ice. If they remain unfrozen, the shell shatters for another 350 base Ice damage.", "shatterDamage": 350, "shatterAt": 0.922});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Only one harmful debuff can be active. Repeat applications cannot refresh it.';
@@ -750,6 +750,11 @@
       for(let i=0;i<3;i++)if(a.elapsed>=NINJA_HIT_TIMES[i]*a.card.duration)applyPenguinHit(a,i);
     if(a.stage==="summon"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
+      a.shatterPending=false;
+      const victim=getUnit(a.target);
+      if(victim?.hp>0&&!victim.statuses.some(st=>st.kind==="frozen"))damage(caster,victim,a.card.shatterDamage,a.card,a);
+    }
     if(a.stage==="dragon-splash"&&a.runeResult==="success"){
       // Apply the 150 damage when each outward-traveling mini fireball
       // reaches its neighbor, never before or more than once.
@@ -1739,7 +1744,10 @@
     if(card.kind==="heizmann"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
-        if(t.hp>0&&!anim.windDomeTargets?.[t.id]&&(anim.freezeRoll??Math.random())<card.freezeChance)freezeTarget(t);
+        if(t.hp>0&&!anim.windDomeTargets?.[t.id]){
+          if(!t.statuses.some(st=>st.kind==="frozen")&&(anim.freezeRoll??Math.random())<card.freezeChance)freezeTarget(t);
+          anim.shatterPending=!t.statuses.some(st=>st.kind==="frozen");
+        }
       }
     }else if(card.kind==="grillmaster"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
@@ -2054,7 +2062,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 860</b><span>20% FREEZE</span></span>':k.id==="venustrap"?
+        const effect=k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?
@@ -2640,6 +2648,8 @@
     for(const x of [-61,61])line(ctx,x-4,-124,x+2,-110,"#cfaa74",3);
   }
   function drawUnit(u,time){
+    const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
+    if(frozen)time=0;
     // Physical depth scale from the same arena floor, not separate
     // front/back teams. Lower Y sits nearer the 3/4 camera.
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
@@ -2674,7 +2684,7 @@
     // Palette swaps use the approved full-body frames; only changing
     // silhouettes uses the existing geometry-based model fallback.
     const approvedWizard=u.hat==="pointed"&&u.robe==="classic";
-    const action=state.animation?.source===u.id?state.animation:null;
+    const action=!frozen&&state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
     if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
@@ -3280,6 +3290,10 @@
     }));
     for(const u of sorted){
       if(u.hp<=0)continue;
+      if(u.statuses.some(st=>st.kind==="frozen")){
+        const catching=action?.card?.id==="heizmann"&&action.stage==="summon"&&action.target===u.id&&!action.windDomeTargets?.[u.id]&&action.elapsed/action.duration>=action.card.hit;
+        if(!catching)renderables.push({type:"frozen-shell",depthY:u.y+.1,priority:2,draw:()=>window.Heizmann?.frozenShell(g,u)});
+      }
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time})});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
@@ -3304,7 +3318,7 @@
     if(action?.card?.id==="heizmann"&&action.stage==="summon"){
       const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1);
       if(target&&window.Heizmann)for(const [layer,depthY] of [["floor",0],["actor",510],["slash",target.y+.1]])
-        renderables.push({type:"heizmann-"+layer,depthY,priority:2,draw:()=>window.Heizmann.draw(g,p,target,layer)});
+        renderables.push({type:"heizmann-"+layer,depthY,priority:2,draw:()=>window.Heizmann.draw(g,p,target,layer,!!action.windDomeTargets?.[target.id])});
     }
     if(action?.card?.id==="venustrap"&&action.stage==="summon"){
       const spell=window.WIZARDRY_VENUS_TRAP;

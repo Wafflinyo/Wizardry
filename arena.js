@@ -159,11 +159,11 @@
   // middle seats sit farther out. Vertical spacing preserves 2.5D depth
   // and leaves a clear casting lane plus room for outward-facing HP plates.
   const scenePositions={
-    1:[[[225,520]],[[775,500]]],
-    2:[[[210,445],[285,590]],[[790,425],[715,570]]],
-    3:[[[245,420],[135,515],[305,600]],[[755,400],[865,495],[695,580]]],
-    4:[[[265,410],[130,475],[180,550],[330,605]],
-       [[735,390],[870,455],[820,530],[670,590]]]
+    1:[[[285,520]],[[715,500]]],
+    2:[[[285,445],[340,590]],[[715,425],[660,570]]],
+    3:[[[335,420],[265,515],[350,600]],[[665,400],[735,495],[650,580]]],
+    4:[[[335,410],[265,475],[275,550],[350,605]],
+       [[665,390],[735,455],[725,530],[650,590]]]
   };
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -2625,7 +2625,7 @@
     // Narrow side plates avoid the adjacent front-row character silhouettes
     // in dense 4v4 seating, particularly the two rightmost enemies.
     const w=180;
-    const x=clamp(u.team?u.x+82:u.x-w-82,8,W-w-8);
+    const x=u.team?W-w-8:8;
     let y=0;
     for(const seat of state.units.filter(v=>v.team===u.team).sort((a,b)=>a.y-b.y)){
       const desired=seat.y-((seat.x<220||seat.x>780)?178:175);
@@ -3064,7 +3064,7 @@
     // All sparks stop IMMEDIATELY when rune success/failure resolves.
     window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
       school:a.card.school,elapsed:a.elapsed,duration:a.duration,
-      centerX:500,centerY:310,scale:5.55
+      centerX:500,centerY:410,scale:5.55
     });
   }
   function drawRuneOutcome(a){
@@ -3073,14 +3073,14 @@
       school:a.card.school,
       result:a.stage==="rune-success"?"success":"fail",
       elapsed:a.elapsed,duration:a.duration,
-      centerX:500,centerY:310,scale:5.55
+      centerX:500,centerY:410,scale:5.55
     });
   }
   function drawFizzle(a){
     if(!a||a.stage!=="fizzle")return;
     const c=getUnit(a.source);if(!c)return;
     const progress=a.elapsed/a.duration;
-    const centerX=500,centerY=339;
+    const centerX=500,centerY=410;
     g.save();g.globalAlpha=Math.max(0,1-progress);
     ellipse(g,centerX,centerY,17+progress*77,17+progress*29,
       null,"#ef9e9f",3);
@@ -3155,7 +3155,7 @@
     }
     if(action?.stage==="summon"&&["flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
-      const depth=(targets.length?Math.max(...targets.map(t=>t.y)):425)+.1;
+      const depth=(targets.length?Math.max(...targets.map(t=>t.y)):480)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
     }
     if(action?.card?.id==="croc"&&action.stage==="summon"){
@@ -3174,7 +3174,7 @@
       const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target),releases:WIND_FIST_RELEASES};
       const spell=window.WIZARDRY_WIND_FIST_V123;
       if(spell){
-        for(const layer of ["ground","actor"])renderables.push({type:"wind-fist-"+layer,depthY:layer==="ground"?424.8:425,priority:2,draw:()=>spell.draw(g,{...opts,layer})});
+        for(const layer of ["ground","actor"])renderables.push({type:"wind-fist-"+layer,depthY:layer==="ground"?479.8:480,priority:2,draw:()=>spell.draw(g,{...opts,layer})});
         for(let i=0;i<10;i++)for(const layer of ["fist","impact"])renderables.push({type:"wind-fist-"+layer+i,depthY:spell.depthFor({...opts,index:i,layer}),priority:2,draw:()=>spell.draw(g,{...opts,index:i,layer})});
       }
     }
@@ -3193,14 +3193,14 @@
     }
     if(action?.card?.id==="rod"&&action.stage==="summon"){
       const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source)};
-      if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:425,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
+      if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:480,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
     for(const burst of state.gunpowderBursts||[])renderables.push({type:"gunpowder-explosion",depthY:burst.y+.15,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.explosion(g,burst)});
     if(action?.card?.id==="gunpowderkiss"&&action.stage==="summon"){
       const kiss=window.WIZARDRY_GUNPOWDER_V120,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
       if(kiss){
-        renderables.push({type:"gunpowder-mistress",depthY:425,priority:1,draw:()=>kiss.draw(g,{...opts,layer:"actor"})});
+        renderables.push({type:"gunpowder-mistress",depthY:480,priority:1,draw:()=>kiss.draw(g,{...opts,layer:"actor"})});
         renderables.push({type:"gunpowder-kiss",depthY:kiss.depthFor(opts),priority:2,draw:()=>kiss.draw(g,{...opts,layer:"powder"})});
       }
     }
@@ -3214,7 +3214,7 @@
     }
     if(action?.card?.id==="kineticsand"&&action.stage==="summon"){
       const p=clamp(action.elapsed/action.duration,0,1),target=getUnit(action.target);
-      if(target)for(const layer of ["back","front"])renderables.push({type:"kinetic-sand-"+layer,depthY:p<.43?425+(layer==="back"?-.1:.1):target.y+(layer==="back"?-.1:.1),priority:2,draw:()=>drawKineticSand(g,p,target,time,layer)});
+      if(target)for(const layer of ["back","front"])renderables.push({type:"kinetic-sand-"+layer,depthY:p<.43?480+(layer==="back"?-.1:.1):target.y+(layer==="back"?-.1:.1),priority:2,draw:()=>drawKineticSand(g,p,target,time,layer)});
     }
     if(action?.card?.id==="blizzard"&&action.stage==="summon"){
       const caster=getUnit(action.source),progress=clamp(action.elapsed/action.duration,0,1);
@@ -3222,7 +3222,7 @@
     }
     if(action?.card?.id==="bloom"&&action.stage==="summon"){
       const bloom=window.WIZARDRY_BLOOM_V97,caster=getUnit(action.source),opts={progress:clamp(action.elapsed/action.duration,0,1),targets:action.sporeTargets||alive(1-caster.team).map(t=>({id:t.id,x:t.x,y:t.y}))};
-      if(bloom){renderables.push({type:"bloom-flower",depthY:425,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
+      if(bloom){renderables.push({type:"bloom-flower",depthY:480,priority:2,draw:()=>bloom.draw(g,{...opts,layer:"flower"})});
         for(const target of opts.targets)renderables.push({type:"bloom-spores-"+target.id,depthY:bloom.depthFor(opts,target),priority:2,draw:()=>bloom.draw(g,{...opts,target,layer:"spores"})});}
     }
     if(action?.card?.id==="devil"&&action.stage==="summon"){
@@ -3308,7 +3308,7 @@
     if(action?.card?.id==="frosty"&&action.stage.startsWith("frost-")){
       const frosty=window.WIZARDRY_FROSTY_V85,opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.frostTargetPoint||getUnit(action.target)};
       if(frosty){frosty.draw(g,{...opts,layer:"ground"});renderables.push({type:"frosty",depthY:424,priority:0,draw:()=>frosty.draw(g,{...opts,layer:"actor"})});
-        renderables.push({type:"frosty-snow-veil",depthY:425,priority:1,draw:()=>frosty.drawVeil(g,opts)});
+        renderables.push({type:"frosty-snow-veil",depthY:480,priority:1,draw:()=>frosty.drawVeil(g,opts)});
         const ball=frosty.projectile(opts);if(ball)renderables.push({type:"frosty-snowball",depthY:ball.depthY,priority:1,draw:()=>frosty.drawBall(g,ball)});
         renderables.push({type:"frosty-impact",depthY:(opts.target?.y||450)+.1,priority:2,draw:()=>frosty.drawImpact(g,opts)});
       }
@@ -3318,7 +3318,7 @@
       const opts={stage:action.stage,progress:clamp(action.elapsed/action.duration,0,1),target:action.benderTargetPoint||getUnit(action.target)};
       if(bender){bender.draw(g,{...opts,layer:"ground"});
         renderables.push({type:"stone-bender",depthY:417,priority:0,draw:()=>bender.draw(g,{...opts,layer:"actor"})});
-        renderables.push({type:"stone-wall",depthY:425,priority:1,draw:()=>bender.draw(g,{...opts,layer:"wall"})});
+        renderables.push({type:"stone-wall",depthY:480,priority:1,draw:()=>bender.draw(g,{...opts,layer:"wall"})});
         for(const item of bender.items(opts))renderables.push({type:"bender-"+item.type,depthY:item.depthY,priority:item.type==="impact"?2:0,draw:()=>bender.drawItem(g,item)});
       }
     }
@@ -3468,7 +3468,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,
+    getState:()=>state,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},

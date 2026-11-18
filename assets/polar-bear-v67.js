@@ -6,11 +6,11 @@ const clamp=v=>Math.max(0,Math.min(1,v)),mix=(a,b,p)=>a+(b-a)*p;
 function pose(o){
  const p=clamp(o.progress),t=o.target||{x:700,y:340},dir=t.x>=500?1:-1;
  const end={x:t.x-dir*66,y:t.y+8};
- let x=500,y=425,frame=3,alpha=1;
+ let x=500,y=480,frame=3,alpha=1;
  if(o.stage==='bear-appear'){frame=Math.min(3,Math.floor(p*4));alpha=p;}
  if(o.stage==='bear-roar')frame=4+Math.min(3,Math.floor(p*4));
  if(o.stage==='bear-ready')frame=8;
- if(o.stage==='bear-charge'){x=mix(500,end.x,p);y=mix(425,end.y,p);frame=9+Math.floor(p*9)%3;}
+ if(o.stage==='bear-charge'){x=mix(500,end.x,p);y=mix(480,end.y,p);frame=9+Math.floor(p*9)%3;}
  if(o.stage==='bear-claw'||o.stage==='bear-disperse'){
   x=end.x;y=end.y;frame=o.stage==='bear-claw'?12+Math.min(2,Math.floor(p*3)):15;
   if(o.stage==='bear-disperse')alpha=1-p;

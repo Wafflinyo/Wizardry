@@ -37,7 +37,7 @@ function pose(o){
  if(s==='thunder-impact')frame=7;
  if(s==='thunder-dissolve'){frame=p<.55?10:11;alpha=1-p;}
  const thrust=s==='thunder-clap'?9*C((p-.5)/.5):['thunder-bolt','thunder-impact'].includes(s)?9:0;
- return{x:500+dir*thrust,y:425,dir,frame,alpha,source:{x:500+dir*(48+thrust),y:279},end:{x:t.x,y:t.y-105}};
+ return{x:500+dir*thrust,y:480,dir,frame,alpha,source:{x:500+dir*(48+thrust),y:334},end:{x:t.x,y:t.y-105}};
 }
 function path(o,t){const b=pose(o);return{x:L(b.source.x,b.end.x-b.dir*34,t),y:L(b.source.y,b.end.y,t)};}
 function crescent(o,p,u){const b=pose(o),center=path(o,p),scale=Math.min(1,p*5);return{x:center.x+b.dir*34*Math.sin(Math.PI*u)*scale,y:center.y-76*Math.cos(Math.PI*u)*scale};}
@@ -81,11 +81,11 @@ function armMist(c,o){
 function draw(c,o){
  const b=pose(o),p=C(o.progress),s=o.stage;
  if(o.layer==='ground'){
-  c.save();c.globalAlpha*=b.alpha*.6;c.fillStyle='#172837';c.beginPath();c.ellipse(500,425,68,16,0,0,TAU);c.fill();
-  c.strokeStyle='#5599b1';c.lineWidth=1.5;c.beginPath();c.ellipse(500,425,52+8*Math.sin(p*TAU),13,0,0,TAU);c.stroke();c.restore();
+  c.save();c.globalAlpha*=b.alpha*.6;c.fillStyle='#172837';c.beginPath();c.ellipse(500,480,68,16,0,0,TAU);c.fill();
+  c.strokeStyle='#5599b1';c.lineWidth=1.5;c.beginPath();c.ellipse(500,480,52+8*Math.sin(p*TAU),13,0,0,TAU);c.stroke();c.restore();
  }
  if(o.layer==='actor'&&image.complete&&image.naturalWidth){
-  const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(b.x,425);c.scale(b.dir,1);
+  const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(b.x,480);c.scale(b.dir,1);
   if(s==='thunder-clap'&&p>.55){const force=Math.sin((p-.55)/.45*Math.PI);c.scale(1+force*.035,1-force*.025);}
   const bob=['thunder-spread'].includes(s)?Math.sin(p*Math.PI)*3:0;
   cloudBody(c,o,b,w,h,bob);c.restore();
@@ -102,5 +102,5 @@ function draw(c,o){
   if(s==='thunder-bolt'||s==='thunder-impact')bolt(c,o);
  }
 }
-root.WIZARDRY_THUNDERCLAP_V79={draw,pose,path,crescent,clock,lowerWarp,depthFor:(o,layer)=>layer==='bolt'?(o.target?.y||450)+.1:425-8};
+root.WIZARDRY_THUNDERCLAP_V79={draw,pose,path,crescent,clock,lowerWarp,depthFor:(o,layer)=>layer==='bolt'?(o.target?.y||450)+.1:480-8};
 })(window);

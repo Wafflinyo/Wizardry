@@ -23,7 +23,7 @@ img.onload=()=>callbacks.splice(0).forEach(fn=>{try{fn()}catch(e){}});
 img.src="./assets/baby-dragon-fire-v62.webp?v=0.62.0";
 function ready(){return img.complete&&img.naturalWidth===1024&&img.naturalHeight===1024}
 function onReady(fn){if(typeof fn==="function"){if(ready())fn();else callbacks.push(fn)}}
-const HOME={x:500,groundY:425,size:226};
+const HOME={x:500,groundY:480,size:226};
 function sprite(c,index,x,y,size=HOME.size,alpha=1,direction=1){
  if(!ready()||alpha<=0)return false;
  c.save();c.globalAlpha*=C(alpha);c.translate(x,y);c.scale(direction<0?-1:1,1);
@@ -68,7 +68,7 @@ function position(o){
  if(o.stage==="dragon-drop")return{x:500,y:L(-180,base,E(p))};
  if(o.stage==="dragon-exit"){
    // Flight frame 14 has feet ~65px higher inside its cell than the
-   // grounded pose. Set its INITIAL feet on the same 425px arena floor;
+   // grounded pose. Set its INITIAL feet on the same 480px arena floor;
    // then actually lift the entire body away from that anchor.
    const groundedCorrection=63*(1-E(p/.21));
    return{x:500+dir(o)*82*E(p),y:base+groundedCorrection-345*E(p)};
@@ -120,7 +120,7 @@ function smoke(c,p){
 }
 // A distinct puff on the ARENA FLOOR. The atlas's flight frames 14/15
 // contain no ground smoke; all the particles below stay at x=500,
-// y=425 regardless of the dragon's moving actor position.
+// y=480 regardless of the dragon's moving actor position.
 function takeoffGroundDust(c,p){
  const time=C(p),fade=(1-E(time/.72))*.75;
  if(fade<=.001)return;

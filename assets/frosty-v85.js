@@ -13,7 +13,7 @@ function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let f
  if(s==='frost-throw')frame=p<.4?7:8;
  if(s==='frost-flight'||s==='frost-impact')frame=9;
  if(s==='frost-melt'){frame=p<.38?9:p<.76?10:11;squash=p<.38?L(1,.6,p/.38):p<.76?L(1,.65,(p-.38)/.38):1;alpha=1-C((p-.76)/.24);}
- return{x:500,y:431,frame,alpha,squash,dir:t.x>=500?1:-1};}
+ return{x:500,y:486,frame,alpha,squash,dir:t.x>=500?1:-1};}
 // Crisp, registered in-between poses: one fully opaque character at a time.
 const growth=new Image();growth.src='./assets/frosty-growth-v87.webp';
 const throwing=new Image();throwing.src='./assets/frosty-throw-v87.webp';
@@ -51,11 +51,11 @@ function forcePose(o){const p=C(o.progress),s=o.stage;
  return{lean:0,drop:0};
 }
 function throwPowder(c,o){const p=C(o.progress),s=o.stage,dir=pose(o).dir,age=s==='frost-throw'&&p>.60?(p-.60)*150:s==='frost-flight'?60+p*322.5:-1;if(age<0||age>300)return;const q=age/300;
- c.save();c.globalAlpha*=1-q;for(let i=0;i<16;i++){const x=500-dir*(20+q*(20+i%5*8)),y=424-Math.sin(q*Math.PI)*(8+i%4*5)+Math.sin(i*3)*4,r=3+i%3*2;const haze=c.createRadialGradient(x,y,0,x,y,r);haze.addColorStop(0,'#f1ffffa0');haze.addColorStop(1,'#d7edf000');c.fillStyle=haze;c.beginPath();c.arc(x,y,r,0,TAU);c.fill();}c.restore();
+ c.save();c.globalAlpha*=1-q;for(let i=0;i<16;i++){const x=500-dir*(20+q*(20+i%5*8)),y=479-Math.sin(q*Math.PI)*(8+i%4*5)+Math.sin(i*3)*4,r=3+i%3*2;const haze=c.createRadialGradient(x,y,0,x,y,r);haze.addColorStop(0,'#f1ffffa0');haze.addColorStop(1,'#d7edf000');c.fillStyle=haze;c.beginPath();c.arc(x,y,r,0,TAU);c.fill();}c.restore();
 }
 function idleBreath(o){return o.stage==='frost-pause'?Math.sin(C(o.progress)*Math.PI):0;}
 function solidActor(c,o,b){const m=motion(o);if(!m)return false;const src=m.atlas==='growth'?growth:m.atlas==='throw'?throwing:m.atlas==='prep'?prep:image,rows=m.atlas==='base'?3:4,info=prepareAtlas(src,rows);if(!info)return false;
- const r=info[m.frame],scale=m.atlas==='throw'&&o.stage!=='frost-melt'?228/info[4].h:m.height/r.h,ratio=m.atlas==='throw'?.81:m.atlas==='prep'?.94:1,k=formScale(o),force=forcePose(o);c.save();c.globalAlpha*=m.alpha;c.translate(500,425);const breath=idleBreath(o);c.scale(b.dir*k*(1+breath*.018),k*(1+breath*.025));c.transform(1,0,-force.lean/210,1-force.drop/210,0,0);c.drawImage(src,m.frame%4*r.w,Math.floor(m.frame/4)*r.cellH,r.w,r.cellH,-r.w*scale*ratio/2,-(r.bottom+1)*scale,r.w*scale*ratio,r.cellH*scale);c.restore();return true;
+ const r=info[m.frame],scale=m.atlas==='throw'&&o.stage!=='frost-melt'?228/info[4].h:m.height/r.h,ratio=m.atlas==='throw'?.81:m.atlas==='prep'?.94:1,k=formScale(o),force=forcePose(o);c.save();c.globalAlpha*=m.alpha;c.translate(500,480);const breath=idleBreath(o);c.scale(b.dir*k*(1+breath*.018),k*(1+breath*.025));c.transform(1,0,-force.lean/210,1-force.drop/210,0,0);c.drawImage(src,m.frame%4*r.w,Math.floor(m.frame/4)*r.cellH,r.w,r.cellH,-r.w*scale*ratio/2,-(r.bottom+1)*scale,r.w*scale*ratio,r.cellH*scale);c.restore();return true;
 }
 function swirlClock(o){return (o.stage==='frost-gust'?C(o.progress)*800:800+C(o.progress)*650)*.007*pose(o).dir;}
 function drawVeil(c,o){const p=C(o.progress),s=o.stage;if(s!=='frost-gust'&&s!=='frost-appear')return;
@@ -64,22 +64,22 @@ function drawVeil(c,o){const p=C(o.progress),s=o.stage;if(s!=='frost-gust'&&s!==
  // Opaque, ragged snow column. Its drifting silhouette fully masks the summon.
  const edge=(u,side)=>{const wobble=Math.sin(spin*1.7+u*19)*8+Math.sin(spin*2.3-u*37+side)*5;return 500+Math.sin(spin+u*9)*10+side*(55+u*55+wobble);};
  c.fillStyle='#bcdde8';c.beginPath();
- for(let i=0;i<=32;i++){const u=i/32;c.lineTo(edge(u,-1),431-u*180);}
- for(let i=32;i>=0;i--){const u=i/32;c.lineTo(edge(u,1),431-u*180);}
+ for(let i=0;i<=32;i++){const u=i/32;c.lineTo(edge(u,-1),486-u*180);}
+ for(let i=32;i>=0;i--){const u=i/32;c.lineTo(edge(u,1),486-u*180);}
  c.closePath();c.fill();
  // Overlapping, fully filled snow sheets give the column churning uneven layers.
- for(let i=0;i<27;i++){const u=i/27,v=Math.min(1,(i+1.5)/27),y=431-u*180,yy=431-v*180,slant=Math.sin(spin*2+i*1.83)*9;
+ for(let i=0;i<27;i++){const u=i/27,v=Math.min(1,(i+1.5)/27),y=486-u*180,yy=486-v*180,slant=Math.sin(spin*2+i*1.83)*9;
  c.fillStyle=['#c8e7ed','#dceff2','#a8d2e2','#e4f4f4'][i%4];c.beginPath();c.moveTo(edge(u,-1),y);c.lineTo(edge(v,-1),yy);c.lineTo(edge(v,1),yy+slant);c.lineTo(edge(u,1),y+slant);c.closePath();c.fill();}
  // Jagged streamers rotate around the dense snow rather than forming even rings.
  for(const front of [false,true])for(let strand=0;strand<5;strand++){
   for(let j=0;j<74;j++){
    const u=j/74,v=(j+1)/74,a=spin+strand*1.25+u*TAU*2.4,b=spin+strand*1.25+v*TAU*2.4;
    if((Math.sin((a+b)/2)>0)!==front)continue;
-   const r=78+u*36+Math.sin(a*3+spin)*9,rr=78+v*36+Math.sin(b*3+spin)*9,x=500+Math.cos(a)*r,y=425-u*170+Math.sin(a)*r*.20,xx=500+Math.cos(b)*rr,yy=425-v*170+Math.sin(b)*rr*.20;
+   const r=78+u*36+Math.sin(a*3+spin)*9,rr=78+v*36+Math.sin(b*3+spin)*9,x=500+Math.cos(a)*r,y=480-u*170+Math.sin(a)*r*.20,xx=500+Math.cos(b)*rr,yy=480-v*170+Math.sin(b)*rr*.20;
    const width=(7+Math.sin(u*27+spin)*3+Math.sin(u*Math.PI)*10)*(1-u*.3);c.save();c.globalAlpha*=(front?.72:.28)*Math.sin(Math.PI*(.06+u*.88));c.fillStyle=(j+strand)%4?'#b1e4ef':'#ecffff';c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.lineTo(xx+3,yy+width);c.lineTo(x+3,y+width);c.closePath();c.fill();c.restore();
   }
  }
- for(let i=0;i<85;i++){const u=(i/85+spin*.025)%1,a=spin*1.2+i*2.399,r=32+u*100;flake(c,500+Math.cos(a)*r,425-u*150+Math.sin(a)*r*.2,1+i%3,.35+.5*Math.sin(a)**2);}c.restore();
+ for(let i=0;i<85;i++){const u=(i/85+spin*.025)%1,a=spin*1.2+i*2.399,r=32+u*100;flake(c,500+Math.cos(a)*r,480-u*150+Math.sin(a)*r*.2,1+i%3,.35+.5*Math.sin(a)**2);}c.restore();
 }
 function flake(c,x,y,r,alpha){c.save();c.globalAlpha*=alpha;c.translate(x,y);c.strokeStyle='#e1faff';c.lineWidth=1;for(let i=0;i<3;i++){const a=i*Math.PI/3;c.beginPath();c.moveTo(-Math.cos(a)*r,-Math.sin(a)*r);c.lineTo(Math.cos(a)*r,Math.sin(a)*r);c.stroke();}c.restore();}
 function gust(c,o){const p=C(o.progress),fade=o.stage==='frost-gust'?Math.sin(p*Math.PI):1-p,spin=swirlClock(o);
@@ -88,15 +88,15 @@ function gust(c,o){const p=C(o.progress),fade=o.stage==='frost-gust'?Math.sin(p*
 function draw(c,o){const p=C(o.progress),s=o.stage,b=pose(o);
  if(o.layer==='ground'){
   throwPowder(c,o);
-  c.save();c.globalAlpha*=s==='frost-gust'?p*.25:b.alpha*.3;c.fillStyle='#a8d3e0';c.beginPath();c.ellipse(500,425,45,13,0,0,TAU);c.fill();c.restore();
+  c.save();c.globalAlpha*=s==='frost-gust'?p*.25:b.alpha*.3;c.fillStyle='#a8d3e0';c.beginPath();c.ellipse(500,480,45,13,0,0,TAU);c.fill();c.restore();
   if(s==='frost-gust'||s==='frost-appear')gust(c,o);
   if(s==='frost-melt'){c.save();c.globalAlpha*=Math.sin(Math.PI*p)*.7;c.fillStyle='#85bdcc70';c.beginPath();c.ellipse(500,426,30+p*65,7+p*15,0,0,TAU);c.fill();c.strokeStyle='#b2e4eb';c.lineWidth=1;c.stroke();c.restore();}
  }
- if(o.layer==='actor'&&b.alpha>0&&image.complete&&image.naturalWidth){if(solidActor(c,o,b))return;const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,431);c.scale(b.dir,b.squash);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-120,-231,240,240);c.restore();}
+ if(o.layer==='actor'&&b.alpha>0&&image.complete&&image.naturalWidth){if(solidActor(c,o,b))return;const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(500,486);c.scale(b.dir,b.squash);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-120,-231,240,240);c.restore();}
 }
 function projectile(o){const p=C(o.progress),s=o.stage,b=pose(o),target=o.target||{x:800,y:450};let ms=-1;
  if(s==='frost-throw'&&p>=.75)ms=p*150-112.5;if(s==='frost-flight')ms=37.5+p*322.5;
- if(ms<0)return null;const q=C(ms/360),release=forcePose({stage:'frost-throw',progress:.75}),start={x:500+b.dir*.9*(90*.81+197*release.lean/210),y:425-197*.9*(1-release.drop/210)},end={x:target.x,y:target.y-95};return{x:L(start.x,end.x,q),y:L(start.y,end.y,q)-Math.sin(Math.PI*q)*65,r:L(38,34,q),p:q,dir:b.dir,depthY:L(425,target.y,q)-.1};}
+ if(ms<0)return null;const q=C(ms/360),release=forcePose({stage:'frost-throw',progress:.75}),start={x:500+b.dir*.9*(90*.81+197*release.lean/210),y:480-197*.9*(1-release.drop/210)},end={x:target.x,y:target.y-95};return{x:L(start.x,end.x,q),y:L(start.y,end.y,q)-Math.sin(Math.PI*q)*65,r:L(38,34,q),p:q,dir:b.dir,depthY:L(480,target.y,q)-.1};}
 function drawBall(c,b){if(!b)return;c.save();c.translate(b.x,b.y);
  for(let i=0;i<22;i++){const q=i/22,x=-b.dir*q*125,y=Math.sin(q*10+b.p*18)*q*19,r=6+q*15;const haze=c.createRadialGradient(x,y,0,x,y,r);haze.addColorStop(0,'#e4faff70');haze.addColorStop(1,'#d0eef800');c.fillStyle=haze;c.beginPath();c.ellipse(x,y,r,r*.65,0,0,TAU);c.fill();}
  for(let i=0;i<25;i++){const q=(b.p*2+i/25)%1,x=-b.dir*(15+q*125),y=Math.sin(i*2.399+b.p*12)*(7+q*24);flake(c,x,y,1+i%3,(1-q)*.8);if(i%3===0){c.fillStyle='#efffffd0';c.beginPath();c.arc(x,y,2.5,0,TAU);c.fill();}}

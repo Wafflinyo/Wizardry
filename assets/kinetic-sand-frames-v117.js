@@ -15,11 +15,11 @@
    const cw=image.naturalWidth/16,ch=image.naturalHeight/16;
    // Map the artwork's fixed source and target floor anchors to the arena.
    // All rise, curling arc, trailing flow and compression are actual frames.
-   const sx=(target.x-500)/(.52*cw),skew=(target.y-425)/(.52*cw);
+   const sx=(target.x-500)/(.52*cw),skew=(target.y-480)/(.52*cw);
    const opening=.78+.22*smooth((p-.17)/.18),closing=1-.28*smooth((p-.55)/.20);
    const width=opening*closing,anchor=p<.55?500:target.x;
    c.save();c.translate(anchor,0);c.scale(width,1);c.translate(-anchor,0);
-   c.translate(500,425);c.transform(sx,skew,0,300/ch,0,0);c.globalAlpha*=alpha;
+   c.translate(500,480);c.transform(sx,skew,0,300/ch,0,0);c.globalAlpha*=alpha;
    c.drawImage(image,(i%16)*cw,Math.floor(i/16)*ch,cw,ch,-cw*.28,-ch*.88,cw,ch);
    c.restore();
  }

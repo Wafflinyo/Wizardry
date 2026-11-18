@@ -19,15 +19,15 @@ function prepare(){
 function pose(o){
  const p=C(o.progress),target=o.target||{x:800,y:450},dir=target.x>=500?1:-1;
  const end={x:target.x-dir*70,y:target.y-157},floor=target.y+8;
- let x=500,y=416,groundY=416,angle=0,flex=0,phase=0,theta=Math.PI/2,height=1;
+ let x=500,y=480,groundY=480,angle=0,flex=0,phase=0,theta=Math.PI/2,height=1;
  const stage=o.stage;
  if(stage==='shark-fin')height=S(p);
  if(stage==='shark-swim')theta+=dir*3*Math.PI*p;
  if(stage==='shark-submerge'){theta+=dir*3*Math.PI;height=1-S(C(p/.72));}
- if(['shark-fin','shark-swim','shark-submerge'].includes(stage)){x=500+94*Math.cos(theta);y=416+28*Math.sin(theta);groundY=y;}
+ if(['shark-fin','shark-swim','shark-submerge'].includes(stage)){x=500+94*Math.cos(theta);y=480+28*Math.sin(theta);groundY=y;}
  if(['shark-rise','shark-flop','shark-arch'].includes(stage)){
   const elapsed=stage==='shark-rise'?650*p:stage==='shark-flop'?650+500*p:1150+550*p,t=elapsed/1700;
-  x=L(500,end.x,t);y=L(448,end.y,t)-875*t*(1-t);groundY=L(388,floor,t);
+  x=L(500,end.x,t);y=L(512,end.y,t)-875*t*(1-t);groundY=L(452,floor,t);
   angle=t<.4?L(-1.30,-.85,S(t/.4)):L(-.85,1,S((t-.4)/.6));
   if(stage==='shark-flop')angle+=Math.sin(p*TAU)*.16;
   flex=Math.sin(t*TAU*2.5)*17;phase=t*13;
@@ -49,13 +49,13 @@ function fin(c,b){
 function pool(c,x,y,r,alpha){c.save();c.globalAlpha*=C(alpha);const points=[];for(let i=0;i<14;i++){const a=i/14*TAU;points.push([x+Math.cos(a)*r,y+Math.sin(a)*r*.28]);}poly(c,points,'#116e9d75');
  for(let i=0;i<7;i++){const a=i*TAU/7;poly(c,[[x,y],[x+Math.cos(a)*r,y+Math.sin(a)*r*.28],[x+Math.cos(a+.6)*r,y+Math.sin(a+.6)*r*.28]],i%2?'#50cad92b':'#8cf5ef25');}c.restore();}
 function wake(c,b){
- pool(c,500,416,114,.65);
+ pool(c,500,480,114,.65);
  for(let lane=0;lane<3;lane++){
   c.save();c.strokeStyle=lane===0?'#d8ffffba':'#49cceba8';c.lineWidth=lane===0?3:5;c.beginPath();
-  for(let n=0;n<38;n++){const a=b.theta-b.dir*n*.025,r=94+(lane-1)*11,x=500+r*Math.cos(a),y=416+r*.30*Math.sin(a);n?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();c.restore();
+  for(let n=0;n<38;n++){const a=b.theta-b.dir*n*.025,r=94+(lane-1)*11,x=500+r*Math.cos(a),y=480+r*.30*Math.sin(a);n?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();c.restore();
  }
  for(let i=0;i<18;i++){const age=((b.p*4+i/18)%1),a=b.theta-b.dir*age*.95,r=94+Math.sin(i*2.4)*15;
-  c.save();c.globalAlpha*=1-age;const x=500+r*Math.cos(a),y=416+r*.3*Math.sin(a)-Math.sin(age*Math.PI)*(4+i%4);poly(c,[[x-3,y],[x,y-3],[x+4,y],[x,y+2]],i%3?'#93ecf6':'#f1ffff');c.restore();
+  c.save();c.globalAlpha*=1-age;const x=500+r*Math.cos(a),y=480+r*.3*Math.sin(a)-Math.sin(age*Math.PI)*(4+i%4);poly(c,[[x-3,y],[x,y-3],[x+4,y],[x,y+2]],i%3?'#93ecf6':'#f1ffff');c.restore();
  }rings(c,b.x,b.y,22,.65);
 }
 function splash(c,x,y,q,strength=1,big=1){
@@ -83,9 +83,9 @@ function actor(c,b){
 function draw(c,o){
  const b=pose(o),p=b.p,s=b.stage,t=o.target||{x:800,y:450};
  if(o.layer==='water'){
-  if(s==='shark-fin'){pool(c,500,416,36+30*p,.5*p);rings(c,b.x,b.y,12+18*p,.3+.5*p);}
+  if(s==='shark-fin'){pool(c,500,480,36+30*p,.5*p);rings(c,b.x,b.y,12+18*p,.3+.5*p);}
   if(s==='shark-swim')wake(c,b);
-  if(s==='shark-submerge'){pool(c,500,416,100,1-p);rings(c,b.x,b.y,28+35*p,1-p);}
+  if(s==='shark-submerge'){pool(c,500,480,100,1-p);rings(c,b.x,b.y,28+35*p,1-p);}
   if(s==='shark-rise')splash(c,500,388,C(p*.9),1,1.05);
   if(s==='shark-flop')splash(c,500,388,.9+.1*p,.6,1.05);
  }

@@ -10,7 +10,7 @@ const TAU=Math.PI*2;
 // Center medallion floor contact: the entire coffin must rise UP through
 // groundY instead of fading in above the stage. Sprite center is above the
 // ground; anything below groundY is occluded during the rise.
-const COFFIN={x:500,y:311,groundY:417,size:207};
+const COFFIN={x:500,y:374,groundY:480,size:207};
 const VAMPIRE_SIZE=187; // ~71% of the previous 264px flying vampire.
 const art=new Image();
 art.decoding="async";

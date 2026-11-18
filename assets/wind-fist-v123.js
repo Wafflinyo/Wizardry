@@ -5,7 +5,7 @@ const poses=[{"x":51,"y":7,"w":78,"h":109,"cx":78.375},{"x":204,"y":24,"w":77,"h
 function ready(){if(monk.complete&&monk.naturalWidth&&fists.complete&&fists.naturalWidth&&punches.complete&&punches.naturalWidth)listeners.splice(0).forEach(fn=>fn());}
 monk.onload=ready;fists.onload=ready;punches.onload=ready;punches.src="./assets/wind-fist-punches-v124.webp";monk.src=root.WIZARDRY_MONK_ATLAS_V123;fists.src=root.WIZARDRY_FISTS_ATLAS_V123;
 // Match the standing wizard at the summon depth, including perspective.
-const wizardScale=.60+.30*((425-288)/235),bodyHeight=220*.80*wizardScale;
+const wizardScale=.60+.30*((480-288)/235),bodyHeight=220*.80*wizardScale;
 const releases=Array.from({length:10},(_,i)=>.52+i*.014),flight=.032;
 const punchStep=.014,volleyEnd=releases[releases.length-1]+punchStep/2,landingEnd=volleyEnd+.09;
 function punchAt(p){if(p>=volleyEnd)return null;const t=(p-(releases[0]-punchStep/2))/punchStep,index=Math.floor(t);if(index<0||index>=10)return null;return{index,frame:(index%2)*4+Math.min(3,Math.floor((t-index)*4+1e-8))};}
@@ -18,14 +18,14 @@ function frameAt(p){
  // faster alternating volley ends; go directly into recovery and landing.
  if(p>=volleyEnd&&p<.90)return 49+Math.min(6,Math.floor(C((p-volleyEnd)/(landingEnd-volleyEnd))*7));
  const cuts=[0,.18,.34,.44,.52,.79,.90,1],starts=[0,8,16,24,32,48,56],counts=[8,8,8,8,16,8,8];let k=0;while(k<6&&p>=cuts[k+1])k++;return starts[k]+Math.min(counts[k]-1,Math.floor(C((p-cuts[k])/(cuts[k+1]-cuts[k]))*counts[k]));}
-function actorPose(p,target){let y=425;if(p<.14)y=L(-170,425,E(p/.14));else if(p>=.44&&p<.52)y=L(425,245,E((p-.44)/.08));else if(p>=.52&&p<volleyEnd)y=245-Math.sin((p-.52)/(volleyEnd-.52)*Math.PI)*8;else if(p>=volleyEnd&&p<landingEnd)y=L(245,425,E((p-volleyEnd)/(landingEnd-volleyEnd)));else if(p>.96)y=L(425,-180,E((p-.96)/.04));return{x:500,y,dir:target.x>=500?1:-1};}
+function actorPose(p,target){let y=480;if(p<.14)y=L(-170,480,E(p/.14));else if(p>=.44&&p<.52)y=L(480,300,E((p-.44)/.08));else if(p>=.52&&p<volleyEnd)y=300-Math.sin((p-.52)/(volleyEnd-.52)*Math.PI)*8;else if(p>=volleyEnd&&p<landingEnd)y=L(300,480,E((p-volleyEnd)/(landingEnd-volleyEnd)));else if(p>.96)y=L(480,-180,E((p-.96)/.04));return{x:500,y,dir:target.x>=500?1:-1};}
 function actorSprite(c,frame,x,y,size,dir=1){if(!monk.complete||!monk.naturalWidth)return;const r=poses[frame],ratio=size/(monk.naturalWidth/8);
  c.save();c.translate(x,y);c.scale(dir,1);c.drawImage(monk,r.x,r.y,r.w,r.h,(r.x-r.cx)*ratio,-r.h*ratio,r.w*ratio,r.h*ratio);c.restore();}
 function fistPoint(p,target,index){const release=releases[index],q=C((p-release)/flight),pos=actorPose(release,target),{r,scale}=punchTransform(index%2?6:2),sx=pos.x+pos.dir*(r.handX-r.anchorX)*scale,sy=pos.y+(r.handY-r.anchorY)*scale,tx=target.x,ty=target.y-104+(index%3-1)*12;
  return{x:L(sx,tx,q),y:L(sy,ty,q),q,angle:Math.atan2(ty-sy,tx-sx),release,hit:release+flight};}
 function vfx(c,frame,x,y,w,h,angle=0,front=.5){if(!fists.complete||!fists.naturalWidth)return;const cell=fists.naturalWidth/4;c.save();c.translate(x,y);c.rotate(angle);c.drawImage(fists,frame%4*cell,Math.floor(frame/4)*cell,cell,cell,-w*front,-h/2,w,h);c.restore();}
 function ground(c,p){let q=-1;if(p>=.13&&p<.23)q=(p-.13)/.10;else if(p>=landingEnd&&p<landingEnd+.07)q=(p-landingEnd)/.07;if(q<0)return;
- c.save();c.globalAlpha=(1-q)*.42;c.fillStyle="#b5d4c5";for(let i=0;i<8;i++){const a=i*Math.PI/4,r=16+q*43,x=500+Math.cos(a)*r,y=425+Math.sin(a)*r*.25;c.beginPath();c.moveTo(x-10,y);c.lineTo(x-4,y-5);c.lineTo(x+8,y-3);c.lineTo(x+12,y+2);c.lineTo(x,y+5);c.closePath();c.fill();}c.restore();}
+ c.save();c.globalAlpha=(1-q)*.42;c.fillStyle="#b5d4c5";for(let i=0;i<8;i++){const a=i*Math.PI/4,r=16+q*43,x=500+Math.cos(a)*r,y=480+Math.sin(a)*r*.25;c.beginPath();c.moveTo(x-10,y);c.lineTo(x-4,y-5);c.lineTo(x+8,y-3);c.lineTo(x+12,y+2);c.lineTo(x,y+5);c.closePath();c.fill();}c.restore();}
 function draw(c,{progress:p,target,layer="actor",index=0}){if(!target||p<0||p>=1)return;c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality="high";
  if(layer==="ground")ground(c,p);
  else if(layer==="actor"){const pos=actorPose(p,target),punch=punchAt(p);
@@ -38,7 +38,7 @@ function draw(c,{progress:p,target,layer="actor",index=0}){if(!target||p<0||p>=1
   if(layer==="fist"&&p>=pt.release&&p<pt.hit)vfx(c,Math.min(7,Math.floor(pt.q*8)),pt.x,pt.y,76,55,pt.angle,0);
   if(layer==="impact"&&p>=pt.hit&&p<pt.hit+.06){const q=(p-pt.hit)/.06;vfx(c,8+Math.min(7,Math.floor(q*8)),target.x,target.y-104+(index%3-1)*12,120,120);}
  }c.restore();}
-function depthFor({progress:p,target,index=0,layer}){if(!target)return 425;if(layer==="impact")return target.y+.13;return L(425,target.y,fistPoint(p,target,index).q)+.12;}
+function depthFor({progress:p,target,index=0,layer}){if(!target)return 480;if(layer==="impact")return target.y+.13;return L(480,target.y,fistPoint(p,target,index).q)+.12;}
 function portrait(c,w,h){
  // Use a closed-fist punch and the same knuckle landmark as the live spell.
  const {r,scale}=punchTransform(6),fit=Math.min(w*.72/(340*scale),h*.92/(r.bodyHeight*scale));

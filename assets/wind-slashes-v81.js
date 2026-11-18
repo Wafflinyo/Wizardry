@@ -5,8 +5,8 @@ const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,p)=>a+(b-a)*p,TAU=Math.PI*2;
 const image=new Image();image.onload=()=>root.WIZARDRY_ARENA_TEST?.drawCardArts?.();image.src='./assets/wind-slashes-v81.webp';
 const ACTOR_SCALE=.60; // Match a wizard standing at the arena center depth.
 const launchAt=i=>i*135,hitAt=i=>launchAt(i)+260;
-function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let frame=3,y=425,alpha=1;
- if(s==='ronin-drop'){frame=0;y=L(-170,425+54*ACTOR_SCALE,p*p);}
+function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let frame=3,y=480,alpha=1;
+ if(s==='ronin-drop'){frame=0;y=L(-170,480+54*ACTOR_SCALE,p*p);}
  if(s==='ronin-land')frame=p<.65?1:2;
  if(s==='ronin-reach')frame=p<.3?3:p<.75?4:5;
  if(s==='ronin-draw')frame=p<.55?5:6;
@@ -14,13 +14,13 @@ function pose(o){const p=C(o.progress),s=o.stage,t=o.target||{x:800,y:450};let f
  if(s==='ronin-finish')frame=p<.7?10:11;
  if(s==='ronin-exit'){frame=11;alpha=1-p;}
  return{x:500,y,frame,alpha,dir:t.x>=500?1:-1};}
-function dust(c,p,alpha=1){c.save();c.translate(500,427);c.scale(ACTOR_SCALE,ACTOR_SCALE);c.translate(-500,-427);c.globalAlpha*=alpha*(1-p);c.strokeStyle='#bad3ce';c.lineWidth=2;c.beginPath();c.ellipse(500,427,20+90*p,5+21*p,0,0,TAU);c.stroke();for(let i=0;i<13;i++){const a=i*2.399,x=500+Math.cos(a)*(20+85*p),y=425+Math.sin(a)*13-18*Math.sin(p*Math.PI);c.fillStyle=i%2?'#9aabb56b':'#c7d0c573';c.beginPath();c.ellipse(x,y,10+10*p,5+5*p,a*.1,0,0,TAU);c.fill();}c.restore();}
+function dust(c,p,alpha=1){c.save();c.translate(500,482);c.scale(ACTOR_SCALE,ACTOR_SCALE);c.translate(-500,-482);c.globalAlpha*=alpha*(1-p);c.strokeStyle='#bad3ce';c.lineWidth=2;c.beginPath();c.ellipse(500,482,20+90*p,5+21*p,0,0,TAU);c.stroke();for(let i=0;i<13;i++){const a=i*2.399,x=500+Math.cos(a)*(20+85*p),y=480+Math.sin(a)*13-18*Math.sin(p*Math.PI);c.fillStyle=i%2?'#9aabb56b':'#c7d0c573';c.beginPath();c.ellipse(x,y,10+10*p,5+5*p,a*.1,0,0,TAU);c.fill();}c.restore();}
 function draw(c,o){const b=pose(o),s=o.stage,p=C(o.progress);
- if(o.layer==='ground'){c.save();c.globalAlpha*=b.alpha*.45;c.fillStyle='#0a1c2a';c.beginPath();c.ellipse(500,427,(s==='ronin-drop'?18+25*p:45)*ACTOR_SCALE,11*ACTOR_SCALE,0,0,TAU);c.fill();c.restore();if(s==='ronin-land')dust(c,p);}
+ if(o.layer==='ground'){c.save();c.globalAlpha*=b.alpha*.45;c.fillStyle='#0a1c2a';c.beginPath();c.ellipse(500,482,(s==='ronin-drop'?18+25*p:45)*ACTOR_SCALE,11*ACTOR_SCALE,0,0,TAU);c.fill();c.restore();if(s==='ronin-land')dust(c,p);}
  if(o.layer==='actor'&&image.complete&&image.naturalWidth){const w=image.naturalWidth/4,h=image.naturalHeight/3;c.save();c.globalAlpha*=b.alpha;c.translate(b.x,b.y);c.scale(b.dir*ACTOR_SCALE,ACTOR_SCALE);c.drawImage(image,b.frame%4*w,Math.floor(b.frame/4)*h,w,h,-145,-280,290,290);c.restore();}
 }
 function items(o){if(o.stage!=='ronin-volley')return[];const elapsed=C(o.progress)*760,b=pose(o),target=o.target||{x:800,y:450},end={x:target.x,y:target.y-100};const out=[];
- for(let i=0;i<3;i++){const age=elapsed-launchAt(i);if(age>=0&&age<=260){const p=age/260;out.push({type:'slash',i,p,dir:b.dir,x:L(500+b.dir*58*ACTOR_SCALE,end.x,p),y:L(425+(292-425)*ACTOR_SCALE,end.y,p),depthY:target.y-1});}if(age>=260&&age<470)out.push({type:'impact',i,p:(age-260)/210,dir:b.dir,x:end.x,y:end.y,depthY:target.y+.1});}return out;}
+ for(let i=0;i<3;i++){const age=elapsed-launchAt(i);if(age>=0&&age<=260){const p=age/260;out.push({type:'slash',i,p,dir:b.dir,x:L(500+b.dir*58*ACTOR_SCALE,end.x,p),y:L(480+(292-480)*ACTOR_SCALE,end.y,p),depthY:target.y-1});}if(age>=260&&age<470)out.push({type:'impact',i,p:(age-260)/210,dir:b.dir,x:end.x,y:end.y,depthY:target.y+.1});}return out;}
 function drawItem(c,a){
  c.save();c.translate(a.x,a.y);c.rotate([-.5,.45,0][a.i]);const scale=a.type==='impact'?1+a.p*.6:.65+a.p*.35;c.scale(a.dir*scale,scale);
  const fade=a.type==='impact'?1-a.p:1;c.globalAlpha*=fade;

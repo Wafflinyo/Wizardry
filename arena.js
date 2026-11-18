@@ -256,6 +256,11 @@
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=window.WizardryPalettes?.getAtlas(wizardAtlas,"wizard",look)||wizardAtlas;
     ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220+footPadding(wizardAtlas,i)+7,148,220);
+    const armor=armorProgress(look);
+    if(armor>0){
+      ctx.translate(-74,-220+footPadding(wizardAtlas,i)+7);ctx.scale(148/128,220/128);
+      window.BoulderWeight?.sprite(ctx,armor,i);
+    }
     ctx.restore();return true;
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=1600,ARM_LOWER_MS=340,FIZZLE_MS=360;
@@ -2549,6 +2554,7 @@
       [el[0]+8,el[1]+9],[sh[0]+9,sh[1]+10]],primary,dark,1.6);
     pathPoly(ctx,[[el[0]-7,el[1]-9],[hand[0]-7,hand[1]-6],
       [hand[0]+7,hand[1]+7],[el[0]+9,el[1]+8]],light,dark,1.6);
+    window.BoulderWeight?.equip(ctx,armorProgress(u),...sh,...el,...hand,30);
     ellipse(ctx,hand[0],hand[1],9,8,skin,shadeColor(skin,-35),1);
     // One single solid wand, rigid and aimed with the entire arm.
     line(ctx,hand[0],hand[1]+15,top[0],top[1],
@@ -2574,6 +2580,7 @@
       [hand[0]+13,hand[1]+9],[el[0]+12,el[1]+11]],rock,shade,2.5);
     pathPoly(ctx,[[hand[0]-14,hand[1]-7],[hand[0]+12,hand[1]-10],
       [hand[0]+17,hand[1]+14],[hand[0]-13,hand[1]+17]],shade,rock,2);
+    window.BoulderWeight?.equip(ctx,armorProgress(u),...sh,...el,...hand,38);
     const top=[hand[0]+side*(6+94*p),hand[1]-lerp(95,12,p)];
     line(ctx,hand[0],hand[1]+12,top[0],top[1],"#826e5e",6);
     pathPoly(ctx,[[top[0]-10,top[1]+4],[top[0],top[1]-21],
@@ -2677,6 +2684,13 @@
     ellipse(ctx,1,-105,7,7,"#9c422f","#6c342c",1);
     for(const x of [-61,61])line(ctx,x-4,-124,x+2,-110,"#cfaa74",3);
   }
+  function armorProgress(u){
+    if(!u?.statuses||u.hp<=0)return 0;
+    const a=state?.animation;
+    if(a?.card?.id==="boulderweight"&&a.stage==="summon"&&a.target===u.id&&(boulderPenalty(u)||canReceiveDebuff(u)))
+      return Math.min(1,a.elapsed/(a.duration*a.card.hit));
+    return boulderPenalty(u)?1:0;
+  }
   function drawUnit(u,time){
     const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
     if(frozen)time=0;
@@ -2707,6 +2721,7 @@
     g.scale(scale,scale);
     if(u.dummy&&!u.wizardDummy){
       drawTrainingDummy(g,u);
+      window.BoulderWeight?.equip(g,armorProgress(u),31,-128,43,-118,61,-119,31);
       g.restore();return;
     }
     // The approved low-poly wizard now occupies ALL 1v1–4v4 slots,
@@ -3330,11 +3345,6 @@
         if(!catching)renderables.push({type:"frozen-shell",depthY:u.y+.1,priority:2,draw:()=>window.Heizmann?.frozenShell(g,u)});
       }
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time})});
-      const fitting=action?.card?.id==="boulderweight"&&action.stage==="summon"&&action.target===u.id;
-      if(boulderPenalty(u)||(fitting&&canReceiveDebuff(u))){
-        const progress=fitting?Math.min(1,action.elapsed/(action.duration*action.card.hit)):1;
-        renderables.push({type:"boulder-armor",depthY:u.y+.08,priority:2,draw:()=>window.BoulderWeight?.draw(g,u,progress,time)});
-      }
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
       if(growing||wrapped){

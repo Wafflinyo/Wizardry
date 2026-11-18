@@ -102,12 +102,15 @@
   CARDS.push({"id": "acidair", "name": "Acid Air", "school": "wind", "cost": 4, "target": "enemy", "kind": "acidair", "poisonChance": 1, "poisonDamage": 100, "poisonTurns": 5, "accuracy": 0.9, "icon": "≋", "rarity": "RARE", "duration": 2300, "hit": 0.58, "short": "90% ACCURACY", "description": "A toxic wind coils around one enemy’s face and inflicts Extreme Poison for 100 base damage at the start of each of the next 5 turns."});
   CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits. If status damage lands first, that damage event gains 20% and spends the mark."});
   CARDS.push({"id": "burningpheonix", "name": "Burning Pheonix", "school": "fire", "cost": 9, "target": "enemy", "kind": "damage", "damage": 1100, "accuracy": 0.7, "rarity": "LEGENDARY", "duration": 5100, "hit": 0.88, "short": "70% ACCURACY", "description": "A blazing ground flame rises into a phoenix. It beats its wings high above the arena and dives into one enemy for 1,100 base Fire damage."});
+  CARDS.push({"id":"electrodisc","name":"Electro Disc","school":"lightning","cost":4,"target":"enemy","kind":"electrodisc","damage":360,"hitDamage":120,"hits":3,"accuracy":0.9,"icon":"ϟ","rarity":"EPIC","duration":4200,"hit":0.94,"short":"90% ACCURACY","description":"Three electro discs deal 120 damage each to one enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
   }
   const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.014);
   const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
+  const ELECTRO_DISC_RELEASES=[.54,.67,.79];
+  const ELECTRO_DISC_HIT_TIMES=ELECTRO_DISC_RELEASES.map(p=>p+.075);
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const MAX_HAND_SIZE=5;
   // The latest implemented card is always in a human player's opening hand.
@@ -765,6 +768,9 @@
     else caster.armRaise=1;
     if(a.stage==="summon"&&a.card.id==="windfist"&&a.runeResult==="success")
       for(let i=0;i<WIND_FIST_HIT_TIMES.length;i++)if(p>=WIND_FIST_HIT_TIMES[i])applyWindFistHit(a,i);
+    if(a.stage==="summon"&&a.card.id==="electrodisc"&&a.runeResult==="success")
+      for(let i=0;i<ELECTRO_DISC_HIT_TIMES.length;i++)
+        if(p>=ELECTRO_DISC_HIT_TIMES[i])applyRepeatedHit(a,i);
     if(a.stage==="summon"&&a.card.id==="zeus"&&a.runeResult==="success"){
       if(p>=a.card.hit)applyZeusImpact(a);
       for(const entry of a.zeusChainTargets||[])if(p>=entry.hitAt)applyZeusChain(a,entry);
@@ -1449,10 +1455,11 @@
   }
 
 
-  function applyWindFistHit(a,index){
+  function applyWindFistHit(a,index){return applyRepeatedHit(a,index);}
+  function applyRepeatedHit(a,index){
     if(state.phase==="ending"||state.phase==="finished"||a.runeResult==="failed")return false;
-    if(!Number.isInteger(index)||index<0||index>=10)return false;
-    a.windFistHits??=[];if(a.windFistHits[index])return false;a.windFistHits[index]=true;
+    if(!Number.isInteger(index)||index<0||index>=a.card.hits)return false;
+    a.repeatedHits??=[];if(a.repeatedHits[index])return false;a.repeatedHits[index]=true;
     const source=getUnit(a.source||a.action.casterId),target=getUnit(a.target||a.action.targetId);
     if(!source||source.hp<=0||!target||target.hp<=0||source.team===target.team)return false;
     damage(source,target,a.card.hitDamage,a.card,a);return true;
@@ -1820,6 +1827,8 @@
       }
     }else if(card.kind==="windfist"){
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
+    }else if(card.kind==="electrodisc"){
+      for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
     }else if(card.kind==="flowstate"){
       addStatus(c,"flow_state","≈",1);
       Object.assign(c.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
@@ -2132,7 +2141,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
+        const effect=k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?
@@ -2193,7 +2202,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           (k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"self debuff granting one mana per Lightning spell received":k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+" HP to a living ally":
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of mastery-adjusted base damage without a damage-variant roll, capped at maximum health.":
@@ -3026,6 +3035,7 @@
   function paintCardPortrait(card,c,width,height){
       if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
+      else if(card.id==="electrodisc")window.ElectroDisc?.portrait(c,width,height);
       else if(card.id==="burningpheonix")window.BurningPheonix?.portrait(c,width,height);
       else if(card.id==="cyclops")window.Cyclops?.portrait(c,width,height);
       else if(card.id==="boulderweight")window.BoulderWeight?.portrait(c,width,height);
@@ -3113,6 +3123,7 @@
     window.DecayStrength?.onReady(drawCardArts);
     window.AcidAir?.onReady(drawCardArts);
     window.BurningPheonix?.onReady(drawCardArts);
+    window.ElectroDisc?.onReady(drawCardArts);
     window.Cyclops?.onReady(drawCardArts);
     window.BoulderWeight?.onReady(drawCardArts);
     window.Heizmann?.onReady(drawCardArts);
@@ -3360,7 +3371,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -3457,6 +3468,16 @@
       const spell=window.WIZARDRY_JACK_V129;
       if(spell)for(const layer of ["ground","actor","crow0","crow1","crow2","impact"])
         renderables.push({type:"jack-"+layer,depthY:spell.depthFor(opts,layer),priority:2,draw:()=>spell.draw(g,{...opts,layer})});
+    }
+    if(action?.card?.id==="electrodisc"&&action.stage==="summon"){
+      const spell=window.ElectroDisc,target=getUnit(action.target);
+      const progress=clamp(action.elapsed/action.duration,0,1);
+      if(spell&&target){
+        const opts={progress,target,releases:ELECTRO_DISC_RELEASES,hits:ELECTRO_DISC_HIT_TIMES};
+        renderables.push({type:"electro-disc-actor",depthY:510,priority:2,draw:()=>spell.actor(g,opts)});
+        for(let index=0;index<ELECTRO_DISC_RELEASES.length;index++)
+          renderables.push({type:"electro-disc-"+index,depthY:spell.depth(opts,index),priority:2,draw:()=>spell.projectile(g,opts,index)});
+      }
     }
     if(action?.card?.id==="windfist"&&action.stage==="summon"){
       const opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target),releases:WIND_FIST_RELEASES};

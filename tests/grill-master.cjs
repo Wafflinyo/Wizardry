@@ -95,4 +95,16 @@ const actorFrames=frames.filter(([image])=>image.src.endsWith('grill-master-pose
 assert.equal(new Set(actorFrames.map(([,sx,sy])=>sx+','+sy)).size,16,'all actor poses play');
 assert.ok(actorFrames.every(([,sx,sy,sw,sh])=>sx+sw<=1024&&sy+sh<=1024));
 assert.ok(frames.some(([image])=>image.src.endsWith('grill-master-effects-v151.webp')),'fire uses the effects atlas');
+const sample = {x:820,y:590};
+frames.length=0;
+fx.draw(canvas,{progress:.50,target:sample,layer:'actor'});
+const vapor=frames.filter(([image])=>image.src.endsWith('grill-master-effects-v151.webp'));
+assert.ok(vapor.length>=3,'an overheated grill vents smoke and steam from both sides');
+assert.ok(vapor.some(([, , , , , , ,width,height])=>width>=295&&height>=325),'a fully heated plume builds well above the lid');
+frames.length=0;
+fx.draw(canvas,{progress:fx.HIT,target:sample,layer:'stream'});
+assert.equal(frames.length,3,'two side tongues fan out from the core flame');
+assert.ok(frames.every(([, , , , ,x])=>x===0),'all three tongues start from the mouth origin');
+assert.ok(frames.at(-1)[8]>=130,'the core reaches full visual width at impact');
+
 console.log('Grill Master: opening hand, flame contact timing, single 440 base hit, exact Burn roll and ticks, blocked or invalid targets, and mirrored summon animation passed.');

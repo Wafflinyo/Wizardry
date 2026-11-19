@@ -1,7 +1,11 @@
 (() => {
   const atlas = new Image();
   atlas.src = "./assets/reikel.webp";
+  const flourish = new Image();
+  flourish.src = "./assets/reikel-flourish.webp";
   const tile = 256;
+  const spinStart=.10, spinEnd=.53;
+  const spinFrames=36, spinColumns=6, spinTile=192;
   const size = 242;
   const dashStart = .71;
   const clamp = n => Math.max(0,Math.min(1,n));
@@ -62,7 +66,12 @@
         streak(ctx,trailX+dir*96,y-92+flutter*6,dir,53+i*8,10+flutter*3,dash*(1-i/8)*.72);
       }
       ctx.save();ctx.translate(x,y);ctx.scale(dir,1);
-      sprite(ctx,frame,0,0,size);
+      if(p>=spinStart&&p<spinEnd&&flourish.naturalWidth){
+        const progress=(p-spinStart)/(spinEnd-spinStart);
+        const index=Math.min(spinFrames-1,Math.floor(progress*spinFrames));
+        ctx.drawImage(flourish,(index%spinColumns)*spinTile,Math.floor(index/spinColumns)*spinTile,
+          spinTile,spinTile,-size/2,-size*.88,size,size);
+      }else sprite(ctx,frame,0,0,size);
       ctx.restore();
       const impact=(p-hit)/.13;
       if(impact>=0&&impact<1){

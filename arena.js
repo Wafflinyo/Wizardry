@@ -1683,38 +1683,6 @@
     if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
     return u.hp>0;
   }
-  function drawThornyVine(c,u,progress,time,layer){
-    if(progress<=0)return;
-    const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1)),height=150*scale;
-    const total=100,grown=Math.floor(total*progress),turns=3.2;
-    c.save();c.lineJoin="bevel";c.lineCap="round";
-    if(layer==="back"){
-      c.fillStyle="#293e25";c.beginPath();c.ellipse(u.x,u.y+2,29*scale*progress,9*scale*progress,0,0,Math.PI*2);c.fill();
-      for(let n=0;n<7;n++){
-        const angle=n*2.4,r=(12+n%3*8)*scale;
-        c.fillStyle=n%2?"#6b7850":"#424f36";c.beginPath();
-        const x=u.x+Math.cos(angle)*r,y=u.y+Math.sin(angle)*r*.3;
-        c.moveTo(x-5,y+2);c.lineTo(x,y-5*progress);c.lineTo(x+7,y+3);c.closePath();c.fill();
-      }
-    }
-    for(let j=0;j<grown;j++){
-      const t=j/total,next=(j+1)/total,angle=t*Math.PI*2*turns-.8,angle2=next*Math.PI*2*turns-.8;
-      if((Math.sin(angle)>0)!==(layer==="front"))continue;
-      const radius=(30+4*Math.sin(t*8+time*.001))*scale;
-      const x=u.x+Math.cos(angle)*radius,y=u.y-t*height+Math.sin(angle)*8*scale;
-      const xx=u.x+Math.cos(angle2)*radius,yy=u.y-next*height+Math.sin(angle2)*8*scale;
-      c.strokeStyle="#29491c";c.lineWidth=10*scale;c.beginPath();c.moveTo(x,y);c.lineTo(xx,yy);c.stroke();
-      c.strokeStyle=j%4<2?"#669b37":"#81b64b";c.lineWidth=6*scale;c.beginPath();c.moveTo(x-1,y-1);c.lineTo(xx-1,yy-1);c.stroke();
-      if(j%5===0){
-        const side=j%10?1:-1;
-        c.fillStyle="#c7d893";c.beginPath();c.moveTo(x-3*scale,y);c.lineTo(x+side*12*scale,y-10*scale);c.lineTo(x+4*scale,y+3*scale);c.closePath();c.fill();
-        c.fillStyle="#577b2e";c.beginPath();c.moveTo(x,y);c.lineTo(x+side*12*scale,y-10*scale);c.lineTo(x+side*4*scale,y-2*scale);c.closePath();c.fill();
-      }
-      if(j%19===0){const side=Math.cos(angle)>0?1:-1;c.fillStyle="#7eae43";c.beginPath();c.moveTo(x,y);c.lineTo(x+side*19*scale,y-14*scale);c.lineTo(x+side*13*scale,y+2*scale);c.closePath();c.fill();}
-    }
-    c.restore();
-  }
-
   function blizzardHitAt(i,count){return .44+i*.18/Math.max(1,count-1);}
   function applyBlizzardHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
@@ -3345,7 +3313,7 @@
       else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
       else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
       else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
-      else if(card.id==="thornwrap"){c.save();c.translate(width*.5,height*.94);c.scale(width/130,height/180);drawThornyVine(c,{x:0,y:0},1,0,"back");drawThornyVine(c,{x:0,y:0},1,0,"front");c.restore();}
+      else if(card.id==="thornwrap")window.ThornyWrap?.portrait(c,width,height);
       else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
       else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
       else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
@@ -3429,6 +3397,7 @@
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.DarkSpells?.onReady(drawCardArts);
+    window.ThornyWrap?.onReady(drawCardArts);
     window.DecayStrength?.onReady(drawCardArts);
     window.AcidAir?.onReady(drawCardArts);
     window.BurningPheonix?.onReady(drawCardArts);
@@ -3708,8 +3677,9 @@
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
       if(growing||wrapped){
-        const progress=growing?clamp(action.elapsed/action.duration/.85,0,1):1;
-        for(const layer of ["back","front"])renderables.push({type:"thornwrap-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,draw:()=>drawThornyVine(g,u,progress,time,layer)});
+        const progress=growing?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
+        renderables.push({type:"thornwrap",depthY:u.y+.06,priority:2,
+          draw:()=>window.ThornyWrap?.draw(g,u,progress)});
       }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.source===u.id;
       if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
@@ -4272,7 +4242,7 @@
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
-    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,drawThornyVine,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

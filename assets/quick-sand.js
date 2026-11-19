@@ -21,7 +21,10 @@
     draw(ctx,x,y,scale,time,opacity) {
       ctx.save();
       ctx.globalAlpha*=opacity;
-      sprite(ctx,x,y,198*scale,108*scale,Math.floor(time/80)%16);
+      const lastFrame = 15;
+      const phase = Math.floor(time/80)%(lastFrame*2);
+      const frame = lastFrame-Math.abs(lastFrame-phase);
+      sprite(ctx,x,y,198*scale,108*scale,frame);
       for(let i=0;i<18;i++){
         const age=(time/1240+i*.618)%1;
         const angle=i*2.4+age*5.4;

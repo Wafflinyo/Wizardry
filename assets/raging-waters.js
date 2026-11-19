@@ -13,10 +13,13 @@
 
   function draw(g,{progress:p,target}){
     const index=thresholds.findLastIndex(t=>p>=t);
-    const size=252;
+    const rise=clamp(p/.19);
+    const size=252*(.42+.58*rise);
+    // The puddle is centered on the feet, then the growing crest pivots to its base.
+    const anchor=.833+(.947-.833)*rise;
     g.save();
     g.globalAlpha=Math.min(clamp(p/.08),clamp((1-p)/.10));
-    tile(g,index,target.x-size/2,target.y-size+13,size);
+    tile(g,index,target.x-size/2,target.y-size*anchor,size);
     if(p>=.47){
       const q=clamp((p-.47)/.48);
       const y=target.y-82-32*Math.sin(q*Math.PI);

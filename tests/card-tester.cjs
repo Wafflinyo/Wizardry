@@ -37,8 +37,8 @@ const assert = require('node:assert/strict');
   assert.equal(dummy.name,'Training Dummy');
   assert.equal(dummy.dummy,true);
   assert.equal(dummy.hand.length,0);
-  assert.equal(wizard.hand[0],'crystalicemirrors');
-  assert.equal(wizard.hand[1],'reikel');
+  assert.equal(wizard.hand[0],'electriceel');
+  assert.equal(wizard.hand[1],'crystalicemirrors');
   assert.deepEqual([...wizard.hand,...wizard.drawPile],getOrder());
   assert.ok(!wizard.masteries.includes('fire'),'tester can use Fire even without Fire mastery');
   assert.ok(wizard.hp<wizard.maxHp,'healing can be tested on the caster');
@@ -49,7 +49,7 @@ const assert = require('node:assert/strict');
   element('testerTarget').onchange({target:{value:'wizard'}});
   assert.equal(dummy.wizardDummy,true);assert.notEqual(dummy.name,'Training Dummy');
   assert.deepEqual([...wizard.hand],opening);
-  for(const id of ['crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
+  for(const id of ['electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
   api.chooseCard('meteorshower');
   assert.ok(api.discardSelected());
   api.chooseCard('crabgiant');
@@ -110,7 +110,7 @@ const assert = require('node:assert/strict');
   assert.equal(dummy.hp,startingHp-360,'the summon never repeats a hit');
   assert.equal(wizard.mana,wizard.maxMana);
   assert.equal(state.phase,'planning');
-  assert.deepEqual([...wizard.hand],getOrder().slice(19,24));
+  assert.deepEqual([...wizard.hand],getOrder().slice(20,25));
 
   api.chooseCard('burningpheonix');assert.ok(api.discardSelected());
   api.chooseCard('decaystrength');assert.ok(api.discardSelected());
@@ -121,7 +121,7 @@ const assert = require('node:assert/strict');
   const next = wizard.drawPile[0];
   assert.ok(api.discardSelected());
   assert.equal(wizard.hand.at(-1),next);
-  const seen = new Set(['crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge','meteorshower','crabgiant','ragingwaters','kamikaze','wickedwitch','lightningball','totallyrad','yeti','bulletseed','tree','scaldingair','zen','decaystrength','electrodisc','burningpheonix','electricalcharge','grillmaster','venustrap']);
+  const seen = new Set(['electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge','meteorshower','crabgiant','ragingwaters','kamikaze','wickedwitch','lightningball','totallyrad','yeti','bulletseed','tree','scaldingair','zen','decaystrength','electrodisc','burningpheonix','electricalcharge','grillmaster','venustrap']);
   while(wizard.drawPile.length){
     seen.add(wizard.hand[0]);
     api.chooseCard(wizard.hand[0]);
@@ -144,9 +144,9 @@ const assert = require('node:assert/strict');
   state = api.getState();
   [wizard,dummy] = state.units;
   assert.notEqual(wizard.name,firstName,'reset rerolls the wizard');
-  assert.equal(wizard.hand[0],'crystalicemirrors');
+  assert.equal(wizard.hand[0],'electriceel');
   dummy.hp=1;
-  for(const id of ['crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
+  for(const id of ['electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
   api.chooseCard('meteorshower');
   assert.ok(api.discardSelected());
   api.chooseCard('crabgiant');

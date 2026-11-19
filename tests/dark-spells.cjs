@@ -109,6 +109,7 @@ const tester = api.getState();
 const [wizard, dummy] = tester.units;
 wizard.skills.dark = 0;
 const dummyHP = dummy.hp;
+for(const id of ["electriceel","crystalicemirrors"]){api.chooseCard(id);assert.ok(api.discardSelected());}
 api.chooseCard('soulharvest');
 api.confirmTarget();
 while (tester.animation && tester.animation.stage !== 'summon') api.advanceBackground(40);

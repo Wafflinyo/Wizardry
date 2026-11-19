@@ -3861,6 +3861,10 @@
     if(action?.card?.id==="blizzard"&&action.stage==="summon"){
       const caster=getUnit(action.source),progress=clamp(action.elapsed/action.duration,0,1);
       const targets=action.blizzardTargets||[];
+      if(caster&&targets.length)renderables.push({
+        type:"blizzard-field",depthY:Math.max(...targets.map(target=>target.y))+.2,priority:2,
+        draw:()=>window.Blizzard?.field(g,progress,caster,targets)
+      });
       if(caster)for(const [i,target] of targets.entries())renderables.push({
         type:"blizzard-"+target.id,depthY:target.y+.1,priority:2,
         draw:()=>window.Blizzard?.draw(g,progress,caster,target,blizzardHitAt(i,targets.length))

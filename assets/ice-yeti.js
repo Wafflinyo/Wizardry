@@ -1,11 +1,11 @@
 (()=>{
   const atlas=new Image(),runAtlas=new Image();
   atlas.src='./assets/yeti-poses.webp?v=0.208.0';
-  runAtlas.src='./assets/yeti-run.webp';
+  runAtlas.src='./assets/yeti-stride.webp';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const size=241;
-  const runStart=.42,runEnd=.65,runCycles=2;
+  const runStart=.42,runEnd=.64,runCycles=1,runFrames=12;
   const contacts=Array.from({length:runCycles*2},(_,step)=>
     runStart+(runEnd-runStart)*step/(runCycles*2));
   function direction(target){return target.x>=500?1:-1;}
@@ -45,11 +45,11 @@
       const age=(p-at)/.104;
       if(age<0||age>=1)continue;
       const {x,floor}=position(target,at);
-      const foot=x+dir*(step%2?27:33);
+      const foot=x+dir*(step%2?58:51);
       for(let i=0;i<8;i++){
         const drift=(12+i*6)*age;
         const lift=(7+i%4*7)*Math.sin(age*Math.PI);
-        const px=foot-dir*drift,py=floor-lift-i%3*3;
+        const px=foot-dir*drift,py=floor-(step%2?9:2)-lift-i%3*3;
         g.globalAlpha=(1-age)**1.35*(.36+i%3*.17);
         crystal(g,px,py,4+i%3*3+age*10,-dir*.35+i*.48,i%2?'#eefaff':'#b8e6fa');
       }
@@ -60,7 +60,7 @@
     const {x,floor}=position(target,p);
     const running=p>=runStart&&p<runEnd;
     let pose=0;
-    if(running)pose=Math.floor((p-runStart)/(runEnd-runStart)*runCycles*8)%8;
+    if(running)pose=Math.floor((p-runStart)/(runEnd-runStart)*runCycles*runFrames)%runFrames;
     else if(p>=runEnd&&p<.67)pose=7;
     else if(p>=.67)pose=p>=.91?11:p>=hit?10:p>=hit-.033?9:8;
     else if(p>=.35)pose=3;

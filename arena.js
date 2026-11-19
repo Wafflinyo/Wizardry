@@ -3768,7 +3768,7 @@
       const forming=action?.card?.id==="crystalicemirrors"&&action.stage==="summon"&&action.target===u.id;
       const reflected=state.flashes.findLast(f=>f.mirrorCaster===u.id);
       if(forming||reflected)renderables.push({
-        type:"ice-mirrors",depthY:u.y+.08,priority:2,
+        type:"ice-mirrors",depthY:u.y-.08,priority:2,
         draw:()=>window.CrystalIceMirrors?.draw(g,u,reflected?reflected.age/.75:action.elapsed/action.duration,!!reflected)
       });
     }

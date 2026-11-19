@@ -18,44 +18,33 @@
       if (atlas.naturalWidth) fn();
       else atlas.addEventListener("load",fn,{once:true});
     },
-    draw(ctx, progress, caster, target, impact) {
-      const start = impact-.38;
-      const end = Math.min(1,impact+.37);
-      if (progress < start || progress >= end) return;
-      const approaching = progress <= impact;
-      const fraction = approaching ? (progress-start)/(impact-start) : (progress-impact)/(end-impact);
-      const frame = approaching ? Math.floor(clamp(fraction)*peak) : peak+Math.min(15-peak,Math.floor(fraction*6));
-      const direction = target.x >= caster.x ? 1 : -1;
-      const distance = Math.abs(target.x-caster.x);
-      const x = approaching ? caster.x+direction*(distance*(1-(1-fraction)**1.4)) : target.x+direction*fraction*180;
-      const y = (approaching ? caster.y+(target.y-caster.y)*fraction : target.y)-83;
+    draw(ctx, progress, caster, targets, fullStrengthAt) {
+      const start = .06;
+      if (progress <= start || progress >= 1 || !targets.length) return;
+      const direction = caster.x < 500 ? 1 : -1;
+      const centerX = targets.reduce((sum,target)=>sum+target.x,0)/targets.length;
+      const centerY = targets.reduce((sum,target)=>sum+target.y,0)/targets.length;
+      const travel = (progress-start)/(fullStrengthAt-start);
+      const approach = clamp(travel);
+      const exit = clamp((progress-fullStrengthAt)/(1-fullStrengthAt));
+      const growth = approach*approach*(3-2*approach);
+      const width = (116+growth*574)*(1-.21*exit);
+      const height = (70+growth*290)*(1-.18*exit);
+      const opacity = clamp(approach*6)*clamp((1-exit)*3.5);
+      const x = caster.x+(centerX-caster.x)*travel+direction*88*exit*exit;
+      const y = caster.y+(centerY-caster.y)*approach-86;
       ctx.save();
       ctx.translate(x,y);
       ctx.scale(direction,1);
-      const width = 295+Math.min(138,distance*.24);
-      drawFrame(ctx,frame,0,0,width,224);
-      ctx.restore();
-    },
-    field(ctx, progress, caster, targets) {
-      const age = (progress-.37)/.62;
-      if (age <= 0 || age >= 1) return;
-      const dir = caster.x < 500 ? 1 : -1;
-      const growth = clamp(age*4.2);
-      const opacity = growth * clamp((1-age)*4);
-      const centerY = targets.reduce((sum,target)=>sum+target.y,0)/targets.length;
-      const width = 390+growth*300;
-      const height = 210+growth*150;
-      ctx.save();
-      ctx.translate(500+dir*(178+45*age),centerY-102);
-      ctx.scale(dir,1);
-      for (const [dx,dy,phase,scale,alpha] of [
-        [-34,-86,.10,.89,.67], [28,70,.02,.91,.68], [-17,-12,0,1,.91],
-        [90,13,.17,.75,.54], [-61,53,-.05,.70,.57],
+      for (const [dx,dy,scale,alpha,delay] of [
+        [-.08,-.24,.89,.70,.08], [.03,.21,.91,.68,.04], [0,0,1,.96,0],
+        [.14,.04,.75,.56,.12], [-.11,.14,.70,.60,.04],
       ]) {
-        const step = clamp(age+phase);
-        const frame = Math.min(15,Math.floor(5+step*11));
+        const intro = clamp((approach-delay)/(1-delay));
+        const life = clamp((exit-delay)/(1-delay));
+        const frame = Math.min(15,Math.floor(intro*peak+life*5+.00001));
         ctx.globalAlpha = opacity*alpha;
-        drawFrame(ctx,frame,dx+age*64,dy,width*scale,height*scale);
+        drawFrame(ctx,frame,dx*width,dy*height,width*scale,height*scale);
       }
       ctx.restore();
     },

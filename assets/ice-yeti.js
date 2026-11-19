@@ -1,13 +1,15 @@
 (()=>{
   const atlas=new Image(),runAtlas=new Image();
   atlas.src='./assets/yeti-poses.webp?v=0.208.0';
-  runAtlas.src='./assets/yeti-stride.webp';
+  runAtlas.src='./assets/yeti-run-v236.webp';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const size=241;
-  const runStart=.42,runEnd=.64,runCycles=1,runFrames=12;
-  const contacts=Array.from({length:runCycles*2},(_,step)=>
-    runStart+(runEnd-runStart)*step/(runCycles*2));
+  const runStart=.42,runEnd=.64;
+  // The six full-body frames are ordered by support leg: near plant,
+  // near recovery, far plant, far recovery, near knee and near reach.
+  const runFrames=6;
+  const contacts=[runStart,runStart+(runEnd-runStart)*2/runFrames];
   function direction(target){return target.x>=500?1:-1;}
   function position(target,p){
     const dir=direction(target);
@@ -45,7 +47,7 @@
       const age=(p-at)/.104;
       if(age<0||age>=1)continue;
       const {x,floor}=position(target,at);
-      const foot=x+dir*(step%2?58:51);
+      const foot=x+dir*(step%2?64:54);
       for(let i=0;i<8;i++){
         const drift=(12+i*6)*age;
         const lift=(7+i%4*7)*Math.sin(age*Math.PI);
@@ -60,7 +62,7 @@
     const {x,floor}=position(target,p);
     const running=p>=runStart&&p<runEnd;
     let pose=0;
-    if(running)pose=Math.floor((p-runStart)/(runEnd-runStart)*runCycles*runFrames)%runFrames;
+    if(running)pose=Math.floor((p-runStart)/(runEnd-runStart)*runFrames);
     else if(p>=runEnd&&p<.67)pose=7;
     else if(p>=.67)pose=p>=.91?11:p>=hit?10:p>=hit-.033?9:8;
     else if(p>=.35)pose=3;

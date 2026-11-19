@@ -3863,11 +3863,7 @@
       const targets=action.blizzardTargets||[];
       if(caster&&targets.length)renderables.push({
         type:"blizzard-field",depthY:Math.max(...targets.map(target=>target.y))+.2,priority:2,
-        draw:()=>window.Blizzard?.field(g,progress,caster,targets)
-      });
-      if(caster)for(const [i,target] of targets.entries())renderables.push({
-        type:"blizzard-"+target.id,depthY:target.y+.1,priority:2,
-        draw:()=>window.Blizzard?.draw(g,progress,caster,target,blizzardHitAt(i,targets.length))
+        draw:()=>window.Blizzard?.draw(g,progress,caster,targets,blizzardHitAt(targets.length-1,targets.length))
       });
     }
     if(action?.card?.id==="bloom"&&action.stage==="summon"){

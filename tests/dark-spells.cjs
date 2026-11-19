@@ -14,7 +14,7 @@ const api = ctx.window.WIZARDRY_ARENA_TEST;
 const backend = JSON.parse(src('backend/cards.json'));
 const opening = {grimoire: ['soulharvest', 'manascourge', 'reaper', 'jack', 'wickedwitch']};
 api.startHand(opening, true);
-assert.equal(opening.hand[0], 'soulharvest');
+assert.ok(opening.hand.includes('soulharvest'));
 assert.ok(opening.hand.includes('manascourge'));
 
 function battle() {

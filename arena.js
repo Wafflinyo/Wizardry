@@ -3082,7 +3082,9 @@
   function unitPlateRect(u){
     const team=state.units.filter(v=>v.team===u.team).sort((a,b)=>a.y-b.y),index=team.findIndex(v=>v.id===u.id),top=index<Math.ceil(team.length/2),w=160;
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
-    const offset=top&&index===1?(u.team?32:-32):0;
+    // Give the outer lower plate clearance from the inner plate's HP row.
+    const outward=u.team?1:-1;
+    const offset=top&&index===1?32*outward:team.length===4&&index===2?24*outward:0;
     return {x:clamp(u.x-w/2+offset,8,W-w-8),y:top?u.y-220*scale-64:u.y+14,w,h:52,above:top};
   }
   function plateIsTarget(u,a){

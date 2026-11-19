@@ -36,10 +36,10 @@
     else if(elapsed<2070)frame=6+Number(elapsed>=1720);
     else {
       frame=8;
-      const swing=entries.find(entry=>elapsed>=entry.swingAt-142&&elapsed<entry.swingAt+138);
+      const swing=entries.find(entry=>elapsed>=entry.swingAt-76&&elapsed<entry.swingAt+94);
       if(swing){
         const age=elapsed-swing.swingAt;
-        frame=age<-53?8:age<0?9:age<38?10:age<77?11:age<110?12:13;
+        frame=age<-36?8:age<0?9:age<23?10:age<47?11:age<71?12:13;
       }else if(leaving>0)frame=15;
     }
     sprite(ctx,frame,px-dir*38*leaving,py,245,dir,.88);
@@ -67,8 +67,8 @@
     ctx.restore();
   }
 
-  function stone(ctx,{x,y,dir,elapsed,entry,index}){
-    const liftAt=1720+index*28;
+  function stone(ctx,{x,y,dir,elapsed,entries,entry,index}){
+    const liftAt=1720+(entries.length-1-index)*82;
     if(elapsed<liftAt||elapsed>entry.hitAt+415)return;
     const contactX=x+dir*94, contactY=y-106;
     const age=elapsed-entry.hitAt;
@@ -82,12 +82,16 @@
     }
     let px,py;
     if(elapsed<entry.swingAt){
-      const lift=clamp((elapsed-liftAt)/385);
-      const fall=clamp((elapsed-entry.swingAt+212)/212);
-      px=mix(contactX+dir*index*48,contactX,fall);
-      py=mix(y-17,y-186,lift*lift*(3-2*lift));
+      const lift=clamp((elapsed-liftAt)/300);
+      const swingInterval=entries.length>1?entries[1].swingAt-entries[0].swingAt:175;
+      const fallTime=185;
+      const dropSpeed=62/swingInterval;
+      const dropAt=entries[0].swingAt-fallTime;
+      const peak=contactY-dropSpeed*(entry.swingAt-dropAt);
+      px=contactX;
+      py=mix(y-17,peak,lift*lift*(3-2*lift));
       if(lift<1)updraft(ctx,px,y,py,elapsed-liftAt,lift);
-      py=mix(py,contactY,fall*fall);
+      py+=dropSpeed*Math.max(0,elapsed-dropAt);
     }else{
       const flight=clamp((elapsed-entry.swingAt)/(entry.hitAt-entry.swingAt));
       px=mix(contactX,entry.x,flight);

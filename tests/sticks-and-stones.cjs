@@ -52,15 +52,24 @@ const effects = {window:{},Image:class {naturalWidth=1024}};
 vm.runInNewContext(fs.readFileSync('assets/sticks-and-stones.js','utf8'),effects);
 const {actor,stone} = effects.window.SticksAndStones;
 for(const dir of [-1,1]){
-  const calls=[];
-  const canvas=new Proxy({globalAlpha:1,drawImage(...args){calls.push(args)}},{get:(o,k)=>o[k]??(()=>{})});
+  const calls=[],positions=[];
+  const canvas=new Proxy({globalAlpha:1,translate(x,y){positions.push([x,y]);},drawImage(...args){calls.push(args)}},{get:(o,k)=>o[k]??(()=>{})});
   const opts={x:500-dir*104,y:510,dir,duration:4300,entries:targets,elapsed:600};
   actor(canvas,opts);
   assert.equal(calls.length,2,'cloud and rider use separate sprites');
+  opts.elapsed=targets[0].swingAt-100;
+  positions.length=0;
+  targets.forEach((entry,index)=>stone(canvas,{...opts,entry,index}));
+  const lowestY=positions[0][1];
+  positions.forEach(([x,y],index)=>{
+    assert.equal(x,opts.x+dir*94,'stones share a vertical column');
+    assert.ok(Math.abs(lowestY-y-index*62)<.001,'the falling column keeps even gaps');
+  });
   opts.elapsed=targets[0].swingAt;
   actor(canvas,opts);
   assert.equal(calls.at(-1)[1],2*256,'uses the contact pose');
   stone(canvas,{...opts,entry:targets[0],index:0});
   assert.equal(calls.at(-1)[2],4*256,'boulder draws from the effects row');
+  assert.deepEqual(positions.at(-1),[opts.x+dir*94,opts.y-106],'the stone meets the bat at contact');
 }
 console.log('Sticks and Stones: 1–4 targets, staggered 320 damage, independent Wind runes, Wind Dome, and mirrored sprite cues passed.');

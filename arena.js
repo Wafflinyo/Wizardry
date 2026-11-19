@@ -899,7 +899,7 @@
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.kind==="sticksandstones"){
         a.stoneTargets=sticksAndStonesTargets(caster);
-        startStage(a,"summon",(a.stoneTargets.at(-1)?.hitAt??2710)+650);
+        startStage(a,"summon",(a.stoneTargets.at(-1)?.hitAt??2610)+650);
       }else if(a.card.id==="meteorshower"){
         const targets=alive(1-caster.team);
         a.meteorTargets=targets.map((u,i)=>({id:u.id,x:u.x,y:u.y,hitAt:1020+i*360,hit:false}));
@@ -1812,8 +1812,8 @@
   }
   function sticksAndStonesTargets(caster){
     return alive(1-caster.team).slice(0,4).map((target,index)=>{
-      const swingAt=2440+280*index;
-      return {id:target.id,x:target.x,y:target.y,swingAt,hitAt:swingAt+270,hit:false};
+      const swingAt=2440+175*index;
+      return {id:target.id,x:target.x,y:target.y,swingAt,hitAt:swingAt+170,hit:false};
     });
   }
   function applyFallingHit(a,entry,roll){

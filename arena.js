@@ -114,7 +114,7 @@
   CARDS.push({"id":"kamikaze","name":"Kamikaze?","school":"fire","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"♨","rarity":"RARE","duration":7850,"hit":7034/7850,"short":"90% ACCURACY","description":"A gremlin plants a bomb, then picks it back up after the fuse goes dark. The explosion hits one enemy for 470 Fire damage."});
   CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","selfOnly":true,"kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself. Your next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
   CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":7,"target":"enemy","kind":"damage","damage":670,"accuracy":0.8,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"80% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 670 Water damage to one enemy."});
-  CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each enemy is struck by one meteor."});
+  CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell or status tick)."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -1821,6 +1821,11 @@
     if(!canReceiveDebuff(target,"burn")||spell.windDomeTargets?.[target.id]||(roll??Math.random())>=card.burnChance)return;
     applyPeriodicStatus(target,"burn",caster,card,spell);
   }
+  function applyDecayOfStrength(target,boost){
+    if(!canReceiveDebuff(target))return;
+    addStatus(target,"decay_mark",null,boost);
+    flash(target,"DECAY OF STRENGTH","#ddb7ff");
+  }
   function applyFallingHit(a,entry,roll){
     if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
@@ -1828,6 +1833,8 @@
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
     if(a.card.burnChance)trySpellBurn(caster,target,a.card,a,roll);
+    if(a.card.decayChance&&target.hp>0&&!a.windDomeTargets?.[target.id]&&
+        (roll??Math.random())<a.card.decayChance)applyDecayOfStrength(target,a.card.decayBoost);
     paintUI();return true;
   }
   function applyDragonImpact(a,roll=Math.random()){
@@ -2004,10 +2011,7 @@
       applyZeusImpact(anim);
       for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
     }else if(card.kind==="decaystrength"){
-      if(t&&t.team!==c.team&&canReceiveDebuff(t)){
-        addStatus(t,"decay_mark",null,card.boost);
-        flash(t,"DECAY OF STRENGTH","#ddb7ff");
-      }
+      if(t&&t.team!==c.team)applyDecayOfStrength(t,card.boost);
     }else if(card.kind==="acidair"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t,"poison")){
         applyPeriodicStatus(t,"poison",c,card,anim);
@@ -2312,7 +2316,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="meteorshower"?'<span class="spell-effect"><b>ONE METEOR EACH</b><span>ALL ENEMIES</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
+        const effect=k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?

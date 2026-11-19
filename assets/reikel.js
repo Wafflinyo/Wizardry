@@ -1,11 +1,11 @@
 (() => {
   const atlas = new Image();
-  atlas.src = "./assets/reikel.webp";
+  atlas.src = "./assets/reikel-clean-main.webp";
   const flourish = new Image();
-  flourish.src = "./assets/reikel-planted-spins.webp";
+  flourish.src = "./assets/reikel-clean-poses.webp";
   const tile = 256;
   const spinStart=.10, spinEnd=.53;
-  const spinFrames=36, spinColumns=4, spinTile=256;
+  const spinColumns=4, spinTile=256;
   const size = 242;
   const dashStart = .71;
   const clamp = n => Math.max(0,Math.min(1,n));
@@ -45,30 +45,33 @@
     ctx.restore();
   }
 
-  const spearTips = [
-    [148, 20, 148, 226],
-    [201, 30, 64, 192],
-    [232, 121, 35, 124],
-    [218, 201, 45, 92],
-    [225, 39, 33, 39],
-    [200, 83, 51, 20],
-    [29, 49, 202, 49],
-    [39, 87, 221, 23],
-    [213, 21, 58, 158],
-    [225, 65, 39, 142],
-    [233, 161, 37, 101],
-    [181, 223, 73, 44],
+  const grips = [
+    [144, 144],
+    [107, 136],
+    [82, 120],
+    [92, 122],
+    [126, 38],
+    [120, 48],
+    [117, 47],
+    [122, 55],
+    [153, 73],
+    [154, 94],
+    [159, 136],
+    [131, 147],
   ];
 
-  function spinPose(ctx,index,time){
-    const section=Math.floor(index/12);
-    const pose=section*4+index%4;
-    const [ax,ay,bx,by]=spearTips[pose];
+  function spinPose(ctx,progress,time){
+    const step=progress*12;
+    const pose=Math.min(11,Math.floor(step));
+    const next=Math.min(11,pose+1);
+    const blend=step-pose;
     const rate=size/spinTile;
-    const x=(ax+bx)/2*rate-size/2,y=(ay+by)/2*rate-size*.88;
-    const dx=(ax-bx)*rate/2,dy=(ay-by)*rate/2;
-    const squash=section===1?.26:.87;
-    const crossX=-dy*squash,crossY=dx*squash;
+    const x=mix(grips[pose][0],grips[next][0],blend)*rate-size/2;
+    const y=mix(grips[pose][1],grips[next][1],blend)*rate-size*.88;
+    const overhead=clamp((progress-.29)/.06)*clamp((.72-progress)/.06);
+    const radius=91, vertical=radius*mix(.93,.29,overhead);
+    const angle=progress*Math.PI*16;
+    const dx=Math.cos(angle)*radius,dy=Math.sin(angle)*vertical;
     ctx.drawImage(flourish,(pose%spinColumns)*spinTile,Math.floor(pose/spinColumns)*spinTile,
       spinTile,spinTile,-size/2,-size*.88,size,size);
     ctx.save();
@@ -78,20 +81,32 @@
       ctx.strokeStyle=color;
       for(let tip=0;tip<2;tip++){
         for(let part=0;part<22;part++){
-          const a=tip*Math.PI-part*.139,b=a-.158;
+          const a=angle+tip*Math.PI-part*.139,b=a-.158;
           const flicker=Math.sin(time*210+part*2.7)*.14;
           ctx.globalAlpha=opacity*alpha*(1-part/24)*(.88+flicker);
           ctx.lineWidth=width*(1-part/31);
           ctx.beginPath();
-          ctx.moveTo(x+dx*Math.cos(a)+crossX*Math.sin(a),y+dy*Math.cos(a)+crossY*Math.sin(a));
-          ctx.lineTo(x+dx*Math.cos(b)+crossX*Math.sin(b),y+dy*Math.cos(b)+crossY*Math.sin(b));
+          ctx.moveTo(x+radius*Math.cos(a),y+vertical*Math.sin(a));
+          ctx.lineTo(x+radius*Math.cos(b),y+vertical*Math.sin(b));
           ctx.stroke();
         }
       }
     }
-    for(const [tx,ty] of [[ax,ay],[bx,by]]){
-      ctx.globalAlpha=opacity;
-      streak(ctx,tx*rate-size/2,ty*rate-size*.88,1,13+Math.sin(time*212)*4,8,.9);
+    ctx.globalAlpha=opacity;
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(Math.atan2(dy,dx));
+    const length=Math.hypot(dx,dy);
+    ctx.fillStyle="#3a343b";
+    ctx.fillRect(-length, -2.4, length*2, 4.8);
+    ctx.fillStyle="#a499a5";
+    ctx.fillRect(-length, -2, length*2, 1.4);
+    ctx.fillStyle="#ccc4cb";
+    ctx.beginPath();ctx.moveTo(length+2,0);ctx.lineTo(length-15,-5);
+    ctx.lineTo(length-12,0);ctx.lineTo(length-15,5);ctx.closePath();ctx.fill();
+    ctx.restore();
+    for(const end of [-1,1]){
+      streak(ctx,x+end*dx,y+end*dy,end,15+Math.sin(time*212)*4,8,.9);
     }
     ctx.restore();
   }
@@ -119,8 +134,7 @@
       ctx.save();ctx.translate(x,y);ctx.scale(dir,1);
       if(p>=spinStart&&p<spinEnd&&flourish.naturalWidth){
         const progress=(p-spinStart)/(spinEnd-spinStart);
-        const index=Math.min(spinFrames-1,Math.floor(progress*spinFrames));
-        spinPose(ctx,index,p);
+        spinPose(ctx,progress,p);
       }else sprite(ctx,frame,0,0,size);
       ctx.restore();
       const impact=(p-hit)/.13;

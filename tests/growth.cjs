@@ -45,7 +45,7 @@ for(const [id,rune] of [
   ally.statuses.length=0;
 }
 
-assert.equal(api.featuredCard,'growth');
+assert.ok(api.cards.some(spell=>spell.id==='growth'));
 cast('growth',ally,'failed');
 assert.ok(!has(ally,'growth'));
 cast('growth');

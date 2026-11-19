@@ -5,10 +5,47 @@
   const clamp = n => Math.max(0,Math.min(1,n));
   const mix = (a,b,t) => a+(b-a)*t;
 
+  const featheredFrames = [];
+
   function sprite(ctx, frame, x, floor, size) {
     if (!atlas.naturalWidth) return;
-    ctx.drawImage(atlas,(frame%4)*cell,Math.floor(frame/4)*cell,cell,cell,
-      x-size/2,floor-size*.88,size,size);
+    if (!featheredFrames[frame]) {
+      const tile = document.createElement("canvas");
+      tile.width = tile.height = cell;
+      const mask = tile.getContext("2d");
+      mask.drawImage(atlas,(frame%4)*cell,Math.floor(frame/4)*cell,cell,cell,0,0,cell,cell);
+      mask.globalCompositeOperation = "destination-in";
+      for (const [dx,dy,fade] of [[cell,0,.10],[0,cell,.07]]) {
+        const gradient = mask.createLinearGradient(0,0,dx,dy);
+        gradient.addColorStop(0,"transparent");
+        gradient.addColorStop(fade,"white");
+        gradient.addColorStop(1-fade,"white");
+        gradient.addColorStop(1,"transparent");
+        mask.fillStyle = gradient;
+        mask.fillRect(0,0,cell,cell);
+      }
+      featheredFrames[frame] = tile;
+    }
+    ctx.drawImage(featheredFrames[frame],x-size/2,floor-size*.88,size,size);
+  }
+
+  function driftingMist(ctx,p,x,floor) {
+    ctx.save();
+    for (let i=0;i<5;i++) {
+      const age = (p-i*.045)/.78;
+      if (age<=0||age>=1) continue;
+      const dx = x+(i-2)*(25+age*27)+Math.sin(age*4+i)*15;
+      const dy = floor-27-age*(100+i*8);
+      const radius = 35+age*38;
+      const plume = ctx.createRadialGradient(dx,dy,0,dx,dy,radius);
+      plume.addColorStop(0,"#b4f5f3");
+      plume.addColorStop(.45,"#97e9ec80");
+      plume.addColorStop(1,"#97e9ec00");
+      ctx.globalAlpha = Math.sin(age*Math.PI)*.20;
+      ctx.fillStyle = plume;
+      ctx.fillRect(dx-radius,dy-radius,radius*2,radius*2);
+    }
+    ctx.restore();
   }
 
   window.SirensMelody = {
@@ -22,6 +59,7 @@
     },
     draw(ctx,p,caster,allies,hit) {
       const x=500, floor=500, facing=caster.x<500?1:-1;
+      driftingMist(ctx,p,x,floor);
       ctx.save();
       ctx.translate(x,floor);
       ctx.scale(facing,1);

@@ -1,58 +1,42 @@
 (()=>{
-  const tau=Math.PI*2;
+  const atlas=new Image(),ready=[];
+  atlas.onload=()=>ready.splice(0).forEach(fn=>fn());
+  atlas.src='./assets/raging-waters.webp?v=0.222.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
-  const palette=['#173978','#226da6','#269ec7','#5ed9eb','#c4ffff'];
+  const thresholds=[0,.06,.12,.19,.26,.32,.39,.47,.53,.60,.65,.70,.77,.84,.90,.95];
 
-  function surface(g,points,color){
-    g.fillStyle=color;g.beginPath();
-    g.moveTo(...points[0]);
-    for(const point of points.slice(1))g.lineTo(...point);
-    g.closePath();g.fill();
+  function tile(g,index,x,y,width){
+    if(!atlas.naturalWidth)return;
+    const cell=atlas.naturalWidth/4;
+    g.drawImage(atlas,index%4*cell,Math.floor(index/4)*cell,cell,cell,x,y,width,width);
   }
 
-  function currents(g,p){
-    for(let arm=0;arm<3;arm++){
-      for(let i=0;i<16;i++){
-        const point=(index,outer)=>{
-          const fraction=index/16;
-          const angle=arm*tau/3+fraction*1.76+p*tau*1.65;
-          const radius=58-38*fraction+(outer?12*Math.sin(Math.PI*fraction)**.55:0);
-          return [Math.cos(angle)*radius,Math.sin(angle)*radius*.54-18*fraction];
-        };
-        const a=point(i,false),b=point(i,true),c=point(i+1,false),d=point(i+1,true);
-        surface(g,[a,b,c],palette[(arm+i)%3]);
-        surface(g,[b,d,c],palette[2+(i+arm)%3]);
+  function draw(g,{progress:p,target}){
+    const index=thresholds.findLastIndex(t=>p>=t);
+    const size=252;
+    g.save();
+    g.globalAlpha=Math.min(clamp(p/.08),clamp((1-p)/.10));
+    tile(g,index,target.x-size/2,target.y-size+13,size);
+    if(p>=.47){
+      const q=clamp((p-.47)/.48);
+      const y=target.y-82-32*Math.sin(q*Math.PI);
+      for(let i=0;i<22;i++){
+        const angle=i*2.39996+q*3;
+        const radius=(31+i%7*12)*Math.sqrt(q+.04);
+        const x=target.x+Math.cos(angle)*radius;
+        const py=y+Math.sin(angle)*radius*.48+q*q*(38+i%4*9);
+        const d=2+i%4*1.4;
+        g.globalAlpha=(1-q)*(.40+i%4*.15)*clamp((p-.47)*20);
+        g.fillStyle=['#f3ffff','#91f2ff','#3dbee9','#2378bb'][i%4];
+        g.beginPath();
+        g.moveTo(x,py-d);g.lineTo(x+d,py+1);g.lineTo(x-d*.75,py+d);g.closePath();g.fill();
       }
     }
-  }
-
-  function draw(g,{progress,target}){
-    g.save();
-    g.translate(target.x,target.y-14-77*clamp((progress-.44)/.37));
-    const scale=.45+.80*Math.sin(Math.PI*progress);
-    g.scale(scale,scale);
-    g.globalAlpha=clamp(progress*7)*clamp((1-progress)*7);
-    currents(g,progress);
-    for(let i=0;i<18;i++){
-      const phase=(i*.618+progress*2.8)%1;
-      const angle=i*2.4+progress*11,r=29+phase*45;
-      const x=Math.cos(angle)*r,y=Math.sin(angle)*r*.45-phase*28;
-      surface(g,[[x,y-6],[x+3,y],[x,y+3],[x-2,y]],palette[2+i%3]);
-    }
     g.restore();
   }
 
-  function portrait(g,w,h){
-    g.save();
-    g.translate(w*.5,h*.58);
-    const scale=Math.min(w,h)/145;
-    g.scale(scale,scale);
-    currents(g,.14);
-    surface(g,[[0,-47],[15,-22],[12,-13],[0,-5],[-12,-13],[-15,-22]],palette[2]);
-    surface(g,[[0,-47],[0,-21],[-12,-13],[-15,-22]],palette[4]);
-    surface(g,[[0,-21],[15,-22],[12,-13],[0,-5]],palette[1]);
-    g.restore();
-  }
-
-  window.RagingWaters={draw,portrait};
+  window.RagingWaters={
+    draw,onReady(fn){if(atlas.naturalWidth)fn();else ready.push(fn);},
+    portrait(g,w,h){const side=Math.min(w,h);tile(g,7,(w-side)/2,(h-side)/2,side);}
+  };
 })();

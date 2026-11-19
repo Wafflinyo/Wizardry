@@ -17,7 +17,7 @@ function normalize(input,cards){
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
  return {id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:'pointed',robe:'classic',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
-function stats(p){const b=baseline(p.level);return {hp:b.hp+100*(p.skills.hp||0),mana:b.mana+(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
+function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}
 function healAmount(base,p,school){return Math.floor(base*multiplier(p,school));}
 function healing(card,p){return healAmount(card.healPerTurn||card.heal||0,p,card.school)*(card.healPerTurn?(card.healTurns||1):1);}

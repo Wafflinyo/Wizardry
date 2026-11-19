@@ -15,7 +15,8 @@ const card = id => api.cards.find(spell => spell.id === id);
 const charge = card('electricalcharge');
 const builds = ctx.window.WizardryBuilds;
 
-assert.equal(charge.selfOnly, true);
+assert.equal(charge.target, "ally");
+assert.equal(charge.selfOnly, undefined);
 const deck = builds.makeDeck(api.cards, ['water', 'lightning'], () => .99);
 assert.ok(deck.includes(charge.id));
 const profile = { name: 'Charge Tester', level: 20, masteries: ['water', 'lightning'], skills: {}, deck };
@@ -36,9 +37,9 @@ if(!user.hand.includes(charge.id)){
   user.hand[0]=charge.id;
 }
 api.chooseCard(charge.id);
-assert.equal(s.selectedTarget, user.id);
+assert.equal(s.selectedTarget, null);
 api.selectTarget(ally.id);
-assert.equal(s.selectedTarget, user.id);
+assert.equal(s.selectedTarget, ally.id);
 
 user.mana = 5;
 api.applySpell(cast(user, user, charge.id));
@@ -48,7 +49,7 @@ s.round = 2;
 api.applySpell(cast(user, user, charge.id));
 assert.equal(status(user).expiresRound, 6, 'recast refreshes');
 api.applySpell(cast(user, ally, charge.id));
-assert.equal(status(ally), undefined);
+assert.equal(status(ally).expiresRound, 6);
 
 api.applySpell(cast(enemy, user, 'volt', 'failed'));
 assert.equal(user.mana, 5);
@@ -109,4 +110,4 @@ assert.equal(new Set(draws.map(([,sx,sy])=>sx+','+sy)).size,16,'the caster aura 
 fx.emblem(canvas,0,0,32);
 fx.portrait(canvas,220,160);
 assert.ok(draws.every(([asset,sx,sy,sw,sh])=>asset.src.endsWith('electrical-charge-v151.webp')&&sx+sw<=1024&&sy+sh<=1024));
-console.log('Electrical Charge: legal starting-hand card, self debuff, non-stacking, spell/chain/discharge reactions, blocks, cap and expiry passed.');
+console.log('Electrical Charge: legal starting-hand card, self or ally rune, non-stacking, spell/chain/discharge reactions, blocks, cap and expiry passed.');

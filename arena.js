@@ -76,12 +76,12 @@
 ,
     {id:"bloom",name:"Blooming Spores",school:"nature",cost:4,target:"all_enemies",kind:"spores",damage:100,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"EPIC",duration:4600,hit:.72,short:"90% ACCURACY",description:"A huge spotted closed flower bud bulges with pressure, then bursts open into full bloom and releases spore dust, dealing 100 Nature damage to every enemy. Each enemy hit has an independent 30% chance to be poisoned for 50 HP per turn for 3 turns."}
 ,
-    {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",selfOnly:true,kind:"lightningrod",damage:100,rodTurns:5,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Self-only Lightning rune for the next 5 turns. Each later successful Lightning cast by you or any ally stores 1 charge. Failed spells never add charges. At the end of the fifth turn, discharges 100 damage per charge TOTAL, split among living enemies. Lightning Rod itself never charges it. Recasting refreshes duration without stacking runes or losing stored charges."}
+    {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",kind:"lightningrod",damage:100,rodTurns:5,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Place a Lightning rune on yourself or a living ally for the next 5 turns. Each later successful Lightning cast by you or any ally stores 1 charge. Failed spells never add charges. At the end of the fifth turn, discharges 100 damage per charge TOTAL, split among living enemies. Lightning Rod itself never charges it. Recasting refreshes duration without stacking runes or losing stored charges."}
 ,
     {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
 ,
     {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:650,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 650 damage."},
-    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",selfOnly:true,kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."},
+    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself or a living ally. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking."},
     {id:"penguins",name:"Ninja Penguins",school:"ice",cost:4,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:.10,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 10% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Extreme Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
@@ -89,11 +89,11 @@
     {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:1350,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 1,350 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
     {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:3,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
-  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",selfOnly:true,kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Enter Flow State. Gain 1 extra mana at the start of each of your next 3 turns: 2 mana after casting, or 3 after passing, up to your mana capacity. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
+  CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Put yourself or a living ally in Flow State. The recipient gains 1 extra mana at the start of each of their next 3 turns: 2 mana after casting, or 3 after passing, up to their mana capacity. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   CARDS.push({id:"windfist",name:"Wind Fist Barrage",school:"wind",cost:6,target:"enemy",kind:"windfist",damage:500,hitDamage:50,hits:10,accuracy:.85,icon:"≋",rarity:"EPIC",duration:5400,hit:.98,short:"85% ACCURACY",description:"A monk drops into a three-point crouched landing, stands, claps his hands and bows, then takes an open-palm forward stance. He leaps up and unleashes ten forceful wind fists at one enemy: 50 damage per punch, 500 total. 85% spell accuracy."});
   CARDS.push({id:"jack",name:"Jack the Lantern",school:"dark",cost:4,target:"enemy",kind:"jack",damage:280,accuracy:.85,icon:"☠",rarity:"EPIC",duration:5200,hit:.82,fearChance:.30,fearTurns:3,short:"85% ACCURACY",description:"A pumpkin-headed scarecrow rises with its head bowed as three crows circle overhead. It lifts its head to face one enemy, sending the crows to swarm for 280 Dark damage. Inflicts Fear for 3 rounds: a 30% chance to skip each turn. Refreshes without stacking."});
   CARDS.push({id:"croc",name:"Creeping Croc",school:"water",cost:6,target:"enemy",kind:"croc",damage:800,accuracy:.85,icon:"♆",rarity:"EPIC",duration:4500,hit:.62,fearChance:.10,short:"85% ACCURACY",description:"A crocodile floats almost completely submerged toward one enemy, showing only its eyes, the top of its head and its ridged back. It suddenly lunges from the water and snaps for 800 damage. On hit: 10% chance to Fear, skipping the target only if they have not acted yet this round. Never carries into the next round."});
-  CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",selfOnly:true,kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself immediately through the next 3 rounds. Gain 1 mana each time a Lightning spell reaches you, once per cast, up to your mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not charge you. Recasting resets the duration."});
+  CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself or a living ally through the next 3 rounds. The recipient gains 1 mana each time a Lightning spell reaches them, once per cast, up to their mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not grant mana. Recasting resets the duration."});
   CARDS.push({"id":"grillmaster","name":"Grill Master","school":"fire","cost":5,"target":"enemy","kind":"grillmaster","damage":440,"burnChance":0.2,"burnDamage":50,"burnTurns":3,"accuracy":0.85,"icon":"♨","rarity":"RARE","duration":4200,"hit":0.6,"short":"85% ACCURACY","description":"A living cast-iron grill heats up under a closed lid, then snaps its jaws open and blasts one enemy for 440 base Fire damage. A successful hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   CARDS.push({"id":"venustrap","name":"Venus Trap","school":"nature","cost":4,"target":"enemy","kind":"damage","damage":400,"accuracy":0.9,"icon":"❀","rarity":"RARE","duration":4200,"hit":0.655,"short":"90% ACCURACY","description":"A giant Venus flytrap sprouts at the center of the arena, rears up and roars, then stretches out to engulf one enemy for 400 base Nature damage."});
   CARDS.push({"id": "heizmann", "name": "Heizmann", "school": "ice", "cost": 8, "target": "enemy", "kind": "heizmann", "damage": 600, "freezeChance": 0.2, "accuracy": 0.75, "icon": "❄", "rarity": "RARE", "duration": 4800, "hit": 0.748, "short": "75% ACCURACY", "description": "Slash one enemy for 600 base Ice damage. A 20% Freeze chance seals them in ice. If they remain unfrozen, the shell shatters for another 350 base Ice damage.", "shatterDamage": 350, "shatterAt": 0.922});
@@ -112,7 +112,7 @@
   CARDS.push({"id":"lightningball","name":"Lightning Ball","school":"lightning","cost":5,"target":"enemy","kind":"lightningball","damage":350,"accuracy":0.85,"icon":"ϟ","rarity":"RARE","duration":4100,"hit":0.44,"bounceChance":0.7,"bounceDrop":0.1,"bounceDamage":0.9,"short":"85% ACCURACY","description":"350 initial damage. Bounces to a new enemy at 70%, 60%, 50%, then 10 points less per bounce. Each bounce deals 10% less base damage."});
   CARDS.push({"id":"wickedwitch","name":"Wicked Witch","school":"dark","cost":7,"target":"enemy","kind":"wickedwitch","damage":520,"accuracy":0.85,"icon":"☠","rarity":"RARE","duration":4650,"hit":0.64,"burnDamage":50,"burnTurns":3,"frostDamage":50,"frostTurns":3,"poisonDamage":50,"poisonTurns":3,"stunChance":0.3,"short":"85% ACCURACY","description":"520 Dark damage. Fire, Ice, Poison, and Lightning beams each have a 25% chance. Each has a 30% chance of its matching status: Burn, Frostbite, Poison, or skip this round."});
   CARDS.push({"id":"kamikaze","name":"Kamikaze?","school":"fire","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"♨","rarity":"RARE","duration":7850,"hit":7034/7850,"short":"90% ACCURACY","description":"A gremlin plants a bomb, then picks it back up after the fuse goes dark. The explosion hits one enemy for 470 Fire damage."});
-  CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","selfOnly":true,"kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself. Your next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
+  CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself or a living ally. Their next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
   CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":7,"target":"enemy","kind":"damage","damage":670,"accuracy":0.8,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"80% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 670 Water damage to one enemy."});
   CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell or status tick)."});
   CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":3,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Mark one enemy until the rune blocks a round-end mana gain. Full mana preserves the rune."});
@@ -122,6 +122,7 @@
   CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":7,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
   CARDS.push({"id":"crystalicemirrors","name":"Crystal Ice Mirrors","school":"ice","cost":4,"target":"enemy","kind":"crystalicemirrors","accuracy":1,"icon":"❄","rarity":"EPIC","duration":2250,"hit":0.67,"short":"100% ACCURACY","reflectChance":0.4,"turns":3,"description":"Mark one enemy for 3 rounds. Each damaging cast has a 40% chance to turn its damage back on the caster instead. Multi-hit spells roll once. Team attacks reflect one target’s share."});
   CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to cancel their pending action this round."});
+  CARDS.push({"id":"growth","name":"Growth","school":"nature","cost":2,"target":"ally","kind":"growth","boost":0.25,"accuracy":1,"icon":"❧","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Bless yourself or a living ally. Their next damaging Nature spell that lands deals 25% more damage across all hits and targets. Misses and damage over time preserve the rune. Does not stack."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -581,17 +582,20 @@
     const opponents=alive(1-u.team);
     const wounded=alive(u.team).filter(a=>a.hp<a.maxHp);
     if(!opponents.length)return null;
+    const allies=alive(u.team);
+    const chargeTargets=allies.filter(ally=>canReceiveDebuff(ally,"electrical_charge"));
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
-      (card.kind!=="electricalcharge"||canReceiveDebuff(u,"electrical_charge"))&&
+      (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
       (card.kind!=="zen"||targetsFor(card,u).length>0));
     if(!affordable.length)return null;
     const card=affordable[Math.floor(Math.random()*affordable.length)];
     const target=["team","all_enemies"].includes(card.target)?null:
       card.kind==="zen"?targetsFor(card,u)[0]:card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
-        card.target==="ally"?alive(u.team)[Math.floor(Math.random()*alive(u.team).length)]:
+        card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
+        card.target==="ally"?allies[Math.floor(Math.random()*allies.length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
     if(!target&&!["team","all_enemies"].includes(card.target))return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
@@ -1303,7 +1307,7 @@
   const DEBUFF_SPELLS=new Set(['crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const DEBUFFS=new Set(['crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","lightning_rod","blazing_rage","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","lightning_rod","blazing_rage","growth","wind_dome","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
@@ -1357,11 +1361,11 @@
     target.mana++;
     flash(target,"ELECTRICAL CHARGE · +1 MANA","#a5ebff");
   }
-  function applyLightningRod(u,spell){
+  function applyLightningRod(u,spell,source=u){
     const stored=u.statuses.find(st=>st.kind==="lightning_rod")?.stored||0;
     addStatus(u,"lightning_rod",null,stored,BY_ID.rod.school);
     const rod=u.statuses.find(st=>st.kind==="lightning_rod");
-    Object.assign(rod,{stored,power:spellPower(u,BY_ID.rod,spell),appliedRound:state.round,expiresRound:state.round+5});
+    Object.assign(rod,{stored,power:spellPower(source,BY_ID.rod,spell),appliedRound:state.round,expiresRound:state.round+5});
     flash(u,"LIGHTNING ROD · 5 TURNS","#c7eaff");
   }
   function recordLightningRodCast(u,card){
@@ -1485,13 +1489,15 @@
       gainElectricalChargeMana(target,card,spell);
       if(blockWithWindDome(source,target,base,spell))return 0;
     }
-    if(card?.school==="water"&&base>0){
-      let bonus=spell?.ragingWatersBonus;
+    if(base>0&&(card?.school==="nature"||card?.school==="water")){
+      const nature=card.school==="nature";
+      const key=nature?"growthBonus":"ragingWatersBonus";
+      let bonus=spell?.[key];
       if(bonus===undefined){
-        bonus=consumeStatus(source,"raging_waters")?.value||0;
-        if(spell)spell.ragingWatersBonus=bonus;
+        bonus=consumeStatus(source,nature?"growth":"raging_waters")?.value||0;
+        if(spell)spell[key]=bonus;
       }
-      if(bonus){raw*=1+bonus;notes.push("RAGING WATERS +25%");}
+      if(bonus){raw*=1+bonus;notes.push(nature?"GROWTH +25%":"RAGING WATERS +25%");}
     }
     let marked=spell?.decayMarkTargets?.[target.id];
     if(marked===undefined){
@@ -1901,6 +1907,7 @@
     anim.applied=true;
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
+    if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed")return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
     if(card.kind==="zen"){
@@ -1966,19 +1973,20 @@
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
     }else if(card.kind==="electrodisc"||card.kind==="bulletseed"){
       for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
-    }else if(card.kind==="ragingwaters"){
-      if(!canReceiveDebuff(c,"raging_waters")){
-        flash(c,"FOUR DEBUFF RUNES","#f6a7a2");
+    }else if(card.kind==="ragingwaters"||card.kind==="growth"){
+      const nature=card.kind==="growth";
+      if(!nature&&!canReceiveDebuff(t,"raging_waters")){
+        flash(t,"FOUR DEBUFF RUNES","#f6a7a2");
         return;
       }
-      addStatus(c,"raging_waters",null,card.boost,card.school);
-      flash(c,"RAGING WATERS +25%","#a8eeff");
-      state.log=[c.name+" gains +25% damage on their next damaging Water spell.",...state.log].slice(0,5);
+      addStatus(t,nature?"growth":"raging_waters",null,card.boost,card.school);
+      flash(t,nature?"GROWTH +25%":"RAGING WATERS +25%",nature?"#ccf7a3":"#a8eeff");
+      state.log=[t.name+" gains +25% damage on their next damaging "+(nature?"Nature":"Water")+" spell.",...state.log].slice(0,5);
     }else if(card.kind==="flowstate"){
-      addStatus(c,"flow_state",null,1,card.school);
-      Object.assign(c.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
-      flash(c,"FLOW STATE · 3 TURNS","#a7f5ff");
-      state.log=[c.name+" gains +1 extra mana for the next 3 turns.",...state.log].slice(0,5);
+      addStatus(t,"flow_state",null,1,card.school);
+      Object.assign(t.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
+      flash(t,"FLOW STATE · 3 TURNS","#a7f5ff");
+      state.log=[t.name+" gains +1 extra mana for the next 3 turns.",...state.log].slice(0,5);
     }else if(card.kind==="gunpowder"){
       if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card,c,anim);
     }else if(card.kind==="zeus"){
@@ -2058,19 +2066,19 @@
     }else if(card.kind==="penguins"){
       for(let i=0;i<3;i++)applyPenguinHit(anim,i);
     }else if(card.kind==="winddome"){
-      addStatus(c,"wind_dome",null,1,card.school);flash(c,"WIND DOME READY","#d1fff1");
-      state.log=[c.name+" is protected from the next damaging spell by Wind Dome.",...state.log].slice(0,5);
+      addStatus(t,"wind_dome",null,1,card.school);flash(t,"WIND DOME READY","#d1fff1");
+      state.log=[t.name+" is protected from the next damaging spell by Wind Dome.",...state.log].slice(0,5);
     }else if(card.kind==="electricalcharge"){
-      if(t===c&&canReceiveDebuff(c,"electrical_charge")){
-        addStatus(c,"electrical_charge",null,1,card.school);
-        c.statuses.find(st=>st.kind==="electrical_charge").expiresRound=state.round+card.chargeTurns+1;
-        flash(c,"ELECTRICAL CHARGE READY","#a5ebff");
+      if(canReceiveDebuff(t,"electrical_charge")){
+        addStatus(t,"electrical_charge",null,1,card.school);
+        t.statuses.find(st=>st.kind==="electrical_charge").expiresRound=state.round+card.chargeTurns+1;
+        flash(t,"ELECTRICAL CHARGE READY","#a5ebff");
       }else{
-        flash(c,"DEBUFF SLOT OCCUPIED","#a5ebff");
+        flash(t,"DEBUFF SLOT OCCUPIED","#a5ebff");
       }
     }else if(card.kind==="lightningrod"){
-      gainElectricalChargeMana(c,card,anim);
-      applyLightningRod(c,anim);
+      gainElectricalChargeMana(t,card,anim);
+      applyLightningRod(t,anim,c);
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
@@ -2264,7 +2272,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.id==="electricalcharge"?"Self · +1 mana per incoming Lightning spell":card?.id==="flowstate"?"Self · +1 extra mana for your next 3 turns":card?.selfOnly?(card.id==="winddome"?"Self · blocks the next damaging spell · debuff damage passes through":"Self · 5 turns · successful allied Lightning casts charge a shared damage pool"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -2347,23 +2355,23 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
+        const effect=k.id==="growth"?'<span class="spell-effect"><b>+25% NEXT NATURE SPELL</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
           '<span class="spell-effect"><b>NO MANA REGEN</b><span>UNTIL IT BLOCKS A GAIN</span></span>':k.id==="soulharvest"?
-          '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
+          '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF / ALLY · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
           '<span class="spell-effect"><b>+1 MANA PER LIGHTNING SPELL</b><span>SELF DEBUFF · 3 ROUNDS</span></span>':k.id==="croc"?
           '<span class="spell-effect"><b>LUNGE & SNAP · 800</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="jack"?
           '<span class="spell-effect"><b>CROW SWARM · 280</b><span>FEAR · 30% SKIP · 3 ROUNDS</span></span>':k.id==="windfist"?
           '<span class="spell-effect"><b>10 WIND FISTS × 50</b><span>1 ENEMY · 500 TOTAL</span></span>':k.id==="flowstate"?
-          '<span class="spell-effect"><b>+1 EXTRA MANA / TURN</b><span>SELF · NEXT 3 TURNS</span></span>':k.id==="gunpowderkiss"?
+          '<span class="spell-effect"><b>+1 EXTRA MANA / TURN</b><span>SELF / ALLY · NEXT 3 TURNS</span></span>':k.id==="gunpowderkiss"?
           '<span class="spell-effect"><b>GUNPOWDER COAT · 3 TURNS</b><span>FIRE HIT: 150 · UP TO 3 TIMES</span></span>':k.id==="zeus"?
           '<span class="spell-effect"><b>1,350 + 200 ADJACENT</b><span>20% STUN TO EACH HIT</span></span>':k.id==="kineticsand"?
           '<span class="spell-effect"><b>CRUSHING GRIP · 620</b><span>1 ENEMY · EARTH</span></span>':k.id==="thornwrap"?
           '<span class="spell-effect"><b>150 PER SPELL ATTEMPT</b><span>−15% ACC · 3 TURNS</span></span>':k.id==="blizzard"?
           '<span class="spell-effect"><b>160 TO ALL ENEMIES</b><span>60% EXTREME FROSTBITE · 100×5</span></span>':k.id==="penguins"?
           '<span class="spell-effect"><b>3 KUNAI × 100</b><span>10% FROSTBITE EACH · 50×3</span></span>':k.id==="winddome"?
-          '<span class="spell-effect"><b>BLOCK NEXT DAMAGE SPELL</b><span>SELF · EXCLUDES DEBUFF DAMAGE</span></span>':k.id==="centaur"?
+          '<span class="spell-effect"><b>BLOCK NEXT DAMAGE SPELL</b><span>SELF / ALLY · EXCLUDES DEBUFF DAMAGE</span></span>':k.id==="centaur"?
           '<span class="spell-effect"><b>CHARGED ARROW · 650</b><span>1 ENEMY · NATURE</span></span>':k.id==="undead"?
           '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="rod"?
           '<span class="spell-effect"><b>5 TURNS · 100 × CHARGES</b><span>TOTAL SPLIT BETWEEN ENEMIES</span></span>':k.id==="bloom"?
@@ -2404,13 +2412,13 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.kind==="crystalicemirrors"?"40% REFLECT":k.kind==="quicksand"?"530 ON 3RD CAST":k.kind==="manascourge"?"0 MANA REGEN":k.kind==="ragingwaters"?"+25%":k.kind==="zen"?"CLEANSE":k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
+          (k.kind==="crystalicemirrors"?"40% REFLECT":k.kind==="quicksand"?"530 ON 3RD CAST":k.kind==="manascourge"?"0 MANA REGEN":(k.kind==="ragingwaters"||k.kind==="growth")?"+25%":k.kind==="zen"?"CLEANSE":k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="ragingwaters"?"self rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"self debuff granting one mana per Lightning spell received":k.id==="flowstate"?"self-only bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"self-only protection against the next damaging spell":k.id==="rod"?"self-only five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
+          (k.kind==="growth"?"25 percent next Nature spell damage to yourself or an ally":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="growth"||k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of mastery-adjusted base damage without a damage-variant roll, capped at maximum health.":
@@ -3067,7 +3075,7 @@
     switch(st.kind){
       case "fear_turn":return {title:"Fear · This round only",detail:"Creeping Croc frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
-      case "electrical_charge":return {title:"ϟ Electrical Charge · Self debuff",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
+      case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
@@ -3104,6 +3112,7 @@
       case "healing_seed":return {title:"Healing Seed · Nature debuff",detail:"Transfers up to "+st.value+" HP to "+(getUnit(st.sourceId)?.name||"the caster")+" at the start of each round. "+st.remaining+" rounds remaining. Refreshes without stacking."};
       case "soul_drain":return {title:"Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
+      case "growth":return {title:"Growth · Nature rune",detail:"Your next damaging Nature spell that lands deals 25% more damage across all hits and targets. The rune is spent on the first hit and does not stack."};
       case "raging_waters":return {title:"Raging Waters · Water rune",detail:"Your next damaging Water spell that lands deals +25% damage on every hit. The rune is consumed when the spell deals damage and does not stack."};
       case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};
@@ -3158,7 +3167,7 @@
     burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
     fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
-    thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
+    growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
     recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
@@ -3309,7 +3318,8 @@
     output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
   }
   function paintCardPortrait(card,c,width,height){
-      if(card.id==="manascourge"||card.id==="soulharvest")window.DarkSpells?.portrait(c,width,height,card.id);
+      if(card.id==="growth")drawGrowthSprout(c,width/2,height*.77,Math.min(width,height)*.6);
+      else if(card.id==="manascourge"||card.id==="soulharvest")window.DarkSpells?.portrait(c,width,height,card.id);
       else if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
       else if(card.id==="meteorshower")window.MeteorShower?.portrait(c,width,height);
@@ -3506,6 +3516,16 @@
       ESTEL_TRAVEL_MIN_MS,ESTEL_TRAVEL_MAX_MS);
     startStage(anim,"estel-travel",duration);
   }
+  function drawGrowthSprout(ctx,x,y,size){
+    ctx.save();
+    ctx.translate(x,y);ctx.scale(size,size);
+    pathPoly(ctx,[[-.07,0],[.02,-.74],[.10,-.76],[.02,0]],"#80bc56");
+    pathPoly(ctx,[[.02,-.23],[-.43,-.40],[-.60,-.79],[-.23,-.65]],"#458747");
+    pathPoly(ctx,[[.02,-.23],[-.25,-.53],[-.60,-.79],[-.43,-.40]],"#8fc858");
+    pathPoly(ctx,[[.04,-.41],[.18,-.78],[.57,-.96],[.42,-.58]],"#65ad4e");
+    pathPoly(ctx,[[.04,-.41],[.29,-.70],[.57,-.96],[.42,-.58]],"#c4e687");
+    ctx.restore();
+  }
   function drawAction(anim,time){
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
@@ -3554,7 +3574,15 @@
     if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="electricalcharge"){window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target:caster,time});g.restore();return;}
+    if(card.id==="growth"&&target){
+      g.globalAlpha*=Math.min(1,p/.12,(1-p)/.22);
+      for(let i=0;i<3;i++){
+        const rise=ease(clamp((p-i*.09)/.6,0,1));
+        drawGrowthSprout(g,target.x+(i-1)*39,target.y-rise*(i===1?85:52),rise*(i===1?64:36));
+      }
+      g.restore();return;
+    }
+    if(card.id==="electricalcharge"){window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target,time});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
@@ -3698,7 +3726,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -3732,7 +3760,7 @@
           draw:()=>window.ThornyWrap?.draw(g,u,progress,layer)
         });
       }
-      const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.source===u.id;
+      const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.target===u.id;
       if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
         const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
         for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer})});
@@ -3742,11 +3770,11 @@
       for(const layer of ["back","front"])renderables.push({type:"wind-dome-block-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{target:u,time,mode:"block",age:burst.age,layer})});
     }
     if(action?.stage==="summon"&&action.card.id==="ragingwaters"){
-      const caster=getUnit(action.source);
-      if(caster){
+      const target=getUnit(action.target);
+      if(target){
         const progress=clamp(action.elapsed/action.duration,0,1);
-        renderables.push({type:"raging-waters",depthY:caster.y-.01,priority:2,
-          draw:()=>window.RagingWaters?.draw(g,{progress,target:caster})});
+        renderables.push({type:"raging-waters",depthY:target.y-.01,priority:2,
+          draw:()=>window.RagingWaters?.draw(g,{progress,target})});
       }
     }
     if(action?.stage==="summon"&&action.card.id==="flowstate"){
@@ -3758,7 +3786,7 @@
         })
       });
     }
-    if(action?.stage==="summon"&&["electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
+    if(action?.stage==="summon"&&["growth","electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):510)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
@@ -3975,8 +4003,8 @@
       if(undead)for(const layer of ["ground","actor","claws"])renderables.push({type:"undead-"+layer,depthY:undead.depthFor(opts,layer),priority:2,draw:()=>undead.draw(g,{...opts,layer})});
     }
     if(action?.card?.id==="rod"&&action.stage==="summon"){
-      const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.source)};
-      if(rod)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:rod.pose(.08,opts.caster).y,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
+      const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.target)};
+      if(rod&&opts.caster)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:rod.pose(.08,opts.caster).y,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
     for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
     for(const burst of state.gunpowderBursts||[])renderables.push({type:"gunpowder-explosion",depthY:burst.y+.15,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.explosion(g,burst)});

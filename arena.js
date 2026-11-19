@@ -115,7 +115,7 @@
   CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","selfOnly":true,"kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself. Your next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
   CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":7,"target":"enemy","kind":"damage","damage":670,"accuracy":0.8,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"80% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 670 Water damage to one enemy."});
   CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell or status tick)."});
-  CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":3,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Curse one enemy. Their next end-of-round mana regeneration grants 0 mana, including bonuses from passing and Flow State."});
+  CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":3,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Mark one enemy until the rune blocks a round-end mana gain. Full mana preserves the rune."});
   CARDS.push({"id":"soulharvest","name":"Soul Harvest","school":"dark","cost":7,"target":"enemy","kind":"soulharvest","damage":540,"soullessDamage":250,"soullessRounds":3,"accuracy":0.85,"icon":"☠","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"Hook one enemy for 540 base damage and trap their soul in a lantern. Soulless deals 250 damage after 3 rounds."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -650,19 +650,19 @@
   }
   function grantTurnMana(){
     for(const u of state.units){
-      if(u.hp<=0)continue;
+      if(u.hp<=0||(u.dummy&&!u.wizardDummy))continue;
       const flow=u.statuses.find(st=>st.kind==="flow_state");
       const bonus=flow&&flow.remaining>0&&flow.appliedRound<state.round&&flow.lastTickRound!==state.round?1:0;
       // Guard repeated entry to this turn against duplicate mana awards.
       if(u.lastManaRound===state.round)continue;
-      const scourged=consumeStatus(u,"mana_scourge");
-      if(scourged)flash(u,"MANA SCOURGE · 0 MANA","#c5a2ff");
-      if(u.dummy)continue;
       const passed=u.passedRound===state.round-1;
       u.passStreak=passed?(u.passStreak||0)+1:0;
       const base=passed?1+u.passStreak:1,gain=base+bonus;
       u.lastManaRound=state.round;
-      if(!scourged)u.mana=u.testerDeck?u.maxMana:Math.min(u.maxMana||MAX_MANA,u.mana+gain);
+      const regen=u.testerDeck?u.maxMana:Math.min(u.maxMana||MAX_MANA,u.mana+gain);
+      const scourged=regen>u.mana&&consumeStatus(u,"mana_scourge");
+      if(scourged)flash(u,"MANA SCOURGE · 0 MANA","#c5a2ff");
+      else u.mana=regen;
       if(bonus){flow.lastTickRound=state.round;flow.remaining--;
         if(!scourged)flash(u,"+"+gain+" MANA · FLOW STATE","#a7f5ff");
         if(!flow.remaining)consumeStatus(u,"flow_state");}
@@ -2357,7 +2357,7 @@
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
         const effect=k.id==="manascourge"?
-          '<span class="spell-effect"><b>NO MANA REGEN</b><span>NEXT ROUND END</span></span>':k.id==="soulharvest"?
+          '<span class="spell-effect"><b>NO MANA REGEN</b><span>UNTIL IT BLOCKS A GAIN</span></span>':k.id==="soulharvest"?
           '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
           '<span class="spell-effect"><b>FLAMETHROWER · 440</b><span>20% BURN · 50 × 3</span></span>':k.id==="electricalcharge"?
@@ -3069,7 +3069,7 @@
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+Math.floor((st.stored||0)*100*(st.power||1))+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Only successful casts by you or allies count; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
-      case "mana_scourge":return {title:"Mana Scourge",detail:"No mana from the next round-end regeneration, including passing and Flow State. Mana gained during the round still works."};
+      case "mana_scourge":return {title:"Mana Scourge",detail:"Blocks the first round-end mana gain, including passing and Flow State. The rune stays while mana is full. Mana gained during the round still works."};
       case "soulless":return {title:"Soulless",detail:"The trapped soul causes "+st.value+" damage after "+Math.max(0,st.expiresRound-state.round)+" more rounds."};
       case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell or status tick deals 20% more damage. All hits of a triggering spell qualify."};
       case "decaying_strength":return {title:"Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};

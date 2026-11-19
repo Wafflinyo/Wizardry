@@ -20,65 +20,71 @@
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = thickness; ctx.stroke(); }
   }
 
-  function crystal(ctx, size, core = bright) {
-    polygon(ctx, [[0,-size], [size*.56,0], [0,size], [-size*.56,0]], "#512963", violet);
-    polygon(ctx, [[0,-size], [size*.56,0], [0,size*.23]], "#a65adb");
-    polygon(ctx, [[0,-size], [0,size*.23], [-size*.56,0]], core);
-    polygon(ctx, [[0,size*.23], [size*.56,0], [0,size]], "#7d409c");
+  function orb(ctx, radius, core = "#fff3ff") {
+    const halo = ctx.createRadialGradient(0,0,0,0,0,radius*1.9);
+    halo.addColorStop(0,core);
+    halo.addColorStop(.32,"#f6d4ff");
+    halo.addColorStop(.55,"#b877f1bb");
+    halo.addColorStop(1,"#a65adb00");
+    ctx.fillStyle=halo;
+    ctx.beginPath();
+    ctx.arc(0,0,radius*1.9,0,Math.PI*2);
+    ctx.fill();
   }
 
-  // Discrete seal frames form three jaws, lock around the mana crystal,
-  // fracture the light and leave short-lived shards around the target.
-  const sealFrames = [
-    [69, 11, 0, .1], [61, 15, .10, .30], [52, 20, .14, .58],
-    [46, 25, .21, .85], [42, 29, .26, 1], [38, 29, .31, 1],
-    [35, 31, .34, 1], [33, 33, .37, 1], [31, 35, .39, 1],
-    [29, 35, .42, 1], [25, 35, .44, 1], [22, 37, .46, 1],
-    [19, 39, .48, 1], [18, 41, .50, 1], [43, 24, .51, .9],
-    [56, 18, .55, .7], [67, 12, .59, .5], [79, 8, .63, .24],
+  // Four obsidian pylons rise in separate poses, focus on a dark prism,
+  // then collapse into angular fragments once the curse has attached.
+  const scourgeFrames = [
+    [0, 70, 0, .15], [11, 70, 0, .50], [22, 70, 0, .80], [35, 68, 0, 1],
+    [49, 65, 0, 1], [58, 62, 0, 1], [65, 60, 5, 1], [69, 57, 10, 1],
+    [72, 54, 16, 1], [72, 53, 21, 1], [73, 51, 25, 1], [74, 50, 29, 1],
+    [75, 49, 31, 1], [76, 48, 34, 1], [67, 51, 23, .95], [49, 57, 14, .75],
+    [34, 63, 7, .52], [17, 70, 3, .26], [3, 76, 0, .10],
   ];
-  function seal(ctx, frame, layer) {
-    const [radius, jaw, angle, opacity] = sealFrames[frame];
+
+  function pylon(ctx, x, foot, h) {
+    const tip=[x-5,foot-h], seam=[x+3,foot-h*.44];
+    polygon(ctx, [tip,[x+12,foot-h*.35],[x+8,foot],[x-9,foot+2],[x-13,foot-h*.25]],
+      "#23122e","#a969de",1.3);
+    polygon(ctx,[tip,seam,[x-9,foot+2],[x-13,foot-h*.25]],"#4e285f");
+    polygon(ctx,[tip,seam,[x+12,foot-h*.35]],"#9360af");
+    polygon(ctx,[seam,[x+12,foot-h*.35],[x+1,foot-h*.22]],"#e6bbfa");
+    return seam;
+  }
+
+  function scourge(ctx, frame, layer) {
+    const [height, spread, core, opacity] = scourgeFrames[frame];
     ctx.globalAlpha *= opacity;
-    for (let i = 0; i < 6; i++) {
-      const rotation = angle + i * Math.PI / 3;
-      if (layer === "back" && Math.sin(rotation) >= 0) continue;
-      if (layer === "front" && Math.sin(rotation) < 0) continue;
-      ctx.save();
-      ctx.rotate(rotation);
-      ctx.translate(radius, 0);
-      polygon(ctx, [[-jaw*.65,0],[4,-jaw*.51],[jaw*.62,-jaw*.26],[jaw*.29,jaw*.48],[0,jaw*.2]],
-        "#2b1439", "#7c4aac", 1.5);
-      polygon(ctx, [[-jaw*.65,0],[4,-jaw*.51],[jaw*.62,-jaw*.26],[0,-jaw*.12]], "#8f56bb");
-      polygon(ctx, [[-jaw*.65,0],[0,-jaw*.12],[0,jaw*.2]], "#d9a3ff");
-      ctx.restore();
-    }
-    if (layer !== "back" && frame < 16) {
-      ctx.save();
-      if (frame >= 13) ctx.globalAlpha *= .45;
-      crystal(ctx, frame >= 13 ? 14 : 24, frame >= 10 ? "#e4adff" : "#bdf7ff");
-      ctx.restore();
-    }
-    if (layer !== "back" && frame >= 13) {
-      for (let i = 0; i < 7; i++) {
-        const theta = i * 2.4;
-        const distance = (frame - 12) * (5 + i % 3);
-        ctx.save();
-        ctx.translate(Math.cos(theta)*distance, Math.sin(theta)*distance*.75);
-        ctx.rotate(theta);
-        crystal(ctx, 4 + i % 4);
-        ctx.restore();
+    const pylons=[[-spread*.78,4,height*.91],[spread*.78,4,height*.98],[-spread,26,height*.73],[spread,26,height*.84]];
+    const focus=[0,-44];
+    for(const [i,[x,y,h]] of pylons.entries()){
+      if(layer==="back"&&i>=2||layer==="front"&&i<2)continue;
+      const tip=pylon(ctx,x,y,h);
+      if(core>0){
+        const kink=[tip[0]*.55,focus[1]-8+i*5];
+        polygon(ctx,[tip,kink,[focus[0]+3,focus[1]+2],[kink[0],kink[1]+3]],"#d599fcbd");
       }
+    }
+    if(layer==="back"||!core)return;
+    const [x,y]=focus;
+    polygon(ctx,[[x,y-core],[x+core*.51,y-4],[x+core*.22,y+core*.54],[x,y+core],[x-core*.51,y+4]],"#120e1a","#d490ff",2);
+    polygon(ctx,[[x,y-core],[x+core*.51,y-4],[x,y+core*.12]],"#683782");
+    polygon(ctx,[[x-core*.51,y+4],[x,y+core*.12],[x,y+core]],"#472455");
+    for(let i=0;i<4;i++){
+      const sweep=clamp((frame-6+i*1.7)/12);
+      const dx=(i%2?1:-1)*spread*(1-sweep);
+      const dy=y-38*(1-sweep)+(i%3-1)*10;
+      polygon(ctx,[[dx,dy-5],[dx+5,dy],[dx,dy+7],[dx-4,dy]],i%2?"#f3cbff":"#9e74e9");
     }
   }
 
   function drawScourge(ctx, target, progress, layer) {
-    const frame = Math.min(sealFrames.length - 1, Math.floor(progress * sealFrames.length));
+    const frame = Math.min(scourgeFrames.length - 1, Math.floor(progress * scourgeFrames.length));
     const scale = scaleFor(target);
     ctx.save();
-    ctx.translate(target.x, target.y - 110*scale);
-    ctx.scale(scale*1.35, scale*1.1);
-    seal(ctx, frame, layer);
+    ctx.translate(target.x, target.y - 61*scale);
+    ctx.scale(scale*1.14, scale*1.14);
+    scourge(ctx, frame, layer);
     ctx.restore();
   }
 
@@ -121,7 +127,7 @@
       ? clamp((progress-.425)/(hookContact-.425))
       : 1-smooth((progress-retractAt)/.145);
     const blade = curve(hand, contact, extension, -35);
-    const chainDepth = mix(y,target.y,extension)+.13;
+    const chainDepth = Math.max(y,mix(y,target.y,extension))+.13;
     return {target, progress, hooked, x, y, scale, direction, frame, hand, lantern, blade, contact, extension, chainDepth};
   }
 
@@ -206,13 +212,13 @@
           ctx.save();
           ctx.globalAlpha *= 1-i*.14;
           ctx.translate(particle.x,particle.y);
-          crystal(ctx,(21-i*2.6)*(1-.55*t));
+          orb(ctx,(15-i*1.9)*(1-.48*t));
           ctx.restore();
         }
       } else if (p>=lanternCatch && p<.99) {
         ctx.globalAlpha *= 1-smooth((p-.94)/.05);
         ctx.translate(lantern.x,lantern.y);
-        crystal(ctx,16+3*Math.sin(p*80));
+        orb(ctx,12+2*Math.sin(p*80));
       }
     }
     ctx.restore();
@@ -222,9 +228,9 @@
     ctx.save();
     ctx.translate(w*.5,h*.53);
     if(id==="manascourge"){
-      ctx.scale(1.48,1.48);
-      seal(ctx,10);
-      polygon(ctx,[[-13,-46],[13,-46],[40,0],[13,46],[-13,46],[-40,0]],null,"#c58ff4",2);
+      ctx.translate(0,42);
+      ctx.scale(1.62,1.62);
+      scourge(ctx,13);
     }else{
       actor(ctx,10,0,h*.36,h/249,1);
       sickle(ctx,53,-69,-.65,1.2);

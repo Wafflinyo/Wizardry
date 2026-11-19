@@ -59,6 +59,21 @@ function cast(id, caster, target, runeResult = 'success') {
 
 {
   const {caster, target} = battle();
+  target.mana = target.maxMana;
+  cast('manascourge', caster, target);
+  api.finishRound();
+  api.finishRound();
+  assert(target.statuses.some(st => st.kind === 'mana_scourge'), 'the rune survives full-mana rounds');
+  target.mana -= 3;
+  api.finishRound();
+  assert.equal(target.mana, target.maxMana - 3, 'the first real mana gain is blocked');
+  assert(!target.statuses.some(st => st.kind === 'mana_scourge'));
+  api.finishRound();
+  assert.equal(target.mana, target.maxMana - 2, 'the rune only blocks one gain');
+}
+
+{
+  const {caster, target} = battle();
   const spell = cast('soulharvest', caster, target);
   assert.equal(target.hp, 1460);
   assert.equal(spell.soulHooked, true);
@@ -110,17 +125,18 @@ api.confirmTarget();
 api.advanceBackground(20000);
 assert.equal(tester.round, 3);
 assert.equal(dummy.hp, dummyHP - 540, 'Soul Harvest waits for the third full round');
-assert(!dummy.statuses.some(st => st.kind === 'mana_scourge'));
+assert(dummy.statuses.some(st => st.kind === 'mana_scourge'), 'the wooden dummy never attempts mana regeneration');
 api.finishRound();
 assert.equal(dummy.hp, dummyHP - 790);
 
 vm.runInNewContext(src('assets/dark-spells.js'), ctx);
 const art = ctx.window.DarkSpells;
-const noop = new Proxy({globalAlpha: 1}, {get: (obj, key) => key in obj ? obj[key] : () => {}});
+const noop = new Proxy({globalAlpha: 1, createRadialGradient: () => ({addColorStop() {}})}, {get: (obj, key) => key in obj ? obj[key] : () => {}});
 for (const target of [{x: 260, y: 330}, {x: 750, y: 540}]) {
   const impact = art.harvestScene(target, .56, true);
   assert.equal(impact.blade.x, impact.contact.x, 'the chain lands on either side');
   assert.equal(impact.blade.y, impact.contact.y);
+  assert.ok(impact.chainDepth > impact.y, "the chain stays in front of the reaper in every lane");
   const hold = art.harvestScene(target, .69, true);
   assert.deepEqual(hold.blade, hold.contact, 'the hook stays planted before the soul pull');
   assert.ok(art.harvestScene(target, .76, true).extension < 1, 'the chain retracts during the soul pull');

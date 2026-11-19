@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 
 const node = {getContext: () => ({})};
 const ctx = {window: {}, requestAnimationFrame() {}, Image: class {}, document: {getElementById: () => node}};
+vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
   '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
   '  window.setupGrowthTest=s=>state=s;window.damageForTest=damage;paintUI=()=>{};'
@@ -24,7 +25,10 @@ const cast = (id,target=ally,runeResult='success') => api.applySpell({
   action:{casterId:caster.id,targetId:target.id},card:card(id),runeResult
 });
 const has = (unit,kind) => unit.statuses.some(rune=>rune.kind===kind);
-const damage = ctx.window.damageForTest;
+const damage = (source,target,base,card,spell) => {
+  spell.damageVariant=1;
+  return ctx.window.damageForTest(source,target,base,card,spell);
+};
 
 for(const [id,rune] of [
   ['growth','growth'],['solidity','solidity'],['rage','blazing_rage'],
@@ -63,4 +67,17 @@ assert.ok(!has(ally,'growth'));
 assert.equal(damage(ally,enemy,100,nature,{}),100);
 cast('growth',caster);
 assert.ok(has(caster,'growth'));
+cast('estel',ally);
+assert.ok(has(caster,'growth'),'a full-health target does not spend Growth');
+ally.hp=50;
+cast('healingaura');
+assert.ok(has(caster,'growth'),'healing rune application preserves Growth');
+assert.equal(ally.statuses.find(st=>st.kind==='healing_aura').value,200);
+cast('estel',ally,'failed');
+assert.equal(ally.hp,50);
+assert.ok(has(caster,'growth'));
+cast('estel',ally);
+assert.equal(ally.hp,987,'750 direct Nature healing boosted to 937');
+assert.ok(!has(caster,'growth'));
+assert.equal(ally.statuses.find(st=>st.kind==='healing_aura').value,200);
 console.log('Growth: self and ally targeting, one charge, blocked hits preserve it, full next Nature cast boosted.');

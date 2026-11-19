@@ -122,7 +122,7 @@
   CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":7,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
   CARDS.push({"id":"crystalicemirrors","name":"Crystal Ice Mirrors","school":"ice","cost":4,"target":"enemy","kind":"crystalicemirrors","accuracy":1,"icon":"❄","rarity":"EPIC","duration":2250,"hit":0.67,"short":"100% ACCURACY","reflectChance":0.4,"turns":3,"description":"Mark one enemy for 3 rounds. Each damaging cast has a 40% chance to turn its damage back on the caster instead. Multi-hit spells roll once. Team attacks reflect one target’s share."});
   CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to cancel their pending action this round."});
-  CARDS.push({"id":"growth","name":"Growth","school":"nature","cost":2,"target":"ally","kind":"growth","boost":0.25,"accuracy":1,"icon":"❧","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Bless yourself or a living ally. Their next damaging Nature spell that lands deals 25% more damage across all hits and targets. Misses and damage over time preserve the rune. Does not stack."});
+  CARDS.push({"id":"growth","name":"Growth","school":"nature","cost":2,"target":"ally","kind":"growth","boost":0.25,"accuracy":1,"icon":"❧","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Bless yourself or a living ally. Their next direct Nature heal or damaging cast gains 25% across every hit and target. Rune ticks, misses, and fully blocked casts preserve Growth. Does not stack."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -1454,6 +1454,17 @@
     return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
   }
 
+  function growthBonus(source,spell){
+    const bonus=spell?.growthBonus??(consumeStatus(source,"growth")?.value||0);
+    if(spell)spell.growthBonus=bonus;
+    return bonus;
+  }
+
+  function directHealing(card,caster,spell,canHeal){
+    const bonus=card.school==="nature"&&card.heal>0&&canHeal?growthBonus(caster,spell):0;
+    return Math.floor(Builds.healing(card,caster)*(1+bonus));
+  }
+
   function damage(source,target,base,card,spell=null){
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
@@ -1489,15 +1500,14 @@
       gainElectricalChargeMana(target,card,spell);
       if(blockWithWindDome(source,target,base,spell))return 0;
     }
-    if(base>0&&(card?.school==="nature"||card?.school==="water")){
-      const nature=card.school==="nature";
-      const key=nature?"growthBonus":"ragingWatersBonus";
-      let bonus=spell?.[key];
-      if(bonus===undefined){
-        bonus=consumeStatus(source,nature?"growth":"raging_waters")?.value||0;
-        if(spell)spell[key]=bonus;
-      }
-      if(bonus){raw*=1+bonus;notes.push(nature?"GROWTH +25%":"RAGING WATERS +25%");}
+    if(base>0&&card?.school==="nature"){
+      const bonus=growthBonus(source,spell);
+      if(bonus){raw*=1+bonus;notes.push("GROWTH +25%");}
+    }
+    if(base>0&&card?.school==="water"){
+      const bonus=spell?.ragingWatersBonus??(consumeStatus(source,"raging_waters")?.value||0);
+      if(spell)spell.ragingWatersBonus=bonus;
+      if(bonus){raw*=1+bonus;notes.push("RAGING WATERS +25%");}
     }
     let marked=spell?.decayMarkTargets?.[target.id];
     if(marked===undefined){
@@ -1981,7 +1991,7 @@
       }
       addStatus(t,nature?"growth":"raging_waters",null,card.boost,card.school);
       flash(t,nature?"GROWTH +25%":"RAGING WATERS +25%",nature?"#ccf7a3":"#a8eeff");
-      state.log=[t.name+" gains +25% damage on their next damaging "+(nature?"Nature":"Water")+" spell.",...state.log].slice(0,5);
+      state.log=[t.name+(nature?" gains +25% on their next direct Nature heal or damaging cast.":" gains +25% damage on their next damaging Water spell."),...state.log].slice(0,5);
     }else if(card.kind==="flowstate"){
       addStatus(t,"flow_state",null,1,card.school);
       Object.assign(t.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
@@ -2123,15 +2133,16 @@
       }
     } else if(card.kind==="heal"&&t&&t.hp>0&&t.team===c.team){
       // The heal cannot damage an enemy, resurrect a KO, or exceed max HP.
-      const n=Math.min(Builds.healing(card,c),Math.max(0,t.maxHp-t.hp));
+      const n=Math.min(directHealing(card,c,anim,t.hp<t.maxHp),Math.max(0,t.maxHp-t.hp));
       t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
     } else if(card.kind==="freezing"&&canReceiveDebuff(t,"freezing_temps")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"freezing_temps",null,.5,card.school);flash(t,"FREEZING TEMPS","#b8f3ff");state.log=[t.name+" is marked: the next Ice spell has a 50% freeze chance.",...state.log].slice(0,5);
     } else if(card.kind==="teamheal"){
-      const healing=Builds.healing(card,c);
-      for(const ally of alive(c.team)){
+      const allies=alive(c.team);
+      const healing=directHealing(card,c,anim,allies.some(ally=>ally.hp<ally.maxHp));
+      for(const ally of allies){
         const amount=Math.min(healing,Math.max(0,ally.maxHp-ally.hp));
         ally.hp+=amount;
         flash(ally,amount>0?"+"+amount+" HP":"FULL HP","#b6fff3");
@@ -2355,7 +2366,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="growth"?'<span class="spell-effect"><b>+25% NEXT NATURE SPELL</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
+        const effect=k.id==="growth"?'<span class="spell-effect"><b>+25% NATURE HEAL / DAMAGE</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
           '<span class="spell-effect"><b>NO MANA REGEN</b><span>UNTIL IT BLOCKS A GAIN</span></span>':k.id==="soulharvest"?
           '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF / ALLY · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
@@ -2416,7 +2427,7 @@
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="growth"?"25 percent next Nature spell damage to yourself or an ally":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
+          (k.kind==="growth"?"25 percent more direct healing or damage on your or an ally’s next Nature cast":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
           "% accuracy. "+(k.id==="growth"||k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
@@ -3112,7 +3123,7 @@
       case "healing_seed":return {title:"Healing Seed · Nature debuff",detail:"Transfers up to "+st.value+" HP to "+(getUnit(st.sourceId)?.name||"the caster")+" at the start of each round. "+st.remaining+" rounds remaining. Refreshes without stacking."};
       case "soul_drain":return {title:"Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
-      case "growth":return {title:"Growth · Nature rune",detail:"Your next damaging Nature spell that lands deals 25% more damage across all hits and targets. The rune is spent on the first hit and does not stack."};
+      case "growth":return {title:"Growth · Nature rune",detail:"Your next Nature spell that directly heals or deals damage gains 25% across all hits and targets. Rune ticks, misses, and fully blocked casts preserve it. Does not stack."};
       case "raging_waters":return {title:"Raging Waters · Water rune",detail:"Your next damaging Water spell that lands deals +25% damage on every hit. The rune is consumed when the spell deals damage and does not stack."};
       case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};

@@ -2,7 +2,7 @@
   const atlas = new Image();
   atlas.src = "./assets/reikel.webp";
   const flourish = new Image();
-  flourish.src = "./assets/reikel-walk-flourish.webp";
+  flourish.src = "./assets/reikel-side-spins.webp";
   const tile = 256;
   const spinStart=.10, spinEnd=.53;
   const spinFrames=36, spinColumns=6, spinTile=192;

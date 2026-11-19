@@ -3777,10 +3777,14 @@
     }
     if(action?.card?.id==="meteorshower"&&action.stage==="summon"){
       const spell=window.MeteorShower;
-      if(spell)for(const [index,entry] of (action.meteorTargets||[]).entries()){
-        const age=action.elapsed-entry.hitAt;
-        renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
-          draw:()=>spell.draw(g,{entry,index,age})});
+      if(spell){
+        const dir=getUnit(action.source)?.team===1?-1:1;
+        spell.drawShower(g,{elapsed:action.elapsed,duration:action.duration,dir});
+        for(const [index,entry] of (action.meteorTargets||[]).entries()){
+          const age=action.elapsed-entry.hitAt;
+          renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
+            draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
+        }
       }
     }
     if(action?.card?.id==="crabgiant"&&action.stage==="summon"){

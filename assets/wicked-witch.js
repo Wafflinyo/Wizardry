@@ -4,8 +4,8 @@
   atlas.src='./assets/witch-poses.webp?v=0.214.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
-  const poses=[0,.075,.15,.22,.29,.34,.40,.46,.50,.54,.58,.635,.678,.734,.82,.91];
-  const size=220;
+  const poses=[0,.075,.15,.22,.29,.34,.40,.46,.50,.54,.58,.635,.70,.776,.845,.92];
+  const size=198;
   const palette={
     fire:['#ad260e','#ff6321','#fff0a8'],
     ice:['#266fb0','#71dfff','#f2ffff'],
@@ -14,8 +14,8 @@
   };
   function position(target,p){
     const dir=target.x>=500?1:-1;
-    const hover=target.x-dir*clamp(Math.abs(target.x-500)/560)*90-dir*175;
-    const enter=clamp(p/.30),exit=clamp((p-.77)/.23);
+    const hover=target.x-dir*clamp(Math.abs(target.x-500)/560)*90-dir*201;
+    const enter=clamp(p/.30),exit=clamp((p-.795)/.205);
     const x=p<.30?mix(dir>0?-120:1120,hover,1-(1-enter)**2):mix(hover,dir>0?1130:-130,exit**1.7);
     return {dir,x,y:target.y-107-30*Math.sin(enter*Math.PI*.5)+Math.sin(p*28)*4-30*exit};
   }
@@ -34,7 +34,7 @@
   function rider(g,{target,progress:p}){
     const {dir,x,y}=position(target,p);
     g.save();g.translate(x,y);g.scale(dir,1);
-    if(p<.31||p>.78)for(let i=0;i<10;i++){
+    if(p<.31||p>.795)for(let i=0;i<10;i++){
       const t=(p*19+i*.618)%1;
       g.globalAlpha=(1-t)*.55;
       particle(g,-57-t*91,-11+Math.sin(i+p*39)*t*18,3+i%3,-.4,'#b17cff');
@@ -47,10 +47,10 @@
     if(!palette[element]||p<hit-.13||p>=hit+.19)return;
     const [edge,bright,core]=palette[element];
     const {dir,x,y}=position(target,p);
-    const sx=x+dir*103,sy=y-117,tx=target.x,ty=target.y-81;
+    const sx=x+dir*size*(103/220),sy=y-size*(117/220),tx=target.x,ty=target.y-81;
     const dx=tx-sx,dy=ty-sy,length=Math.hypot(dx,dy),nx=-dy/length,ny=dx/length;
     const q=clamp((p-hit+.052)/.052);
-    const decay=clamp((p-hit)/.094);
+    const decay=clamp((p-hit-.028)/.105);
     const opacity=(1-decay)**.65;
     g.save();
     if(p<hit){

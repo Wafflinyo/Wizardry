@@ -3678,8 +3678,10 @@
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
       if(growing||wrapped){
         const progress=growing?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
-        renderables.push({type:"thornwrap",depthY:u.y+.06,priority:2,
-          draw:()=>window.ThornyWrap?.draw(g,u,progress)});
+        for(const layer of ["back","front"])renderables.push({
+          type:"thornwrap-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,
+          draw:()=>window.ThornyWrap?.draw(g,u,progress,layer)
+        });
       }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.source===u.id;
       if(cast||u.statuses.some(st=>st.kind==="wind_dome")){

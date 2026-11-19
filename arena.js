@@ -847,7 +847,7 @@
     if(a.stage==="summon"&&a.card.id==="meteorshower")
       for(const entry of a.meteorTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
-    if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="meteorshower"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
       a.shatterPending=false;

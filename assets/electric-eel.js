@@ -39,6 +39,25 @@
     }
   }
 
+  // Trace the near coil across the torso. The complementary mask
+  // sends the head, upper loop and returning tail behind the wizard.
+  function clipCoil(ctx,size,frame,layer){
+    const y=frame>=12?.02:0;
+    const outline=[
+      [.02,.47],[.16,.49],[.36,.55],[.59,.60],[.83,.64],[.98,.72],
+      [.98,.83],[.76,.80],[.55,.74],[.31,.69],[.12,.62],[.02,.56]
+    ];
+    ctx.beginPath();
+    if(layer==="back")ctx.rect(-size/2,-size*.88,size,size);
+    outline.forEach(([u,v],i)=>{
+      const x=(u-.5)*size, py=(v-.88+y)*size;
+      if(i===0)ctx.moveTo(x,py);
+      else ctx.lineTo(x,py);
+    });
+    ctx.closePath();
+    ctx.clip("evenodd");
+  }
+
   window.ElectricEel={
     onReady(fn){
       if(atlas.naturalWidth)fn();
@@ -57,12 +76,7 @@
       ctx.globalAlpha*=Math.min(1,p*18,(1-p)*12);
       if(!connected&&p>=hit)ctx.globalAlpha*=clamp(1-(p-hit)*10);
       ctx.save();
-      if(wrapped){
-        ctx.beginPath();
-        if(layer==="back")ctx.rect(-size,-size,2*size,size-69);
-        else ctx.rect(-size,-69,2*size,size);
-        ctx.clip();
-      }
+      if(wrapped)clipCoil(ctx,size,frame,layer);
       sprite(ctx,frame,0,0,size);
       ctx.restore();
       if(layer==="front"&&(p<hit||connected))sparks(ctx,p,wrapped);

@@ -8,6 +8,14 @@
   const poses=[0,.092,.113,.133,.168,.202,.235,.278,.323,.344,.392,.435,.459,.497,.58,.632,.667,.70,.746,.776,.803,.826,.853,.867];
   const setDown=.323,fuseOut=.554,pickup=.826,size=151;
   const tau=Math.PI*2;
+  function originalProgress(progress,hit){
+    const elapsed=progress/hit*7034;
+    const revealPause=500,dudPause=550;
+    const revealAt=.154*6800,dudAt=.579*6800+revealPause;
+    const paused=clamp((elapsed-revealAt)/revealPause)*revealPause+
+      clamp((elapsed-dudAt)/dudPause)*dudPause;
+    return (elapsed-paused)/6800;
+  }
   function position(target,p){
     const dir=target.x>=500?1:-1;
     const close=target.x-dir*73,far=target.x-dir*230,start=500-dir*50;
@@ -35,8 +43,9 @@
     }
     g.restore();
   }
-  function actor(g,{target,progress:p,hit}){
-    if(p>=hit)return;
+  function actor(g,{target,progress,hit}){
+    if(progress>=hit)return;
+    const p=originalProgress(progress,hit);
     const point=position(target,p);
     let pose=poses.findLastIndex(time=>p>=time);
     let direction=point.dir;
@@ -51,6 +60,9 @@
     g.save();g.translate(point.x,point.y);g.scale(direction,1);
     g.globalAlpha=clamp(p/.047);
     frame(g,pose,-size/2,-size,size);
+    if(pose===3&&p>=.133&&p<.155){
+      spark(g,size*.17,-size*.91,progress);
+    }
     g.restore();
   }
   function plantedBomb(g,x,y,p){
@@ -76,6 +88,9 @@
   function blast(g,x,y,q){
     const flash=1-clamp(q/.24),spread=1-(1-q)**3;
     g.save();
+    g.translate(x,y);
+    g.scale(1.42,1.42);
+    x=0;y=0;
     for(let i=0;i<18;i++){
       const a=i*2.39996,r=(20+i%7*13)*spread;
       const cx=x+Math.cos(a)*r,cy=y+Math.sin(a)*r*.70-44*q;
@@ -105,17 +120,18 @@
     }
     g.restore();
   }
-  function bomb(g,{target,progress:p,hit}){
+  function bomb(g,{target,progress,hit}){
+    const p=originalProgress(progress,hit);
     const {dir}=position(target,p);
     const x=target.x-dir*50;
-    if(p>=hit){
-      blast(g,x,target.y-63,clamp((p-hit)/(1-hit)));
+    if(progress>=hit){
+      blast(g,x,target.y-63,clamp((progress-hit)/(1-hit)));
     }else if(p>=setDown&&p<pickup){
       plantedBomb(g,x,target.y-21,p);
     }
   }
   window.Kamikaze={
-    actor,bomb,depth:({target,progress})=>position(target,progress).y+.08,
+    actor,bomb,depth:({target,progress,hit})=>position(target,originalProgress(progress,hit)).y+.08,
     onReady(fn){if(atlas.naturalWidth)fn();else listeners.push(fn);},
     portrait(g,w,h){const side=Math.min(w,h);frame(g,3,(w-side)/2,(h-side)/2,side);}
   };

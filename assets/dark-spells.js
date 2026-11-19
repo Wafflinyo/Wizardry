@@ -84,7 +84,10 @@
 
   // Each cue selects a separately drawn, grounded pose. Hand sockets share
   // those frames so the chain and captured soul track the two hands.
-  const poseTimes = [0,.09,.18,.29,.35,.41,.47,.53,.61,.69,.80,.90];
+  const hookContact = .56;
+  const soulRelease = .70;
+  const lanternCatch = .90;
+  const poseTimes = [0,.09,.18,.29,.35,.41,.47,.53,.63,soulRelease,.84,.93];
   const sockets = [
     [[-12, -5], [43, -23]],
     [[-13, -46], [52, -45]],
@@ -108,14 +111,15 @@
     const direction = target.x >= 500 ? 1 : -1;
     const x = target.x - direction * Math.min(255, Math.max(156, Math.abs(target.x-500)+75));
     const y = Math.min(536, Math.max(421, target.y+18));
-    const scale = scaleFor({y}) * .94;
+    const scale = scaleFor({y}) * 1.08;
     const frame = poseTimes.findLastIndex(time => progress >= time);
     const point = ([dx,dy]) => ({x:x+direction*dx*scale,y:y+dy*scale});
     const [hand, lantern] = sockets[frame].map(point);
     const contact = {x:target.x,y:target.y-96*scaleFor(target)};
-    const extension = progress < .56
-      ? clamp((progress-.425)/.135)
-      : 1-smooth((progress-.61)/.155);
+    const retractAt = hooked ? soulRelease : .61;
+    const extension = progress < hookContact
+      ? clamp((progress-.425)/(hookContact-.425))
+      : 1-smooth((progress-retractAt)/.145);
     const blade = curve(hand, contact, extension, -35);
     const chainDepth = mix(y,target.y,extension)+.13;
     return {target, progress, hooked, x, y, scale, direction, frame, hand, lantern, blade, contact, extension, chainDepth};
@@ -147,7 +151,7 @@
 
   function drawChain(ctx, scene) {
     const {hand, blade, extension, scale, direction, progress} = scene;
-    if (progress < .28 || progress > .86) return;
+    if (progress < .28 || progress > .89) return;
     const distance = Math.hypot(blade.x-hand.x,blade.y-hand.y);
     const links = Math.max(1,Math.ceil(distance/7));
     for (let i=0; i<links; i++) {
@@ -180,9 +184,9 @@
         smooth(p/.07)*(1-smooth((p-.91)/.09)));
     } else if (layer === "chain") {
       drawChain(ctx,scene);
-    } else if (hooked && p>=.56) {
+    } else if (hooked && p>=hookContact) {
       if (p<.69) {
-        const burst=clamp((p-.56)/.13);
+        const burst=clamp((p-hookContact)/(.69-hookContact));
         ctx.save();
         ctx.globalAlpha *= 1-burst;
         ctx.translate(contact.x,contact.y);
@@ -195,20 +199,20 @@
         }
         ctx.restore();
       }
-      if (p>=.59 && p<.85) {
-        const t=smooth((p-.59)/.26);
+      if (p>=soulRelease && p<lanternCatch) {
+        const t=smooth((p-soulRelease)/(lanternCatch-soulRelease));
         for(let i=5;i>=0;i--){
-          const particle=curve(contact,lantern,clamp(t-i*.032),-66);
+          const particle=curve(contact,lantern,clamp(t-i*.032*(1-t)),-66);
           ctx.save();
           ctx.globalAlpha *= 1-i*.14;
           ctx.translate(particle.x,particle.y);
-          crystal(ctx,(16-i*2)*(1-.55*t));
+          crystal(ctx,(21-i*2.6)*(1-.55*t));
           ctx.restore();
         }
-      } else if (p>=.85 && p<.99) {
-        ctx.globalAlpha *= 1-smooth((p-.89)/.10);
+      } else if (p>=lanternCatch && p<.99) {
+        ctx.globalAlpha *= 1-smooth((p-.94)/.05);
         ctx.translate(lantern.x,lantern.y);
-        crystal(ctx,13+3*Math.sin(p*80));
+        crystal(ctx,16+3*Math.sin(p*80));
       }
     }
     ctx.restore();

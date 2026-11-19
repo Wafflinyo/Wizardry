@@ -121,6 +121,10 @@ for (const target of [{x: 260, y: 330}, {x: 750, y: 540}]) {
   const impact = art.harvestScene(target, .56, true);
   assert.equal(impact.blade.x, impact.contact.x, 'the chain lands on either side');
   assert.equal(impact.blade.y, impact.contact.y);
+  const hold = art.harvestScene(target, .69, true);
+  assert.deepEqual(hold.blade, hold.contact, 'the hook stays planted before the soul pull');
+  assert.ok(art.harvestScene(target, .76, true).extension < 1, 'the chain retracts during the soul pull');
+  assert.ok(art.harvestScene(target, .69, false).extension < 1, 'a blocked hook returns without the hold');
   for (let frame = 0; frame <= 100; frame++) {
     const scene = art.harvestScene(target, frame / 100, true);
     for (const layer of ['portal', 'actor', 'chain', 'impact']) art.drawHarvest(noop, scene, layer);

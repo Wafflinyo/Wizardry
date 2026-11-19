@@ -17,39 +17,60 @@
 
   function actor(ctx,{x,y,dir,elapsed,duration,entries}){
     const approach=clamp(elapsed/820);
-    const jump=clamp((elapsed-820)/440);
+    const jump=clamp((elapsed-820)/690);
     const leaving=clamp((elapsed-duration+490)/450);
     const slide=(1-approach)**2;
     ctx.save();
     ctx.globalAlpha*=clamp(elapsed/220)*clamp((duration-elapsed)/360);
-    if(elapsed<1420){
-      const cloudX=x-dir*(40+210*slide)-dir*155*clamp((elapsed-870)/550);
+    if(elapsed<1680){
+      const cloudX=x-dir*(40+210*slide)-dir*155*clamp((elapsed-1000)/680);
       const cloudY=y-26+Math.sin(elapsed*.006)*5;
       ctx.save();
-      ctx.globalAlpha*=clamp((1420-elapsed)/400);
+      ctx.globalAlpha*=clamp((1680-elapsed)/440);
       sprite(ctx,16,cloudX,cloudY,160,dir);
       ctx.restore();
     }
     let frame=0, px=x-dir*(40*(1-jump)+210*slide), py=y-49*(1-jump)-Math.sin(jump*Math.PI)*53;
     if(elapsed<820)frame=Math.min(2,Math.floor(elapsed/260));
-    else if(elapsed<1260)frame=3+Math.min(2,Math.floor(jump*3));
-    else if(elapsed<1630)frame=6+Number(elapsed>=1440);
+    else if(elapsed<1510)frame=jump<.35?3:jump<.87?4:5;
+    else if(elapsed<2070)frame=6+Number(elapsed>=1720);
     else {
       frame=8;
-      const swing=entries.find(entry=>elapsed>=entry.swingAt-260&&elapsed<entry.swingAt+240);
+      const swing=entries.find(entry=>elapsed>=entry.swingAt-142&&elapsed<entry.swingAt+138);
       if(swing){
         const age=elapsed-swing.swingAt;
-        frame=age<-90?8:age<0?9:age<67?10:age<135?11:age<192?12:13;
+        frame=age<-53?8:age<0?9:age<38?10:age<77?11:age<110?12:13;
       }else if(leaving>0)frame=15;
     }
-    sprite(ctx,frame,px-dir*38*leaving,py,221,dir,.88);
+    sprite(ctx,frame,px-dir*38*leaving,py,245,dir,.88);
+    ctx.restore();
+  }
+
+  function updraft(ctx,x,groundY,stoneY,age,rise){
+    const alpha=ctx.globalAlpha;
+    ctx.save();
+    ctx.strokeStyle="#d1f3ed";
+    ctx.lineCap="round";
+    for(let lane=0;lane<4;lane++){
+      const flow=(age/160+lane*.25)%1;
+      const height=Math.max(18,groundY-stoneY);
+      const tail=groundY-flow*height;
+      const head=Math.max(stoneY+7,tail-21-flow*19);
+      const side=(lane-1.5)*13;
+      ctx.globalAlpha=alpha*Math.sin(flow*Math.PI)*clamp((1-rise)*3)*.78;
+      ctx.lineWidth=lane%2?2:3;
+      ctx.beginPath();
+      ctx.moveTo(x+side,tail);
+      ctx.quadraticCurveTo(x+side+14,tail-14,x+side*.58,head);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
   function stone(ctx,{x,y,dir,elapsed,entry,index}){
-    const liftAt=1420+index*38;
+    const liftAt=1720+index*28;
     if(elapsed<liftAt||elapsed>entry.hitAt+415)return;
-    const contactX=x+dir*85, contactY=y-96;
+    const contactX=x+dir*94, contactY=y-106;
     const age=elapsed-entry.hitAt;
     if(age>=0){
       const expand=clamp(age/415);
@@ -61,10 +82,11 @@
     }
     let px,py;
     if(elapsed<entry.swingAt){
-      const lift=clamp((elapsed-liftAt)/310);
-      const fall=clamp((elapsed-entry.swingAt+270)/270);
+      const lift=clamp((elapsed-liftAt)/385);
+      const fall=clamp((elapsed-entry.swingAt+212)/212);
       px=mix(contactX+dir*index*48,contactX,fall);
-      py=mix(y-7,y-174,1-(1-lift)**2);
+      py=mix(y-17,y-186,lift*lift*(3-2*lift));
+      if(lift<1)updraft(ctx,px,y,py,elapsed-liftAt,lift);
       py=mix(py,contactY,fall*fall);
     }else{
       const flight=clamp((elapsed-entry.swingAt)/(entry.hitAt-entry.swingAt));
@@ -81,7 +103,7 @@
       ctx.stroke();
       ctx.restore();
     }
-    sprite(ctx,17+Math.floor(elapsed/92)%2,px,py,56,dir);
+    sprite(ctx,17+Math.floor(elapsed/92)%2,px,py,46,dir);
   }
 
   window.SticksAndStones={
@@ -92,8 +114,8 @@
     portrait(ctx,w,h){
       const size=Math.min(w,h);
       sprite(ctx,16,w*.46,h*.79,size*.85);
-      sprite(ctx,7,w*.46,h*.77,size*.81,1,.88);
-      sprite(ctx,17,w*.76,h*.38,size*.26);
+      sprite(ctx,7,w*.46,h*.77,size*.87,1,.88);
+      sprite(ctx,17,w*.76,h*.38,size*.22);
     },
     actor,stone
   };

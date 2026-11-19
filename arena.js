@@ -377,12 +377,12 @@
   function switchTesterTarget(type){
     if(state?.mode!=="tester"||state.phase!=="planning"||!["wood","wizard"].includes(type))return;
     testerTargetType=type;
-    fitTesterTarget(state.units.find(u=>u.dummy),type);
+    for(const dummy of sideUnits(1))fitTesterTarget(dummy,type);
     paintUI();
   }
   function setBattle(mode="story",size=4){
     const testing=mode==="tester";
-    if(testing)size=1;
+    if(testing)size=size===4?4:1;
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>mode!=="online"||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
@@ -406,7 +406,7 @@
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
     handSwipe?.reset();
     ui.statusPopup.hidden=true;
-    ui.status.textContent=testing?"Test any spell on the training dummy. Casts succeed and mana refills between rounds.":mode==="story"?
+    ui.status.textContent=testing?"Test any spell with passive allies and opponents. Casts succeed and mana refills between rounds.":mode==="story"?
       "You control "+units[0].name+". All other wizards are CPU-controlled.":
       "PvP local hot-seat simulation only. No real matchmaking or connected friends yet.";
     paintUI();
@@ -603,7 +603,7 @@
       runeKind:card.kind==="zen"?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
   }
   function autoFill(team){
-    if(state.phase!=="planning")return;
+    if(state.phase!=="planning"||state.mode==="tester")return;
     for(const u of alive(team)){
       if(u.dummy||(window.WizardrySession?.active?u.isHuman:u.id===state.humanByTeam[team])||state.plans[u.id])continue;
       const p=autoPlan(u);
@@ -899,7 +899,7 @@
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.kind==="sticksandstones"){
         a.stoneTargets=sticksAndStonesTargets(caster);
-        startStage(a,"summon",(a.stoneTargets.at(-1)?.hitAt??2410)+650);
+        startStage(a,"summon",(a.stoneTargets.at(-1)?.hitAt??2710)+650);
       }else if(a.card.id==="meteorshower"){
         const targets=alive(1-caster.team);
         a.meteorTargets=targets.map((u,i)=>({id:u.id,x:u.x,y:u.y,hitAt:1020+i*360,hit:false}));
@@ -1812,8 +1812,8 @@
   }
   function sticksAndStonesTargets(caster){
     return alive(1-caster.team).slice(0,4).map((target,index)=>{
-      const swingAt=2050+405*index;
-      return {id:target.id,x:target.x,y:target.y,swingAt,hitAt:swingAt+360,hit:false};
+      const swingAt=2440+280*index;
+      return {id:target.id,x:target.x,y:target.y,swingAt,hitAt:swingAt+270,hit:false};
     });
   }
   function applyFallingHit(a,entry,roll){
@@ -2222,8 +2222,7 @@
     tickBurnsForRound();
     if(checkBattleEnd())return;
     if(state.mode==="tester"){
-      const dummy=state.units.find(u=>u.dummy);
-      if(dummy.hp<=0)Object.assign(dummy,{hp:dummy.maxHp,statuses:[],defeatElapsedMs:null,stunRound:null,fearRound:null,flinchRound:null});
+      for(const dummy of sideUnits(1))if(dummy.hp<=0)Object.assign(dummy,{hp:dummy.maxHp,statuses:[],defeatElapsedMs:null,stunRound:null,fearRound:null,flinchRound:null});
     }
     grantTurnMana();
     // Complete old round teardown: no queued player actions, target, card,
@@ -2261,7 +2260,7 @@
     ui.phase.textContent=planning?(state.planningSide?"TEAM B · SELECT":"YOUR MOVE"):
       state.phase==="finished"?"BATTLE COMPLETE":state.phase==="ending"?"FINAL DEFEAT":"RESOLVING SPELLS";
     const testing=state.mode==="tester";
-    ui.badge.textContent=testing?"NEW CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
+    ui.badge.textContent=testing?state.size+"v"+state.size+" CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
       (state.mode==="story"?"PRACTICE":"ONLINE LOBBY");
     $("testerTargetRow").hidden=!testing;
     $("testerTarget").disabled=!planning;
@@ -4330,7 +4329,7 @@
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
     switchTesterTarget,
-    startCardTester:()=>{activeRoster=null;setBattle('tester',1);},
+    startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     receiveSnapshot:snapshot=>{const previous=caster(),discard=previous?.discardedRound===state.round?previous.discardedCard:null,previousRound=state.round;const local=state?.selectedCard,copy=state?.selectedHandCopy||0,target=state?.selectedTarget,rune=state?.selectedRune;state=snapshot;state.selectedHandCopy=copy;const mine=state.units.find(u=>u.peerId===window.WizardrySession?.peerId);if(discard&&snapshot.round===previousRound&&snapshot.phase==='planning'&&mine&&!state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);state.planningSide=mine?.team||0;state.humanByTeam={0:null,1:null};if(mine)state.humanByTeam[mine.team]=mine.id;if(mine&&window.WizardrySession?.pendingPlan){const pending=window.WizardrySession.pendingPlan;if(state.phase!=='planning'||pending.round!==state.round||state.plans[mine.id])window.WizardrySession.pendingPlan=null;else state.plans[mine.id]={casterId:mine.id,...pending};}state.selectedCard=mine?.hand.includes(local)&&!state.plans[mine.id]?local:null;state.selectedTarget=state.selectedCard?target:null;state.selectedRune=state.selectedCard==="zen"?rune:null;paintUI();},
     submitRemotePlan:(peerId,p)=>{const u=state?.units.find(u=>u.peerId===peerId);if(state.phase!=='planning'||!u||u.hp<=0||p.round!==state.round||state.plans[u.id])return false;

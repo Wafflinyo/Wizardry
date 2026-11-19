@@ -37,7 +37,7 @@
           ctx.globalAlpha=Math.sin(q*Math.PI)*.84;
           ctx.strokeStyle=i%2?"#9bfff4":"#d8fffc";
           ctx.lineWidth=2;
-          ctx.beginPath();ctx.ellipse(0,0,12+q*20,5+q*8,-.32,0,Math.PI*2);ctx.stroke();
+          ctx.beginPath();ctx.ellipse(0,0,5+q*8,12+q*20,0,0,Math.PI*2);ctx.stroke();
           ctx.restore();
         }
         const pulse=clamp((p-hit)/.2);

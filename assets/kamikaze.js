@@ -1,12 +1,12 @@
 (()=>{
   const atlas=new Image(),listeners=[];
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  atlas.src='./assets/gremlin-poses.webp?v=0.218.0';
+  atlas.src='./assets/gremlin-poses.webp?v=0.219.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const ease=x=>x*x*(3-2*x);
   const poses=[0,.092,.113,.133,.168,.202,.235,.278,.323,.344,.392,.435,.459,.497,.58,.632,.667,.70,.746,.776,.803,.826,.853,.867];
-  const setDown=.323,fuseOut=.554,pickup=.826,size=117;
+  const setDown=.323,fuseOut=.554,pickup=.826,size=151;
   const tau=Math.PI*2;
   function position(target,p){
     const dir=target.x>=500?1:-1;
@@ -54,16 +54,23 @@
     g.restore();
   }
   function plantedBomb(g,x,y,p){
-    const r=19;
-    const ball=g.createRadialGradient(x-6,y-8,1,x,y,r);
-    ball.addColorStop(0,'#687078');ball.addColorStop(.50,'#333740');ball.addColorStop(1,'#151822');
-    g.fillStyle=ball;g.beginPath();g.arc(x,y,r,0,tau);g.fill();
-    g.fillStyle='#67604c';g.fillRect(x-4,y-21,8,4);
+    const r=22;
+    const ball=g.createRadialGradient(x-8,y-10,1,x,y,r);
+    ball.addColorStop(0,'#646575');ball.addColorStop(.53,'#41424f');ball.addColorStop(1,'#242632');
+    const edge=Array.from({length:12},(_,i)=>{
+      const angle=i*tau/12;
+      return [x+Math.cos(angle)*r,y+Math.sin(angle)*r];
+    });
+    shape(g,edge,ball);
+    shape(g,[[x-14,y-12],[x-3,y-17],[x-2,y-8],[x-12,y-4]],'#616270');
+    shape(g,[[x-2,y-8],[x+11,y-9],[x+17,y],[x+6,y+3]],'#494b58');
+    shape(g,[[x-16,y+7],[x-6,y+4],[x+2,y+15],[x-9,y+16]],'#363746');
+    g.fillStyle='#67604c';g.fillRect(x-4,y-24,8,4);
     if(p<fuseOut){
       const length=(1-clamp((p-setDown)/(fuseOut-setDown)))*19;
       g.strokeStyle='#b59b6d';g.lineWidth=2.2;
-      g.beginPath();g.moveTo(x,y-21);g.quadraticCurveTo(x+length*.22,y-21-length,x+length*.55,y-22-length);g.stroke();
-      spark(g,x+length*.55,y-22-length,p);
+      g.beginPath();g.moveTo(x,y-24);g.quadraticCurveTo(x+length*.22,y-24-length,x+length*.55,y-25-length);g.stroke();
+      spark(g,x+length*.55,y-25-length,p);
     }
   }
   function blast(g,x,y,q){
@@ -104,7 +111,7 @@
     if(p>=hit){
       blast(g,x,target.y-63,clamp((p-hit)/(1-hit)));
     }else if(p>=setDown&&p<pickup){
-      plantedBomb(g,x,target.y-18,p);
+      plantedBomb(g,x,target.y-21,p);
     }
   }
   window.Kamikaze={

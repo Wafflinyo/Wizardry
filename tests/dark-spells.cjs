@@ -129,6 +129,7 @@ assert(dummy.statuses.some(st => st.kind === 'mana_scourge'), 'the wooden dummy 
 api.finishRound();
 assert.equal(dummy.hp, dummyHP - 790);
 
+ctx.Image = class { naturalWidth = 1024; };
 vm.runInNewContext(src('assets/dark-spells.js'), ctx);
 const art = ctx.window.DarkSpells;
 const noop = new Proxy({globalAlpha: 1, createRadialGradient: () => ({addColorStop() {}})}, {get: (obj, key) => key in obj ? obj[key] : () => {}});
@@ -144,7 +145,15 @@ for (const target of [{x: 260, y: 330}, {x: 750, y: 540}]) {
   for (let frame = 0; frame <= 100; frame++) {
     const scene = art.harvestScene(target, frame / 100, true);
     for (const layer of ['portal', 'actor', 'chain', 'impact']) art.drawHarvest(noop, scene, layer);
-    for (const layer of ['front', 'back']) art.drawScourge(noop, target, frame / 100, layer);
+    art.drawScourge(noop, target, frame / 100);
   }
 }
-console.log('Dark spells: casting, mana denial, Soulless countdown/cleanse, and mirrored chain contact passed.');
+
+const tiles = [];
+for(let frame=0; frame<16; frame++){
+  art.drawScourge({drawImage(image, x, y){tiles.push([image.src, x, y]);}}, {x: 750, y: 500}, frame/16);
+}
+assert.deepEqual(tiles, Array.from({length:16}, (_,i)=>[
+  './assets/mana-scourge.webp', (i%4)*256, Math.floor(i/4)*256
+]));
+console.log('Dark spells: mana denial, Soulless timing, mirrored chain contact, and all sixteen Mana Scourge atlas frames passed.');

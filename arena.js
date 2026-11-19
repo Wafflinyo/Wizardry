@@ -3745,9 +3745,9 @@
     if(action?.stage==="summon"&&window.DarkSpells&&["manascourge","soulharvest"].includes(action.card.id)){
       const target=getUnit(action.target),progress=clamp(action.elapsed/action.duration,0,1);
       if(target&&action.card.id==="manascourge"){
-        for(const layer of ["back","front"])renderables.push({
-          type:"mana-scourge-"+layer,depthY:target.y+(layer==="back"?-.1:.1),priority:2,
-          draw:()=>window.DarkSpells.drawScourge(g,target,progress,layer)
+        renderables.push({
+          type:"mana-scourge",depthY:target.y+.1,priority:2,
+          draw:()=>window.DarkSpells.drawScourge(g,target,progress)
         });
       }else if(target){
         const scene=window.DarkSpells.harvestScene(target,progress,action.soulHooked);

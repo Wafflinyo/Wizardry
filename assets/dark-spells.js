@@ -2,9 +2,9 @@
   "use strict";
 
   const atlas = new Image();
-  const listeners = [];
-  atlas.onload = () => listeners.splice(0).forEach(fn => fn());
+  const scourgeAtlas = new Image();
   atlas.src = "./assets/soul-harvest.webp";
+  scourgeAtlas.src = "./assets/mana-scourge.webp";
   const violet = "#ba7afa";
   const bright = "#f6e2ff";
   const clamp = n => Math.max(0, Math.min(1, n));
@@ -32,60 +32,20 @@
     ctx.fill();
   }
 
-  // Four obsidian pylons rise in separate poses, focus on a dark prism,
-  // then collapse into angular fragments once the curse has attached.
-  const scourgeFrames = [
-    [0, 70, 0, .15], [11, 70, 0, .50], [22, 70, 0, .80], [35, 68, 0, 1],
-    [49, 65, 0, 1], [58, 62, 0, 1], [65, 60, 5, 1], [69, 57, 10, 1],
-    [72, 54, 16, 1], [72, 53, 21, 1], [73, 51, 25, 1], [74, 50, 29, 1],
-    [75, 49, 31, 1], [76, 48, 34, 1], [67, 51, 23, .95], [49, 57, 14, .75],
-    [34, 63, 7, .52], [17, 70, 3, .26], [3, 76, 0, .10],
-  ];
+  const scourgeCell = 256;
+  const scourgePeak = 11;
 
-  function pylon(ctx, x, foot, h) {
-    const tip=[x-5,foot-h], seam=[x+3,foot-h*.44];
-    polygon(ctx, [tip,[x+12,foot-h*.35],[x+8,foot],[x-9,foot+2],[x-13,foot-h*.25]],
-      "#23122e","#a969de",1.3);
-    polygon(ctx,[tip,seam,[x-9,foot+2],[x-13,foot-h*.25]],"#4e285f");
-    polygon(ctx,[tip,seam,[x+12,foot-h*.35]],"#9360af");
-    polygon(ctx,[seam,[x+12,foot-h*.35],[x+1,foot-h*.22]],"#e6bbfa");
-    return seam;
+  function scourgeSprite(ctx, frame, x, floor, size) {
+    if (!scourgeAtlas.naturalWidth) return;
+    const column = frame % 4, row = Math.floor(frame / 4);
+    ctx.drawImage(scourgeAtlas, column*scourgeCell, row*scourgeCell,
+      scourgeCell, scourgeCell, x-size/2, floor-size*.88, size, size);
   }
 
-  function scourge(ctx, frame, layer) {
-    const [height, spread, core, opacity] = scourgeFrames[frame];
-    ctx.globalAlpha *= opacity;
-    const pylons=[[-spread*.78,4,height*.91],[spread*.78,4,height*.98],[-spread,26,height*.73],[spread,26,height*.84]];
-    const focus=[0,-44];
-    for(const [i,[x,y,h]] of pylons.entries()){
-      if(layer==="back"&&i>=2||layer==="front"&&i<2)continue;
-      const tip=pylon(ctx,x,y,h);
-      if(core>0){
-        const kink=[tip[0]*.55,focus[1]-8+i*5];
-        polygon(ctx,[tip,kink,[focus[0]+3,focus[1]+2],[kink[0],kink[1]+3]],"#d599fcbd");
-      }
-    }
-    if(layer==="back"||!core)return;
-    const [x,y]=focus;
-    polygon(ctx,[[x,y-core],[x+core*.51,y-4],[x+core*.22,y+core*.54],[x,y+core],[x-core*.51,y+4]],"#120e1a","#d490ff",2);
-    polygon(ctx,[[x,y-core],[x+core*.51,y-4],[x,y+core*.12]],"#683782");
-    polygon(ctx,[[x-core*.51,y+4],[x,y+core*.12],[x,y+core]],"#472455");
-    for(let i=0;i<4;i++){
-      const sweep=clamp((frame-6+i*1.7)/12);
-      const dx=(i%2?1:-1)*spread*(1-sweep);
-      const dy=y-38*(1-sweep)+(i%3-1)*10;
-      polygon(ctx,[[dx,dy-5],[dx+5,dy],[dx,dy+7],[dx-4,dy]],i%2?"#f3cbff":"#9e74e9");
-    }
-  }
-
-  function drawScourge(ctx, target, progress, layer) {
-    const frame = Math.min(scourgeFrames.length - 1, Math.floor(progress * scourgeFrames.length));
-    const scale = scaleFor(target);
-    ctx.save();
-    ctx.translate(target.x, target.y - 61*scale);
-    ctx.scale(scale*1.14, scale*1.14);
-    scourge(ctx, frame, layer);
-    ctx.restore();
+  function drawScourge(ctx, target, progress) {
+    const frame = Math.min(15, Math.floor(clamp(progress)*16));
+    const size = 250*scaleFor(target);
+    scourgeSprite(ctx, frame, target.x, target.y+5, size);
   }
 
   // Each cue selects a separately drawn, grounded pose. Hand sockets share
@@ -228,9 +188,8 @@
     ctx.save();
     ctx.translate(w*.5,h*.53);
     if(id==="manascourge"){
-      ctx.translate(0,42);
-      ctx.scale(1.62,1.62);
-      scourge(ctx,13);
+      const size = Math.min(w,h);
+      scourgeSprite(ctx,scourgePeak,0,size*.38,size);
     }else{
       actor(ctx,10,0,h*.36,h/249,1);
       sickle(ctx,53,-69,-.65,1.2);
@@ -238,5 +197,10 @@
     ctx.restore();
   }
 
-  window.DarkSpells={onReady:fn=>atlas.naturalWidth?fn():listeners.push(fn),portrait,drawScourge,harvestScene,drawHarvest};
+  window.DarkSpells={onReady(fn){
+    for(const image of [atlas,scourgeAtlas]){
+      if(image.naturalWidth)fn();
+      else image.addEventListener("load",fn,{once:true});
+    }
+  },portrait,drawScourge,harvestScene,drawHarvest};
 })();

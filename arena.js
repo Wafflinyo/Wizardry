@@ -1689,14 +1689,7 @@
     }
     return unit.hp>0;
   }
-  function drawQuickSand(ctx,x,y,size,progress){
-    ctx.save();
-    ctx.globalAlpha*=progress;
-    ellipse(ctx,x,y,72*size,23*size,"#b98448","#e3b773",2);
-    ellipse(ctx,x,y+1,57*size,16*size,"#89522e","#c98b4b",2);
-    ellipse(ctx,x,y+2,40*size,10*size,"#653d2a","#a66a3d",2);
-    ctx.restore();
-  }
+
   function triggerThornyWrap(u,a){
     if(!thornAccuracyPenalty(u)||a.thornTriggered)return u.hp>0;
     const vine=u.statuses.find(st=>st.kind==="thorny_wrap");
@@ -2896,6 +2889,7 @@
     return boulderPenalty(u)?1:0;
   }
   function drawUnit(u,time){
+    const sandTime=time;
     const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
     if(frozen)time=0;
     // Physical depth scale from the same arena floor, not separate
@@ -2929,7 +2923,7 @@
       const settle=sinking?clamp(sinking.age/.28,0,1):1;
       const rise=sinking?.quickSandDepth===3?1-clamp((sinking.age-.34)/.48,0,1):1;
       const depth=sinking?((sinking.quickSandDepth-1)+settle*(sinking.quickSandDepth===3?3:1))*rise:sand?.sinks||0;
-      drawQuickSand(g,0,0,scale,sand?1:forming?clamp(state.animation.elapsed/(state.animation.duration*.5),0,1):rise);
+      window.QuickSand?.draw(g,0,0,scale,sandTime,sand?1:forming?clamp(state.animation.elapsed/(state.animation.duration*.5),0,1):rise);
       g.beginPath();g.rect(-220,-320,440,322);g.clip();
       g.translate(0,depth*45*scale);
     }
@@ -3299,7 +3293,7 @@
       else if(card.id==="gunpowderkiss")window.WIZARDRY_GUNPOWDER_V120?.portrait(c,width,height);
       else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
       else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
-      else if(card.id==="quicksand")drawQuickSand(c,width/2,height*.58,Math.min(width/152,height/58),1);
+      else if(card.id==="quicksand")window.QuickSand?.portrait(c,width,height);
       else if(card.id==="thornwrap")window.ThornyWrap?.portrait(c,width,height);
       else if(card.id==="sirensmelody")window.SirensMelody?.portrait(c,width,height);
       else if(card.id==="blizzard")window.Blizzard?.portrait(c,width,height);
@@ -3353,6 +3347,7 @@
     window.IceYeti?.onReady(drawCardArts);
     window.Blizzard?.onReady(drawCardArts);
     window.SirensMelody?.onReady(drawCardArts);
+    window.QuickSand?.onReady(drawCardArts);
     window.BulletSeed?.onReady(drawCardArts);
     window.TreeSpell?.onReady(drawCardArts);
     window.ScaldingAir?.onReady(drawCardArts);

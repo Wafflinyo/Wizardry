@@ -1,12 +1,12 @@
 (()=>{
   const atlas=new Image(),listeners=[];
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  atlas.src='./assets/gremlin-poses.webp?v=0.217.0';
+  atlas.src='./assets/gremlin-poses.webp?v=0.218.0';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const ease=x=>x*x*(3-2*x);
   const poses=[0,.092,.113,.133,.168,.202,.235,.278,.323,.344,.392,.435,.459,.497,.58,.632,.667,.70,.746,.776,.803,.826,.853,.867];
-  const setDown=.323,fuseOut=.554,pickup=.826,size=143;
+  const setDown=.323,fuseOut=.554,pickup=.826,size=117;
   const tau=Math.PI*2;
   function position(target,p){
     const dir=target.x>=500?1:-1;
@@ -41,12 +41,12 @@
     let pose=poses.findLastIndex(time=>p>=time);
     let direction=point.dir;
     if(p>=.155&&p<.278){
-      pose=24+Math.floor((p-.155)/.031)%2;
+      pose=24+Math.floor((p-.155)/.0155)%4;
     }else if(p>=.35&&p<.445){
-      pose=26+Math.floor((p-.35)/.024)%2;
+      pose=28+Math.floor((p-.35)/.012)%4;
       direction=-direction;
     }else if(p>=.65&&p<.746){
-      pose=28+Math.floor((p-.65)/.024)%2;
+      pose=32+Math.floor((p-.65)/.012)%4;
     }
     g.save();g.translate(point.x,point.y);g.scale(direction,1);
     g.globalAlpha=clamp(p/.047);
@@ -54,16 +54,16 @@
     g.restore();
   }
   function plantedBomb(g,x,y,p){
-    const r=15;
+    const r=19;
     const ball=g.createRadialGradient(x-6,y-8,1,x,y,r);
     ball.addColorStop(0,'#687078');ball.addColorStop(.50,'#333740');ball.addColorStop(1,'#151822');
     g.fillStyle=ball;g.beginPath();g.arc(x,y,r,0,tau);g.fill();
-    g.fillStyle='#67604c';g.fillRect(x-4,y-17,8,4);
+    g.fillStyle='#67604c';g.fillRect(x-4,y-21,8,4);
     if(p<fuseOut){
       const length=(1-clamp((p-setDown)/(fuseOut-setDown)))*19;
       g.strokeStyle='#b59b6d';g.lineWidth=2.2;
-      g.beginPath();g.moveTo(x,y-17);g.quadraticCurveTo(x+length*.22,y-17-length,x+length*.55,y-18-length);g.stroke();
-      spark(g,x+length*.55,y-18-length,p);
+      g.beginPath();g.moveTo(x,y-21);g.quadraticCurveTo(x+length*.22,y-21-length,x+length*.55,y-22-length);g.stroke();
+      spark(g,x+length*.55,y-22-length,p);
     }
   }
   function blast(g,x,y,q){
@@ -100,11 +100,11 @@
   }
   function bomb(g,{target,progress:p,hit}){
     const {dir}=position(target,p);
-    const x=target.x-dir*42;
+    const x=target.x-dir*50;
     if(p>=hit){
       blast(g,x,target.y-63,clamp((p-hit)/(1-hit)));
     }else if(p>=setDown&&p<pickup){
-      plantedBomb(g,x,target.y-14,p);
+      plantedBomb(g,x,target.y-18,p);
     }
   }
   window.Kamikaze={

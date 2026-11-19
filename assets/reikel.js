@@ -2,7 +2,7 @@
   const atlas = new Image();
   atlas.src = "./assets/reikel.webp";
   const flourish = new Image();
-  flourish.src = "./assets/reikel-flourish.webp";
+  flourish.src = "./assets/reikel-walk-flourish.webp";
   const tile = 256;
   const spinStart=.10, spinEnd=.53;
   const spinFrames=36, spinColumns=6, spinTile=192;
@@ -20,12 +20,15 @@
 
   function scene(target,p,hit,through) {
     const dir=target.x>=500?1:-1;
-    const startX=500-dir*65;
     const contactX=target.x-dir*96;
+    const stanceX=dir===1?Math.min(509,contactX-44):Math.max(491,contactX+44);
+    const startX=stanceX-dir*96;
+    const walk=clamp((p-spinStart)/(spinEnd-spinStart));
+    const plantedX=mix(startX,stanceX,walk);
     const contact=clamp((p-dashStart)/(hit-dashStart));
     const follow=clamp((p-hit)/.12);
     const exit=through?target.x+dir*83:contactX-dir*22;
-    const x=p<hit?mix(startX,contactX,contact):mix(contactX,exit,1-(1-follow)**2);
+    const x=p<hit?mix(plantedX,contactX,contact):mix(contactX,exit,1-(1-follow)**2);
     const y=mix(500,target.y,clamp((p-dashStart)/(hit-dashStart)));
     const frame=cues.findLastIndex(cue=>p>=cue);
     return {x,y,dir,frame,p,hit,target};

@@ -21,9 +21,9 @@
     draw(ctx,x,y,scale,time,opacity) {
       ctx.save();
       ctx.globalAlpha*=opacity;
-      sprite(ctx,x,y,198*scale,108*scale,Math.floor(time/68)%16);
+      sprite(ctx,x,y,198*scale,108*scale,Math.floor(time/80)%16);
       for(let i=0;i<18;i++){
-        const age=(time/1050+i*.618)%1;
+        const age=(time/1240+i*.618)%1;
         const angle=i*2.4+age*5.4;
         const radius=(74-age*54)*scale;
         const px=x+Math.cos(angle)*radius,py=y+Math.sin(angle)*radius*.32;

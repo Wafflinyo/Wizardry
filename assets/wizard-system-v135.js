@@ -22,6 +22,7 @@ function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}
 function healAmount(base,p,school){return Math.floor(base*multiplier(p,school));}
 function healing(card,p){return healAmount(card.healPerTurn||card.heal||0,p,card.school)*(card.healPerTurn?(card.healTurns||1):1);}
 function effectText(card,p){
+ if(card.kind==='wickedwitch')return '';
  const boost=multiplier(p,card.school),span=base=>{const a=Math.floor(base*boost*.9),b=Math.floor(base*boost*1.1);return a===b?String(a):a+'–'+b;};
  if(card.seedDamage)return Math.round(card.seedChance*100)+'% HEALING SEED · '+healAmount(card.seedDamage,p,card.school)+' HP × '+card.seedTurns+' ROUNDS';
  if(card.healPerTurn)return healAmount(card.healPerTurn,p,card.school)+' HP × '+card.healTurns+' TURNS · '+healing(card,p)+' TOTAL';

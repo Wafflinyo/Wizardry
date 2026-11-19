@@ -1696,73 +1696,6 @@
     paintUI();return true;
   }
   // World-space gusts mirror with the caster and sort at each victim's depth.
-  function drawBlizzardWind(c,p,caster,target,index){
-    const local=clamp((p-.09-index*.045)/.86,0,1);
-    if(local<=0||local>=1)return;
-    const dir=target.x>=caster.x?1:-1,fade=Math.min(1,local*9,(1-local)*6);
-    const origin=caster.x+dir*25,span=Math.abs(target.x-origin)+200;
-    const front=clamp(local*3.5,0,1),back=clamp((local-.62)*2.8,0,1);
-    const base=target.y-75;
-    const edgeFade=f=>clamp((f-back)/.13,0,1)*clamp((front-f)/.13,0,1);
-    c.save();c.lineJoin="bevel";
-    // Continuous flowing volumes, tessellated into lit low-poly facets.
-    // The front sweeps through the victim, followed by a sustained snow body.
-    for(let band=0;band<6;band++){
-      const center=base+(band-2.5)*29,phase=local*12-band*.73+index*.4;
-      // Independent pointed wisps avoid a shared vertical boundary.
-      const bandBack=back-.055-.065*rand(band+index*19+7);
-      const bandFront=front+.035+.09*rand(band+index*31+67);
-      const points=[];
-      for(let j=0;j<=18;j++){
-        const t=j/18,u=bandBack+(bandFront-bandBack)*t,x=origin+dir*span*u;
-        const wave=Math.sin(u*8-phase)*23+Math.sin(u*15-phase*.7)*9;
-        const taper=Math.pow(Math.max(0,Math.sin(Math.PI*t)),.7);
-        const thickness=(23+12*Math.sin(u*5+phase*.45+band))*taper;
-        points.push({x,y:center+wave,w:thickness});
-      }
-      for(let j=0;j<18;j++){
-        const a=points[j],b=points[j+1],midA=a.y-a.w*.18,midB=b.y-b.w*.18;
-        const feather=Math.min(1,(j+.5)/3,(18-j-.5)/3);
-        c.globalAlpha=fade*feather*(band%2?.56:.68);
-        c.fillStyle=["#72b6d1","#a7deeb","#d1f0f5"][(j+band)%3];
-        c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.lineTo(a.x,midA);c.closePath();c.fill();
-        c.fillStyle=["#3f82aa","#679fbd","#8ac9dd"][(j+band)%3];
-        c.beginPath();c.moveTo(a.x,midA);c.lineTo(b.x,midB);c.lineTo(b.x,b.y+b.w);c.lineTo(a.x,a.y+a.w);c.closePath();c.fill();
-        if((j+band)%3===0){
-          c.globalAlpha=fade*feather*.48;c.fillStyle="#eafcff";
-          c.beginPath();c.moveTo(a.x,a.y-a.w);c.lineTo(b.x,b.y-b.w);c.lineTo(b.x,midB);c.closePath();c.fill();
-        }
-      }
-    }
-    // Billowing angular snow pockets break up the ribbons into a thick squall.
-    for(let n=0;n<22;n++){
-      const f=(rand(n+index*37)+local*1.5)%1;if(f>front||f<back)continue;
-      const x=origin+dir*span*f,y=base+(rand(n+133)-.5)*180+Math.sin(f*9-local*12)*24;
-      const r=16+rand(n+27)*23;c.globalAlpha=fade*edgeFade(f)*.22;c.fillStyle=n%2?"#c9edf4":"#edfaff";
-      c.beginPath();
-      for(let k=0;k<7;k++){const angle=k*Math.PI*2/7,px=x+Math.cos(angle)*r*1.9,py=y+Math.sin(angle)*r;if(k)c.lineTo(px,py);else c.moveTo(px,py);}
-      c.closePath();c.fill();
-    }
-    // Fast snow blades have long tapered wakes and faceted crystalline tips.
-    for(let n=0;n<112;n++){
-      const seed=rand(n+index*131),f=(seed+local*(2.8+rand(n+73)*1.5))%1;
-      if(f>front||f<back)continue;
-      const x=origin+dir*span*f,y=base+(rand(n+311)-.5)*224+Math.sin(f*9-local*12)*22;
-      const size=1.5+rand(n+52)*4,length=14+rand(n+89)*46;
-      c.globalAlpha=fade*edgeFade(f)*(.3+seed*.6);c.fillStyle="#caeef8";
-      c.beginPath();c.moveTo(x-dir*length,y+size);c.lineTo(x+dir*size*3,y-size*.35);c.lineTo(x-dir*size,y-size);c.closePath();c.fill();
-      c.fillStyle=n%4?"#f2fdff":"#8dd5ee";
-      c.beginPath();c.moveTo(x+dir*size*3,y);c.lineTo(x,y-size*1.6);c.lineTo(x-dir*size*2,y);c.lineTo(x,y+size);c.closePath();c.fill();
-    }
-    const impact=clamp(1-Math.abs(p-blizzardHitAt(index,4))/.15,0,1);
-    if(impact>0)for(let n=0;n<15;n++){
-      const seed=rand(n+index*43),x=target.x+dir*(seed*130-30),y=base+(rand(n+77)-.5)*175;
-      c.globalAlpha=impact*.7;c.fillStyle=n%2?"#f0fdff":"#9cdeef";
-      c.beginPath();c.moveTo(x-dir*35,y+8);c.lineTo(x+dir*42,y-3);c.lineTo(x,y-11);c.closePath();c.fill();
-    }
-    c.restore();
-  }
-
   function applyFrostyImpact(a,roll){
     if(!a||a.applied||a.runeResult!=="success")return false;
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
@@ -3314,7 +3247,7 @@
       else if(card.id==="zeus")window.WIZARDRY_ZEUS_V119?.portrait(c,width,height);
       else if(card.id==="kineticsand")window.WIZARDRY_KINETIC_SAND_V112?.portrait(c,width,height);
       else if(card.id==="thornwrap")window.ThornyWrap?.portrait(c,width,height);
-      else if(card.id==="blizzard"){c.save();c.scale(width/1000,height/620);drawBlizzardWind(c,.53,{x:100,y:440},{x:740,y:450},0);c.restore();}
+      else if(card.id==="blizzard")window.Blizzard?.portrait(c,width,height);
       else if(card.id==="penguins")drawPenguinPortrait(c,width,height);
       else if(card.id==="ronin")window.WIZARDRY_WIND_SLASHES_V81?.drawPortrait(c,width,height);
       else if(card.id==="arrows")window.WIZARDRY_FLAMING_ARROWS_V80?.drawPortrait(c,width,height);
@@ -3363,6 +3296,7 @@
     window.LightningBall?.onReady(drawCardArts);
     window.TotallyRad?.onReady(drawCardArts);
     window.IceYeti?.onReady(drawCardArts);
+    window.Blizzard?.onReady(drawCardArts);
     window.BulletSeed?.onReady(drawCardArts);
     window.TreeSpell?.onReady(drawCardArts);
     window.ScaldingAir?.onReady(drawCardArts);
@@ -3505,7 +3439,6 @@
     if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="electricalcharge"){window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target:caster,time});g.restore();return;}
-    if(card.id==="flowstate"){window.WIZARDRY_FLOW_STATE_V121?.draw(g,{progress:p,target:caster});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
     if(card.kind==="summon"){
@@ -3700,7 +3633,16 @@
           draw:()=>window.RagingWaters?.draw(g,{progress,target:caster})});
       }
     }
-    if(action?.stage==="summon"&&["electricalcharge","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
+    if(action?.stage==="summon"&&action.card.id==="flowstate"){
+      const target=getUnit(action.target)||getUnit(action.source);
+      if(target)for(const layer of ["back","front"])renderables.push({
+        type:"flow-state-"+layer,depthY:target.y+(layer==="back"?-.06:.06),priority:2,
+        draw:()=>window.WIZARDRY_FLOW_STATE_V121?.draw(g,{
+          progress:clamp(action.elapsed/action.duration,0,1),target,layer
+        })
+      });
+    }
+    if(action?.stage==="summon"&&["electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):510)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});
@@ -3918,7 +3860,11 @@
     }
     if(action?.card?.id==="blizzard"&&action.stage==="summon"){
       const caster=getUnit(action.source),progress=clamp(action.elapsed/action.duration,0,1);
-      for(const [i,target] of (action.blizzardTargets||[]).entries())renderables.push({type:"blizzard-"+target.id,depthY:target.y+.1,priority:2,draw:()=>drawBlizzardWind(g,progress,caster,target,i)});
+      const targets=action.blizzardTargets||[];
+      if(caster)for(const [i,target] of targets.entries())renderables.push({
+        type:"blizzard-"+target.id,depthY:target.y+.1,priority:2,
+        draw:()=>window.Blizzard?.draw(g,progress,caster,target,blizzardHitAt(i,targets.length))
+      });
     }
     if(action?.card?.id==="bloom"&&action.stage==="summon"){
       const bloom=window.WIZARDRY_BLOOM_V97,caster=getUnit(action.source),opts={progress:clamp(action.elapsed/action.duration,0,1),targets:action.sporeTargets||alive(1-caster.team).map(t=>({id:t.id,x:t.x,y:t.y}))};
@@ -4244,7 +4190,7 @@
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
-    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,drawBlizzardWind,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

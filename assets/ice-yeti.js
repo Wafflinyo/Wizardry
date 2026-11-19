@@ -1,20 +1,23 @@
 (()=>{
-  const atlas=new Image(),listeners=[];
-  atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  const atlas=new Image(),runAtlas=new Image();
   atlas.src='./assets/yeti-poses.webp?v=0.208.0';
+  runAtlas.src='./assets/yeti-run.webp';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const size=241;
+  const runStart=.42,runEnd=.65,runCycles=2;
+  const contacts=Array.from({length:runCycles*2},(_,step)=>
+    runStart+(runEnd-runStart)*step/(runCycles*2));
   function direction(target){return target.x>=500?1:-1;}
   function position(target,p){
     const dir=direction(target);
     const q=clamp((p-.42)/.25),travel=q*q*(3-2*q);
     return {x:mix(500-dir*52,target.x-dir*62,travel),floor:mix(510,target.y+4,travel),q};
   }
-  function frame(g,index,x,y,width){
-    if(!atlas.naturalWidth)return;
-    const tile=atlas.naturalWidth/4;
-    g.drawImage(atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,width,width);
+  function frame(g,index,x,y,width,image=atlas){
+    if(!image.naturalWidth)return;
+    const tile=image.naturalWidth/4;
+    g.drawImage(image,index%4*tile,Math.floor(index/4)*tile,tile,tile,x,y,width,width);
   }
   function crystal(g,x,y,r,angle,color){
     g.save();g.translate(x,y);g.rotate(angle);
@@ -37,13 +40,12 @@
   }
   function stepSnow(g,target,p){
     const dir=direction(target);
-    const contacts=[.423,.4915,.5272,.599,.6345,.665];
     g.save();
     for(const [step,at] of contacts.entries()){
       const age=(p-at)/.104;
       if(age<0||age>=1)continue;
       const {x,floor}=position(target,at);
-      const foot=x+dir*(step%2?27:-19);
+      const foot=x+dir*(step%2?27:33);
       for(let i=0;i<8;i++){
         const drift=(12+i*6)*age;
         const lift=(7+i%4*7)*Math.sin(age*Math.PI);
@@ -55,9 +57,11 @@
     g.restore();
   }
   function draw(g,{target,progress:p,hit}){
-    const {x,floor,q}=position(target,p);
+    const {x,floor}=position(target,p);
+    const running=p>=runStart&&p<runEnd;
     let pose=0;
-    if(p>=.42&&p<.67)pose=q>.82?7:4+Math.floor(q*7)%3;
+    if(running)pose=Math.floor((p-runStart)/(runEnd-runStart)*runCycles*8)%8;
+    else if(p>=runEnd&&p<.67)pose=7;
     else if(p>=.67)pose=p>=.91?11:p>=hit?10:p>=hit-.033?9:8;
     else if(p>=.35)pose=3;
     else if(p>=.16)pose=2;
@@ -65,7 +69,7 @@
     stepSnow(g,target,p);
     g.save();g.translate(x,floor);g.scale(direction(target),1);
     g.globalAlpha=clamp(p/.085)*clamp((1-p)/.09);
-    frame(g,pose,-size/2,-size-(pose===5?12:0),size);
+    frame(g,pose,-size/2,-size,size,running?runAtlas:atlas);
     if(p>=.16&&p<.43)breath(g,p);
     g.restore();
   }
@@ -154,7 +158,10 @@
   }
   window.IceYeti={
     draw,impact,ground,shake,depth:({target,progress})=>position(target,progress).floor,
-    onReady(fn){if(atlas.naturalWidth)fn();else listeners.push(fn);},
+    onReady(fn){
+      if(atlas.naturalWidth)fn();
+      else atlas.addEventListener('load',fn,{once:true});
+    },
     portrait(g,w,h){const side=Math.min(w,h);frame(g,8,(w-side)/2,(h-side)/2,side);}
   };
 })();

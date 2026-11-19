@@ -14,7 +14,7 @@ vm.runInNewContext(fs.readFileSync('arena.js','utf8').replace(
 const api = context.window.WIZARDRY_ARENA_TEST;
 const {set,sticksAndStonesTargets,updateCastSequence} = context.window.stoneTest;
 const card = api.cards.find(c=>c.id==='sticksandstones');
-assert.equal(api.featuredCard,card.id);
+assert.equal(card.target,'all_enemies');
 
 const unit = (id,team) => ({id,name:id,team,x:team?760:240,y:450,hp:1000,maxHp:1000,statuses:[]});
 const caster = unit('caster',0);

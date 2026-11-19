@@ -1,7 +1,7 @@
 (()=>{
   const atlas=new Image(),runAtlas=new Image();
   atlas.src='./assets/yeti-poses.webp?v=0.208.0';
-  runAtlas.src='./assets/yeti-run-v236.webp';
+  runAtlas.src='./assets/yeti-run-v237.webp';
   const clamp=x=>Math.max(0,Math.min(1,x));
   const mix=(a,b,q)=>a+(b-a)*q;
   const size=241;

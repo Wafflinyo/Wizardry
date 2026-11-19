@@ -18,24 +18,36 @@
     const start=target.x-dir*217;
     const x=mix(start+dir*48*approach,target.x,lunge*lunge);
     const y=mix(510,target.y,clamp(p/.59));
-    const frame=p<.41?Math.floor(p*30)%4:
+    const frame=p<.41?Math.floor(p*17)%4:
       p<.59?4+Math.floor(lunge*4):
       p<hit?8+Math.min(3,Math.floor((p-.59)/(hit-.59)*4)):
-      12+Math.min(3,Math.floor((p-hit)/(1-hit)*4));
+      p>.94?15:12+Math.floor((p-hit)*29)%3;
     return {x,y,dir,p,hit,frame,connected};
   }
 
-  function sparks(ctx,p,wrapped){
-    const tick=Math.floor(p*135);
-    const span=wrapped?64:92;
-    for(let i=0;i<(wrapped?10:6);i++){
-      const theta=i*2.4+tick*.83;
-      const x=Math.cos(theta)*span,y=(wrapped?-95:-32)+Math.sin(theta)*(wrapped?72:14);
-      const len=12+(tick+i*7)%18;
-      ctx.strokeStyle=i%2?"#fff3a4":"#78e9ff";
-      ctx.lineWidth=i%2?1.4:2.4;
-      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len*.4,y-9);
-      ctx.lineTo(x+len*.3,y+3);ctx.lineTo(x+len,y-12);ctx.stroke();
+  function sparks(ctx,p,shocking){
+    const opacity=ctx.globalAlpha;
+    const count=shocking?9:2;
+    for(let i=0;i<count;i++){
+      const clock=p*(shocking?33:13)+i*.618;
+      const age=clock%1;
+      if(!shocking&&age>.36)continue;
+      const seed=Math.floor(clock)*2.4+i*2.4;
+      const pulse=Math.sin(Math.PI*(shocking?age:age/.36));
+      const x=Math.cos(seed)*(shocking?62:79);
+      const y=(shocking?-94:-28)+Math.sin(seed)*(shocking?66:10);
+      const reach=(shocking?31:16)+Math.sin(seed*3)*8;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(seed+Math.sin(age*6)*.19);
+      ctx.globalAlpha=opacity*pulse;
+      ctx.beginPath();
+      ctx.moveTo(0,0);ctx.lineTo(reach*.24,-6);
+      ctx.lineTo(reach*.39,2+Math.sin(age*14)*4);ctx.lineTo(reach*.67,-3);
+      ctx.lineTo(reach,.8);
+      ctx.lineWidth=shocking?5:3;ctx.strokeStyle="#efaa16";ctx.stroke();
+      ctx.lineWidth=shocking?2:1.4;ctx.strokeStyle="#ffed61";ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -79,7 +91,7 @@
       if(wrapped)clipCoil(ctx,size,frame,layer);
       sprite(ctx,frame,0,0,size);
       ctx.restore();
-      if(layer==="front"&&(p<hit||connected))sparks(ctx,p,wrapped);
+      if(layer==="front"&&(p<hit||connected))sparks(ctx,p,wrapped&&p>=hit);
       ctx.restore();
     }
   };

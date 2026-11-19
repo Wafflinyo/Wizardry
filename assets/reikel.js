@@ -7,10 +7,10 @@
   const spinStart=.10, spinEnd=.53;
   const spinColumns=4, spinTile=256;
   const size = 242;
-  const dashStart = .71;
+  const dashStart = .761;
   const clamp = n => Math.max(0,Math.min(1,n));
   const mix = (a,b,t) => a+(b-a)*t;
-  const cues = [0,.055,.11,.17,.23,.29,.35,.41,.47,.53,.61,.71,.745,.80,.87,.94];
+  const cues = [0,.055,.11,.17,.23,.29,.35,.41,.47,.53,.663,.761,.771,.789,.822,.94];
 
   function sprite(ctx,frame,x,y,side) {
     if(!atlas.naturalWidth)return;
@@ -23,7 +23,7 @@
     const contactX=target.x-dir*96;
     const stanceX=dir===1?Math.min(509,contactX-44):Math.max(491,contactX+44);
     const contact=clamp((p-dashStart)/(hit-dashStart));
-    const follow=clamp((p-hit)/.12);
+    const follow=clamp((p-hit)/.042);
     const exit=through?target.x+dir*83:contactX-dir*22;
     const x=p<hit?mix(stanceX,contactX,contact):mix(contactX,exit,1-(1-follow)**2);
     const y=mix(500,target.y,clamp((p-dashStart)/(hit-dashStart)));
@@ -124,7 +124,7 @@
     draw(ctx,{x,y,dir,frame,p,hit,target}){
       ctx.save();
       ctx.globalAlpha*=Math.min(clamp(p/.09),clamp((1-p)/.07));
-      const dash=clamp((p-dashStart)/.045)*clamp((.96-p)/.09);
+      const dash=clamp((p-dashStart)/.012)*clamp((.96-p)/.09);
       for(let i=0;i<11;i++){
         const flutter=Math.sin(p*105+i*2);
         const trailX=x-dir*i*19;

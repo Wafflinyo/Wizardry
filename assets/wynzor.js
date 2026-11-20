@@ -1,10 +1,10 @@
 (() => {
   const atlas = new Image();
-  atlas.src = "./assets/wynzor.webp";
+  atlas.src = "./assets/wynzor.webp?v=0.277.3";
   const clamp = n => Math.max(0, Math.min(1, n));
   const ease = n => { const q = clamp(n); return q * q * (3 - 2 * q); };
   const transitions = new Image();
-  transitions.src = "./assets/wynzor-transitions.webp";
+  transitions.src = "./assets/wynzor-transitions.webp?v=0.277.3";
   const poses = [
     [0,0],[.035,16],[.067,17],[.100,1],[.128,18],[.153,19],[.183,2],[.208,3],
     [.232,20],[.258,4],[.283,21],[.310,5],[.335,22],[.362,23],

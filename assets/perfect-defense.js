@@ -27,25 +27,38 @@
     ctx.drawImage(atlas,frame%4*cell,Math.floor(frame/4)*cell,cell,cell,x,y,w,h);
   }
 
+  // Bake a full revolution of granular slip faces onto the stationary shell.
+  const surfaceFrames=[];
   function shiftingShell(ctx,frame,time){
-    const phase=time/850;
-    const step=time/165;
-    const next=domeCycle[(Math.floor(step)+1)%domeCycle.length];
-    const strips=24;
-    for(let i=0;i<strips;i++){
-      const t=(i+.5)/strips;
-      const drift=Math.sin(t*Math.PI)*(
-        Math.sin(phase*2*Math.PI-t*9)*4.5+Math.sin(phase*4.36-t*16)*2);
-      const sy=i*cell/strips;
-      const y=top+i*height/strips;
-      const x=-width/2+drift;
-      const sh=cell/strips,dh=height/strips+.12;
-      ctx.drawImage(atlas,frame%4*cell,Math.floor(frame/4)*cell+sy,cell,sh,x,y,width,dh);
-      ctx.save();
-      ctx.globalAlpha*=ease(step%1)*.85;
-      ctx.drawImage(atlas,next%4*cell,Math.floor(next/4)*cell+sy,cell,sh,x,y,width,dh);
-      ctx.restore();
+    const index=Math.floor(time/75)%48;
+    if(!surfaceFrames[index]){
+      const tile=document.createElement("canvas");
+      tile.width=tile.height=cell;
+      const c=tile.getContext("2d");
+      const turn=index*Math.PI*2/48;
+      sprite(c,finalFrame,0,0,cell,cell);
+      c.globalCompositeOperation="source-atop";
+      for(let belt=0;belt<23;belt++){
+        const v=(belt+.5)/23;
+        const radius=90*Math.sqrt(v*(2-v));
+        for(let grain=0;grain<44;grain++){
+          const longitude=grain*Math.PI*2/44+turn+1.7*Math.sin(belt*.43)+belt*.21;
+          const facing=Math.cos(longitude);
+          if(facing<=0)continue;
+          const x=96+radius*Math.sin(longitude);
+          const y=9+v*158+facing*(8+6*v)+5*Math.sin(longitude*3+belt*.42);
+          const w=(4+2*Math.sin(grain*3.7+belt))*facing;
+          const h=2+1.5*Math.sin(grain*1.71+belt);
+          c.globalAlpha=.52*facing;
+          c.fillStyle=sand[(grain*7+belt*3)%5];
+          c.beginPath();
+          polygon(c,[[x-w,y],[x-w*.4,y-h],[x+w,y-h*.5],[x+w*.6,y+1],[x,y+h]]);
+          c.fill();
+        }
+      }
+      surfaceFrames[index]=tile;
     }
+    ctx.drawImage(surfaceFrames[index],-width/2,top,width,height);
   }
 
   function shell(ctx,frame,eyeX,eyeY,layer,growth=1,time){
@@ -137,35 +150,32 @@
   function travel(ctx,target,p){
     if(p<=0||p>=.74||!currentAtlas.naturalWidth)return;
     const dx=target.x-500,dy=target.y-510;
-    const distance=Math.hypot(dx,dy);
-    const angle=Math.atan2(dy,dx);
-    const scale=scaleFor(target);
-    const head=ease(p/.49)*distance;
-    const tail=ease((p-.10)/.46)*distance;
-    const span=head-tail;
-    const tick=p*58;
-    ctx.save();
-    if(span>0.5){
+    const length=Math.hypot(dx,dy)||1;
+    const piles=[];
+    // Each crest has its own footprint and arrival time. Only the ground
+    // anchors follow the route, so crests stay upright even on steep paths.
+    for(let row=0;row<5;row++){
+      for(let lane=-1;lane<=1;lane++){
+        const delay=row*.036+Math.abs(lane)*.016;
+        const advance=ease((p-delay)/.47);
+        const size=ease((p-delay)/.085)*(1-ease((p-.49-delay)/.14));
+        if(size<=0)continue;
+        const spread=(17+10*Math.sin(advance*Math.PI))*lane;
+        const x=500+dx*advance-dy/length*spread;
+        const y=510+dy*advance+dx/length*spread*.48;
+        const depth=scaleFor({y});
+        piles.push({x,y,w:(123+23*(1-Math.abs(lane)))*depth*size,
+          h:(72+31*(1-Math.abs(lane)))*depth*size,tick:p*66+row*3+lane+2});
+      }
+    }
+    piles.sort((a,b)=>a.y-b.y);
+    for(const pile of piles){
       ctx.save();
-      ctx.translate(500,510);
-      if(dx<0){
-        ctx.scale(-1,1);
-        ctx.rotate(Math.atan2(dy,-dx));
-      }else ctx.rotate(angle);
-      const breadth=(.7+ease(p/.36)*.3)*scale;
-      ctx.globalAlpha*=ease(p/.09)*(1-ease((p-.50)/.065));
-      rollingCurrent(ctx,tick,tail-8,-41*breadth,span+16,64*breadth);
+      ctx.translate(pile.x,pile.y);
+      ctx.scale(dx<0?-1:1,1);
+      rollingCurrent(ctx,pile.tick,-pile.w/2,-pile.h*.82,pile.w,pile.h);
       ctx.restore();
     }
-    const pool=ease((p-.40)/.12)*(1-ease((p-.60)/.14));
-    if(pool>0){
-      ctx.globalAlpha*=pool;
-      ctx.translate(target.x,target.y);
-      ctx.scale(dx<0?-scale:scale,scale);
-      const width=100+100*ease((p-.40)/.18);
-      rollingCurrent(ctx,tick+5,-width/2,-32,width,54);
-    }
-    ctx.restore();
   }
 
   function shatter(ctx,target,{age,popped}){

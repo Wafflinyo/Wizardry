@@ -132,9 +132,9 @@
   CARDS.push({id:"volcaniceruption",name:"Volcanic Eruption",school:"fire",cost:8,target:"all_enemies",kind:"volcaniceruption",
     damage:430,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:1,icon:"♨",rarity:"EPIC",duration:4860,hit:.6,
     short:"100 / 80 / 60 / 40%",description:"Lava strikes enemies in random order. Hit chances: 100%, 80%, 60%, 40%. Each hit deals 430 damage with a 30% chance of Extreme Burn (100 per round for 5 rounds)."});
-  CARDS.push({id:"frozentouch",name:"Frozen Touch",school:"ice",cost:4,target:"enemy",kind:"frozentouch",
+  CARDS.push({id:"frozentouch",name:"Frozen Touch",school:"ice",cost:4,target:"ally",kind:"frozentouch",
     accuracy:1,icon:"❄",rarity:"EPIC",duration:1850,hit:.60,short:"100% ACCURACY",
-    description:"The target’s next eligible damaging spell deals 0 damage across all hits and targets. Fire and Lightning bypass the rune. Lasts until triggered or cleansed."});
+    description:"Shield yourself or an ally from all hits of the next eligible incoming spell. Fire and Lightning bypass the shield. Lasts until triggered."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -1369,8 +1369,8 @@
     c.restore();return placed;
   }
   const MAX_DEBUFF_RUNES=4;
-  const DEBUFF_SPELLS=new Set(['frozentouch','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
-  const DEBUFFS=new Set(['frozen_touch','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFF_SPELLS=new Set(['drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFFS=new Set(['lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","perfect_defense","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1524,7 +1524,7 @@
     return amount;
   }
   function preventsHitEffects(spell,target){
-    return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
+    return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]||spell?.frozenTouchTargets?.[target.id]);
   }
 
   function growthBonus(source,spell){
@@ -1539,14 +1539,6 @@
   }
 
   function damage(source,target,base,card,spell=null){
-    if(base>0&&source.team!==target.team&&card?.school&&card.school!=="fire"&&card.school!=="lightning"){
-      if(spell?.frozenTouchBlocked)return 0;
-      if(consumeStatus(source,"frozen_touch")){
-        if(spell)spell.frozenTouchBlocked=true;
-        flash(source,"FROZEN TOUCH · 0 DAMAGE","#b8efff").frozenTouchCaster=source.id;
-        return 0;
-      }
-    }
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
       const mark=source.statuses.find(st=>st.kind==="crystal_ice_mirrors"&&state.round<st.expiresRound);
@@ -1558,6 +1550,15 @@
     }
     const reflected=!!spell?.mirrorTarget;
     if(reflected&&(target.id!==spell.mirrorTarget||source.hp<=0))return 0;
+    const recipient=reflected?source:target;
+    if(base>0&&source.team!==target.team&&card?.school&&card.school!=="fire"&&card.school!=="lightning"){
+      if(spell?.frozenTouchTargets?.[recipient.id])return 0;
+      if(consumeStatus(recipient,"frozen_touch")){
+        if(spell)(spell.frozenTouchTargets??={})[recipient.id]=true;
+        flash(recipient,"FROZEN TOUCH · BLOCKED","#b8efff").frozenTouchRecipient=recipient.id;
+        return 0;
+      }
+    }
     // Estimate the original hit while leaving the intended target’s runes intact.
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
@@ -1612,7 +1613,6 @@
     if(solidity){raw*=1-solidity;notes.push("SOLIDITY -25%");}
     const shield=targetRune("shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
-    const recipient=reflected?source:target;
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
@@ -2159,10 +2159,8 @@
         flash(t,"BOULDER WEIGHT","#e6c38a");
       }
     }else if(card.kind==="frozentouch"){
-      if(t?.hp>0&&t.team!==c.team&&canReceiveDebuff(t,"frozen_touch")){
-        addStatus(t,"frozen_touch",null,1,card.school);
-        flash(t,"FROZEN TOUCH","#b8efff");
-      }
+      addStatus(t,"frozen_touch",null,1,card.school);
+      flash(t,"FROZEN TOUCH","#b8efff");
     }else if(card.kind==="crystalicemirrors"){
       if(t?.team!==c.team&&canReceiveDebuff(t,"crystal_ice_mirrors")){
         addStatus(t,"crystal_ice_mirrors",null,card.reflectChance,card.school);
@@ -2479,7 +2477,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="frozentouch"?'<span class="spell-effect"><b>0 DAMAGE · NEXT SPELL</b><span>FIRE / LIGHTNING EXEMPT</span></span>':k.id==="volcaniceruption"?'<span class="spell-effect"><b>30% EXTREME BURN</b><span>RANDOM ENEMY ORDER</span></span>':k.id==="perfectdefense"?'<span class="spell-effect"><b>580 HP SAND DOME</b><span>SELF / ALLY</span></span>':k.id==="stormlizard"?'<span class="spell-effect"><b>TAIL SWIPE · 730</b><span>1 ENEMY · LIGHTNING</span></span>':k.id==="drowzyflowers"?'<span class="spell-effect"><b>SLEEP · 3 ROUNDS</b><span>WAKE 20 / 30 / 40%</span></span>':k.id==="bubbleshield"?'<span class="spell-effect"><b>360 HP BARRIER</b><span>SELF / ALLY</span></span>':k.id==="darksorcerer"?'<span class="spell-effect"><b>570 TO EACH ENEMY</b><span>20% CURSE · 50 × 3</span></span>':k.id==="sticksandstones"?'<span class="spell-effect"><b>320 TO EACH ENEMY</b><span>15% DECAY OF STRENGTH EACH</span></span>':k.id==="growth"?'<span class="spell-effect"><b>+25% NATURE HEAL / DAMAGE</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
+        const effect=k.id==="frozentouch"?'<span class="spell-effect"><b>BLOCK NEXT INCOMING SPELL</b><span>FIRE / LIGHTNING EXEMPT</span></span>':k.id==="volcaniceruption"?'<span class="spell-effect"><b>30% EXTREME BURN</b><span>RANDOM ENEMY ORDER</span></span>':k.id==="perfectdefense"?'<span class="spell-effect"><b>580 HP SAND DOME</b><span>SELF / ALLY</span></span>':k.id==="stormlizard"?'<span class="spell-effect"><b>TAIL SWIPE · 730</b><span>1 ENEMY · LIGHTNING</span></span>':k.id==="drowzyflowers"?'<span class="spell-effect"><b>SLEEP · 3 ROUNDS</b><span>WAKE 20 / 30 / 40%</span></span>':k.id==="bubbleshield"?'<span class="spell-effect"><b>360 HP BARRIER</b><span>SELF / ALLY</span></span>':k.id==="darksorcerer"?'<span class="spell-effect"><b>570 TO EACH ENEMY</b><span>20% CURSE · 50 × 3</span></span>':k.id==="sticksandstones"?'<span class="spell-effect"><b>320 TO EACH ENEMY</b><span>15% DECAY OF STRENGTH EACH</span></span>':k.id==="growth"?'<span class="spell-effect"><b>+25% NATURE HEAL / DAMAGE</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
           '<span class="spell-effect"><b>NO MANA REGEN</b><span>UNTIL IT BLOCKS A GAIN</span></span>':k.id==="soulharvest"?
           '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF / ALLY · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
@@ -3246,7 +3244,7 @@
       case "raging_waters":return {title:"Raging Waters · Water rune",detail:"Your next damaging Water spell that lands deals +25% damage on every hit. The rune is consumed when the spell deals damage and does not stack."};
       case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};
-      case "frozen_touch":return {title:"Frozen Touch",detail:"Your next damaging spell outside Fire or Lightning deals 0 damage across all hits and targets."};
+      case "frozen_touch":return {title:"Frozen Touch",detail:"Blocks all hits from the next incoming damaging spell. Fire and Lightning bypass the shield."};
       case "crystal_ice_mirrors":return {title:"Crystal Ice Mirrors",detail:"40% chance per damaging cast to reflect its damage back at the caster. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "quick_sand":return {title:"Quick Sand",detail:st.sinks+" / 3 sinks · "+Math.max(0,st.expiresRound-state.round)+" rounds left. Every cast attempt counts. The third deals "+st.value+" damage."};
       case "thorny_wrap":return {title:"Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};
@@ -3964,7 +3962,7 @@
     }
     for(const u of sorted){
       const touching=action?.card?.id==="frozentouch"&&action.stage==="summon"&&action.target===u.id;
-      const suppressed=state.flashes.findLast(f=>f.frozenTouchCaster===u.id);
+      const suppressed=state.flashes.findLast(f=>f.frozenTouchRecipient===u.id);
       if(touching||suppressed)renderables.push({
         type:"frozen-touch",depthY:u.y+.1,priority:2,
         draw:()=>window.FrozenTouch?.draw(g,u,touching?action.elapsed/action.duration:suppressed.age/.68,!touching)

@@ -3,19 +3,29 @@
   atlas.src = "./assets/wynzor.webp";
   const clamp = n => Math.max(0, Math.min(1, n));
   const ease = n => { const q = clamp(n); return q * q * (3 - 2 * q); };
+  const transitions = new Image();
+  transitions.src = "./assets/wynzor-transitions.webp";
   const poses = [
-    [0,0],[.055,1],[.105,0],[.155,1],[.195,2],[.235,3],
-    [.275,4],[.32,5],[.36,6],[.43,7],[.49,6],
-    [.53,8],[.57,9],[.62,10],[.69,11],[.755,12],
-    [.79,13],[.865,14],[.91,15]
+    [0,0],[.035,16],[.067,17],[.100,1],[.128,18],[.153,19],[.183,2],[.208,3],
+    [.232,20],[.258,4],[.283,21],[.310,5],[.335,22],[.362,23],
+    [.390,6],[.421,24],[.453,7],[.486,25],[.519,8],[.550,26],
+    [.575,27],[.602,28],[.625,9],[.653,29],[.685,10],[.721,30],
+    [.754,11],[.786,31],[.815,12],[.876,13],[.908,14],[.95,15]
   ];
-  const release = .755;
+  const release = .815;
+  // In-jaw anchor coordinates within each windup and release cel.
+  const mouth = {
+    29:[.19,.72],10:[.23,.65],30:[.15,.76],
+    11:[.21,.66],31:[.23,.64],12:[.33,.54]
+  };
   const colors = ["#eafff5","#b9f4e2","#65baa8","#67d5c2"];
 
   function tile(g, frame, size) {
     if (!atlas.naturalWidth) return;
-    const cell = atlas.naturalWidth / 4;
-    g.drawImage(atlas, frame % 4 * cell, Math.floor(frame / 4) * cell,
+    const sheet = frame >= 16 && transitions.naturalWidth ? transitions : atlas;
+    const index = frame >= 16 && sheet === atlas ? [0,0,1,1,3,4,5,6,6,7,7,8,9,10,11,11][frame-16] : frame%16;
+    const cell = sheet.naturalWidth / 4;
+    g.drawImage(sheet, index % 4 * cell, Math.floor(index / 4) * cell,
       cell, cell, -size/2, -size, size, size);
   }
 
@@ -24,12 +34,12 @@
     const floor = Math.max(335, Math.min(529, target.y + 8));
     const x = 500 - side * 56;
     const size = 302 + (floor - 335) * .23;
-    const descent = ease(p/.275);
+    const descent = ease(p/.258);
     const frame = poses.findLast(([at]) => p >= at)[1];
     return {
       p, hit, side, floor, size, frame,
       x: x - side * 126 * (1-descent), y: floor - 270 * (1-descent),
-      originX: x + side * size*.22, originY: floor - size*.64,
+      originX: x + side * size*mouth[12][0], originY: floor - size*mouth[12][1],
       endX: target.x, endY: target.y - 93
     };
   }
@@ -59,8 +69,8 @@
     g.scale(side,1);
     tile(g, frame, size);
     g.restore();
-    if (p >= .275 && p < .43) {
-      const q = (p-.275)/.155;
+    if (p >= .258 && p < .404) {
+      const q = (p-.258)/.146;
       g.globalAlpha *= (1-q)**2;
       for (let i=0; i<16; i++) {
         const a=i*2.39996, r=16+q*(52+i%5*14);
@@ -73,12 +83,13 @@
 
   function blast(g, s) {
     const { p, hit, originX, originY, endX, endY, side, size, frame } = s;
-    if (p < .62 || p >= hit+.15) return;
+    if (p < .653 || p >= hit+.15) return;
     g.save();
     if (p < release) {
-      const charge = ease((p-.62)/(release-.62));
-      const mouthX = s.x + side*size*(frame === 10 ? .18 : .20);
-      const mouthY = s.floor - size*(frame === 10 ? .69 : .66);
+      const charge = ease((p-.653)/(release-.653));
+      const [mouthOffset, mouthHeight] = mouth[frame];
+      const mouthX = s.x + side*size*mouthOffset;
+      const mouthY = s.floor - size*mouthHeight;
       const radius = 5+charge*27;
       const glow = g.createRadialGradient(mouthX,mouthY,0,mouthX,mouthY,radius*1.5);
       glow.addColorStop(0,"#f4fff5");

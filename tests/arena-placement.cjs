@@ -21,7 +21,7 @@ for(const size of [1,2,3,4]){
   ctx.window.matchMedia=query=>({matches:query.includes('pointer: fine')});
   api.startPractice(size);
   for(const [index,unit] of api.getState().units.entries()){
-    assert.equal(unit.x,compact[index].x+(unit.team?100:-100));
+    assert.equal(unit.x,compact[index].x+(unit.team?120:-120));
     assert.equal(unit.y,compact[index].y);
   }
 }

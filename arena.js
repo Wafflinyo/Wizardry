@@ -136,7 +136,7 @@
     accuracy:1,icon:"❄",rarity:"EPIC",duration:1850,hit:.60,short:"100% ACCURACY",
     description:"Shield yourself or an ally from all hits of the next eligible incoming spell. Fire and Lightning bypass the shield. Lasts until triggered."});
   CARDS.push({id:"wynzor",name:"Wynzor",school:"wind",cost:8,target:"enemy",kind:"damage",
-    damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:5200,hit:.83,short:"80% ACCURACY",
+    damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:6500,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -402,7 +402,7 @@
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>mode!=="online"||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
     // Online clients share the host's world coordinates for spell effects.
     const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (pointer: fine)").matches;
-    const teamOffset=desktopArena?100:0;
+    const teamOffset=desktopArena?120:0;
     for(const u of units){
       const [x,y]=scenePositions[size][u.team][u.index];
       u.x=x+(u.team?teamOffset:-teamOffset);
@@ -4098,7 +4098,7 @@
       if(fx&&target){
         const scene=fx.scene(target,clamp(action.elapsed/action.duration,0,1),action.card.hit);
         renderables.push({type:"wynzor",depthY:scene.floor,priority:2,draw:()=>fx.actor(g,scene)});
-        renderables.push({type:"wynzor-wind",depthY:target.y+.12,priority:2,draw:()=>fx.blast(g,scene)});
+        renderables.push({type:"wynzor-wind",depthY:Math.max(scene.floor,target.y)+.12,priority:2,draw:()=>fx.blast(g,scene)});
       }
     }
     if(action?.card?.id==="stormlizard" && action.stage==="summon" && window.StormLizard){

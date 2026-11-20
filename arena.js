@@ -76,7 +76,7 @@
 ,
     {id:"bloom",name:"Blooming Spores",school:"nature",cost:4,target:"all_enemies",kind:"spores",damage:100,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"EPIC",duration:4600,hit:.72,short:"90% ACCURACY",description:"A huge spotted closed flower bud bulges with pressure, then bursts open into full bloom and releases spore dust, dealing 100 Nature damage to every enemy. Each enemy hit has an independent 30% chance to be poisoned for 50 HP per turn for 3 turns."}
 ,
-    {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",kind:"lightningrod",damage:100,rodTurns:5,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Place a Lightning rune on yourself or a living ally for the next 5 turns. Each later successful Lightning cast by you or any ally stores 1 charge. Failed spells never add charges. At the end of the fifth turn, discharges 100 damage per charge TOTAL, split among living enemies. Lightning Rod itself never charges it. Recasting refreshes duration without stacking runes or losing stored charges."}
+    {id:"rod",name:"Lightning Rod",school:"lightning",cost:3,target:"ally",selfOnly:true,kind:"lightningrod",redirect:.20,rodTurns:3,accuracy:1,icon:"ϟ",rarity:"EPIC",duration:4000,hit:.78,short:"100% ACCURACY",description:"Place a debuff rune on yourself for 3 rounds, including this round. Redirect 20% of Lightning spell damage from any wizard into healing for yourself. Active rods share the redirected healing."}
 ,
     {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
 ,
@@ -785,7 +785,6 @@
     const label=full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     if(success){
       c.mana=Math.max(0,c.mana-a.card.cost);
-      recordLightningRodCast(c,a.card);
       // The COMPLETED ELEMENT rune must brighten and hold before any
       // summon begins. Freeze the chosen Golem target for its later fissure.
       if(a.card.id==="golem"){
@@ -1347,9 +1346,9 @@
   }
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
-  const DEBUFFS=new Set(['sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(['lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","lightning_rod","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
@@ -1366,7 +1365,7 @@
       existing.value=value;
       if(school)existing.school=school;
       existing.charges=1;return;}
-    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="lightning_rod"&&st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
+    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
   }
   function applyPeriodicStatus(target,kind,caster,card,spell){
@@ -1403,40 +1402,40 @@
     target.mana++;
     flash(target,"ELECTRICAL CHARGE · +1 MANA","#a5ebff");
   }
-  function applyLightningRod(u,spell,source=u){
-    const stored=u.statuses.find(st=>st.kind==="lightning_rod")?.stored||0;
-    addStatus(u,"lightning_rod",null,stored,BY_ID.rod.school);
-    const rod=u.statuses.find(st=>st.kind==="lightning_rod");
-    Object.assign(rod,{stored,power:spellPower(source,BY_ID.rod,spell),appliedRound:state.round,expiresRound:state.round+5});
-    flash(u,"LIGHTNING ROD · 5 TURNS","#c7eaff");
-  }
-  function recordLightningRodCast(u,card){
-    if(!u||u.hp<=0||card.school!=="lightning"||card.id==="rod")return false;
-    let charged=false;
-    for(const owner of alive(u.team)){
-      const rod=owner.statuses.find(st=>st.kind==="lightning_rod");
-      if(!rod||state.round<rod.appliedRound||state.round>rod.expiresRound)continue;
-      rod.stored=(rod.stored||0)+1;rod.value=rod.stored;charged=true;
-      flash(owner,"ROD CHARGE "+rod.stored,"#c7eaff");
+  function applyLightningRod(wizard){
+    const card=BY_ID.rod;
+    if(!canReceiveDebuff(wizard,"lightning_rod")){
+      flash(wizard,"FOUR DEBUFF RUNES","#f6a7a2");
+      return;
     }
-    return charged;
-  }
-  function splitLightningRodDamage(pool,targets){
-    if(!targets.length||pool<=0)return[];
-    const share=Math.floor(pool/targets.length),extra=pool%targets.length;
-    return targets.map((target,i)=>({target,amount:share+(i<extra?1:0)}));
+    addStatus(wizard,"lightning_rod",null,card.redirect,card.school);
+    const rune=wizard.statuses.find(status=>status.kind==="lightning_rod");
+    rune.expiresRound=state.round+card.rodTurns-1;
+    flash(wizard,"LIGHTNING ROD · 3 ROUNDS","#c7eaff");
   }
   function expireLightningRods(){
-    for(const u of state.units){const rod=u.statuses.find(st=>st.kind==="lightning_rod");if(!rod)continue;
-      if(u.hp<=0){consumeStatus(u,"lightning_rod");continue;}
-      if(state.round<rod.expiresRound)continue;
-      consumeStatus(u,"lightning_rod");const pool=Math.floor((rod.stored||0)*100*(rod.power||1)),targets=alive(1-u.team),shares=splitLightningRodDamage(pool,targets);
-      flash(u,pool?"ROD DISCHARGE · "+pool:"ROD EXPIRED · NO CHARGE","#c9edff");
-      if(shares.length){(state.rodBursts??=[]).push({source:{x:u.x,y:u.y},targets:shares.map(({target,amount})=>({x:target.x,y:target.y,amount})),age:0});}
-      // A delayed fixed damage pool: it does not consume next-spell buffs or marks.
-      for(const share of shares){const target=share.target,amount=markedStatusDamage(target,share.amount);if(!amount)continue;gainElectricalChargeMana(target,BY_ID.rod);target.hp=Math.max(0,target.hp-amount);flash(target,"−"+amount+" · ROD","#bde7ff");if(!target.hp){target.defeatElapsedMs=0;flash(target,"DEFEATED","#ffd5b0");}}
-      state.log=[u.name+"'s Lightning Rod releases "+pool+" total damage across "+shares.length+" enemies.",...state.log].slice(0,5);
+    for(const wizard of state.units){
+      const rune=wizard.statuses.find(status=>status.kind==="lightning_rod");
+      if(rune && (wizard.hp<=0 || state.round>=rune.expiresRound))consumeStatus(wizard,"lightning_rod");
     }
+  }
+  function lightningRodOwners(){
+    return state.units.filter(wizard=>wizard.hp>0 && wizard.statuses.some(
+      rune=>rune.kind==="lightning_rod" && rune.expiresRound>=state.round));
+  }
+  function healFromLightningRod(owners,amount,target){
+    if(!amount)return;
+    const share=Math.floor(amount/owners.length),remainder=amount%owners.length;
+    const healed=[];
+    for(const [index,owner] of owners.entries()){
+      if(owner.hp<=0)continue;
+      const healing=Math.min(owner.maxHp-owner.hp,share+Number(index<remainder));
+      if(healing<=0)continue;
+      owner.hp+=healing;
+      flash(owner,"LIGHTNING ROD · +"+healing+" HP","#a8f9d4");
+      healed.push({x:owner.x,y:owner.y});
+    }
+    if(healed.length)(state.rodBursts??=[]).push({source:{x:target.x,y:target.y},targets:healed,age:0});
   }
   function attemptUndeadFear(source,target,card,roll=Math.random()){
     if(!["undead","croc"].includes(card?.id)||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
@@ -1583,12 +1582,17 @@
     if(solidity){raw*=1-solidity;notes.push("SOLIDITY -25%");}
     const shield=targetRune("shield");
     if(shield){raw*=1-shield.value;notes.push("BLOCK");}
-    const amount=absorbBubbleDamage(reflected?source:target,Math.max(0,Math.floor(raw)));
+    const recipient=reflected?source:target;
+    const impact=Math.max(0,Math.floor(raw));
+    const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
+    const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
+    const amount=absorbBubbleDamage(recipient,impact-redirected);
     if(reflected){
       source.hp=Math.max(0,source.hp-amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
       state.log=[source.name+" takes "+amount+" reflected damage.",...state.log].slice(0,5);
       if(!source.hp){source.defeatElapsedMs=0;flash(source,"DEFEATED","#ffd5b0");}
+      healFromLightningRod(rodOwners,redirected,recipient);
       return 0;
     }
     const oldHp=target.hp,wasAlive=target.hp>0;
@@ -1604,6 +1608,7 @@
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
     attemptMarkedFreeze(target,card,spell);
     const directDamage=oldHp-target.hp;
+    healFromLightningRod(rodOwners,redirected,recipient);
     triggerGunpowderCoat(source,target,card,spell);
     return directDamage;
   }
@@ -2159,8 +2164,10 @@
         flash(t,"DEBUFF SLOT OCCUPIED","#a5ebff");
       }
     }else if(card.kind==="lightningrod"){
-      gainElectricalChargeMana(t,card,anim);
-      applyLightningRod(t,anim,c);
+      if(t===c){
+        gainElectricalChargeMana(c,card,anim);
+        applyLightningRod(c);
+      }
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
@@ -2257,7 +2264,6 @@
     if(checkBattleEnd())return;
     for(const u of state.units)if(Number.isInteger(u.fearRound)&&u.fearRound<=state.round){u.fearRound=null;u.fearSource=null;consumeStatus(u,"fear_turn");}
     expireLightningRods();
-    if(checkBattleEnd())return;
     for(const team of [0,1]){
       const aura=state.auras[team];
       if(aura&&--aura.turns<=0)state.auras[team]=null;
@@ -2456,7 +2462,7 @@
           '<span class="spell-effect"><b>BLOCK NEXT DAMAGE SPELL</b><span>SELF / ALLY · EXCLUDES DEBUFF DAMAGE</span></span>':k.id==="centaur"?
           '<span class="spell-effect"><b>CHARGED ARROW · 650</b><span>1 ENEMY · NATURE</span></span>':k.id==="undead"?
           '<span class="spell-effect"><b>POUNCE & CLAW · 200</b><span>10% FEAR · THIS ROUND ONLY</span></span>':k.id==="rod"?
-          '<span class="spell-effect"><b>5 TURNS · 100 × CHARGES</b><span>TOTAL SPLIT BETWEEN ENEMIES</span></span>':k.id==="bloom"?
+          '<span class="spell-effect"><b>20% DAMAGE → SELF HEAL</b><span>ALL LIGHTNING · 3 ROUNDS</span></span>':k.id==="bloom"?
           '<span class="spell-effect"><b>100 TO ALL ENEMIES</b><span>30% POISON EACH · 50×3</span></span>':k.id==="devil"?
           '<span class="spell-effect"><b>VOLCANIC SHOT · 250</b><span>1 ENEMY · FIRE</span></span>':k.id==="octo"?
           '<span class="spell-effect"><b>TENTACLE WHIP · 400</b><span>15% FLINCH · THIS TURN ONLY</span></span>':k.id==="scorpion"?
@@ -2494,11 +2500,11 @@
           '<span class="spell-art-shell"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>'+
           '<span class="spell-name">'+escapeHtml(k.name)+'</span>'+
           '<span class="spell-combat"><span><b>'+(k.kind==="winddome"?"≋ ":k.kind==="freezing"?"❄ ":k.kind==="turbulence"?"≋ ":k.kind==="rage"?"✦ ":k.kind==="shield"?"◆ ":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"✚ ":"✹ ")+
-          (k.kind==="drowzyflowers"?"3 ROUNDS":k.kind==="bubbleshield"?"500 SHIELD":k.kind==="crystalicemirrors"?"40% REFLECT":k.kind==="quicksand"?"530 ON 3RD CAST":k.kind==="manascourge"?"0 MANA REGEN":(k.kind==="ragingwaters"||k.kind==="growth")?"+25%":k.kind==="zen"?"CLEANSE":k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"100×":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
+          (k.kind==="drowzyflowers"?"3 ROUNDS":k.kind==="bubbleshield"?"500 SHIELD":k.kind==="crystalicemirrors"?"40% REFLECT":k.kind==="quicksand"?"530 ON 3RD CAST":k.kind==="manascourge"?"0 MANA REGEN":(k.kind==="ragingwaters"||k.kind==="growth")?"+25%":k.kind==="zen"?"CLEANSE":k.id==="decaystrength"?"+20%":k.id==="acidair"?"100 × 5":k.id==="electricalcharge"||k.id==="flowstate"?"+1 MANA":k.id==="gunpowderkiss"?"150 / FIRE":k.id==="thornwrap"?"150 / CAST":k.id==="winddome"?"BLOCK":k.id==="rod"?"20% HEAL":k.kind==="freezing"?"50% FREEZE":k.kind==="turbulence"?"50% FAIL":k.kind==="rage"?"+20%":k.kind==="shield"?"25%":((k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?k.heal:k.id==="penguins"?300:k.id==="ronin"?450:(k.damage??0)).toLocaleString())+'</b></span>'+
           '<span><b>◎ '+Math.round(k.accuracy*100)+'%</b> ACC</span></span>'+
           effect;
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
-          (k.kind==="growth"?"25 percent more direct healing or damage on your or an ally’s next Nature cast":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"five-turn charging rune; shared total damage on expiry":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
+          (k.kind==="growth"?"25 percent more direct healing or damage on your or an ally’s next Nature cast":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"three-round self debuff that redirects 20 percent of Lightning spell damage into self-healing":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
           "% accuracy. "+(k.id==="drowzyflowers"||k.id==="bubbleshield"||k.id==="darksorcerer"||k.id==="sticksandstones"||k.id==="growth"||k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
@@ -3146,7 +3152,7 @@
   }
   function plateAlpha(){return 1;}
   function unitStatuses(u){
-    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:st.kind==='wind_dome'?4:st.kind==='lightning_rod'?3:0;
+    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:st.kind==='wind_dome'?4:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
@@ -3165,7 +3171,7 @@
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / 500 shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used; does not stack."};
-      case "lightning_rod":return {title:"ϟ Lightning Rod · Charging rune",detail:(st.stored||0)+" stored Lightning casts · "+Math.floor((st.stored||0)*100*(st.power||1))+" total damage. "+Math.min(5,Math.max(0,st.expiresRound-state.round+1))+" turns remain. Discharges at the end of Round "+st.expiresRound+", split across living enemies. Only successful casts by you or allies count; Lightning Rod itself does not. Recasting refreshes the timer and preserves charges."};
+      case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
       case "mana_scourge":return {title:"Mana Scourge",detail:"Blocks the first round-end mana gain, including passing and Flow State. The rune stays while mana is full. Mana gained during the round still works."};
       case "soulless":return {title:"Soulless",detail:"The trapped soul causes "+st.value+" damage after "+Math.max(0,st.expiresRound-state.round)+" more rounds."};
       case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell or status tick deals 20% more damage. All hits of a triggering spell qualify."};
@@ -3349,9 +3355,6 @@
       const r=statusRuneRect(u,i);
       const school=statusSchool(st,u);
       drawStatusStone(g,r,school,runeColors[school]);
-      if(st.kind==="lightning_rod"){
-        g.font="bold 10px system-ui";g.fillStyle="#fff2ae";g.fillText(String(st.stored||0),r.x+12,r.y+11);
-      }
     });
     g.restore();
   }
@@ -4139,7 +4142,7 @@
       const rod=window.WIZARDRY_ROD_V98,opts={progress:clamp(action.elapsed/action.duration,0,1),caster:getUnit(action.target)};
       if(rod&&opts.caster)for(const layer of ["rod","arc"])renderables.push({type:"lightning-rod-"+layer,depthY:layer==="arc"?opts.caster.y+.1:rod.pose(.08,opts.caster).y,priority:2,draw:()=>rod.draw(g,{...opts,layer})});
     }
-    for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-discharge",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
+    for(const burst of state.rodBursts||[])for(const target of burst.targets)renderables.push({type:"rod-redirect",depthY:target.y+.1,priority:2,draw:()=>window.WIZARDRY_ROD_V98?.discharge(g,burst,target)});
     for(const burst of state.gunpowderBursts||[])renderables.push({type:"gunpowder-explosion",depthY:burst.y+.15,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.explosion(g,burst)});
     if(action?.card?.id==="gunpowderkiss"&&action.stage==="summon"){
       const kiss=window.WIZARDRY_GUNPOWDER_V120,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
@@ -4494,7 +4497,7 @@
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
-    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,recordLightningRodCast,splitLightningRodDamage,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

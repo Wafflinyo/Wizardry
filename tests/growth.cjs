@@ -33,7 +33,7 @@ const damage = (source,target,base,card,spell) => {
 for(const [id,rune] of [
   ['growth','growth'],['solidity','solidity'],['rage','blazing_rage'],
   ['winddome','wind_dome'],['electricalcharge','electrical_charge'],
-  ['rod','lightning_rod'],['ragingwaters','raging_waters'],['flowstate','flow_state']
+  ['ragingwaters','raging_waters'],['flowstate','flow_state']
 ]){
   assert.equal(card(id).target,'ally');
   assert.ok(!card(id).selfOnly);

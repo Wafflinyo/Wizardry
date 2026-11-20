@@ -75,11 +75,9 @@ assert.equal(user.mana, 9);
 assert.equal(ally.mana, 6, 'a chain hit grants mana to each charged wizard it reaches');
 
 api.applyLightningRod(otherEnemy);
-api.recordLightningRodCast(otherEnemy, card('volt'));
-const rod = otherEnemy.statuses.find(st => st.kind === 'lightning_rod');
-rod.expiresRound = s.round;
-api.expireLightningRods();
-assert.equal(user.mana, 10, 'delayed discharge counts as Lightning');
+const redirected = cast(otherEnemy, user, 'volt');
+damage(otherEnemy, user, 100, redirected.card, redirected);
+assert.equal(user.mana, 10, 'a redirected hit still grants Electrical Charge mana');
 
 api.applySpell(cast(user, user, 'winddome'));
 const hp = user.hp;

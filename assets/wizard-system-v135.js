@@ -27,7 +27,7 @@ function effectText(card,p){
  if(card.seedDamage)return Math.round(card.seedChance*100)+'% HEALING SEED · '+healAmount(card.seedDamage,p,card.school)+' HP × '+card.seedTurns+' ROUNDS';
  if(card.healPerTurn)return healAmount(card.healPerTurn,p,card.school)+' HP × '+card.healTurns+' TURNS · '+healing(card,p)+' TOTAL';
  if(card.heal)return 'RESTORE '+healing(card,p)+' HP';
- if(card.id==='rod')return span(card.damage)+' DAMAGE / CHARGE · 5 TURNS';
+ if(card.id==='rod')return span(card.redirect*100)+'% LIGHTNING DAMAGE → SELF HEAL · '+card.rodTurns+' ROUNDS';
  return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+(base===100&&turns===5?'EXTREME ':'')+label+' · '+span(base)+' × '+turns).join(' · ');
 }
 function rollVariant(r=Math.random()){return [.9,1,1.1][Math.min(2,Math.floor(Math.max(0,r)*3))];}

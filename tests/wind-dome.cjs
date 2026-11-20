@@ -17,8 +17,6 @@ battle();dome(s.units[1]);const slashes=action('ronin');for(let i=0;i<3;i++)api.
 // Area damage and on-hit poison resolve independently for each enemy.
 battle();dome(s.units[1]);const bloom=action('bloom');bloom.poisonRolls={b:0,c:0};api.applySpell(bloom);assert.equal(s.units[1].hp,2000);assert.equal(has(s.units[1],'poison'),false);assert.equal(s.units[2].hp,1900);assert.equal(has(s.units[2],'poison'),true);
 for(const kind of ['burn','frostbite','poison','soul_drain']){battle();dome(s.units[1]);s.units[1].statuses.push({kind,value:50,remaining:3,appliedRound:1,lastTickRound:1,sourceId:'a'});s.round=2;api.tickBurnsForRound();assert.equal(s.units[1].hp,1950,kind+' bypasses');assert.ok(has(s.units[1]),kind+' preserves the shield');}
-// Lightning Rod is damage from an attached rune, so it also passes through.
-battle();dome(s.units[1]);api.applyLightningRod(s.units[0]);const rod=s.units[0].statuses.find(st=>st.kind==='lightning_rod');rod.stored=2;rod.expiresRound=1;api.expireLightningRods();assert.equal(s.units[1].hp,1900);assert.ok(has(s.units[1]));
 // Misses do not consume a shield; Static Shock's backlash still hurts its owner.
 battle();dome(s.units[0]);s.units[0].statuses.push({kind:'static_shock',value:.30,expiresRound:4});s.animation={...action('centaur'),stage:'tracing-auto',traceMs:100};math.random=()=>.99;test.resolveAutoRune();assert.equal(s.animation.runeResult,'failed');assert.equal(s.units[0].hp,1900);assert.ok(has(s.units[0]));
 // A blocked attack cannot apply any on-hit curse or crowd control.

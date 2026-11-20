@@ -7,8 +7,8 @@
   const ease = n => {const t=clamp(n);return t*t*(3-2*t);};
   // Hold the roar, then put the widest swipe pose exactly on the damage cue.
   const poses = [
-    [.19,0],[.23,1],[.27,2],[.31,3],[.40,4],[.44,5],[.49,6],[.56,7],
-    [.61,8],[.66,9],[.695,10],[.73,11],[.80,12],[.85,13],[.89,14],[.93,15]
+    [.16,0],[.20,1],[.24,2],[.29,3],[.49,4],[.55,5],[.60,6],[.65,7],
+    [.69,8],[.73,9],[.755,10],[.78,11],[.83,12],[.87,13],[.91,14],[.95,15]
   ];
   const strikeTip = {x:.471,y:-.315};
 
@@ -19,8 +19,8 @@
   function scene(target,p,hit){
     const direction=target.team?1:-1;
     const size=300+40*clamp((target.y-290)/230);
-    const turn=ease((p-.53)/(hit-.53));
-    const retreat=ease((p-.79)/.15);
+    const turn=ease((p-.63)/(hit-.63));
+    const retreat=ease((p-.84)/.13);
     const reach=mix(187,strikeTip.x*size,turn)+retreat*38;
     return {
       p,hit,size,direction,x:target.x-direction*reach,
@@ -75,34 +75,72 @@
   }
 
   function entranceFlash(progress){
-    const peak=.09;
-    const width=progress<peak?.012:.04;
+    const peak=.080;
+    const width=progress<peak?.009:.027;
     return .72*(1-ease(Math.abs(progress-peak)/width));
+  }
+
+  const trunk=[
+    [-74,-690],[-46,-525],[-67,-460],[-11,-378],[-40,-320],[21,-227],
+    [-12,-180],[35,-111],[-4,-65],[16,-35],[0,-7]
+  ];
+  const forks=[
+    [2,[[-141,-418],[-123,-350],[-185,-288],[-205,-204]]],
+    [3,[[58,-334],[40,-285],[103,-238],[96,-168]]],
+    [5,[[89,-212],[64,-170],[128,-131],[151,-65]]],
+    [7,[[-27,-99],[-54,-48],[-111,-27]]]
+  ];
+
+  function traceStrike(ctx,points,width,energy){
+    ctx.save();
+    ctx.lineJoin="bevel";
+    ctx.lineCap="round";
+    ctx.beginPath();
+    points.forEach(([x,y],index)=>index===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+    for(const [color,scale,opacity] of [
+      ["#ff932e",2.2,.16],["#ffb52d",1.4,.45],["#ffe268",1,.96],["#fff5bc",.59,1],["#fffef6",.27,1]
+    ]){
+      ctx.globalAlpha=energy*opacity;
+      ctx.lineWidth=width*scale;
+      ctx.strokeStyle=color;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawEntrance(ctx,x,y,direction,p){
+    if(p<.067||p>=.183)return;
+    const energy=ease((p-.067)/.012)*(1-ease((p-.094)/.036));
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(direction,1);
+    if(energy>0){
+      for(const [branch,points] of forks)traceStrike(ctx,[trunk[branch],...points],8,energy*.83);
+      traceStrike(ctx,trunk,25,energy);
+    }
+    const burst=clamp((p-.077)/.105);
+    const glow=ctx.createRadialGradient(0,-8,0,0,-8,115);
+    glow.addColorStop(0,"#fffbe4");
+    glow.addColorStop(.24,"#ffcf47a0");
+    glow.addColorStop(1,"#ffa52a00");
+    ctx.save();
+    ctx.globalAlpha=(1-burst)*ease((p-.067)/.012);
+    ctx.fillStyle=glow;
+    ctx.fillRect(-115,-123,230,230);
+    ctx.restore();
+    sparks(ctx,0,-10,(p-.077)/.105,44,145);
+    ctx.restore();
   }
 
   function draw(ctx,s){
     const {x,y,p,size,direction,frame,hit}=s;
     const tick=Math.floor(p*130);
-    if(p>=.075&&p<.25){
-      const energy=ease((p-.075)/.012)*(1-ease((p-.106)/.075));
-      const skyX=x-direction*95,skyY=-65;
-      bolt(ctx,skyX,skyY,x,y-7,3,energy,6);
-      bolt(ctx,skyX-direction*54,skyY+85,x-direction*24,y-119,6,energy*.88,2.7);
-      bolt(ctx,x-direction*43,y-224,x+direction*99,y-67,9,energy*.74,2);
-      ctx.save();
-      ctx.globalAlpha=energy*.76;
-      ctx.fillStyle="#fff2ae";
-      ctx.beginPath();
-      ctx.ellipse(x,y-8,51+energy*29,12+energy*10,0,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-      sparks(ctx,x,y-10,(p-.077)/.17,35,108);
-    }
-    if(p<.14)return;
+    drawEntrance(ctx,x,y,direction,p);
+    if(p<.13)return;
     ctx.save();
     ctx.translate(x,y);
     ctx.scale(direction,1);
-    ctx.globalAlpha*=ease((p-.14)/.07)*(1-ease((p-.92)/.08));
+    ctx.globalAlpha*=ease((p-.13)/.05)*(1-ease((p-.95)/.05));
     ctx.save();
     ctx.globalAlpha*=.3;
     ctx.fillStyle="#182524";
@@ -111,22 +149,11 @@
     ctx.fill();
     ctx.restore();
     sprite(ctx,frame,size);
-    if(p>=.28&&p<.82){
-      const charge=ease((p-.28)/.14)*(1-ease((p-.76)/.06));
-      const swing=ease((p-.65)/(hit-.65));
-      const winding=frame>=9;
-      const tailSide=winding?1:-1;
-      const tipX=tailSide*mix(.39,strikeTip.x,swing)*size;
-      const tipY=mix(frame>=6&&frame<=10?-.47:-.24,strikeTip.y,swing)*size;
-      bolt(ctx,tailSide*size*.12,-size*.26,tipX,tipY,tick,charge*(.5+.5*Math.cos(tick*1.8)**2),1);
-      if(p>=.67&&p<=hit+.06){
-        ctx.beginPath();
-        ctx.moveTo(size*.13,-size*.48);
-        ctx.quadraticCurveTo(size*.38,-size*.56,tipX,tipY);
-        ctx.quadraticCurveTo(size*.32,-size*.48,size*.13,-size*.48);
-        ctx.fillStyle="rgba(255,218,64,.37)";
-        ctx.fill();
-      }
+    if(frame>=9 && frame<=11){
+      const charge=ease((p-.73)/.035)*(1-ease((p-hit)/.05));
+      const tip=frame===9?[.31,-.50]:frame===10?[.39,-.58]:[strikeTip.x,strikeTip.y];
+      bolt(ctx,size*.24,-size*.29,tip[0]*size,tip[1]*size,tick,charge,1.55);
+      bolt(ctx,size*.28,-size*.31,tip[0]*size,(tip[1]-.07)*size,tick+4,charge*.6,.9);
     }
     ctx.restore();
   }
@@ -139,7 +166,7 @@
     const y=scene.contactY;
     for(let i=0;i<4;i++){
       const offset=(i-1.5)*23;
-      bolt(ctx,target.x+offset,y-83+(i%2)*30,target.x-offset*.5,y+50,tick+i*4,strength,1.12);
+      bolt(ctx,target.x+offset,y-83+(i%2)*30,target.x-offset*.5,y+50,tick+i*4,strength,1.65);
     }
     sparks(ctx,target.x,y,age,29,100);
   }

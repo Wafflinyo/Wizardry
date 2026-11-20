@@ -66,3 +66,6 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-tem
 #game #cardHand.cards>button.spell.card-ornate{top:6px}
 #game .hand-assist{min-height:0!important}
 }
+
+.hair-choices{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 0 8px;padding:4px;border:0}.hair-choices legend{margin:auto;color:var(--gold);font-weight:bold}.hair-choices button[aria-pressed=true]{border-color:#dfbf72;background:#443a25;color:#fff}
+body[data-portal-view=create] aside.wizard-display:has(.hair-choices) canvas{grid-row:2/5}

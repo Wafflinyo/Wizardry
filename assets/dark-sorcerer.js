@@ -51,6 +51,7 @@
       ctx.scale(.85,1.1);ctx.fillStyle=ink;ctx.fillRect(-100,-211,200,200);ctx.restore();
     }
     tendrils(ctx,p,true);
+    rupture(ctx,p);
     if(p>.88){
       const q=clamp((p-.88)/.12);
       ctx.strokeStyle="#d6a0ff";ctx.lineWidth=3;
@@ -60,31 +61,93 @@
     }
     ctx.restore();
   }
-  function slashes(ctx,p,target,hit){
-    for(let i=0;i<3;i++){
-      const launch=.49+i*.028;
-      if(p<launch||p>hit+.1)continue;
-      const q=clamp((p-launch)/(hit-launch));
-      const x=500+(target.x-500)*q,y=394+(target.y-78-394)*q;
-      const fade=1-clamp((p-hit)/.1);
-      ctx.save();ctx.translate(x,y);
-      ctx.rotate((i-1)*.77+(target.x<500?Math.PI:0));
-      ctx.globalAlpha*=fade;
-      ctx.shadowColor="#a04de2";ctx.shadowBlur=16*fade;
-      ctx.beginPath();ctx.moveTo(-65,22);ctx.quadraticCurveTo(18,25,49,-40);
-      ctx.quadraticCurveTo(36,43,-65,22);ctx.fillStyle="#3c174f";ctx.fill();
-      ctx.beginPath();ctx.moveTo(-45,23);ctx.quadraticCurveTo(24,20,49,-40);
-      ctx.strokeStyle="#c27df3";ctx.lineWidth=3;ctx.stroke();
-      ctx.shadowBlur=0;
-      for(let j=0;j<3;j++){
-        const trail=(q*92+j*24)%73;
-        ctx.globalAlpha=fade*.47*(1-trail/82);
-        ctx.strokeStyle="#9c58ca";ctx.lineWidth=2;
-        ctx.beginPath();ctx.moveTo(-18-trail,24+j*9);
-        ctx.quadraticCurveTo(-61-trail,36+j*8,-88-trail,25+j*12);ctx.stroke();
+  const tau=Math.PI*2;
+  const smokeFrames=[];
+  // Build a rolling, faceted cross-section. The bright seam curls around
+  // a dark interior as successive lobes overtake one another.
+  function billow(ctx,x,y,r,phase,stretch=1){
+    const frame=((Math.floor(phase*24)%24)+24)%24;
+    if(!smokeFrames[frame]){
+      const tile=document.createElement("canvas");
+      tile.width=tile.height=96;
+      const c=tile.getContext("2d"),t=tau*frame/24;
+      const rings=[[ [43+5*Math.cos(t),47+5*Math.sin(t)] ]];
+      for(let ring=1;ring<=4;ring++){
+        const points=[];
+        for(let i=0;i<18;i++){
+          const a=i*tau/18+.15*Math.sin(t+ring*.83)+ring*.09;
+          const rad=ring*(9+.95*Math.sin(3*a-t)+.75*Math.cos(5*a+t));
+          points.push([48+rad*Math.cos(a),48+rad*Math.sin(a)]);
+        }
+        rings.push(points);
       }
-      ctx.restore();
+      const colors=["#140d22","#21102f","#351646","#54205e","#792876","#aa3c97","#de65bc","#ffb0de"];
+      function facet(a,b,d,light){
+        c.fillStyle=colors[Math.max(0,Math.min(7,Math.floor(light)))];
+        c.strokeStyle=c.fillStyle;c.lineWidth=.65;
+        c.beginPath();c.moveTo(...a);c.lineTo(...b);c.lineTo(...d);c.closePath();c.fill();c.stroke();
+      }
+      for(let j=1;j<=4;j++)for(let i=0;i<18;i++){
+        const k=(i+1)%18,inner=rings[j-1],outer=rings[j];
+        const a=inner[i%inner.length],b=inner[k%inner.length];
+        const curl=Math.cos(i*tau/18-t+j*1.27);
+        const light=.8+j*.45+Math.max(0,curl)**3*(j===4?4:3);
+        facet(a,outer[i],outer[k],light);
+        if(j>1)facet(a,outer[k],b,light-.7);
+      }
+      smokeFrames[frame]=tile;
     }
+    ctx.drawImage(smokeFrames[frame],x-r*stretch,y-r,2*r*stretch,2*r);
+  }
+  function rupture(ctx,p){
+    if(p<.46||p>=.67)return;
+    const q=clamp((p-.48)/.19);
+    ctx.save();ctx.translate(0,-116);
+    ctx.globalAlpha*=clamp((p-.46)/.02)*(1-q)**1.4;
+    // Splinters outrun the cloud for a sharp leading edge at detonation.
+    for(let i=0;i<22;i++){
+      const a=i*2.39996,reach=(48+174*Math.sqrt(q))*(.68+.32*Math.cos(i*4));
+      ctx.save();ctx.rotate(a);
+      ctx.fillStyle=i%3?"#963c9e":"#ffc5eb";
+      ctx.beginPath();ctx.moveTo(reach,0);ctx.lineTo(reach*.60,4*(1-q));
+      ctx.lineTo(reach*.42,0);ctx.lineTo(reach*.71,-2);ctx.closePath();ctx.fill();ctx.restore();
+    }
+    for(let i=0;i<19;i++){
+      const a=i*2.39996,r=(22+154*q**.66)*(.75+.25*Math.sin(i*11));
+      billow(ctx,Math.cos(a)*r,Math.sin(a)*r*.8,12+q*32,i*.37+q*.85);
+    }
+    ctx.restore();
+  }
+  function slashes(ctx,p,target,hit){
+    const launch=.485;
+    if(p<=launch||p>=hit+.19)return;
+    const dx=target.x-500,dy=target.y-78-394;
+    const distance=Math.hypot(dx,dy);
+    ctx.save();ctx.translate(500,394);ctx.rotate(Math.atan2(dy,dx));
+    // A continuous surge. Its rear collapses into the front as the wave lands.
+    const head=clamp((p-launch)/(hit-launch))**1.32;
+    const tail=clamp((p-launch-.067)/(hit-launch))**1.35;
+    ctx.globalAlpha*=clamp((p-launch)/.016)*(1-clamp((p-hit)/.07));
+    if(p<hit+.07)for(let i=0;i<18;i++){
+      const f=i/17,u=tail+(head-tail)*f;
+      const curl=u*7-p*17;
+      const width=(17+20*Math.sin(f*Math.PI*.8))*Math.min(1,distance/140);
+      for(let l=-1;l<=1;l++){
+        const y=Math.sin(curl+l*.8)*14*Math.sin(u*Math.PI)+l*width*.48;
+        billow(ctx,u*distance,y,width*(1-.27*Math.abs(l)),p*4+i*.13+l*.31,1.36);
+      }
+    }
+    ctx.restore();
+    if(p<hit)return;
+    const q=clamp((p-hit)/.19);
+    ctx.save();ctx.translate(target.x,target.y-78);
+    ctx.globalAlpha*=1-q*q;
+    for(let i=0;i<15;i++){
+      const a=i*2.39996,r=(13+76*q**.65)*(.75+.25*Math.cos(i*8));
+      billow(ctx,Math.cos(a)*r,Math.sin(a)*r-q*q*32,
+        (24+9*Math.sin(i))*(1-.73*q),q+i*.19);
+    }
+    ctx.restore();
   }
   window.DarkSorcerer={actor,slashes,portrait(ctx,w,h){sprite(ctx,8,w/2,h*.87,Math.min(w,h));},
     onReady(fn){if(atlas.naturalWidth)fn();else atlas.addEventListener("load",fn,{once:true});}};

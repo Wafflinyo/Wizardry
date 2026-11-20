@@ -6,7 +6,7 @@ const api=ctx.window.WIZARDRY_ARENA_TEST,B=ctx.window.WizardryBuilds;
 assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).low,620);
 assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).high,757);
 const tree=api.cards.find(c=>c.id==='tree');
-for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,false,0,720,75],[.10,true,0,720,75],[.10,false,3,763,79]]){
+for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,false,0,720,75],[.10,true,0,720,75],[.10,false,3,763,75]]){
  api.startPractice(1);
  const state=api.getState(),[caster,target]=state.units;
  caster.skills.nature=mastery;

@@ -23,15 +23,14 @@ function healAmount(base,p,school){return Math.floor(base*multiplier(p,school));
 function healing(card,p){return healAmount(card.healPerTurn||card.heal||0,p,card.school)*(card.healPerTurn?(card.healTurns||1):1);}
 function effectText(card,p){
  if(card.kind==='wickedwitch')return '';
- const boost=multiplier(p,card.school),span=base=>{const a=Math.floor(base*boost*.9),b=Math.floor(base*boost*1.1);return a===b?String(a):a+'–'+b;};
- if(card.seedDamage)return Math.round(card.seedChance*100)+'% HEALING SEED · '+healAmount(card.seedDamage,p,card.school)+' HP × '+card.seedTurns+' ROUNDS';
+ if(card.seedDamage)return Math.round(card.seedChance*100)+'% HEALING SEED · '+card.seedDamage+' HP × '+card.seedTurns+' ROUNDS';
  if(card.healPerTurn)return healAmount(card.healPerTurn,p,card.school)+' HP × '+card.healTurns+' TURNS · '+healing(card,p)+' TOTAL';
  if(card.heal)return 'RESTORE '+healing(card,p)+' HP';
- if(card.id==='rod')return span(card.redirect*100)+'% LIGHTNING DAMAGE → SELF HEAL · '+card.rodTurns+' ROUNDS';
- return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+(base===100&&turns===5?'EXTREME ':'')+label+' · '+span(base)+' × '+turns).join(' · ');
+ if(card.id==='rod')return Math.round(card.redirect*100)+'% LIGHTNING DAMAGE → SELF HEAL · '+card.rodTurns+' ROUNDS';
+ return [[card.burnDamage,card.burnChance,card.burnTurns,'BURN'],[card.poisonDamage,card.poisonChance,card.poisonTurns,'POISON'],[card.frostDamage,card.frostChance,card.frostTurns,'FROSTBITE'],[card.curseDamage,card.curseChance,card.curseTurns,'CURSE']].filter(x=>x[0]).map(([base,chance,turns,label])=>Math.round(chance*100)+'% '+(base===100&&turns===5?'EXTREME ':'')+label+' · '+base+' × '+turns).join(' · ');
 }
 function rollVariant(r=Math.random()){return [.9,1,1.1][Math.min(2,Math.floor(Math.max(0,r)*3))];}
-function range(card,p,total=true){let base=card.damage||card.coatDamage||(card.id==='thornwrap'?150:0);if(!(base>0))return null;let hits=1;if(total&&(card.id==='windfist'||card.id==='bulletseed')){base=card.hitDamage;hits=card.hits;}if(total&&(card.id==='penguins'||card.id==='ronin'))hits=3;
+function range(card,p,total=true){let base=card.damage||card.coatDamage||(card.id==='thornwrap'?150:0);if(!(base>0))return null;if(['static','soul','gunpowderkiss','thornwrap'].includes(card.id))return {low:base,high:base};let hits=1;if(total&&(card.id==='windfist'||card.id==='bulletseed')){base=card.hitDamage;hits=card.hits;}if(total&&(card.id==='penguins'||card.id==='ronin'))hits=3;
  const boost=multiplier(p,card.school);return {low:Math.floor(base*boost*.9)*hits,high:Math.floor(base*boost*1.1)*hits};}
 function shuffle(list,rng=Math.random){const out=[...list];for(let i=out.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;}
 function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.filter(c=>masteries.includes(c.school)),rng);if(legal.length<8)return [];const deck=legal.flatMap(c=>[c.id,c.id]);for(const c of shuffle(legal,rng)){if(deck.length>=24)break;deck.push(c.id);}return shuffle(deck.slice(0,24),rng);}

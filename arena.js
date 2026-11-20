@@ -100,7 +100,7 @@
   CARDS.push({"id": "boulderweight", "name": "Boulder Weight", "school": "earth", "cost": 3, "target": "enemy", "kind": "boulderweight", "accuracy": 1, "penalty": 0.3, "turns": 3, "icon": "⛰", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Heavy stone pauldrons and sleeves weigh down one enemy. Their spell accuracy drops by 30 percentage points for 3 turns."});
   CARDS.push({"id": "cyclops", "name": "Cyclops", "school": "earth", "cost": 7, "target": "enemy", "kind": "damage", "damage": 760, "accuracy": 0.8, "icon": "⛰", "rarity": "EPIC", "duration": 3950, "hit": 0.8, "short": "80% ACCURACY", "description": "A one-eyed giant roars and flings his heavy club in a flat spin at one enemy for 760 base Earth damage."});
   CARDS.push({"id": "acidair", "name": "Acid Air", "school": "wind", "cost": 4, "target": "enemy", "kind": "acidair", "poisonChance": 1, "poisonDamage": 100, "poisonTurns": 5, "accuracy": 0.9, "icon": "≋", "rarity": "RARE", "duration": 2300, "hit": 0.58, "short": "90% ACCURACY", "description": "A toxic wind coils around one enemy’s face and inflicts Extreme Poison for 100 base damage at the start of each of the next 5 turns."});
-  CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits. If status damage lands first, that damage event gains 20% and spends the mark."});
+  CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits."});
   CARDS.push({"id": "burningpheonix", "name": "Burning Pheonix", "school": "fire", "cost": 9, "target": "enemy", "kind": "damage", "damage": 1100, "accuracy": 0.7, "rarity": "LEGENDARY", "duration": 5100, "hit": 0.88, "short": "70% ACCURACY", "description": "A blazing ground flame rises into a phoenix. It beats its wings high above the arena and dives into one enemy for 1,100 base Fire damage."});
   CARDS.push({"id":"electrodisc","name":"Electro Disc","school":"lightning","cost":4,"target":"enemy","kind":"electrodisc","damage":360,"hitDamage":120,"hits":3,"accuracy":0.9,"icon":"ϟ","rarity":"EPIC","duration":4200,"hit":0.94,"short":"90% ACCURACY","description":"Three electro discs deal 120 damage each to one enemy."});
   CARDS.push({"id":"zen","name":"Zen","school":"wind","cost":2,"target":"ally","kind":"zen","accuracy":1,"icon":"≋","rarity":"RARE","duration":1300,"hit":0.48,"short":"100% ACCURACY","description":"Choose one negative rune on yourself or an ally to remove."});
@@ -114,7 +114,7 @@
   CARDS.push({"id":"kamikaze","name":"Kamikaze?","school":"fire","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"♨","rarity":"RARE","duration":7850,"hit":7034/7850,"short":"90% ACCURACY","description":"A gremlin plants a bomb, then picks it back up after the fuse goes dark. The explosion hits one enemy for 470 Fire damage."});
   CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself or a living ally. Their next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
   CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":6,"target":"enemy","kind":"damage","damage":550,"accuracy":0.8,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"80% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 550 Water damage to one enemy."});
-  CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell or status tick)."});
+  CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell)."});
   CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":3,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Mark one enemy until the rune blocks a round-end mana gain. Full mana preserves the rune."});
   CARDS.push({"id":"soulharvest","name":"Soul Harvest","school":"dark","cost":7,"target":"enemy","kind":"soulharvest","damage":540,"soullessDamage":250,"soullessRounds":3,"accuracy":0.85,"icon":"☠","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"Hook one enemy for 540 base damage and trap their soul in a lantern. Soulless deals 250 damage after 3 rounds."});
   CARDS.push({"id":"sirensmelody","name":"Sirens Melody","school":"water","cost":5,"target":"team","kind":"teamheal","heal":350,"accuracy":0.95,"icon":"≈","rarity":"EPIC","duration":3400,"hit":0.62,"short":"95% ACCURACY","description":"A siren rises on a rock and sings. Restores up to 350 base HP to each living ally, including you."});
@@ -805,7 +805,7 @@
       // animation has finished. No generic red X or premature fizzle.
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
       flash(c,full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
-      if(shock){consumeStatus(c,"static_shock");const amount=markedStatusDamage(c,shock.damage||100);c.hp=Math.max(0,c.hp-amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
+      if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);c.hp=Math.max(0,c.hp-amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         state.log=[c.name+" takes 100 damage from Static Shock; the curse expires.",...state.log].slice(0,5);
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
       state.log=[c.name+"'s "+a.card.name+" missed ("+label+").",...state.log].slice(0,5);
@@ -1389,7 +1389,7 @@
     if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
   }
-  function applyPeriodicStatus(target,kind,caster,card,spell){
+  function applyPeriodicStatus(target,kind,card){
     const prefix=kind==="frostbite"?"frost":kind;
     const base=card[prefix+"Damage"],turns=card[prefix+"Turns"];
     const extreme=base===100&&turns===5;
@@ -1397,7 +1397,7 @@
     if(!canReceiveDebuff(target,kind)||(effect&&Boolean(effect.extreme)!==extreme))return false;
     const refresh=Boolean(effect);
     if(!effect){
-      addStatus(target,kind,null,effectDamage(caster,card,base,spell),card.statusSchool||card.school);
+      addStatus(target,kind,null,base,card.statusSchool||card.school);
       effect=target.statuses.find(st=>st.kind===kind);
     }
     Object.assign(effect,{school:card.statusSchool||card.school,extreme,remaining:turns,appliedRound:state.round,lastTickRound:state.round});
@@ -1506,7 +1506,6 @@
     if(spell&&spell.damageVariant===undefined)spell.damageVariant=Builds.rollVariant();
     return (spell?.damageVariant||1)*Builds.multiplier(source,card?.school);
   }
-  function effectDamage(source,card,base,spell){return Math.floor(base*spellPower(source,card,spell));}
   function absorbBarrierDamage(target,amount){
     if(amount<=0)return amount;
     for(const shield of target.statuses.filter(st=>st.kind==="bubble_shield"||st.kind==="perfect_defense")){
@@ -1520,11 +1519,6 @@
       if(!amount)break;
     }
     return amount;
-  }
-  function markedStatusDamage(target,amount){
-    if(amount<=0)return amount;
-    const mark=consumeStatus(target,"decay_mark");
-    return absorbBarrierDamage(target,mark?Math.floor(amount*(1+mark.value)):amount);
   }
   function preventsHitEffects(spell,target){
     return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
@@ -1634,7 +1628,7 @@
     attemptMarkedFreeze(target,card,spell);
     const directDamage=oldHp-target.hp;
     healFromLightningRod(rodOwners,redirected,recipient);
-    triggerGunpowderCoat(source,target,card,spell);
+    triggerGunpowderCoat(target,card,spell);
     return directDamage;
   }
   function applyVampDamage(a){
@@ -1677,28 +1671,27 @@
     const card=cast.card;
     if(preventsHitEffects(cast,target)||!canReceiveDebuff(target,"healing_seed")||
        (cast.seedRoll??Math.random())>=card.seedChance)return;
-    const transfer=Builds?.healAmount(card.seedDamage,source,card.school)??card.seedDamage;
-    addStatus(target,"healing_seed","❧",transfer,card.school);
+    addStatus(target,"healing_seed","❧",card.seedDamage,card.school);
     Object.assign(target.statuses.find(st=>st.kind==="healing_seed"),{
       sourceId:source.id,remaining:card.seedTurns,appliedRound:state.round,lastTickRound:state.round
     });
     cast.seedAttached=true;
     flash(target,"HEALING SEED · "+card.seedTurns+" ROUNDS","#a4f5a8");
   }
-  function applyGunpowderCoat(target,card,source,spell){
+  function applyGunpowderCoat(target,card){
     if(!target||target.hp<=0)return false;
     if(!canReceiveDebuff(target))return false;
     const lastTriggerRound=target.statuses.find(st=>st.kind==="gunpowder_coat")?.lastTriggerRound??null;
-    addStatus(target,"gunpowder_coat",null,effectDamage(source,card,card.coatDamage,spell),card.school);
+    addStatus(target,"gunpowder_coat",null,card.coatDamage,card.school);
     Object.assign(target.statuses.find(st=>st.kind==="gunpowder_coat"),{expiresRound:state.round+card.coatTurns,lastTriggerRound,triggers:0});
     flash(target,"GUNPOWDER COAT · 3 TURNS","#c8b69a");
     state.log=[target.name+" is coated in gunpowder for 3 turns: Fire hits can ignite it once each turn.",...state.log].slice(0,5);
   }
-  function triggerGunpowderCoat(source,target,card,spell){
+  function triggerGunpowderCoat(target,card,spell){
     const coat=target?.statuses.find(st=>st.kind==="gunpowder_coat");
     if(!coat||card?.school!=="fire"||card.id==="gunpowderkiss"||spell?.runeResult==="failed"||state.round>=coat.expiresRound||coat.lastTriggerRound===state.round||(coat.triggers||0)>=3)return 0;
     coat.lastTriggerRound=state.round;coat.triggers=(coat.triggers||0)+1;
-    const wasAlive=target.hp>0,amount=Math.min(target.hp,markedStatusDamage(target,coat.value||150));
+    const wasAlive=target.hp>0,amount=Math.min(target.hp,absorbBarrierDamage(target,coat.value||150));
     target.hp=Math.max(0,target.hp-amount);
     (state.gunpowderBursts??=[]).push({targetId:target.id,x:target.x,y:target.y,age:0});
     flash(target,"GUNPOWDER −"+amount,"#ffd38b");
@@ -1783,7 +1776,7 @@
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
     if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
-      applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a);
+      applyPeriodicStatus(target,"frostbite",a.card);
     }
     paintUI();return true;
   }
@@ -1825,7 +1818,7 @@
     if(!thornAccuracyPenalty(u)||a.thornTriggered)return u.hp>0;
     const vine=u.statuses.find(st=>st.kind==="thorny_wrap");
     a.thornTriggered=true;
-    const amount=markedStatusDamage(u,vine.attemptDamage||150);
+    const amount=absorbBarrierDamage(u,vine.attemptDamage||150);
     u.hp=Math.max(0,u.hp-amount);
     flash(u,"THORNS −"+amount,"#b1e781");
     state.log=[u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for "+amount+" damage.",...state.log].slice(0,5);
@@ -1840,7 +1833,7 @@
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
     if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
-      if(applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a))state.log=[target.name+" suffers Extreme Frostbite: 100 HP per turn for 5 turns.",...state.log].slice(0,5);
+      if(applyPeriodicStatus(target,"frostbite",a.card))state.log=[target.name+" suffers Extreme Frostbite: 100 HP per turn for 5 turns.",...state.log].slice(0,5);
     }
     paintUI();return true;
   }
@@ -1851,7 +1844,7 @@
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
     if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
-      applyPeriodicStatus(target,"frostbite",getUnit(a.source),a.card,a);
+      applyPeriodicStatus(target,"frostbite",a.card);
     }
     paintUI();return true;
   }
@@ -1877,9 +1870,9 @@
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);paintUI();return true;
   }
-  function trySpellBurn(caster,target,card,spell,roll){
+  function trySpellBurn(target,card,spell,roll){
     if(!canReceiveDebuff(target,"burn")||preventsHitEffects(spell,target)||(roll??Math.random())>=card.burnChance)return;
-    applyPeriodicStatus(target,"burn",caster,card,spell);
+    applyPeriodicStatus(target,"burn",card);
   }
   function applyDecayOfStrength(target,boost,school){
     if(!canReceiveDebuff(target,"decay_mark"))return;
@@ -1898,7 +1891,7 @@
     const caster=getUnit(a.source),target=getUnit(entry.id);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(a.card.burnChance)trySpellBurn(caster,target,a.card,a,roll);
+    if(a.card.burnChance)trySpellBurn(target,a.card,a,roll);
     if(a.card.decayChance&&target.hp>0&&!preventsHitEffects(a,target)&&
         (roll??Math.random())<a.card.decayChance)applyDecayOfStrength(target,a.card.decayBoost,a.card.school);
     paintUI();return true;
@@ -1918,7 +1911,7 @@
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
     if(canReceiveDebuff(target,"burn")&&target.hp>0&&!preventsHitEffects(a,target)&&a.runeResult==="success"&&roll<a.card.burnChance){
-      if(applyPeriodicStatus(target,"burn",getUnit(a.source),a.card,a)){
+      if(applyPeriodicStatus(target,"burn",a.card)){
       state.log=[target.name+" is burned: 50 damage at the start of the next 3 rounds.",
         ...state.log].slice(0,5);
       a.dragonBurned=true;}
@@ -1959,11 +1952,10 @@
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       const seed=kind==="healing_seed",name=seed?"Healing Seed":"Soul Drain";
       effect.lastTickRound=state.round;
-      const drained=Math.min(u.hp,seed?absorbBarrierDamage(u,effect.value):markedStatusDamage(u,effect.value));
+      const drained=Math.min(u.hp,absorbBarrierDamage(u,effect.value));
       u.hp-=drained;effect.remaining--;
       const caster=getUnit(effect.sourceId);
-      const healValue=seed?drained:effect.healValue||drained;
-      const healed=caster?.hp>0?Math.min(healValue,Math.max(0,caster.maxHp-caster.hp)):0;
+      const healed=caster?.hp>0?Math.min(drained,Math.max(0,caster.maxHp-caster.hp)):0;
       if(healed){caster.hp+=healed;flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");}
       flash(u,name.toUpperCase()+" −"+drained,seed?"#a4f5a8":"#d79ce7");
       state.log=[u.name+" loses "+drained+" HP to "+name+(healed?"; "+caster.name+" restores "+healed+" HP":"")+" ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
@@ -1977,7 +1969,7 @@
       if(u.hp<=0){consumeStatus(u,"soulless");continue;}
       if(state.round<curse.expiresRound)continue;
       consumeStatus(u,"soulless");
-      const amount=Math.min(u.hp,markedStatusDamage(u,curse.value));
+      const amount=Math.min(u.hp,absorbBarrierDamage(u,curse.value));
       u.hp-=amount;
       flash(u,"SOULLESS −"+amount,"#dfadff");
       state.log=[u.name+" takes "+amount+" damage from Soulless.",...state.log].slice(0,5);
@@ -1989,7 +1981,7 @@
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(u.hp,markedStatusDamage(u,effect.value||50));u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,effect.value||50));u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
       flash(u,(effect.extreme?"EXTREME "+kind.toUpperCase()+" −":kind==="burn"?"BURN −":kind==="poison"?"POISON −":kind==="curse"?"CURSE −":"FROSTBITE −")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       state.log=[u.name+" takes "+amount+" "+(effect.extreme?"Extreme ":"")+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2036,7 +2028,7 @@
         if(element==="lightning")attemptVoltStun(c,t,card,roll);
         else if(roll<card.stunChance){
           const kind=element==="fire"?"burn":element==="ice"?"frostbite":"poison";
-          applyPeriodicStatus(t,kind,c,{...card,statusSchool:element==="poison"?"dark":element},anim);
+          applyPeriodicStatus(t,kind,{...card,statusSchool:element==="poison"?"dark":element});
         }
       }
     }else if(card.kind==="lightningball"){
@@ -2046,7 +2038,7 @@
         damage(c,t,card.damage,card,anim);
         if(!preventsHitEffects(anim,t)&&canReceiveDebuff(t,"frostbite")&&
            (anim.frostRoll??Math.random())<card.frostChance)
-          applyPeriodicStatus(t,"frostbite",c,card,anim);
+          applyPeriodicStatus(t,"frostbite",card);
       }
     }else if(card.kind==="tree"){
       if(anim.runeResult==="success"&&t?.hp>0&&t.team!==c.team){
@@ -2056,7 +2048,7 @@
     }else if(card.kind==="grillmaster"||card.kind==="scaldingair"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
-        trySpellBurn(c,t,card,anim,anim.burnRoll);
+        trySpellBurn(t,card,anim,anim.burnRoll);
       }
     }else if(card.kind==="croc"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
@@ -2095,7 +2087,7 @@
       flash(t,"FLOW STATE · 3 TURNS","#a7f5ff");
       state.log=[t.name+" gains +1 extra mana for the next 3 turns.",...state.log].slice(0,5);
     }else if(card.kind==="gunpowder"){
-      if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card,c,anim);
+      if(t&&t.hp>0&&t.team!==c.team)applyGunpowderCoat(t,card);
     }else if(card.kind==="zeus"){
       applyZeusImpact(anim);
       for(const entry of anim.zeusChainTargets||[])applyZeusChain(anim,entry);
@@ -2103,7 +2095,7 @@
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
         if(enemy.hp>0&&!preventsHitEffects(anim,enemy)&&(anim.curseRolls?.[enemy.id]??Math.random())<card.curseChance)
-          applyPeriodicStatus(enemy,"curse",c,card,anim);
+          applyPeriodicStatus(enemy,"curse",card);
       }
     }else if(card.kind==="sticksandstones"){
       for(const entry of anim.stoneTargets??sticksAndStonesTargets(c))applyFallingHit(anim,entry);
@@ -2146,7 +2138,7 @@
       if(t&&t.team!==c.team)applyDecayOfStrength(t,card.boost,card.school);
     }else if(card.kind==="acidair"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t,"poison")){
-        applyPeriodicStatus(t,"poison",c,card,anim);
+        applyPeriodicStatus(t,"poison",card);
       }
     }else if(card.kind==="boulderweight"){
       if(t&&t.team!==c.team&&canReceiveDebuff(t,"boulder_weight")){
@@ -2172,7 +2164,7 @@
     }else if(card.kind==="thornwrap"){
       if(canReceiveDebuff(t,"thorny_wrap")&&t&&t.hp>0&&t.team!==c.team){
         addStatus(t,"thorny_wrap",null,.15,card.school);
-        Object.assign(t.statuses.find(st=>st.kind==="thorny_wrap"),{expiresRound:state.round+3,appliedRound:state.round,attemptDamage:effectDamage(c,card,150,anim)});
+        Object.assign(t.statuses.find(st=>st.kind==="thorny_wrap"),{expiresRound:state.round+3,appliedRound:state.round,attemptDamage:150});
         flash(t,"THORNY WRAP · 3 TURNS","#b5e989");
         state.log=[t.name+" is wrapped: 150 damage per spell attempt and −15 accuracy points for 3 turns.",...state.log].slice(0,5);
       }
@@ -2200,7 +2192,7 @@
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
         if(canReceiveDebuff(enemy,"poison")&&enemy.hp>0&&!preventsHitEffects(anim,enemy)&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
-          applyPeriodicStatus(enemy,"poison",c,card,anim);
+          applyPeriodicStatus(enemy,"poison",card);
         }
       }
     }else if(card.kind==="aoe"&&card.target==="all_enemies"){
@@ -2227,7 +2219,7 @@
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
-        if(canReceiveDebuff(t,"poison")&&t.hp>0&&!preventsHitEffects(anim,t)&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",c,card,anim);}}
+        if(canReceiveDebuff(t,"poison")&&t.hp>0&&!preventsHitEffects(anim,t)&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",card);}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         damage(c,t,card.damage,card,anim);
@@ -2259,15 +2251,15 @@
       for(const ally of alive(c.team)){addStatus(ally,"healing_aura",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school);const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
       state.log=[c.name+" blesses the entire team: 200 HP per turn for 3 turns each.",...state.log].slice(0,5);
     } else if(card.kind==="souldrain"&&canReceiveDebuff(t,"soul_drain")&&t&&t.hp>0&&t.team!==c.team){
-      addStatus(t,"soul_drain",null,effectDamage(c,card,card.damage,anim),card.school);const curse=t.statuses.find(st=>st.kind==="soul_drain");
-      curse.healValue=Builds.healAmount(card.damage,c,card.school);curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
+      addStatus(t,"soul_drain",null,card.damage,card.school);const curse=t.statuses.find(st=>st.kind==="soul_drain");
+      curse.sourceId=c.id;curse.remaining=card.drainTurns;curse.appliedRound=state.round;curse.lastTickRound=state.round;
       flash(t,"SOUL DRAIN","#d79ce7");state.log=[c.name+" curses "+t.name+" with Soul Drain: 100 HP per turn for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="turbulence"&&canReceiveDebuff(t,"turbulence")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"turbulence",null,.5,card.school);flash(t,"TURBULENCE","#b8efdc");state.log=[t.name+" loses 50 accuracy points on their next spell.",...state.log].slice(0,5);
     } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"blazing_rage",null,card.boost,card.school);flash(t,"BLAZING RAGE +20%","#ffbb76");state.log=[t.name+" gains +20% damage on their next damaging Fire spell.",...state.log].slice(0,5);
     } else if(card.kind==="static"&&canReceiveDebuff(t,"static_shock")&&t&&t.hp>0&&t.team!==c.team){
-      addStatus(t,"static_shock",null,.30,card.school);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=effectDamage(c,card,100,anim);
+      addStatus(t,"static_shock",null,.30,card.school);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=card.damage;
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");state.log=[t.name+" is cursed with Static Shock for 3 turns.",...state.log].slice(0,5);
     } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
       addStatus(t,"calming_waters",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school);const effect=t.statuses.find(st=>st.kind==="calming_waters");
@@ -3203,7 +3195,7 @@
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
       case "mana_scourge":return {title:"Mana Scourge",detail:"Blocks the first round-end mana gain, including passing and Flow State. The rune stays while mana is full. Mana gained during the round still works."};
       case "soulless":return {title:"Soulless",detail:"The trapped soul causes "+st.value+" damage after "+Math.max(0,st.expiresRound-state.round)+" more rounds."};
-      case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell or status tick deals 20% more damage. All hits of a triggering spell qualify."};
+      case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell deals 20% more damage. All hits of a triggering spell qualify."};
       case "decaying_strength":return {title:"Decaying Strength · Debuff",detail:u.name+" takes 20% more damage from the next successful damaging spell. Includes every hit of that spell. Misses, healing and burn ticks do not consume it. Does not stack."};
       case "recharge":
         return {title:"Recharge · Debuff",

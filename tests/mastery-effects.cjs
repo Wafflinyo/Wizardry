@@ -41,3 +41,10 @@ console.log('Mastery effects: fixed boosted direct/periodic healing, boosted poi
   cast('frozentouch',u,u,1);
   assert.ok(u.statuses.some(st=>st.kind==='frozen_touch'),'self casting applies the shield');
 }
+{
+  const {u,enemy}=setup();
+  enemy.hp=5000;
+  u.skills.wind=0;
+  cast('wynzor',u,enemy,1);
+  assert.equal(enemy.hp,4090,'Wynzor deals 910 base Wind damage');
+}

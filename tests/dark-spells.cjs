@@ -109,7 +109,7 @@ const tester = api.getState();
 const [wizard, dummy] = tester.units;
 wizard.skills.dark = 0;
 const dummyHP = dummy.hp;
-for(const id of ["frozentouch","volcaniceruption","perfectdefense","stormlizard","drowzyflowers","bubbleshield","darksorcerer","sticksandstones","growth","electriceel","crystalicemirrors"]){api.chooseCard(id);assert.ok(api.discardSelected());}
+for(const id of ["wynzor","frozentouch","volcaniceruption","perfectdefense","stormlizard","drowzyflowers","bubbleshield","darksorcerer","sticksandstones","growth","electriceel","crystalicemirrors"]){api.chooseCard(id);assert.ok(api.discardSelected());}
 api.chooseCard('soulharvest');
 api.confirmTarget();
 while (tester.animation && tester.animation.stage !== 'summon') api.advanceBackground(40);

@@ -21,7 +21,7 @@
     const size=300+40*clamp((target.y-290)/230);
     const turn=ease((p-.63)/(hit-.63));
     const retreat=ease((p-.84)/.13);
-    const reach=mix(187,strikeTip.x*size,turn)+retreat*38;
+    const reach=mix(205,strikeTip.x*size,turn)+retreat*38;
     return {
       p,hit,size,direction,x:target.x-direction*reach,
       y:target.y+6,

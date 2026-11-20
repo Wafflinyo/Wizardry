@@ -72,12 +72,12 @@
     found={original,width,height,positions};
     sources.set(source,found);return found;
   }
-  function recolor(source,look,kind){
+  function recolor(source,look,kind,variant){
     const robe=paletteColors[look.robeColor]?look.robeColor:DEFAULT;
     const hat=paletteColors[look.hatColor]?look.hatColor:DEFAULT;
     const skin=skinColors[look.skinColor]?look.skinColor:DEFAULT_SKIN;
     if(robe===DEFAULT&&hat===DEFAULT&&skin===DEFAULT_SKIN)return source;
-    const key=kind+"|"+robe+"|"+hat+"|"+skin;
+    const key=variant+"|"+kind+"|"+robe+"|"+hat+"|"+skin;
     if(colored.has(key)){
       const v=colored.get(key);colored.delete(key);colored.set(key,v);return v;
     }
@@ -108,7 +108,7 @@
     return out;
   }
   global.WizardryPalettes={
-    getAtlas:(image,kind,look)=>recolor(image,look||{},kind),
+    getAtlas:(image,kind,look,variant="original")=>recolor(image,look||{},kind,variant),
     robeColors:paletteColors,hatColors:paletteColors,skinColors,
     clear:()=>colored.clear()
   };

@@ -3562,6 +3562,7 @@
     window.WIZARDRY_UNDEAD_V99?.onReady(drawCardArts);
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
+    window.PerfectDefense?.onReady(drawCardArts);
     window.StormLizard?.onReady(drawCardArts);
     window.DrowzyFlowers?.onReady(drawCardArts);
     window.GrowthArt?.onReady(drawCardArts);
@@ -3870,10 +3871,10 @@
         const progress=formingSand?clamp(action.elapsed/action.duration,0,1):1;
         if(formingSand)renderables.push({type:"sand-travel",depthY:u.y+.04,priority:2,
           draw:()=>fx.travel(g,u,progress)});
-        const growth=sand?1:clamp((progress-.48)/(.82-.48),0,1);
+        const growth=sand?1:clamp((progress-.53)/(action.card.hit-.53),0,1);
         if(growth>0)for(const layer of ["back","front"]){
           renderables.push({type:"sand-dome-"+layer,depthY:u.y+(layer==="back"?-.065:.065),priority:2,
-            draw:()=>fx.dome(g,u,growth,layer)});
+            draw:()=>fx.dome(g,u,growth,layer,time)});
         }
       }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.target===u.id;

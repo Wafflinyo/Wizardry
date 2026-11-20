@@ -23,11 +23,11 @@
    c.drawImage(image,(i%16)*cw,Math.floor(i/16)*ch,cw,ch,-cw*.28,-ch*.88,cw,ch);
    c.restore();
  }
- function draw(c,{progress:p,target,layer="front"}){
+ function draw(c,{progress:p,target,layer="front",opacity=1}){
    if(layer!=="front"||!target||p<=0||p>=1)return;
    const i=frameAt(p),next=Math.min(i+1,times.length-1);
    const blend=next===i?0:clamp((p-times[i])/(times[next]-times[i]));
-   c.save();c.globalAlpha=clamp(Math.min(1,p/.035,(1-p)/.04));
+   c.save();c.globalAlpha*=opacity*clamp(Math.min(1,p/.035,(1-p)/.04));
    blendCtx.clearRect(0,0,1000,620);
    blendCtx.globalCompositeOperation="source-over";blendCtx.globalAlpha=1;
    sprite(blendCtx,i,target,1-blend,p);

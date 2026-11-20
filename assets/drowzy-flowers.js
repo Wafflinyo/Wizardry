@@ -14,7 +14,7 @@
     ctx.translate(500-direction*28,510);
     ctx.scale(direction,1);
     ctx.globalAlpha *= 1-smooth((progress-.86)/.14);
-    for (const [x,y,size,delay] of [[-74,-15,102,.05],[75,-12,110,.09],[0,0,155,0]]) {
+    for (const [x,y,size,delay] of [[-101,-19,142,.05],[104,-16,152,.09],[0,0,217,0]]) {
       const t=clamp((progress-delay)/(1-delay));
       const rise=smooth(t/.19);
       if (!rise) continue;
@@ -38,37 +38,59 @@
   function gust(ctx,progress,direction,target) {
     // Stepped drawings keep the particle flight in time with the bending flower frames.
     const p=Math.floor(progress*96)/96;
-    if(p<.47 || p>=.99)return;
+    if(p<.43 || p>=.99)return;
     const scale=.6+.3*clamp((target.y-288)/235);
     const destX=target.x, destY=target.y-145*scale;
-    const startX=500-direction*28, startY=459;
+    const startX=500-direction*28, startY=418;
     function point(t,lane,phase,spread) {
-      const lift=Math.sin(Math.PI*t);
+      // Negative time extends the same flight path through the upwind edge of the field.
+      const lift=Math.sin(Math.PI*clamp(t));
       const angle=t*tau*1.45+phase;
-      return [startX+(destX-startX)*t+direction*(1-t)*lane+Math.cos(angle)*spread*lift,
-        startY+(destY-startY)*t-47*lift+Math.sin(angle)*spread];
+      return [startX+(destX-startX)*clamp(t)+direction*(Math.min(0,t)*260+(1-clamp(t))*lane)+Math.cos(angle)*spread*lift,
+        startY+(destY-startY)*clamp(t)-47*lift+Math.sin(angle)*spread];
     }
     ctx.save();
-    for(let i=0;i<4;i++){
-      const head=clamp((p-.48-i*.021)/.29),tail=clamp((p-.55-i*.021)/.29);
-      if(head<=tail)continue;
-      ctx.beginPath();
-      for(let j=0;j<=14;j++){
-        const [x,y]=point(tail+(head-tail)*j/14,i*13-21,i*1.5,9);
-        if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    // Broad translucent ribbons sit behind narrow crests and the airborne pollen.
+    for(let i=0;i<5;i++){
+      const passage=(p-.48-i*.018)/.29;
+      const front=Math.min(.995,passage), back=Math.max(-.49,passage-.44);
+      if(front<=back)continue;
+      const fade=smooth((p-.43)/.055)*(1-smooth((p-.82)/.14));
+      const center=[];
+      for(let j=0;j<=18;j++){
+        const t=j/18;
+        const [x,y]=point(back+(front-back)*t,i*19-39,i*1.28,10+i*2);
+        center.push({x,y,width:Math.sin(Math.PI*t)**.72*(i===2?15:9)});
       }
-      ctx.strokeStyle=i%2?'rgba(222,255,204,.48)':'rgba(233,215,255,.55)';
-      ctx.lineWidth=1.8+i*.25;ctx.lineCap='round';ctx.stroke();
+      const first=center[0], last=center.at(-1);
+      const gradient=ctx.createLinearGradient(first.x,first.y,last.x,last.y);
+      gradient.addColorStop(0,'rgba(137,218,225,0)');
+      gradient.addColorStop(.48,i%2?'rgba(150,231,224,.39)':'rgba(178,234,253,.49)');
+      gradient.addColorStop(.82,'rgba(232,255,251,.76)');
+      gradient.addColorStop(1,'rgba(245,255,255,.14)');
+      ctx.globalAlpha=fade;
+      ctx.fillStyle=gradient;
+      ctx.beginPath();
+      ctx.moveTo(first.x,first.y);
+      for(const {x,y,width} of center)ctx.lineTo(x,y-width);
+      for(const {x,y,width} of [...center].reverse())ctx.lineTo(x,y+width*.52);
+      ctx.closePath();ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(first.x,first.y);
+      for(const {x,y,width} of center)ctx.lineTo(x,y-width*.73);
+      ctx.strokeStyle=gradient;ctx.lineWidth=i===2?3.5:2;
+      ctx.lineCap='round';ctx.stroke();
     }
-    for(let i=0;i<82;i++){
+    for(let i=0;i<102;i++){
       const phase=i*2.39996;
-      const launch=.48+((i*37)%83)/83*.16;
+      const launch=.48+((i*37)%103)/103*.16;
       const t=(p-launch)/.29;
       if(t<0||t>1.38)continue;
       const drift=clamp((t-1)/.38);
       const [cx,cy]=point(Math.min(1,t),Math.sin(phase)*76,phase,5+i%13);
       const x=cx+Math.cos(phase)*(5+30*drift),y=cy+Math.sin(phase)*14-22*drift;
-      const r=(1.2+i%4*.65)*(1+.25*Math.sin(t*8+phase));
+      const r=(1.6+i%4*.72)*(1+.25*Math.sin(t*8+phase));
       ctx.globalAlpha=clamp(t*10)*(1-drift);
       ctx.fillStyle=palette[i%5];ctx.beginPath();ctx.moveTo(x-r*1.5,y);
       ctx.lineTo(x,y-r);ctx.lineTo(x+r*1.5,y);ctx.lineTo(x,y+r);ctx.closePath();ctx.fill();

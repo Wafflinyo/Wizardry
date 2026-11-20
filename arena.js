@@ -3881,10 +3881,8 @@
     if(action?.stage==="summon" && action.card.id==="growth"){
       const target=getUnit(action.target);
       const progress=clamp(action.elapsed/action.duration,0,1);
-      if(target)for(const offset of [-.08,.08]){
-        renderables.push({type:"growth-saplings",depthY:target.y+offset,priority:2,
-          draw:()=>window.GrowthArt?.draw(g,target,progress,offset>0,action.card.hit)});
-      }
+      if(target)renderables.push({type:"growth-saplings",depthY:target.y+.08,priority:2,
+        draw:()=>window.GrowthArt?.draw(g,target,progress,action.card.hit)});
     }
     if(action?.stage==="summon"&&["electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);

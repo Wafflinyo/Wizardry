@@ -14,10 +14,10 @@
     ctx.restore();
   }
 
-  function draw(ctx, target, progress, foreground, hit) {
+  function draw(ctx, target, progress, hit) {
     const depthScale = 0.60 + 0.30 * clamp((target.y - 288) / 235);
     const side = target.team ? -1 : 1;
-    const saplings = foreground ? [[54, 7, 94, .10]] : [[-48, -15, 128, 0], [34, -20, 84, .12]];
+    const saplings = [[-48, -15, 128, 0], [34, -20, 84, .12], [54, 7, 94, .10]];
     ctx.save();
     ctx.translate(target.x, target.y);
     ctx.scale(depthScale, depthScale);
@@ -31,7 +31,7 @@
       ctx.restore();
     }
     // The crown releases a short trail of seedlight into the wizard at buff contact.
-    if (foreground)for(let i=0;i<11;i++){
+    for(let i=0;i<11;i++){
       const arrival = hit + i * .015;
       const t = (progress - arrival + .23) / .23;
       if(t<=0 || t>=1)continue;

@@ -170,6 +170,14 @@ const assert = require('node:assert/strict');
   assert.equal(dummies.length,4);
   element('testerTarget').onchange({target:{value:'wizard'}});
   assert.ok(dummies.every(unit=>unit.wizardDummy));
+  api.chooseCard('frozentouch');
+  const protectedWizard=teamTest.units.find(unit=>unit.team===0&&unit.id!==teamTest.selectedCaster);
+  api.selectTarget(protectedWizard.id);
+  assert.equal(teamTest.selectedTarget,protectedWizard.id,'Frozen Touch accepts a living ally');
+  api.selectTarget(dummies[0].id);
+  assert.equal(teamTest.selectedTarget,protectedWizard.id,'Frozen Touch rejects an enemy');
+  api.selectTarget(teamTest.selectedCaster);
+  assert.equal(teamTest.selectedTarget,teamTest.selectedCaster,'Frozen Touch accepts self');
   teamTest.units[0].skills.wind=0;
   dummies.forEach(unit=>{unit.hp=1;});
   for(const id of ['frozentouch','volcaniceruption','perfectdefense']){api.chooseCard(id);assert.ok(api.discardSelected());}

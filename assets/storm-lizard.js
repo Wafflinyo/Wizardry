@@ -1,6 +1,6 @@
 (() => {
   const atlas = new Image();
-  atlas.src = "./assets/storm-lizard.webp";
+  atlas.src = "./assets/storm-lizard-turn.webp";
   const cell = 192;
   const clamp = n => Math.max(0, Math.min(1, n));
   const mix = (a,b,t) => a+(b-a)*t;
@@ -10,7 +10,7 @@
     [.19,0],[.23,1],[.27,2],[.31,3],[.40,4],[.44,5],[.49,6],[.56,7],
     [.61,8],[.66,9],[.695,10],[.73,11],[.80,12],[.85,13],[.89,14],[.93,15]
   ];
-  const strikeTip = {x:.446,y:-.256};
+  const strikeTip = {x:.471,y:-.315};
 
   function sprite(ctx,frame,size){
     if(!atlas.naturalWidth)return;
@@ -74,15 +74,29 @@
     ctx.restore();
   }
 
+  function entranceFlash(progress){
+    const peak=.09;
+    const width=progress<peak?.012:.04;
+    return .72*(1-ease(Math.abs(progress-peak)/width));
+  }
+
   function draw(ctx,s){
     const {x,y,p,size,direction,frame,hit}=s;
     const tick=Math.floor(p*130);
-    const entry=clamp((p-.065)/.12);
-    if(p>=.065&&p<.235){
-      const flash=(1-entry)*(.58+.42*Math.cos(tick*2.7)**2);
-      bolt(ctx,x-direction*70,y-410,x,y-9,tick,flash,2.6);
-      bolt(ctx,x-direction*48,y-260,x+direction*58,y-116,tick+3,flash*.65,1.1);
-      sparks(ctx,x,y-10,(p-.065)/.17,22,83);
+    if(p>=.075&&p<.25){
+      const energy=ease((p-.075)/.012)*(1-ease((p-.106)/.075));
+      const skyX=x-direction*95,skyY=-65;
+      bolt(ctx,skyX,skyY,x,y-7,3,energy,6);
+      bolt(ctx,skyX-direction*54,skyY+85,x-direction*24,y-119,6,energy*.88,2.7);
+      bolt(ctx,x-direction*43,y-224,x+direction*99,y-67,9,energy*.74,2);
+      ctx.save();
+      ctx.globalAlpha=energy*.76;
+      ctx.fillStyle="#fff2ae";
+      ctx.beginPath();
+      ctx.ellipse(x,y-8,51+energy*29,12+energy*10,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      sparks(ctx,x,y-10,(p-.077)/.17,35,108);
     }
     if(p<.14)return;
     ctx.save();
@@ -100,9 +114,11 @@
     if(p>=.28&&p<.82){
       const charge=ease((p-.28)/.14)*(1-ease((p-.76)/.06));
       const swing=ease((p-.65)/(hit-.65));
-      const tipX=mix(.34,strikeTip.x,swing)*size;
-      const tipY=mix(-.43,strikeTip.y,swing)*size;
-      bolt(ctx,size*.09,-size*.29,tipX,tipY,tick,charge*(.5+.5*Math.cos(tick*1.8)**2),1);
+      const winding=frame>=9;
+      const tailSide=winding?1:-1;
+      const tipX=tailSide*mix(.39,strikeTip.x,swing)*size;
+      const tipY=mix(frame>=6&&frame<=10?-.47:-.24,strikeTip.y,swing)*size;
+      bolt(ctx,tailSide*size*.12,-size*.26,tipX,tipY,tick,charge*(.5+.5*Math.cos(tick*1.8)**2),1);
       if(p>=.67&&p<=hit+.06){
         ctx.beginPath();
         ctx.moveTo(size*.13,-size*.48);
@@ -129,7 +145,7 @@
   }
 
   window.StormLizard={
-    scene,draw,impact,
+    scene,draw,impact,entranceFlash,
     onReady(fn){if(atlas.naturalWidth)fn();else atlas.addEventListener("load",fn,{once:true});},
     portrait(ctx,w,h){
       ctx.save();

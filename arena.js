@@ -4372,6 +4372,17 @@
         time,target:getUnit(a.target),end:a.estelOrbEnd
       });
     }
+    if(action?.card?.id==="stormlizard" && action.stage==="summon"){
+      const flashAlpha=window.StormLizard?.entranceFlash(action.elapsed/action.duration);
+      if(flashAlpha>0){
+        g.save();
+        g.setTransform(ratio,0,0,ratio,0,0);
+        g.globalAlpha=flashAlpha;
+        g.fillStyle="#fff8d7";
+        g.fillRect(0,0,vw,vh);
+        g.restore();
+      }
+    }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     drawZenCast(state.animation);

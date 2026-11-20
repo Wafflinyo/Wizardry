@@ -19,3 +19,22 @@ console.log('Mastery effects: fixed boosted direct/periodic healing, boosted poi
   assert.equal(u.hp,200,'Soul Drain heals by the actual HP drained');
   assert.ok(enemy.statuses.some(st=>st.kind==='decay_mark'));
 }
+{
+  const {s,u,ally,enemy}=setup();
+  const other=s.units[3];
+  enemy.hp=other.hp=5000;
+  cast('frozentouch',enemy,u,1);
+  cast('estel',u,ally,1);
+  cast('devil',u,enemy,1);
+  assert.ok(enemy.hp<5000,'Fire bypasses Frozen Touch');
+  const afterFire=enemy.hp;
+  cast('volt',u,enemy,1);
+  assert.ok(enemy.hp<afterFire,'Lightning bypasses Frozen Touch');
+  assert.ok(u.statuses.some(st=>st.kind==='frozen_touch'));
+  const hp=[enemy.hp,other.hp];
+  cast('darksorcerer',u,enemy,1);
+  assert.deepEqual([enemy.hp,other.hp],hp,'Frozen Touch suppresses all targets of the same cast');
+  assert.ok(!u.statuses.some(st=>st.kind==='frozen_touch'));
+  cast('scorpion',u,enemy,1);
+  assert.ok(enemy.hp<hp[0],'the next damaging spell works after the rune is spent');
+}

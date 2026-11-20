@@ -1,7 +1,11 @@
 (() => {
   const atlas = new Image();
   atlas.src = "./assets/perfect-defense-dome.webp";
+  const currentAtlas = new Image();
+  currentAtlas.src = "./assets/perfect-defense-current.webp";
   const cell = 192;
+  const currentRowHeight = 72;
+  const domeCycle = [12,13,14,15,14,13];
   const width = 224;
   const height = 257;
   const top = -height+8;
@@ -23,7 +27,28 @@
     ctx.drawImage(atlas,frame%4*cell,Math.floor(frame/4)*cell,cell,cell,x,y,w,h);
   }
 
-  function shell(ctx,frame,eyeX,eyeY,layer,growth=1){
+  function shiftingShell(ctx,frame,time){
+    const phase=time/850;
+    const step=time/165;
+    const next=domeCycle[(Math.floor(step)+1)%domeCycle.length];
+    const strips=24;
+    for(let i=0;i<strips;i++){
+      const t=(i+.5)/strips;
+      const drift=Math.sin(t*Math.PI)*(
+        Math.sin(phase*2*Math.PI-t*9)*4.5+Math.sin(phase*4.36-t*16)*2);
+      const sy=i*cell/strips;
+      const y=top+i*height/strips;
+      const x=-width/2+drift;
+      const sh=cell/strips,dh=height/strips+.12;
+      ctx.drawImage(atlas,frame%4*cell,Math.floor(frame/4)*cell+sy,cell,sh,x,y,width,dh);
+      ctx.save();
+      ctx.globalAlpha*=ease(step%1)*.85;
+      ctx.drawImage(atlas,next%4*cell,Math.floor(next/4)*cell+sy,cell,sh,x,y,width,dh);
+      ctx.restore();
+    }
+  }
+
+  function shell(ctx,frame,eyeX,eyeY,layer,growth=1,time){
     const slit=[
       [eyeX-34,eyeY-4],[eyeX-9,eyeY-9],[eyeX+29,eyeY-8],[eyeX+44,eyeY-3],
       [eyeX+40,eyeY+8],[eyeX-13,eyeY+9],[eyeX-34,eyeY+5]
@@ -48,7 +73,8 @@
         polygon(ctx,slit);
         ctx.clip("evenodd");
       }
-      sprite(ctx,frame,-width/2,top,width,height);
+      if(growth>=1&&time!==undefined)shiftingShell(ctx,frame,time);
+      else sprite(ctx,frame,-width/2,top,width,height);
       if(hasSlit){
         ctx.beginPath();
         polygon(ctx,slit);
@@ -80,8 +106,7 @@
 
   function dome(ctx,target,growth,layer,time=0){
     if(growth<=0||!atlas.naturalWidth)return;
-    const cycle=[12,13,14,15,14,13];
-    const frame=growth>=1?cycle[Math.floor(time/155)%cycle.length]:
+    const frame=growth>=1?domeCycle[Math.floor(time/165)%domeCycle.length]:
       Math.min(finalFrame,Math.floor(growth*(finalFrame+1)));
     const scale=scaleFor(target),side=target.team?-1:1;
     const isWood=target.dummy&&!target.wizardDummy;
@@ -90,80 +115,55 @@
     ctx.translate(target.x,target.y);
     ctx.scale(side*scale,scale);
     const eyeY=isWood?-174:spriteWizard?-123:-140;
-    shell(ctx,frame,isWood?0:spriteWizard?17:14,eyeY,layer,growth);
+    shell(ctx,frame,isWood?0:spriteWizard?17:14,eyeY,layer,growth,time);
     if(layer==="front")flowingGrains(ctx,time,growth,eyeY);
     ctx.restore();
   }
 
-  function sandTexture(ctx,points,x,y,w,h,offset){
+  function currentFrame(ctx,index,x,y,w,h){
+    ctx.drawImage(currentAtlas,index%4*cell,Math.floor(index/4)*currentRowHeight,
+      cell,currentRowHeight,x,y,w,h);
+  }
+
+  function rollingCurrent(ctx,tick,x,y,w,h){
+    const frame=Math.floor(tick)%16;
+    currentFrame(ctx,frame,x,y,w,h);
     ctx.save();
-    ctx.beginPath();
-    polygon(ctx,points);
-    ctx.clip();
-    ctx.fillStyle="#b47b33";
-    ctx.fillRect(x,y,w,h);
-    if(atlas.naturalWidth){
-      // Sample the dome's golden sand bands for the floor ribbon's surface.
-      ctx.drawImage(atlas,38+offset,576+82,115,67,x,y,w,h);
-    }
+    ctx.globalAlpha*=ease(tick%1);
+    currentFrame(ctx,(frame+1)%16,x,y,w,h);
     ctx.restore();
   }
 
-  function travel(ctx,target,progress){
-    if(progress<=0||progress>=.75)return;
+  function travel(ctx,target,p){
+    if(p<=0||p>=.74||!currentAtlas.naturalWidth)return;
     const dx=target.x-500,dy=target.y-510;
-    const length=Math.hypot(dx,dy);
-    const head=ease(progress/.49)*length;
-    const tail=ease((progress-.15)/.43)*length;
+    const distance=Math.hypot(dx,dy);
+    const angle=Math.atan2(dy,dx);
+    const scale=scaleFor(target);
+    const head=ease(p/.49)*distance;
+    const tail=ease((p-.10)/.46)*distance;
     const span=head-tail;
-    const pool=ease((progress-.40)/.13)*(1-ease((progress-.61)/.14));
-    const size=scaleFor(target);
+    const tick=p*58;
     ctx.save();
-    if(span>1){
+    if(span>0.5){
       ctx.save();
       ctx.translate(500,510);
-      ctx.rotate(Math.atan2(dy,dx));
-      const left=[],right=[],ridge=[];
-      for(let i=0;i<=20;i++){
-        const t=i/20,x=tail+span*t;
-        const taper=Math.sin(Math.PI*t)**.53;
-        const wave=Math.sin(x*.045-progress*38)*6*taper;
-        const spread=(16+10*t)*size*taper;
-        left.push([x,wave-spread]);
-        right.push([x,wave+spread]);
-        ridge.push([x,wave-spread*.23]);
-      }
-      const outline=[...left,...right.reverse()];
-      const x=tail-2,y=-27*size-8;
-      ctx.globalAlpha*=ease(progress/.065)*(1-ease((progress-.48)/.14));
-      sandTexture(ctx,outline,x,y,span+4,-2*y,Math.floor(progress*33)%18);
-      ctx.beginPath();
-      polygon(ctx,[...ridge,...left.reverse()]);
-      ctx.fillStyle="#ffcf763e";
-      ctx.fill();
-      for(let i=0;i<40;i++){
-        const t=(i*.618+progress*5)%1;
-        const x=tail+span*t;
-        const taper=Math.sin(Math.PI*t);
-        const y=Math.sin(x*.045-progress*38)*6*taper+Math.sin(i*4.6)*(10+i%5*2)*size*taper;
-        const grain=1+i%3;
-        ctx.beginPath();
-        polygon(ctx,[[x-grain*3,y],[x+grain,y-grain],[x+grain*2,y],[x,y+grain]]);
-        ctx.fillStyle=sand[i%sand.length];
-        ctx.fill();
-      }
+      if(dx<0){
+        ctx.scale(-1,1);
+        ctx.rotate(Math.atan2(dy,-dx));
+      }else ctx.rotate(angle);
+      const breadth=(.7+ease(p/.36)*.3)*scale;
+      ctx.globalAlpha*=ease(p/.09)*(1-ease((p-.50)/.065));
+      rollingCurrent(ctx,tick,tail-8,-41*breadth,span+16,64*breadth);
       ctx.restore();
     }
+    const pool=ease((p-.40)/.12)*(1-ease((p-.60)/.14));
     if(pool>0){
-      ctx.translate(target.x,target.y);
-      ctx.scale(size,size);
       ctx.globalAlpha*=pool;
-      const rim=Array.from({length:20},(_,i)=>{
-        const angle=i*Math.PI/10;
-        const radius=1+Math.sin(i*3.1+progress*31)*.11;
-        return [Math.cos(angle)*100*radius,Math.sin(angle)*22*radius+5];
-      });
-      sandTexture(ctx,rim,-114,-25,228,58,Math.floor(progress*30)%18);
+      ctx.translate(target.x,target.y);
+      ctx.scale(dx<0?-scale:scale,scale);
+      const width=100+100*ease((p-.40)/.18);
+      rollingCurrent(ctx,tick+5,-width/2,-32,width,54);
     }
     ctx.restore();
   }

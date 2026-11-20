@@ -128,7 +128,7 @@
   CARDS.push({"id":"bubbleshield","name":"Bubble Shield","school":"water","cost":3,"target":"ally","kind":"bubbleshield","shieldHp":360,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1600,"hit":0.7,"short":"100% ACCURACY","description":"Wrap yourself or a living ally in a 360 HP bubble. It absorbs damage until it pops. Excess damage reaches the wizard. Recasting restores the bubble to 360 HP."});
   CARDS.push({"id": "drowzyflowers", "name": "Drowzy Flowers", "school": "nature", "cost": 5, "target": "enemy", "kind": "drowzyflowers", "accuracy": 1, "icon": "❀", "rarity": "RARE", "duration": 3900, "hit": 0.77, "short": "100% ACCURACY", "description": "Pollen puts one enemy to sleep for up to 3 rounds. Wake chance rises from 20% to 30% to 40%. Wakes automatically on the fourth round."});
   CARDS.push({"id":"stormlizard","name":"Storm Lizard","school":"lightning","cost":8,"target":"enemy","kind":"damage","damage":730,"accuracy":0.8,"icon":"ϟ","rarity":"EPIC","duration":5100,"hit":0.78,"short":"80% ACCURACY","description":"A skybolt summons a storm lizard. It roars, pivots, and electrocutes one enemy with a tail swipe for 730 base Lightning damage."});
-  CARDS.push({"id":"perfectdefense","name":"Perfect Defense","school":"earth","cost":5,"target":"ally","kind":"perfectdefense","shieldHp":580,"accuracy":1,"icon":"◆","rarity":"RARE","duration":3000,"hit":0.82,"short":"100% ACCURACY","description":"Raise a 580 HP sand dome around yourself or a living ally. Excess damage reaches the wizard. Recasting restores the dome to 580 HP."});
+  CARDS.push({"id":"perfectdefense","name":"Perfect Defense","school":"earth","cost":5,"target":"ally","kind":"perfectdefense","shieldHp":580,"accuracy":1,"icon":"◆","rarity":"RARE","duration":4800,"hit":0.82,"short":"100% ACCURACY","description":"Raise a 580 HP sand dome around yourself or a living ally. Excess damage reaches the wizard. Recasting restores the dome to 580 HP."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -3870,7 +3870,7 @@
       if(fx&&(sand||formingSand)){
         const progress=formingSand?clamp(action.elapsed/action.duration,0,1):1;
         if(formingSand)fx.travel(g,u,progress);
-        const growth=sand?1:clamp((progress-.50)/(action.card.hit-.50),0,1);
+        const growth=sand?1:clamp((progress-.53)/(action.card.hit-.53),0,1);
         if(growth>0)for(const layer of ["back","front"]){
           renderables.push({type:"sand-dome-"+layer,depthY:u.y+(layer==="back"?-.065:.065),priority:2,
             draw:()=>fx.dome(g,u,growth,layer,time)});

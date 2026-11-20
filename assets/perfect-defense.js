@@ -6,9 +6,9 @@
   const cell = 192;
   const currentRowHeight = 72;
   const domeCycle = [12,13,14,15,14,13];
-  const width = 224;
-  const top = -249;
-  const base = 28; // Includes the transparent margin under the painted sand.
+  const width = 304;
+  const top = -268;
+  const base = 55; // Includes the transparent margin under the painted sand.
   const height = base-top;
   const clamp = n => Math.max(0, Math.min(1, n));
   const ease = n => {const t=clamp(n);return t*t*(3-2*t);};
@@ -213,8 +213,8 @@
     else atlas.addEventListener("load",fn,{once:true});
   },portrait(ctx,w,h){
     if(!atlas.naturalWidth)return;
-    const scale=Math.min(w/228,h/260);
-    ctx.save();ctx.translate(w/2,h*.96);ctx.scale(scale,scale);
+    const scale=Math.min(w/(width+4),h/(height+4));
+    ctx.save();ctx.translate(w/2,h/2-(top+base)*scale/2);ctx.scale(scale,scale);
     shell(ctx,finalFrame,14,-138,"back");
     shell(ctx,finalFrame,14,-138,"front");
     ctx.restore();

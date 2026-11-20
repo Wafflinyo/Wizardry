@@ -62,7 +62,7 @@
     for(let i=0;i<35;i++){
       const t=(time*(.00055+i%4*.00012)+i*.173)%1;
       const band=i%3;
-      const x=lerp(-92+band*8,86-band*5,t);
+      const x=-92+band*8+(178-band*13)*t;
       const y=-Math.min(lift-6,28+band*47+t*54)+Math.sin(t*Math.PI+i)*4;
       if(y>-8||Math.abs(y-eyeY)<14)continue;
       const size=1.1+i%4*.63;

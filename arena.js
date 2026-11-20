@@ -400,8 +400,13 @@
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>mode!=="online"||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
+    // Online clients share the host's world coordinates for spell effects.
+    const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (pointer: fine)").matches;
+    const teamOffset=desktopArena?100:0;
     for(const u of units){
-      const p=scenePositions[size][u.team][u.index];u.x=p[0];u.y=p[1];
+      const [x,y]=scenePositions[size][u.team][u.index];
+      u.x=x+(u.team?teamOffset:-teamOffset);
+      u.y=y;
       if(!testing){startHand(u,u.isHuman||(!activeRoster&&u.id==="a0"));continue;}
       if(u.team===1){
         Object.assign(u,{name:"Training Dummy",dummy:true,hp:12000,maxHp:12000,mana:0,hand:[],drawPile:[],discardPile:[]});

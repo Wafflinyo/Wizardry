@@ -14,6 +14,18 @@ for(const start of [api.startPractice,api.startCardTester]){
     }
   }
 }
+for(const size of [1,2,3,4]){
+  ctx.window.matchMedia=()=>({matches:false});
+  api.startPractice(size);
+  const compact=api.getState().units.map(({x,y})=>({x,y}));
+  ctx.window.matchMedia=query=>({matches:query.includes('pointer: fine')});
+  api.startPractice(size);
+  for(const [index,unit] of api.getState().units.entries()){
+    assert.equal(unit.x,compact[index].x+(unit.team?100:-100));
+    assert.equal(unit.y,compact[index].y);
+  }
+}
+delete ctx.window.matchMedia;
 let trace,outcome;ctx.window.WIZARDRY_ELEMENT_TRACE_V45={draw:(g,o)=>trace=o,drawOutcome:(g,o)=>outcome=o};const a={stage:'tracing-auto',card:api.cards[0],elapsed:300,duration:1600};api.drawAirborneRune(a);a.stage='rune-success';api.drawRuneOutcome(a);assert.equal(trace.centerY,440);assert.equal(outcome.centerY,440);
 for(const f of ['jack-v129.js','octo-whip-v95.js','forrest-centaur-v100.js'])vm.runInNewContext(fs.readFileSync('assets/'+f,'utf8'),ctx);
 for(const target of [{x:335,y:410},{x:265,y:550},{x:735,y:455},{x:650,y:590}]){assert.equal(ctx.window.WIZARDRY_JACK_V129.pose(.5,target).y,510);assert.equal(ctx.window.WIZARDRY_OCTO_V95.pose(.3,target).groundY,510);assert.equal(ctx.window.WIZARDRY_CENTAUR_V100.pose(.5,target).groundY,510);}

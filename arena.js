@@ -3409,7 +3409,7 @@
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
       else if(card.id==="darksorcerer")window.DarkSorcerer?.portrait(c,width,height);
       else if(card.id==="sticksandstones")window.SticksAndStones?.portrait(c,width,height);
-      else if(card.id==="growth")drawGrowthSprout(c,width/2,height*.77,Math.min(width,height)*.6);
+      else if(card.id==="growth")window.GrowthArt?.portrait(c,width,height);
       else if(card.id==="manascourge"||card.id==="soulharvest")window.DarkSpells?.portrait(c,width,height,card.id);
       else if(card.id==="decaystrength")window.DecayStrength?.portrait(c,width,height);
       else if(card.id==="acidair")window.AcidAir?.portrait(c,width,height);
@@ -3548,6 +3548,7 @@
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.DrowzyFlowers?.onReady(drawCardArts);
+    window.GrowthArt?.onReady(drawCardArts);
     window.DarkSpells?.onReady(drawCardArts);
     window.ThornyWrap?.onReady(drawCardArts);
     window.DecayStrength?.onReady(drawCardArts);
@@ -3610,16 +3611,6 @@
       ESTEL_TRAVEL_MIN_MS,ESTEL_TRAVEL_MAX_MS);
     startStage(anim,"estel-travel",duration);
   }
-  function drawGrowthSprout(ctx,x,y,size){
-    ctx.save();
-    ctx.translate(x,y);ctx.scale(size,size);
-    pathPoly(ctx,[[-.07,0],[.02,-.74],[.10,-.76],[.02,0]],"#80bc56");
-    pathPoly(ctx,[[.02,-.23],[-.43,-.40],[-.60,-.79],[-.23,-.65]],"#458747");
-    pathPoly(ctx,[[.02,-.23],[-.25,-.53],[-.60,-.79],[-.43,-.40]],"#8fc858");
-    pathPoly(ctx,[[.04,-.41],[.18,-.78],[.57,-.96],[.42,-.58]],"#65ad4e");
-    pathPoly(ctx,[[.04,-.41],[.29,-.70],[.57,-.96],[.42,-.58]],"#c4e687");
-    ctx.restore();
-  }
   function drawAction(anim,time){
     const p=clamp(anim.elapsed/anim.duration,0,1),caster=getUnit(anim.source),
       target=getUnit(anim.target),card=anim.card;
@@ -3668,14 +3659,6 @@
     if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="growth"&&target){
-      g.globalAlpha*=Math.min(1,p/.12,(1-p)/.22);
-      for(let i=0;i<3;i++){
-        const rise=ease(clamp((p-i*.09)/.6,0,1));
-        drawGrowthSprout(g,target.x+(i-1)*39,target.y-rise*(i===1?85:52),rise*(i===1?64:36));
-      }
-      g.restore();return;
-    }
     if(card.id==="electricalcharge"){window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target,time});g.restore();return;}
     if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
     if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
@@ -3895,7 +3878,15 @@
         })
       });
     }
-    if(action?.stage==="summon"&&["growth","electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
+    if(action?.stage==="summon" && action.card.id==="growth"){
+      const target=getUnit(action.target);
+      const progress=clamp(action.elapsed/action.duration,0,1);
+      if(target)for(const offset of [-.08,.08]){
+        renderables.push({type:"growth-saplings",depthY:target.y+offset,priority:2,
+          draw:()=>window.GrowthArt?.draw(g,target,progress,offset>0,action.card.hit)});
+      }
+    }
+    if(action?.stage==="summon"&&["electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
       const depth=(targets.length?Math.max(...targets.map(t=>t.y)):510)+.1;
       renderables.push({type:"attached-spell",depthY:depth,priority:2,draw:()=>drawAction(action,time)});

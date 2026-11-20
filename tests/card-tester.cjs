@@ -161,8 +161,12 @@ const assert = require('node:assert/strict');
 
   element('battleHome').onclick();
   assert.equal(ctx.document.body.dataset.screen,'home');
-  assert.match(element('portal').innerHTML,/data-action="cardTester4">4v4 Card Tester/);
-  await element('portal').click({target:{closest:()=>({dataset:{action:'cardTester4'}})}});
+  assert.doesNotMatch(element('portal').innerHTML,/data-action="cardTester4"/);
+  await element('portal').click({target:{closest:()=>({dataset:{action:'cardTester'}})}});
+  for(const size of [2,3,4]){
+    element('testerSize').onchange({target:{value:String(size)}});
+    assert.equal(api.getState().units.length,size*2);
+  }
   let teamTest=api.getState();
   assert.equal(teamTest.size,4);
   assert.equal(teamTest.units.length,8);

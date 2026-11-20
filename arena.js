@@ -396,12 +396,11 @@
   }
   function setBattle(mode="story",size=4){
     const testing=mode==="tester";
-    if(testing)size=size===4?4:1;
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>mode!=="online"||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
     // Online clients share the host's world coordinates for spell effects.
-    const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (pointer: fine)").matches;
+    const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (any-pointer: fine)").matches;
     const teamOffset=desktopArena?120:0;
     for(const u of units){
       const [x,y]=scenePositions[size][u.team][u.index];
@@ -416,7 +415,7 @@
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
-    state={mode,size,units,round:1,phase:"planning",planningSide:0,
+    state={mode,size,units,desktopArena,round:1,phase:"planning",planningSide:0,
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
       humanByTeam:{0:"a0",1:mode==="pvp"?"e0":null},
@@ -1354,7 +1353,8 @@
       for(const f of messages){
         const width=c.measureText(f.text).width+12,height=fontSize+12;
         if(width>W-24)break;
-        const x=clamp(f.x,width/2+12,W-width/2-12),y=clamp(f.y-f.age*67,height/2+12,H-height/2-12);
+        const margin=state?.desktopArena?camera.x/camera.scale:0;
+        const x=clamp(f.x,width/2+12-margin,W-width/2-12+margin),y=clamp(f.y-f.age*67,height/2+12,H-height/2-12);
         const xs=[x,width/2+12,W-width/2-12],ys=[y,height/2+12,H-height/2-12];
         for(const b of placed){ys.push(b.y-(b.height+height)/2-gap,b.y+(b.height+height)/2+gap);xs.push(b.x-(b.width+width)/2-gap,b.x+(b.width+width)/2+gap);}
         const candidates=[];
@@ -2368,6 +2368,8 @@
     ui.badge.textContent=testing?state.size+"v"+state.size+" CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
       (state.mode==="story"?"PRACTICE":"ONLINE LOBBY");
     $("testerTargetRow").hidden=!testing;
+    $("testerSize").disabled=!planning;
+    $("testerSize").value=String(state.size);
     $("testerTarget").disabled=!planning;
     $("testerTarget").value=testerTargetType;
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
@@ -3180,7 +3182,8 @@
     // Give the outer lower plate clearance from the inner plate's HP row.
     const outward=u.team?1:-1;
     const offset=top&&index===1?32*outward:team.length===4&&index===2?24*outward:0;
-    return {x:clamp(u.x-w/2+offset,8,W-w-8),y:top?u.y-220*scale-64:u.y+14,w,h:52,above:top};
+    const margin=state?.desktopArena?camera.x/camera.scale:0;
+    return {x:clamp(u.x-w/2+offset,8-margin,W-w-8+margin),y:top?u.y-220*scale-64:u.y+14,w,h:52,above:top};
   }
   function plateIsTarget(u,a){
     if(!a)return false;if(a.target===u.id)return true;
@@ -3824,6 +3827,14 @@
     g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#06151f';g.fillRect(0,0,vw,vh);
     const fieldHeight=Math.max(1,vh-30),sceneHeight=state.size>1?730:H,fit=Math.min(vw/W,fieldHeight/sceneHeight);
     camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
+    if(state.desktopArena&&state.phase==="planning"){
+      const visibleWidth=vw/fit;
+      const offset=Math.max(0,Math.min(340,visibleWidth*.18-170,visibleWidth/2-480));
+      for(const unit of state.units){
+        const [x]=scenePositions[state.size][unit.team][unit.index];
+        unit.x=x+(unit.team?offset:-offset);
+      }
+    }
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
     const impactFx=state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;

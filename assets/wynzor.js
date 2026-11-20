@@ -7,15 +7,16 @@
   transitions.src = "./assets/wynzor-transitions.webp?v=0.277.3";
   const poses = [
     [0,0],[.035,16],[.067,17],[.100,1],[.128,18],[.153,19],[.183,2],[.208,3],
-    [.232,20],[.258,4],[.283,21],[.310,5],[.335,22],[.362,23],
-    [.390,6],[.421,24],[.453,7],[.486,25],[.519,8],[.550,26],
-    [.575,27],[.602,28],[.625,9],[.653,29],[.685,10],[.721,30],
-    [.754,11],[.786,31],[.815,12],[.876,13],[.908,14],[.95,15]
+    [.232,20],[.258,4],[.283,21],[.310,5],[.335,22],
+    [.362,6],[.398,24],[.438,23],[.482,7],
+    [.535,25],[.567,9],[.600,26],[.626,10],[.653,31],
+    [.682,11],[.710,28],[.737,27],[.763,29],[.787,30],
+    [.815,12],[.876,13],[.908,14],[.95,15]
   ];
   const release = .815;
   // In-jaw anchor coordinates within each windup and release cel.
   const mouth = {
-    29:[.19,.72],10:[.23,.65],30:[.15,.76],
+    27:[.23,.71],28:[.24,.70],29:[.19,.72],30:[.15,.76],
     11:[.21,.66],31:[.23,.64],12:[.33,.54]
   };
   const colors = ["#eafff5","#b9f4e2","#65baa8","#67d5c2"];
@@ -35,9 +36,11 @@
     const x = 500 - side * 56;
     const size = 302 + (floor - 335) * .23;
     const descent = ease(p/.258);
-    const frame = poses.findLast(([at]) => p >= at)[1];
+    const pose = poses.findLastIndex(([at]) => p >= at);
+    const [at, frame] = poses[pose];
+    const blend = pose > 0 && p < release ? ease((p-at)/.009) : 1;
     return {
-      p, hit, side, floor, size, frame,
+      p, hit, side, floor, size, frame, blend, previousFrame: poses[Math.max(0,pose-1)][1],
       x: x - side * 126 * (1-descent), y: floor - 270 * (1-descent),
       originX: x + side * size*mouth[12][0], originY: floor - size*mouth[12][1],
       endX: target.x, endY: target.y - 93
@@ -67,6 +70,13 @@
     g.save();
     g.translate(x,y);
     g.scale(side,1);
+    if (s.blend < 1) {
+      g.save();
+      g.globalAlpha *= 1-s.blend;
+      tile(g,s.previousFrame,size);
+      g.restore();
+    }
+    g.globalAlpha *= s.blend;
     tile(g, frame, size);
     g.restore();
     if (p >= .258 && p < .404) {

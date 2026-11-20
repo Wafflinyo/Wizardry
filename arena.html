@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 <style>
-.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.6rem;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
+.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.6rem;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget,#testerSize{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
 #initiative{display:none!important}
 #resetTester{margin-left:6px;background:#102b37;border:1px solid var(--line);color:var(--ink);padding:5px 7px;border-radius:6px;font-size:10px;white-space:nowrap}
 .hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
@@ -39,9 +39,12 @@
       <span class="brand-gem">✦</span>
       <div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM</small></div>
     </div>
-  <label id="testerTargetRow" hidden><span class="tester-target-label">Target</span>
+  <div id="testerTargetRow" hidden>
+    <select id="testerSize" aria-label="Team size"><option value="1">1v1</option><option value="2">2v2</option><option value="3">3v3</option><option value="4">4v4</option></select>
+    <label><span class="tester-target-label">Target</span>
     <select id="testerTarget"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option></select>
-  </label>
+    </label>
+  </div>
     <button id="battleHome" type="button">Home</button><button id="resetTester" type="button" hidden>Reset Tester</button><button id="battleFullscreen" type="button">Full screen</button>
   </header>
 
@@ -285,8 +288,8 @@
 <script src="./assets/perfect-defense.js?v=0.274.7" defer></script>
 <script src="./assets/volcanic-eruption.js?v=0.275.1" defer></script>
 <script src="./assets/frozen-touch.js?v=0.276.3" defer></script>
-<script src="./assets/wynzor.js?v=0.277.3" defer></script>
-<script src="./arena.js?v=0.277.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.263.0" defer></script>
+<script src="./assets/wynzor.js?v=0.277.4" defer></script>
+<script src="./arena.js?v=0.277.4" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.277.4" defer></script>
 </body>
 </html>

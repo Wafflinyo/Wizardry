@@ -30,7 +30,7 @@
     }
     ctx.restore();
   }
-  function draw(ctx,{target,time,growth,hp},layer){
+  function draw(ctx,{target,time,growth,hp,maxHp},layer){
     if(growth<=0)return;
     const scale=.60+.30*clamp((target.y-288)/235);
     const swell=1-(1-growth)**3;
@@ -38,7 +38,7 @@
     ctx.translate(target.x,target.y-109*scale*swell);
     ctx.scale(108*scale*swell,124*scale*swell);
     ctx.globalAlpha*=clamp(growth*3);
-    shell(ctx,time,hp/500,layer);
+    shell(ctx,time,hp/maxHp,layer);
     ctx.restore();
   }
   function ripple(ctx,target,{age,popped}){

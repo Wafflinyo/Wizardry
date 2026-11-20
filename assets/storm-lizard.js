@@ -24,7 +24,7 @@
     const reach=mix(187,strikeTip.x*size,turn)+retreat*38;
     return {
       p,hit,size,direction,x:target.x-direction*reach,
-      y:target.y+6, contactY:target.y+6+strikeTip.y*size,
+      y:target.y+6,
       frame:poses.findLast(([at])=>p>=at)?.[1]??0
     };
   }
@@ -158,17 +158,28 @@
     ctx.restore();
   }
 
-  function impact(ctx,scene,target){
+  function impact(ctx,scene,target,layer){
     const age=(scene.p-scene.hit)/.20;
     if(age<0||age>=1)return;
-    const tick=Math.floor(age*23);
-    const strength=(1-age)*(.5+.5*Math.cos(tick*2.2)**2);
-    const y=scene.contactY;
-    for(let i=0;i<4;i++){
-      const offset=(i-1.5)*23;
-      bolt(ctx,target.x+offset,y-83+(i%2)*30,target.x-offset*.5,y+50,tick+i*4,strength,1.65);
+    const front=layer==="front";
+    const beat=Math.floor(age*17);
+    const alpha=(1-ease((age-.53)/.47))*(.78+.22*Math.cos(beat*2.2)**2);
+    const scale=.60+.30*clamp((target.y-288)/235);
+    ctx.save();
+    ctx.translate(target.x,target.y);
+    ctx.scale(scale,scale);
+    ctx.globalAlpha*=alpha;
+    // Offset the two halves so the shoulder and hip arcs wrap around the model.
+    const side=scene.direction;
+    for(const [height,tilt] of [[-155,18],[-80,24]]){
+      const turn=front?side:-side;
+      bolt(ctx,-75*turn,height+tilt,75*turn,height-tilt,beat+height,front?.87:.62,front?1.65:1.3);
     }
-    sparks(ctx,target.x,y,age,29,100);
+    if(front){
+      window.ElectricEel?.electrocute(ctx,scene.p,scene.hit);
+      sparks(ctx,0,-103,age,25,112);
+    }
+    ctx.restore();
   }
 
   window.StormLizard={

@@ -4028,7 +4028,10 @@
         const progress=clamp(action.elapsed/action.duration,0,1);
         const scene=fx.scene(target,progress,action.card.hit);
         renderables.push({type:"storm-lizard",depthY:scene.y+.05,priority:2,draw:()=>fx.draw(g,scene)});
-        if(!preventsHitEffects(action,target))renderables.push({type:"storm-lizard-impact",depthY:target.y+.12,priority:2,draw:()=>fx.impact(g,scene,target)});
+        if(!preventsHitEffects(action,target))for(const layer of ["back","front"]){
+          renderables.push({type:"storm-lizard-impact-"+layer,depthY:target.y+(layer==="back"?-.12:.12),priority:2,
+            draw:()=>fx.impact(g,scene,target,layer)});
+        }
       }
     }
     if(action?.card?.id==="drowzyflowers" && action.stage==="summon"){

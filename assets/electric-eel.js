@@ -101,7 +101,7 @@
       const size=Math.min(w,h);
       sprite(ctx,13,w/2,(h-size)/2+size*1.01,size);
     },
-    scene,
+    scene,electrocute,
     draw(ctx,{x,y,dir,p,hit,frame,connected},layer){
       const wrapped=(frame>=9&&frame<=14)||frame>=16;
       if(!wrapped&&layer==="back")return;

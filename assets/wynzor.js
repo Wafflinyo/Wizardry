@@ -8,13 +8,14 @@
   const landing = .200;
   const chargeStart = .615;
   const release = .815;
+  const blastEnd = .957;
   const poses = [
     [0,0],[.027,16],[.052,17],[.077,1],[.099,18],[.118,19],[.142,2],[.161,3],
     [.180,20],[landing,4],[.219,21],[.241,5],[.260,22],
     [.281,6],[.309,24],[.340,23],[.374,7],
     [.415,25],[.439,9],[.465,26],[.486,10],[.507,31],
     [.551,28],[.574,27],[.592,29],[chargeStart,30],
-    [release,12],[.876,13],[.908,14],[.95,15]
+    [release,12],[blastEnd,13],[.975,14],[.99,15]
   ];
   // The windup uses an unlit mouth cel. Its glow grows independently.
   const chargeMouth = [.15,.76];
@@ -61,7 +62,7 @@
   let poseBuffer;
   function actor(g, s) {
     const { x, y, floor, size, side, p, frame } = s;
-    const fade = 1 - ease((p-.94)/.06);
+    const fade = 1 - ease((p-.975)/.025);
     g.save();
     g.globalAlpha *= fade;
     g.fillStyle = "#182e34";
@@ -125,14 +126,18 @@
         shard(g,mouthX+Math.cos(a)*r,mouthY+Math.sin(a)*r*.73,
           Math.sin(a)*9*charge,-Math.cos(a)*9*charge,.22,colors[i%4]);
       }
-    } else if (p < hit) {
+    }
+    if (p >= release && p < blastEnd) {
+      g.save();
+      const strength=1-ease((p-(blastEnd-.026))/.026);
+      const alpha=g.globalAlpha;
       const q = clamp((p-release)/(hit-release));
       const dx=endX-originX,dy=endY-originY,length=Math.hypot(dx,dy)||1;
       const nx=-dy/length,ny=dx/length;
       const frontX=originX+dx*q,frontY=originY+dy*q;
-      const width=18+q*43,tail=Math.max(0,q-.68);
+      const width=(18+q*43)*(.7+.3*strength),tail=0;
       const tailX=originX+dx*tail,tailY=originY+dy*tail;
-      g.globalAlpha*=.49;
+      g.globalAlpha=alpha*.49*strength;
       g.fillStyle="#a5f3de";
       g.beginPath();
       g.moveTo(tailX,tailY);
@@ -143,16 +148,18 @@
       g.quadraticCurveTo(frontX-dx*.21-nx*width,frontY-dy*.21-ny*width,tailX,tailY);
       g.fill();
       for(let i=0;i<36;i++){
-        const back=i/42,front=q-back;
+        const back=((i/36+(blastEnd-p)*7)%1),front=q-back;
         if(front<0)continue;
         const a=front*15-p*103+i*2.39996;
         const ring=(11+front*35)*(1-back*.68);
         const px=originX+dx*front+nx*Math.cos(a)*ring;
         const py=originY+dy*front+ny*Math.cos(a)*ring;
-        g.globalAlpha=.45+(1-back)*.45;
+        g.globalAlpha=alpha*strength*(.45+(1-back)*.45);
         shard(g,px,py,dx/length*(15+i%5*6),dy/length*(15+i%5*6)+Math.sin(a)*7,.26,colors[i%4]);
       }
-    } else {
+      g.restore();
+    }
+    if (p >= hit) {
       const q = (p-hit)/.15;
       g.globalAlpha *= (1-q)**1.5;
       for(let i=0;i<30;i++){

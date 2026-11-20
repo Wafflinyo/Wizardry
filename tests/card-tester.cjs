@@ -37,8 +37,8 @@ const assert = require('node:assert/strict');
   assert.equal(dummy.name,'Training Dummy');
   assert.equal(dummy.dummy,true);
   assert.equal(dummy.hand.length,0);
-  assert.equal(wizard.hand[0],'drowzyflowers');
-  assert.equal(wizard.hand[1],'bubbleshield');
+  assert.equal(wizard.hand[0],'stormlizard');
+  assert.equal(wizard.hand[1],'drowzyflowers');
   assert.deepEqual([...wizard.hand,...wizard.drawPile],getOrder());
   assert.ok(!wizard.masteries.includes('fire'),'tester can use Fire even without Fire mastery');
   assert.ok(wizard.hp<wizard.maxHp,'healing can be tested on the caster');
@@ -49,7 +49,7 @@ const assert = require('node:assert/strict');
   element('testerTarget').onchange({target:{value:'wizard'}});
   assert.equal(dummy.wizardDummy,true);assert.notEqual(dummy.name,'Training Dummy');
   assert.deepEqual([...wizard.hand],opening);
-  for(const id of ['drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
+  for(const id of ['stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
   api.chooseCard('meteorshower');
   assert.ok(api.discardSelected());
   api.chooseCard('crabgiant');
@@ -121,7 +121,7 @@ const assert = require('node:assert/strict');
   const next = wizard.drawPile[0];
   assert.ok(api.discardSelected());
   assert.equal(wizard.hand.at(-1),next);
-  const seen = new Set(['drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge','meteorshower','crabgiant','ragingwaters','kamikaze','wickedwitch','lightningball','totallyrad','yeti','bulletseed','tree','scaldingair','zen','decaystrength','electrodisc','burningpheonix','electricalcharge','grillmaster','venustrap']);
+  const seen = new Set(['stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge','meteorshower','crabgiant','ragingwaters','kamikaze','wickedwitch','lightningball','totallyrad','yeti','bulletseed','tree','scaldingair','zen','decaystrength','electrodisc','burningpheonix','electricalcharge','grillmaster','venustrap']);
   while(wizard.drawPile.length){
     seen.add(wizard.hand[0]);
     api.chooseCard(wizard.hand[0]);
@@ -144,9 +144,9 @@ const assert = require('node:assert/strict');
   state = api.getState();
   [wizard,dummy] = state.units;
   assert.notEqual(wizard.name,firstName,'reset rerolls the wizard');
-  assert.equal(wizard.hand[0],'drowzyflowers');
+  assert.equal(wizard.hand[0],'stormlizard');
   dummy.hp=1;
-  for(const id of ['drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
+  for(const id of ['stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
   api.chooseCard('meteorshower');
   assert.ok(api.discardSelected());
   api.chooseCard('crabgiant');

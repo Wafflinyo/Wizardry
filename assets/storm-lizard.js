@@ -93,6 +93,7 @@
 
   function traceStrike(ctx,points,width,energy){
     ctx.save();
+    const baseAlpha=ctx.globalAlpha;
     ctx.lineJoin="bevel";
     ctx.lineCap="round";
     ctx.beginPath();
@@ -100,7 +101,7 @@
     for(const [color,scale,opacity] of [
       ["#ff932e",2.2,.16],["#ffb52d",1.4,.45],["#ffe268",1,.96],["#fff5bc",.59,1],["#fffef6",.27,1]
     ]){
-      ctx.globalAlpha=energy*opacity;
+      ctx.globalAlpha=baseAlpha*energy*opacity;
       ctx.lineWidth=width*scale;
       ctx.strokeStyle=color;
       ctx.stroke();
@@ -158,26 +159,59 @@
     ctx.restore();
   }
 
+  // Each fork leaves the tail contact and climbs or drops along the silhouette.
+  const impactForks={
+    front:[
+      {delay:0,width:7,points:[[-66,-105],[-44,-116],[-25,-138],[-9,-130],[8,-165],[29,-177],[39,-205]]},
+      {delay:.07,width:4,points:[[-25,-138],[-38,-158],[-30,-178],[-51,-199]]},
+      {delay:.18,width:3,points:[[8,-165],[21,-146],[39,-150],[54,-164]]},
+      {delay:.04,width:6,points:[[-66,-105],[-39,-93],[-31,-66],[-10,-70],[8,-38],[30,-28],[41,-2]]},
+      {delay:.20,width:3,points:[[-31,-66],[-54,-45],[-49,-28],[-73,-14]]},
+      {delay:.22,width:3,points:[[8,-38],[32,-49],[51,-41],[59,-23]]}
+    ],
+    back:[
+      {delay:.04,width:5,points:[[-66,-105],[-52,-141],[-62,-162],[-42,-193],[-17,-200],[3,-225]]},
+      {delay:.12,width:4,points:[[-66,-105],[-30,-114],[3,-101],[24,-126],[50,-116],[72,-150]]},
+      {delay:.21,width:3,points:[[50,-116],[62,-92],[78,-72],[73,-45]]}
+    ]
+  };
+
   function impact(ctx,scene,target,layer){
     const age=(scene.p-scene.hit)/.20;
     if(age<0||age>=1)return;
-    const front=layer==="front";
-    const beat=Math.floor(age*17);
-    const alpha=(1-ease((age-.53)/.47))*(.78+.22*Math.cos(beat*2.2)**2);
     const scale=.60+.30*clamp((target.y-288)/235);
+    const beat=Math.floor(age*16);
+    const decay=1-ease((age-.34)/.66);
     ctx.save();
     ctx.translate(target.x,target.y);
-    ctx.scale(scale,scale);
-    ctx.globalAlpha*=alpha;
-    // Offset the two halves so the shoulder and hip arcs wrap around the model.
-    const side=scene.direction;
-    for(const [height,tilt] of [[-155,18],[-80,24]]){
-      const turn=front?side:-side;
-      bolt(ctx,-75*turn,height+tilt,75*turn,height-tilt,beat+height,front?.87:.62,front?1.65:1.3);
+    ctx.scale(scale*scene.direction,scale);
+
+    for(const [index,{delay,width,points}] of impactForks[layer].entries()){
+      const growth=clamp((age-delay)*11);
+      if(!growth)continue;
+      const last=growth*(points.length-1);
+      const path=points.slice(0,Math.floor(last)+1);
+      if(last%1){
+        const [x,y]=path.at(-1),[nextX,nextY]=points[path.length];
+        path.push([mix(x,nextX,last%1),mix(y,nextY,last%1)]);
+      }
+      const flicker=.52+.48*Math.cos(beat*1.9+index*2.7)**2;
+      traceStrike(ctx,path,width,decay*flicker*(layer==="front"?1:.68));
     }
-    if(front){
-      window.ElectricEel?.electrocute(ctx,scene.p,scene.hit);
-      sparks(ctx,0,-103,age,25,112);
+    if(layer==="front"){
+      const pulse=1-ease(age/.31);
+      if(pulse>0){
+        const bloom=ctx.createRadialGradient(-62,-105,0,-62,-105,53);
+        bloom.addColorStop(0,"#fffde9");
+        bloom.addColorStop(.32,"#ffdc4ca0");
+        bloom.addColorStop(1,"#ffaf2400");
+        ctx.save();
+        ctx.globalAlpha*=pulse;
+        ctx.fillStyle=bloom;
+        ctx.fillRect(-115,-158,106,106);
+        ctx.restore();
+      }
+      sparks(ctx,-62,-105,age,24,115);
     }
     ctx.restore();
   }

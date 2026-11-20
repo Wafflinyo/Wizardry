@@ -13,12 +13,14 @@
     if (progress < 0 || progress >= 1) return;
     const scale = .60 + .30 * Math.max(0, Math.min(1, (target.y - 288) / 235));
     const frame = Math.floor(suppressed ? 10 + progress * 6 : progress * 16);
-    const drift = suppressed ? 0 : 120 * Math.max(0, 1 - progress / .57) ** 2;
+    const drift = suppressed ? 0 : 26 * Math.max(0, 1 - progress / .57) ** 2;
+    const faceHeight = target.dummy && !target.wizardDummy ? 174 :
+      target.hat === "pointed" && target.robe === "classic" ? 123 : 140;
     ctx.save();
-    ctx.translate(target.x, target.y - 104 * scale);
+    ctx.translate(target.x, target.y - (faceHeight + 18) * scale);
     ctx.scale(target.team ? scale : -scale, scale);
     ctx.globalAlpha *= Math.min(1, progress * 14, (1 - progress) * 8);
-    sprite(ctx, frame, 46 - drift, 0, suppressed ? 132 : 176);
+    sprite(ctx, frame, -56 - drift, 0, suppressed ? 132 : 176);
     ctx.restore();
   }
 

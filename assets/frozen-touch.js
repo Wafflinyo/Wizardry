@@ -18,7 +18,7 @@
     ctx.translate(target.x, target.y - 104 * scale);
     ctx.scale(target.team ? scale : -scale, scale);
     ctx.globalAlpha *= Math.min(1, progress * 14, (1 - progress) * 8);
-    sprite(ctx, frame, -drift, 0, suppressed ? 200 : 278);
+    sprite(ctx, frame, 46 - drift, 0, suppressed ? 132 : 176);
     ctx.restore();
   }
 

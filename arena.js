@@ -3964,7 +3964,7 @@
       const touching=action?.card?.id==="frozentouch"&&action.stage==="summon"&&action.target===u.id;
       const suppressed=state.flashes.findLast(f=>f.frozenTouchRecipient===u.id);
       if(touching||suppressed)renderables.push({
-        type:"frozen-touch",depthY:u.y+.1,priority:2,
+        type:"frozen-touch",depthY:u.y-.08,priority:2,
         draw:()=>window.FrozenTouch?.draw(g,u,touching?action.elapsed/action.duration:suppressed.age/.68,!touching)
       });
       const forming=action?.card?.id==="crystalicemirrors"&&action.stage==="summon"&&action.target===u.id;

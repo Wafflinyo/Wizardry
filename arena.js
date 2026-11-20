@@ -3869,7 +3869,10 @@
       const fx=window.PerfectDefense;
       if(fx&&(sand||formingSand)){
         const progress=formingSand?clamp(action.elapsed/action.duration,0,1):1;
-        if(formingSand)fx.travel(g,u,progress);
+        if(formingSand)renderables.push({
+          type:"crawling-sand",depthY:u.y+.03,priority:2,
+          draw:()=>fx.travel(g,u,progress)
+        });
         const growth=sand?1:clamp((progress-.53)/(action.card.hit-.53),0,1);
         if(growth>0)for(const layer of ["back","front"]){
           renderables.push({type:"sand-dome-"+layer,depthY:u.y+(layer==="back"?-.065:.065),priority:2,

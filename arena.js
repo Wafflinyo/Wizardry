@@ -136,7 +136,7 @@
     accuracy:1,icon:"❄",rarity:"EPIC",duration:1850,hit:.60,short:"100% ACCURACY",
     description:"Shield yourself or an ally from all hits of the next eligible incoming spell. Fire and Lightning bypass the shield. Lasts until triggered."});
   CARDS.push({id:"wynzor",name:"Wynzor",school:"wind",cost:8,target:"enemy",kind:"damage",
-    damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:5000,hit:.875,short:"80% ACCURACY",
+    damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:4700,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');

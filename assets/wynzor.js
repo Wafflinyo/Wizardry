@@ -5,22 +5,20 @@
   const ease = n => { const q = clamp(n); return q * q * (3 - 2 * q); };
   const transitions = new Image();
   transitions.src = "./assets/wynzor-transitions.webp?v=0.277.5";
-  const landing = .230;
-  const chargeStart = .705;
+  const landing = .200;
+  const chargeStart = .615;
   const release = .815;
   const poses = [
-    [0,0],[.031,16],[.060,17],[.089,1],[.114,18],[.136,19],[.163,2],[.185,3],
-    [.207,20],[landing,4],[.252,21],[.277,5],[.299,22],
-    [.323,6],[.355,24],[.391,23],[.430,7],
-    [.477,25],[.505,9],[.535,26],[.558,10],[.582,31],
-    [.608,11],[.633,28],[.658,27],[.680,29],[chargeStart,30],
+    [0,0],[.027,16],[.052,17],[.077,1],[.099,18],[.118,19],[.142,2],[.161,3],
+    [.180,20],[landing,4],[.219,21],[.241,5],[.260,22],
+    [.281,6],[.309,24],[.340,23],[.374,7],
+    [.415,25],[.439,9],[.465,26],[.486,10],[.507,31],
+    [.551,28],[.574,27],[.592,29],[chargeStart,30],
     [release,12],[.876,13],[.908,14],[.95,15]
   ];
-  // In-jaw anchor coordinates within each windup and release cel.
-  const mouth = {
-    27:[.23,.71],28:[.24,.70],29:[.19,.72],30:[.15,.76],
-    11:[.21,.66],31:[.23,.64],12:[.33,.54]
-  };
+  // The windup uses an unlit mouth cel. Its glow grows independently.
+  const chargeMouth = [.15,.76];
+  const releaseMouth = [.33,.54];
   const colors = ["#eafff5","#b9f4e2","#65baa8","#67d5c2"];
 
   function tile(g, frame, size) {
@@ -44,7 +42,7 @@
     return {
       p, hit, side, floor, size, frame, blend, previousFrame: poses[Math.max(0,pose-1)][1],
       x: x - side * 126 * (1-descent), y: floor - 270 * (1-descent),
-      originX: x + side * size*mouth[12][0], originY: floor - size*mouth[12][1],
+      originX: x + side * size*releaseMouth[0], originY: floor - size*releaseMouth[1],
       endX: target.x, endY: target.y - 93
     };
   }
@@ -105,15 +103,16 @@
   }
 
   function blast(g, s) {
-    const { p, hit, originX, originY, endX, endY, side, size, frame } = s;
+    const { p, hit, originX, originY, endX, endY, side, size } = s;
     if (p < chargeStart || p >= hit+.15) return;
     g.save();
     if (p < release) {
-      const charge = ease((p-chargeStart)/(release-chargeStart));
-      const [mouthOffset, mouthHeight] = mouth[frame];
+      const charge = clamp((p-chargeStart)/(release-chargeStart));
+      const [mouthOffset, mouthHeight] = chargeMouth;
       const mouthX = s.x + side*size*mouthOffset;
       const mouthY = s.floor - size*mouthHeight;
-      const radius = 4+charge*31;
+      g.globalAlpha *= Math.min(1,charge*1.7);
+      const radius = 2+charge**1.35*33;
       const glow = g.createRadialGradient(mouthX,mouthY,0,mouthX,mouthY,radius*1.5);
       glow.addColorStop(0,"#f4fff5");
       glow.addColorStop(.45,"#92f3d8b0");
@@ -124,7 +123,7 @@
         const a = i*2.39996 - p*62;
         const r = radius*(.55+((i*.381-p*14)%1+1)%1);
         shard(g,mouthX+Math.cos(a)*r,mouthY+Math.sin(a)*r*.73,
-          Math.sin(a)*9,-Math.cos(a)*9,.22,colors[i%4]);
+          Math.sin(a)*9*charge,-Math.cos(a)*9*charge,.22,colors[i%4]);
       }
     } else if (p < hit) {
       const q = clamp((p-release)/(hit-release));

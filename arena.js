@@ -12,7 +12,7 @@
     queue:$("queueButton"),auto:$("autoButton"),resolve:$("resolveButton"),plans:$("plannedList"),
     status:$("status"),reset:$("resetButton"),hat:$("wizardHat"),robe:$("wizardRobe"),
     robeColor:$("wizardColor"),hatColor:$("wizardHatColor"),
-    facialHair:$("wizardFacialHair"),skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
+    headHair:$("wizardHeadHair"),facialHair:$("wizardFacialHair"),skinColor:$("wizardSkinColor"),confirm:$("confirmTarget"),
     statusPopup:$("statusPopup"),statusName:$("statusName"),
     statusText:$("statusText"),statusClose:$("statusClose")};
   // Cards use accuracy rolls, never manual tracing. The lightning summon
@@ -284,12 +284,44 @@
       if(t>=DEFEAT_FRAME_STARTS[i])return i;
     return 0;
   }
+  // Face anchors in 128px atlas cells. The last defeat poses turn the brim downward.
+  const hairAnchors={
+    wizard:[[65,44],[65,42],[65,40],[65,37],[65,37],[65,38],[64,40],[65,42],
+      [65,44],[65,45],[65,45],[65,45],[58,44],[58,44],[58,44],[59,45],
+      [59,44],[59,44],[59,43],[58,41],[58,40],[58,41],[58,44],[58,44],
+      [58,46],[58,46],[58,45],[58,45]],
+    defeat:[[60,49],[59,44],[57,36],[58,52],[60,59],[63,74],[73,86],[73,87]]
+  };
+  function drawHeadHair(ctx,look,kind,frame,top){
+    const style=look?.headHair;
+    if(style!=="medium"&&style!=="long")return;
+    const [x,y]=hairAnchors[kind][frame],long=style==="long";
+    ctx.save();
+    ctx.translate(-74,top);
+    ctx.scale(148/128,220/128);
+    ctx.translate(x,y);
+    if(kind==="defeat"&&frame>=4)ctx.rotate([.12,.35,.75,.75][frame-4]);
+    function lock(color,points){
+      ctx.beginPath();
+      points.forEach(([px,py],index)=>index?ctx.lineTo(px,py):ctx.moveTo(px,py));
+      ctx.closePath();ctx.fillStyle=color;ctx.fill();
+    }
+    const end=long?30:16;
+    lock("#352321",[[-15,8],[-4,5],[2,3],[1,11],[-4,end-2],[-7,end-5],
+      [-13,end+1],[-14,end-3],[long?-22:-18,end],[-17,13]]);
+    lock("#684232",[[-14,8],[-7,6],[-9,14],[long?-19:-16,end-2],[-15,13]]);
+    lock("#83553b",[[-7,6],[-3,5],[-5,14],[-12,end-1],[-10,14]]);
+    lock("#503127",[[-3,5],[2,3],[0,12],[-5,end-4],[-4,12]]);
+    ctx.restore();
+  }
   function drawDefeatSprite(ctx,elapsedMs,look){
     if(!defeatAtlasReady())return false;
     const i=defeatFrame(elapsedMs);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=appearanceAtlas(defeatAtlas,"defeat",look);
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220+footPadding(defeatAtlas,i)+7,148,220);
+    const top=-220+footPadding(defeatAtlas,i)+7;
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+    drawHeadHair(ctx,look,"defeat",i,top);
     ctx.restore();return true;
   }
   const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
@@ -309,7 +341,9 @@
     const i=wizardFrame(stage,p,ms,time,lowerFrom);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=appearanceAtlas(wizardAtlas,"wizard",look);
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,-220+footPadding(wizardAtlas,i)+7,148,220);
+    const top=-220+footPadding(wizardAtlas,i)+7;
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+    drawHeadHair(ctx,look,"wizard",i,top);
     const armor=armorProgress(look);
     if(armor>0){
       ctx.translate(-74,-220+footPadding(wizardAtlas,i)+7);ctx.scale(148/128,220/128);
@@ -363,7 +397,7 @@
     if(saved&&typeof saved==="object"&&!Array.isArray(saved))savedLooks=saved;}catch{}
   function saveLook(u){
     savedLooks[u.id]={hat:u.hat,robe:u.robe,robeColor:u.robeColor,
-      facialHair:u.facialHair,hatColor:u.hatColor,skinColor:u.skinColor};
+      headHair:u.headHair,facialHair:u.facialHair,hatColor:u.hatColor,skinColor:u.skinColor};
     try{localStorage.setItem(LOOK_STORAGE_KEY,JSON.stringify(savedLooks));}catch{}
   }
   // Rune drawings play automatically in the arena for all combatants.
@@ -384,6 +418,7 @@
       robe:"classic",
       robeColor:profile?.robeColor||pick(custom.robeColor,colors?.robeColors,preset.robeColor),
       hatColor:profile?.hatColor||pick(custom.hatColor,colors?.hatColors,preset.hatColor),
+      headHair:(!entry&&!savedProfile?custom.headHair:profile?.headHair)||"none",
       facialHair:(!entry&&!savedProfile?custom.facialHair:profile?.facialHair)||"original",
       skinColor:profile?.skinColor||pick(custom.skinColor,colors?.skinColors,preset.skinColor),
       armRaise:0,facing:team?-.74:.74,defeatElapsedMs:null};
@@ -396,7 +431,7 @@
     u.wizardDummy=type==="wizard";
     if(!u.wizardDummy){u.name="Training Dummy";return;}
     const look=createUnit(ENEMIES[0],1,0,true);
-    for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair"])u[key]=look[key];
+    for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair"])u[key]=look[key];
   }
   function switchTesterTarget(type){
     if(state?.mode!=="tester"||state.phase!=="planning"||!["wood","wizard"].includes(type))return;
@@ -2403,11 +2438,11 @@
     // Dress-up controls affect the selected wizard immediately on Canvas.
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
     ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=
-      ui.hatColor.disabled=ui.facialHair.disabled=ui.skinColor.disabled=!canDress;
+      ui.hatColor.disabled=ui.headHair.disabled=ui.facialHair.disabled=ui.skinColor.disabled=!canDress;
     if(c){
       ui.hat.value=c.hat;ui.robe.value=c.robe;
       ui.robeColor.value=c.robeColor;
-      ui.hatColor.value=c.hatColor;ui.skinColor.value=c.skinColor;ui.facialHair.value=c.facialHair;
+      ui.hatColor.value=c.hatColor;ui.skinColor.value=c.skinColor;ui.facialHair.value=c.facialHair;ui.headHair.value=c.headHair;
       for(const [input,color] of [[ui.robeColor,c.robeColor],
           [ui.hatColor,c.hatColor],[ui.skinColor,c.skinColor]])
         input.style.setProperty("--swatch",color);
@@ -2643,7 +2678,7 @@
     ui.auto.onclick=()=>{};
     ui.resolve.onclick=()=>{};
     for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"],
-        [ui.hatColor,"hatColor"],[ui.skinColor,"skinColor"],[ui.facialHair,"facialHair"]]){
+        [ui.hatColor,"hatColor"],[ui.skinColor,"skinColor"],[ui.headHair,"headHair"],[ui.facialHair,"facialHair"]]){
       input.onchange=()=>{
         const u=caster();
         if(state.phase!=="planning"||!u||(u.team===1&&state.mode!=="pvp"))return;

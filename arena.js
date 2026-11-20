@@ -129,6 +129,9 @@
   CARDS.push({"id": "drowzyflowers", "name": "Drowzy Flowers", "school": "nature", "cost": 5, "target": "enemy", "kind": "drowzyflowers", "accuracy": 1, "icon": "❀", "rarity": "RARE", "duration": 3900, "hit": 0.77, "short": "100% ACCURACY", "description": "Pollen puts one enemy to sleep for up to 3 rounds. Wake chance rises from 20% to 30% to 40%. Wakes automatically on the fourth round."});
   CARDS.push({"id":"stormlizard","name":"Storm Lizard","school":"lightning","cost":8,"target":"enemy","kind":"damage","damage":730,"accuracy":0.8,"icon":"ϟ","rarity":"EPIC","duration":5100,"hit":0.78,"short":"80% ACCURACY","description":"A skybolt summons a storm lizard. It roars, pivots, and electrocutes one enemy with a tail swipe for 730 base Lightning damage."});
   CARDS.push({"id":"perfectdefense","name":"Perfect Defense","school":"earth","cost":5,"target":"ally","kind":"perfectdefense","shieldHp":580,"accuracy":1,"icon":"◆","rarity":"RARE","duration":4800,"hit":0.82,"short":"100% ACCURACY","description":"Raise a 580 HP sand dome around yourself or a living ally. Excess damage reaches the wizard. Recasting restores the dome to 580 HP."});
+  CARDS.push({id:"volcaniceruption",name:"Volcanic Eruption",school:"fire",cost:8,target:"all_enemies",kind:"volcaniceruption",
+    damage:430,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:1,icon:"♨",rarity:"EPIC",duration:4860,hit:.6,
+    short:"100 / 80 / 60 / 40%",description:"Lava strikes enemies in random order. Hit chances: 100%, 80%, 60%, 40%. Each hit deals 430 damage with a 30% chance of Extreme Burn (100 per round for 5 rounds)."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -873,10 +876,21 @@
     if(a.stage==="summon"&&a.card.kind==="sticksandstones")
       for(const entry of a.stoneTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
+    if(a.stage==="summon"&&a.card.id==="volcaniceruption"){
+      for(const entry of a.lavaTargets||[]){
+        if(entry.hit||a.elapsed<entry.hitAt)continue;
+        if(entry.lands)applyFallingHit(a,entry);
+        else{
+          entry.hit=true;
+          const target=getUnit(entry.id);
+          if(target?.hp>0)flash(target,"MISS","#ffd2aa");
+        }
+      }
+    }
     if(a.stage==="summon"&&a.card.id==="meteorshower")
       for(const entry of a.meteorTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
-    if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
       a.shatterPending=false;
@@ -932,6 +946,11 @@
       }else if(a.card.kind==="sticksandstones"){
         a.stoneTargets=sticksAndStonesTargets(caster);
         startStage(a,"summon",(a.stoneTargets.at(-1)?.hitAt??2610)+650);
+      }else if(a.card.id==="volcaniceruption"){
+        a.lavaTargets=shuffleDeck(alive(1-caster.team)).slice(0,4).map((u,i)=>({
+          id:u.id,x:u.x,y:u.y,hitAt:2920+i*430,hit:false,lands:Math.random()<[1,.8,.6,.4][i]
+        }));
+        startStage(a,"summon",(a.lavaTargets.at(-1)?.hitAt??2920)+650);
       }else if(a.card.id==="meteorshower"){
         const targets=alive(1-caster.team);
         a.meteorTargets=targets.map((u,i)=>({id:u.id,x:u.x,y:u.y,hitAt:1020+i*360,hit:false}));
@@ -2370,7 +2389,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
     ui.chosenTarget.textContent=card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
-      (card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · 320 each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
+      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · 320 each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -2452,7 +2471,7 @@
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
         b.dataset.element=k.school;
         const water=k.id==="poseidon";
-        const effect=k.id==="perfectdefense"?'<span class="spell-effect"><b>580 HP SAND DOME</b><span>SELF / ALLY</span></span>':k.id==="stormlizard"?'<span class="spell-effect"><b>TAIL SWIPE · 730</b><span>1 ENEMY · LIGHTNING</span></span>':k.id==="drowzyflowers"?'<span class="spell-effect"><b>SLEEP · 3 ROUNDS</b><span>WAKE 20 / 30 / 40%</span></span>':k.id==="bubbleshield"?'<span class="spell-effect"><b>360 HP BARRIER</b><span>SELF / ALLY</span></span>':k.id==="darksorcerer"?'<span class="spell-effect"><b>570 TO EACH ENEMY</b><span>20% CURSE · 50 × 3</span></span>':k.id==="sticksandstones"?'<span class="spell-effect"><b>320 TO EACH ENEMY</b><span>15% DECAY OF STRENGTH EACH</span></span>':k.id==="growth"?'<span class="spell-effect"><b>+25% NATURE HEAL / DAMAGE</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
+        const effect=k.id==="volcaniceruption"?'<span class="spell-effect"><b>30% EXTREME BURN</b><span>RANDOM ENEMY ORDER</span></span>':k.id==="perfectdefense"?'<span class="spell-effect"><b>580 HP SAND DOME</b><span>SELF / ALLY</span></span>':k.id==="stormlizard"?'<span class="spell-effect"><b>TAIL SWIPE · 730</b><span>1 ENEMY · LIGHTNING</span></span>':k.id==="drowzyflowers"?'<span class="spell-effect"><b>SLEEP · 3 ROUNDS</b><span>WAKE 20 / 30 / 40%</span></span>':k.id==="bubbleshield"?'<span class="spell-effect"><b>360 HP BARRIER</b><span>SELF / ALLY</span></span>':k.id==="darksorcerer"?'<span class="spell-effect"><b>570 TO EACH ENEMY</b><span>20% CURSE · 50 × 3</span></span>':k.id==="sticksandstones"?'<span class="spell-effect"><b>320 TO EACH ENEMY</b><span>15% DECAY OF STRENGTH EACH</span></span>':k.id==="growth"?'<span class="spell-effect"><b>+25% NATURE HEAL / DAMAGE</b><span>SELF / ALLY · UNTIL USED</span></span>':k.id==="electriceel"?'<span class="spell-effect"><b>25% SKIP PENDING ACTION</b><span>THIS ROUND ONLY</span></span>':k.id==="crystalicemirrors"?'<span class="spell-effect"><b>40% REFLECT OWN DAMAGE</b><span>3 ROUNDS</span></span>':k.id==="reikel"?'<span class="spell-effect"><b>30% DESTROY A BUFF</b><span>1 ENEMY</span></span>':k.id==="quicksand"?'<span class="spell-effect"><b>530 DAMAGE ON 3RD CAST</b><span>5 ROUNDS</span></span>':k.id==="manascourge"?
           '<span class="spell-effect"><b>NO MANA REGEN</b><span>UNTIL IT BLOCKS A GAIN</span></span>':k.id==="soulharvest"?
           '<span class="spell-effect"><b>SOULLESS · +250 DAMAGE</b><span>AFTER 3 ROUNDS</span></span>':k.id==="meteorshower"?'<span class="spell-effect"><b>25% DECAY OF STRENGTH</b><span>ONE METEOR PER ENEMY</span></span>':k.id==="crabgiant"?'<span class="spell-effect"><b>PINCER SNAP</b><span>1 ENEMY</span></span>':k.kind==="ragingwaters"?'<span class="spell-effect"><b>+25% NEXT WATER DAMAGE</b><span>SELF / ALLY · ONE SPELL</span></span>':k.id==="kamikaze"?'<span class="spell-effect"><b>DELAYED EXPLOSION</b><span>1 ENEMY</span></span>':k.kind==="wickedwitch"?'<span class="spell-effect"><b>4 BEAMS · 25% EACH</b><span>30% MATCHING STATUS</span></span>':k.kind==="lightningball"?'<span class="spell-effect"><b>70% → 60% → 50% BOUNCE</b><span>−10% DAMAGE PER BOUNCE</span></span>':k.kind==="totallyrad"?'<span class="spell-effect"><b>15% FROSTBITE</b><span>50 × 3 ROUNDS</span></span>':k.id==="yeti"?'<span class="spell-effect"><b>OVERHEAD SMASH</b><span>1 ENEMY</span></span>':k.kind==="bulletseed"?'<span class="spell-effect"><b>40% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="tree"?'<span class="spell-effect"><b>30% HEALING SEED</b><span>75 HP × 5 ROUNDS</span></span>':k.kind==="scaldingair"?'<span class="spell-effect"><b>40% EXTREME BURN</b><span>100 × 5 ROUNDS</span></span>':k.kind==="zen"?'<span class="spell-effect"><b>CLEANSE 1 RUNE</b><span>SELF OR ALLY</span></span>':k.id==="electrodisc"?'<span class="spell-effect"><b>120 × 3 DISCS</b><span>1 ENEMY</span></span>':k.id==="burningpheonix"?'<span class="spell-effect"><b>FLAMING DIVE</b><span>1 ENEMY</span></span>':k.id==="decaystrength"?'<span class="spell-effect"><b>+20% DAMAGE TAKEN</b><span>NEXT SPELL OR STATUS HIT</span></span>':k.id==="acidair"?'<span class="spell-effect"><b>EXTREME POISON</b><span>100 × 5 TURNS</span></span>':k.id==="cyclops"?'<span class="spell-effect"><b>CLUB THROW · 760</b><span>1 ENEMY</span></span>':k.id==="boulderweight"?'<span class="spell-effect"><b>−30 ACCURACY</b><span>1 ENEMY · 3 TURNS</span></span>':k.id==="heizmann"?'<span class="spell-effect"><b>ICE CLEAVE · 600</b><span>20% FREEZE · ELSE +350</span></span>':k.id==="venustrap"?
           '<span class="spell-effect"><b>ENGULF · 400</b><span>1 ENEMY</span></span>':k.id==="grillmaster"?
@@ -2515,7 +2534,7 @@
         b.setAttribute("aria-label",k.name+", "+k.cost+" mana, "+
           ((k.kind==="bubbleshield"||k.kind==="perfectdefense")?k.shieldHp+" HP barrier for yourself or an ally":k.kind==="growth"?"25 percent more direct healing or damage on your or an ally’s next Nature cast":k.kind==="ragingwaters"?"rune granting 25 percent next Water spell damage":k.kind==="zen"?"cleanse one chosen negative rune":k.id==="decaystrength"?"damage vulnerability":k.id==="acidair"?"Extreme Poison":k.id==="electricalcharge"?"rune granting one mana per Lightning spell received":k.id==="flowstate"?"mana bonus: 1 extra mana for the next 3 turns":k.id==="gunpowderkiss"?"three-turn Gunpowder Coat: Fire hits trigger 150 extra damage once per turn":k.id==="thornwrap"?"three-turn curse: 150 damage per spell attempt and minus 15 accuracy points":k.id==="winddome"?"protection against the next damaging spell":k.id==="rod"?"three-round self debuff that redirects 20 percent of Lightning spell damage into self-healing":k.kind==="freezing"?"next Ice spell has 50% freeze chance":k.kind==="turbulence"?"adds 50% failure chance to the next spell":k.kind==="rage"?"grants 20% damage boost to the next damaging Fire spell":k.kind==="shield"?"reduces the next damaging spell by 25%":(k.kind==="heal"||k.kind==="teamheal"||k.kind==="regen"||k.kind==="teamregen")?"heals up to "+k.heal+(k.kind==="teamheal"?" HP per living ally":" HP to a living ally"):
             (k.id==="penguins"?300:k.id==="ronin"?450:k.damage)+" "+k.school+" damage")+", "+Math.round(k.accuracy*100)+
-          "% accuracy. "+(k.id==="perfectdefense"||k.id==="drowzyflowers"||k.id==="bubbleshield"||k.id==="darksorcerer"||k.id==="sticksandstones"||k.id==="growth"||k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
+          "% accuracy. "+(k.id==="volcaniceruption"||k.id==="perfectdefense"||k.id==="drowzyflowers"||k.id==="bubbleshield"||k.id==="darksorcerer"||k.id==="sticksandstones"||k.id==="growth"||k.id==="electriceel"||k.id==="crystalicemirrors"||k.id==="reikel"||k.id==="quicksand"||k.id==="sirensmelody"||k.id==="manascourge"||k.id==="soulharvest"||k.id==="meteorshower"||k.id==="crabgiant"||k.id==="ragingwaters"||k.id==="kamikaze"||k.id==="wickedwitch"||k.id==="lightningball"||k.id==="totallyrad"||k.id==="yeti"||k.id==="bulletseed"||k.id==="tree"||k.id==="scaldingair"||k.id==="electrodisc"||k.id==="decaystrength"||k.id==="acidair"||k.id==="cyclops"||k.id==="boulderweight"||k.id==="heizmann"||k.id==="venustrap"||k.id==="grillmaster"||k.id==="electricalcharge"||k.id==="croc"||k.id==="jack"||k.id==="windfist"||k.id==="flowstate"||k.id==="gunpowderkiss"||k.id==="zeus"||k.id==="kineticsand"||k.id==="thornwrap"||k.id==="blizzard"?k.description:k.id==="penguins"?k.description:k.id==="winddome"?k.description:k.id==="centaur"?k.description:k.id==="undead"?k.description:k.id==="rod"?k.description:k.id==="bloom"?k.description:k.id==="devil"?k.description:k.id==="octo"?k.description:k.id==="scorpion"?k.description:k.id==="freezing"?k.description:k.id==="healingaura"?k.description:k.id==="soul"?k.description:k.id==="turbulence"?k.description:k.id==="rage"?k.description:k.id==="static"?k.description:k.id==="calming"?k.description:k.id==="solidity"?k.description:k.id==="frosty"?k.description:k.id==="bender"?k.description:k.id==="reaper"?k.description:k.id==="ronin"?k.description:k.id==="arrows"?k.description:k.id==="thunder"?k.description:k.id==="shark"?k.description:k.id==="bear"?k.description:k.id==="dragon"?
             "A baby dragon falls from the sky in a smoke cloud, charges and fires a large fireball. Deals 650 to its main target and 150 to immediate left and right enemy formation neighbors. 25 percent burn chance on main target: 50 damage at the start of each of the next three rounds. Then it flies off.":
             k.id==="vampire"?
             "A coffin rises and opens. The vampire flies entirely out to an enemy and siphons 550 damage. It flies back to the caster and presents a red orb that floats to the caster, healing 50% of mastery-adjusted base damage without a damage-variant roll, capped at maximum health.":
@@ -3418,7 +3437,8 @@
     output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
   }
   function paintCardPortrait(card,c,width,height){
-      if(card.id==="perfectdefense")window.PerfectDefense?.portrait(c,width,height);
+      if(card.id==="volcaniceruption")window.VolcanicEruption?.portrait(c,width,height);
+      else if(card.id==="perfectdefense")window.PerfectDefense?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
@@ -3563,6 +3583,7 @@
     window.WIZARDRY_CENTAUR_V100?.onReady(drawCardArts);
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.PerfectDefense?.onReady(drawCardArts);
+    window.VolcanicEruption?.onReady(drawCardArts);
     window.StormLizard?.onReady(drawCardArts);
     window.DrowzyFlowers?.onReady(drawCardArts);
     window.GrowthArt?.onReady(drawCardArts);
@@ -3820,7 +3841,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["perfectdefense","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(["volcaniceruption","perfectdefense","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4093,6 +4114,17 @@
           renderables.push({type:"batted-stone",depthY:lerp(opts.y,entry.y,travel)+.12,priority:2,
             draw:()=>spell.stone(g,{...opts,entry,index})});
         });
+      }
+    }
+    if(action?.card?.id==="volcaniceruption"&&action.stage==="summon"){
+      const fx=window.VolcanicEruption;
+      if(fx){
+        renderables.push({type:"volcano",depthY:510,priority:2,draw:()=>fx.cone(g,action.elapsed,action.duration)});
+        for(const [i,entry] of action.lavaTargets.entries()){
+          const flightProgress=fx.flightProgress(action.elapsed-entry.hitAt);
+          renderables.push({type:"lava",depthY:510+(entry.y-510)*flightProgress+.12,priority:2,
+            draw:()=>fx.blob(g,entry,i,action.elapsed-entry.hitAt)});
+        }
       }
     }
     if(action?.card?.id==="meteorshower"&&action.stage==="summon"){

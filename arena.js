@@ -294,8 +294,9 @@
   };
   function drawHeadHair(ctx,look,kind,frame,top,time){
     const style=look?.headHair;
-    if(style!=="medium"&&style!=="long")return;
-    const [x,y]=hairAnchors[kind][frame],long=style==="long";
+    const curly=style==="curlyMedium"||style==="curlyLong";
+    if(!curly&&style!=="medium"&&style!=="long")return;
+    const [x,y]=hairAnchors[kind][frame],long=style==="long"||style==="curlyLong";
     ctx.save();
     ctx.translate(-74,top);
     ctx.scale(148/128,220/128);
@@ -320,7 +321,30 @@
       ctx.bezierCurveTo(...point(.68,.70),...point(.29,.75),...point(0,.45));
       ctx.closePath();ctx.fill();
     }
-    if(long){
+    if(curly){
+      // Overlapping ringlets follow the shoulder. Keep each root still and taper each tip.
+      ctx.lineCap="round";ctx.lineJoin="round";
+      for(let layer=0;layer<3;layer++){
+        const length=(long?29:12)-layer*1.5;
+        const turns=(long?3.35:1.65)-layer*.12;
+        const radius=long?2.65:1.45;
+        let previous;
+        for(let i=0;i<=40;i++){
+          const t=i/40,angle=t*turns*2*Math.PI+layer*1.4;
+          const curl=radius*Math.sin(Math.min(1,t*5)*Math.PI/2);
+          const sway=Math.sin(phase-2.8*t+layer*.5)*t*t*settle;
+          const px=-layer*3-length*t+curl*Math.sin(angle);
+          const py=5+layer*.75+(long?9:2)*(2*t-t*t)+curl*Math.cos(angle)+sway*(long?2.6:.55);
+          if(previous){
+            ctx.beginPath();ctx.moveTo(...previous);ctx.lineTo(px,py);
+            ctx.lineWidth=(long?3.3:2.15)*(1-.64*t);
+            ctx.strokeStyle=Math.cos(angle)>.24?["#795443","#875f48","#76503f"][layer]:["#483029","#593c30","#644437"][layer];
+            ctx.stroke();
+          }
+          previous=[px,py];
+        }
+      }
+    }else if(long){
       strand(-3,6,29,9,6,.15,"#49302a");
       strand(-7,7,27,6,4.4,.55,"#674637");
       strand(-1,5,25,12,4.5,-.4,"#583a30");

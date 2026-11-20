@@ -15,7 +15,7 @@ function normalize(input,cards){
  if(deck.length!==24)throw Error('Your grimoire must contain exactly 24 cards from your two mastery elements.');
  const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>3)throw Error('A grimoire can hold up to 3 copies of each spell.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
- return {id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:'pointed',robe:'classic',headHair:["medium","long"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
+ return {id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}

@@ -292,7 +292,7 @@
       [58,46],[58,46],[58,45],[58,45]],
     defeat:[[60,49],[59,44],[57,36],[58,52],[60,59],[63,74],[73,86],[73,87]]
   };
-  function drawHeadHair(ctx,look,kind,frame,top){
+  function drawHeadHair(ctx,look,kind,frame,top,time){
     const style=look?.headHair;
     if(style!=="medium"&&style!=="long")return;
     const [x,y]=hairAnchors[kind][frame],long=style==="long";
@@ -301,24 +301,33 @@
     ctx.scale(148/128,220/128);
     ctx.translate(x,y);
     if(kind==="defeat"&&frame>=4)ctx.rotate([.12,.35,.75,.75][frame-4]);
-    function lock(color,points){
+    // The brim pins each root. Motion grows along the strand and reaches the tip last.
+    const phase=time*Math.PI/720;
+    const settle=kind==="defeat"?Math.exp(-time/430):1;
+    function strand(rootX,rootY,length,drop,width,offset,color){
+      function point(t,edge){
+        const lag=phase-2.8*t+offset;
+        const flex=t*t*settle;
+        const sway=(long?3.1:.65)*flex*Math.sin(lag);
+        const drift=(long?1.1:.3)*flex*Math.cos(lag*.5+offset);
+        return [rootX-length*t+drift,rootY+drop*(1-(1-t)**2)+sway+edge*width];
+      }
+      ctx.fillStyle=color;
       ctx.beginPath();
-      points.forEach(([px,py],index)=>index?ctx.lineTo(px,py):ctx.moveTo(px,py));
-      ctx.closePath();ctx.fillStyle=color;ctx.fill();
+      ctx.moveTo(...point(0,-.45));
+      ctx.bezierCurveTo(...point(.3,-.65),...point(.72,-.25),...point(.96,-.13));
+      ctx.bezierCurveTo(...point(1.02,-.08),...point(1.02,.12),...point(.94,.22));
+      ctx.bezierCurveTo(...point(.68,.70),...point(.29,.75),...point(0,.45));
+      ctx.closePath();ctx.fill();
     }
     if(long){
-      // Spread the ends along the trailing shoulder, with the outer lock lifted.
-      lock("#352321",[[-15,8],[-4,5],[2,3],[0,10],[-7,14],[-20,19],
-        [-17,16],[-30,18],[-27,15],[-37,14],[-29,12],[-22,9]]);
-      lock("#684232",[[-14,8],[-6,6],[-14,12],[-27,15],[-34,14],[-24,11]]);
-      lock("#83553b",[[-7,6],[-2,5],[-10,12],[-26,16],[-18,12]]);
-      lock("#503127",[[-2,5],[2,3],[0,9],[-7,13],[-18,17],[-9,11]]);
+      strand(-3,6,29,9,6,.15,"#49302a");
+      strand(-7,7,27,6,4.4,.55,"#674637");
+      strand(-1,5,25,12,4.5,-.4,"#583a30");
+      strand(-5,6,22,8,2.2,.1,"#795442");
     }else{
-      // The collar rises toward the cheek. Keep the front tuft shorter.
-      lock("#352321",[[-15,8],[-4,5],[2,3],[0,7],[-4,8],[-3,6],
-        [-9,9],[-8,7],[-15,10],[-13,8]]);
-      lock("#684232",[[-14,8],[-6,6],[-9,8],[-14,9]]);
-      lock("#83553b",[[-7,6],[-1,4],[-4,6],[-9,8]]);
+      strand(0,5,13,3,2.7,.2,"#51362c");
+      strand(-3,6,12,2.3,1.9,.6,"#71503e");
     }
     ctx.restore();
   }
@@ -329,7 +338,7 @@
     const art=appearanceAtlas(defeatAtlas,"defeat",look);
     const top=-220+footPadding(defeatAtlas,i)+7;
     ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
-    drawHeadHair(ctx,look,"defeat",i,top);
+    drawHeadHair(ctx,look,"defeat",i,top,elapsedMs);
     ctx.restore();return true;
   }
   const waveFrame=ms=>16+(Math.floor(Math.max(0,ms)/130)%8);
@@ -351,7 +360,7 @@
     const art=appearanceAtlas(wizardAtlas,"wizard",look);
     const top=-220+footPadding(wizardAtlas,i)+7;
     ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
-    drawHeadHair(ctx,look,"wizard",i,top);
+    drawHeadHair(ctx,look,"wizard",i,top,time);
     const armor=armorProgress(look);
     if(armor>0){
       ctx.translate(-74,-220+footPadding(wizardAtlas,i)+7);ctx.scale(148/128,220/128);

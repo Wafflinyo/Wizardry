@@ -7,8 +7,9 @@
   const currentRowHeight = 72;
   const domeCycle = [12,13,14,15,14,13];
   const width = 224;
-  const height = 257;
-  const top = -height+8;
+  const top = -249;
+  const base = 28; // Includes the transparent margin under the painted sand.
+  const height = base-top;
   const clamp = n => Math.max(0, Math.min(1, n));
   const ease = n => {const t=clamp(n);return t*t*(3-2*t);};
   const scaleFor = target => .60+.30*clamp((target.y-288)/235);
@@ -66,7 +67,7 @@
       [eyeX-34,eyeY-4],[eyeX-9,eyeY-9],[eyeX+29,eyeY-8],[eyeX+44,eyeY-3],
       [eyeX+40,eyeY+8],[eyeX-13,eyeY+9],[eyeX-34,eyeY+5]
     ];
-    const rim=8-height*ease(growth);
+    const rim=base-height*ease(growth);
     const hasSlit=frame>=9&&rim<=eyeY-10;
     ctx.save();
     if(layer==="back"){
@@ -148,6 +149,7 @@
   }
 
   function travel(ctx,target,p){
+    p/=1.12;
     if(p<=0||p>=.74||!currentAtlas.naturalWidth)return;
     const dx=target.x-500,dy=target.y-510;
     const length=Math.hypot(dx,dy)||1;

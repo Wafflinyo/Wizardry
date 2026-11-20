@@ -1,10 +1,10 @@
 (() => {
   const atlas = new Image();
-  atlas.src = "./assets/wynzor.webp?v=0.277.3";
+  atlas.src = "./assets/wynzor.webp?v=0.277.5";
   const clamp = n => Math.max(0, Math.min(1, n));
   const ease = n => { const q = clamp(n); return q * q * (3 - 2 * q); };
   const transitions = new Image();
-  transitions.src = "./assets/wynzor-transitions.webp?v=0.277.3";
+  transitions.src = "./assets/wynzor-transitions.webp?v=0.277.5";
   const poses = [
     [0,0],[.035,16],[.067,17],[.100,1],[.128,18],[.153,19],[.183,2],[.208,3],
     [.232,20],[.258,4],[.283,21],[.310,5],[.335,22],
@@ -38,7 +38,7 @@
     const descent = ease(p/.258);
     const pose = poses.findLastIndex(([at]) => p >= at);
     const [at, frame] = poses[pose];
-    const blend = pose > 0 && p < release ? ease((p-at)/.009) : 1;
+    const blend = pose > 0 && p < release ? ease((p-at)/.014) : 1;
     return {
       p, hit, side, floor, size, frame, blend, previousFrame: poses[Math.max(0,pose-1)][1],
       x: x - side * 126 * (1-descent), y: floor - 270 * (1-descent),
@@ -58,6 +58,7 @@
     g.fill();
   }
 
+  let poseBuffer;
   function actor(g, s) {
     const { x, y, floor, size, side, p, frame } = s;
     const fade = 1 - ease((p-.94)/.06);
@@ -71,13 +72,23 @@
     g.translate(x,y);
     g.scale(side,1);
     if (s.blend < 1) {
-      g.save();
-      g.globalAlpha *= 1-s.blend;
-      tile(g,s.previousFrame,size);
-      g.restore();
-    }
-    g.globalAlpha *= s.blend;
-    tile(g, frame, size);
+      // Mix premultiplied frames once so overlapping opaque pixels stay opaque.
+      if (!poseBuffer) {
+        poseBuffer = document.createElement("canvas");
+        poseBuffer.width = poseBuffer.height = 256;
+      }
+      const mix = poseBuffer.getContext("2d");
+      mix.setTransform(1,0,0,1,0,0);
+      mix.clearRect(0,0,256,256);
+      mix.translate(128,256);
+      mix.globalCompositeOperation = "source-over";
+      mix.globalAlpha = 1-s.blend;
+      tile(mix,s.previousFrame,256);
+      mix.globalCompositeOperation = "lighter";
+      mix.globalAlpha = s.blend;
+      tile(mix,frame,256);
+      g.drawImage(poseBuffer,-size/2,-size,size,size);
+    } else tile(g,frame,size);
     g.restore();
     if (p >= .258 && p < .404) {
       const q = (p-.258)/.146;

@@ -250,14 +250,14 @@ function startCardTester(size=1){towerLobby=false;api.startCardTester(size);show
 // Shared lobby transport. Only the host can publish combat state.
 const ENDPOINT='https://vocaddalptoghysgdkvh.supabase.co/functions/v1/wizardry-lobby';
 const session=window.WizardrySession={active:false,isHost:false,peerId:null,lobby:null,roomId:null,token:null,version:-1,
- plan(p){const u=api.getState().units.find(u=>u.peerId===this.peerId);if(u?.discardedRound===p.round)p={...p,discardId:u.discardedCard};if(this.pendingPlan?.round===p.round)return false;if(this.isHost){const ok=api.submitRemotePlan(this.peerId,p);syncRoom();return ok;}this.pendingPlan=p;api.receiveSnapshot(JSON.parse(JSON.stringify(api.getState())));command('plan',{plan:p}).catch(e=>{this.pendingPlan=null;error(e.message);});return true;}};
+ plan(p){const u=api.getState().units.find(u=>u.peerId===this.peerId);if(u?.discardedRound===p.round)p={...p,discardId:u.discardedCard};if(this.pendingPlan?.round===p.round)return false;if(this.isHost){const ok=api.submitRemotePlan(this.peerId,p);syncRoom();return ok;}this.pendingPlan=p;api.receiveSnapshot(JSON.parse(JSON.stringify(api.getState())),true);command('plan',{plan:p}).catch(e=>{this.pendingPlan=null;error(e.message);});return true;}};
 let broadcastTimer=null,battleTimer=null,busy=false,lastState='',lastLobby='',acks=[],generation=0,failures=0,lastClock=performance.now();
 const randomToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 async function request(action,payload={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{const r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,roomId:session.roomId,token:session.token,payload}),signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Lobby request failed.');return data;}finally{clearTimeout(timer);}}
 function closeSession(){const old={roomId:session.roomId,token:session.token};generation++;clearInterval(broadcastTimer);clearInterval(battleTimer);session.active=false;session.lobby=null;session.peerId=null;session.isHost=false;session.roomId=null;session.token=null;session.version=-1;session.pendingPlan=null;busy=false;lastState='';lastLobby='';acks=[];
  if(old.roomId&&old.token)fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'leave',...old,payload:{}}),keepalive:true}).catch(()=>{});
 }
-function acceptRoom(data){session.roomId=data.roomId;session.peerId=data.peerId;session.isHost=data.isHost;session.version=data.version;
+function acceptRoom(data){if(data.roomId===session.roomId&&data.version<session.version)return;session.roomId=data.roomId;session.peerId=data.peerId;session.isHost=data.isHost;session.version=data.version;
  const signature=JSON.stringify(data.lobby);session.lobby=data.lobby;towerLobby=data.lobby.tower===true;
  if(data.lobby.phase==='closed'){closeSession();screen(towerLobby?'tower':'online');error('The host closed this lobby.');return;}
  if(!session.isHost&&data.lobby.phase==='battle'&&data.state){
@@ -283,7 +283,7 @@ function acceptRoom(data){session.roomId=data.roomId;session.peerId=data.peerId;
    data.lobby.players.every(p=>p.ready)&&!data.lobby.players.every(p=>p.profile.towerCleared))void startTowerLobby();
 }
 async function command(action,payload={}){const g=generation,data=await request(action,payload);if(g===generation)acceptRoom(data);return data;}
-async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version};if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.getState()):'';if(serialized&&serialized!==lastState){payload.state=JSON.parse(serialized);lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload);if(g===generation){failures=0;acceptRoom(data);
+async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version};if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.onlineSnapshot()):'';if(serialized&&serialized!==lastState){payload.state=JSON.parse(serialized);lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload);if(g===generation){failures=0;acceptRoom(data);
  if(session.isHost&&session.active&&api.getState().tower?.online&&api.getState().phase==='finished'){
    const result=await request('towerNext');if(g===generation)acceptRoom(result);
  }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}

@@ -579,7 +579,13 @@
     for(const dummy of sideUnits(1))fitTesterTarget(dummy,type);
     paintUI();
   }
+  const GUEST_PLAYBACK_DELAY=350;
+  const HOST_STAGE_HISTORY_MS=2400;
+  let hostPlayback=null,guestPlayback=null,battleSerial=0,guestUiKey=null;
+
   function setBattle(mode="story",size=4,tower=null){
+    hostPlayback={id:Date.now()+"-"+(++battleSerial),time:0,clips:[]};
+    guestPlayback=null;guestUiKey=null;
     const testing=mode==="tester";
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
@@ -3737,10 +3743,10 @@
   const BLAST_RELEASE=.61;
   const embersFrames=new Image();
   embersFrames.onload=()=>drawCardArts();
-  embersFrames.src="./assets/blazing-embers-frames.webp?v=0.284.0";
+  embersFrames.src="./assets/blazing-embers-frames.webp?v=0.284.1";
   function drawEmbersFrame(ctx,frame,x,y,scale,dir){
     ctx.save();ctx.translate(x,y);ctx.scale(scale*dir,scale);
-    ctx.drawImage(embersFrames,(frame%8)*192,Math.floor(frame/8)*160,192,160,-96,-80,192,160);
+    ctx.drawImage(embersFrames,(frame%4)*192,Math.floor(frame/4)*192,192,192,-86,-86,172,172);
     ctx.restore();
   }
   function blastPoly(ctx,color,points){
@@ -3929,13 +3935,13 @@
     if(school==="fire"){
       if(!embersFrames.complete||!embersFrames.naturalWidth)return;
       if(progress<BLAST_RELEASE){
-        drawEmbersFrame(ctx,Math.min(15,Math.floor(progress/BLAST_RELEASE*16)),from.x,from.y,scale,dir);
+        drawEmbersFrame(ctx,Math.min(7,Math.floor(progress/BLAST_RELEASE*8)),from.x,from.y,scale,dir);
       }else if(progress<hit){
         const flight=clamp((progress-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1),dash=flight**1.6;
-        drawEmbersFrame(ctx,Math.min(21,16+Math.floor(flight*6)),lerp(from.x,to.x,dash),lerp(from.y,to.y,dash),scale,dir);
+        drawEmbersFrame(ctx,Math.min(11,8+Math.floor(flight*4)),lerp(from.x,to.x,dash),lerp(from.y,to.y,dash),scale,dir);
       }else{
         const impact=clamp((progress-hit)/(1-hit),0,1);
-        drawEmbersFrame(ctx,Math.min(31,22+Math.floor(impact*10)),to.x,to.y,scale,dir);
+        drawEmbersFrame(ctx,Math.min(15,12+Math.floor(impact*4)),to.x,to.y,scale,dir);
       }
       return;
     }
@@ -5059,6 +5065,63 @@
       checkBattleEnd();
     }
   }
+  // Host snapshots include recent stage boundaries, including poses shorter than the polling interval.
+  function sampleHostStage(){
+    if(!hostPlayback||!window.WizardrySession?.isHost)return;
+    const a=state.animation,time=hostPlayback.time,clips=hostPlayback.clips;
+    const key=a?state.round+"/"+state.queueAt+"/"+a.stage:null;
+    if(!clips.length||clips[clips.length-1].key!==key){
+      clips.push({key,time,animation:a?JSON.parse(JSON.stringify(a)):null});
+    }
+    // Retain a stage crossing the cutoff as well as all subsequent transitions.
+    while(clips.length>1&&clips[1].time<time-HOST_STAGE_HISTORY_MS)clips.shift();
+  }
+  function onlineSnapshot(){
+    if(!hostPlayback)return state;
+    sampleHostStage();
+    return {...state,playback:hostPlayback};
+  }
+  function acceptGuestPlayback(packet,now){
+    if(!packet||!Number.isFinite(packet.time)||!Array.isArray(packet.clips)){
+      guestPlayback=null;return;
+    }
+    if(guestPlayback?.id!==packet.id||packet.time-guestPlayback.playhead>HOST_STAGE_HISTORY_MS){
+      guestPlayback={id:packet.id,playhead:Math.max(0,packet.time-GUEST_PLAYBACK_DELAY),clips:[]};
+      guestUiKey=null;
+    }
+    const playback=guestPlayback;
+    if(packet.time<playback.latest)return;
+    playback.latest=packet.time;
+    playback.receivedAt=now;
+    playback.clips=packet.clips;
+  }
+  // Advance a local presentation clock. Network responses can adjust the rate, but never rewind it.
+  function guestAnimationAt(now,dt){
+    const playback=guestPlayback;
+    if(!playback)return state.animation;
+    const newest=playback.clips[playback.clips.length-1];
+    const stageEnd=newest?.animation?
+      newest.time+newest.animation.duration-newest.animation.elapsed:playback.latest;
+    const maxLead=Math.max(450,stageEnd-playback.latest+GUEST_PLAYBACK_DELAY);
+    const desired=playback.latest+Math.min(maxLead,Math.max(0,now-playback.receivedAt))-GUEST_PLAYBACK_DELAY;
+    const error=desired-playback.playhead;
+    if(error>0)playback.playhead+=Math.min(error,dt*clamp(1+(error-dt)/850,.8,1.25));
+    const clip=playback.clips.findLast(entry=>entry.time<=playback.playhead);
+    if(!clip?.animation)return null;
+    const current=playback.clips[playback.clips.length-1]===clip&&state.animation;
+    const a=current||clip.animation;
+    const elapsed=clamp(clip.animation.elapsed+playback.playhead-clip.time,0,a.duration);
+    // These spells use cumulative clocks in addition to their current stage.
+    const ageDifference=elapsed-a.elapsed;
+    return {...a,elapsed,
+      traceMs:a.stage==="tracing-auto"?Math.max(0,(a.traceMs||0)+ageDifference):a.traceMs,
+      thunderMs:a.stage.startsWith("thunder-")?Math.max(0,(a.thunderMs||0)+ageDifference):a.thunderMs};
+  }
+  function guestSnapshotUiKey(combat){
+    return JSON.stringify([combat.mode,combat.phase,combat.round,combat.queueAt,combat.skipCue?.source,
+      combat.animation?.stage,combat.selectedCard,combat.selectedHandCopy,combat.selectedTarget,combat.selectedRune,
+      Object.values(combat.plans),combat.log,combat.units.map(u=>[u.id,u.hp,u.mana,u.statuses,u.hand,u.drawPile.length])]);
+  }
   function tick(now){
     if(!state)return;
     if(document.body?.dataset?.screen&&document.body.dataset.screen!=='battle'){frameLast=now;requestAnimationFrame(tick);return;}
@@ -5066,13 +5129,23 @@
     // benefit, which is expensive on iPhones. Cap to roughly 60 fps.
     if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
-    updateFacing(dt);
     if(window.WizardrySession?.active){
       const session=window.WizardrySession,a=state.animation,elapsed=a?.elapsed;
-      if(session.isHost){if(a)a.elapsed=Math.min(a.duration,elapsed+Math.min(100,Math.max(0,performance.now()-(session.clockAt||performance.now()))));}
-      else{if(a)a.elapsed=Math.min(a.duration,a.elapsed+dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);for(const f of state.flashes)f.age+=dt/1000;}
-      render(now);if(session.isHost&&a===state.animation&&a)a.elapsed=elapsed;requestAnimationFrame(tick);return;
+      if(session.isHost){
+        if(a)a.elapsed=Math.min(a.duration,elapsed+Math.min(100,Math.max(0,performance.now()-(session.clockAt||performance.now()))));
+      }else{
+        if(!guestPlayback&&a)a.elapsed=Math.min(a.duration,a.elapsed+dt);
+        state.animation=guestAnimationAt(now,dt);
+        for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);
+        for(const f of state.flashes)f.age+=dt/1000;
+        for(const key of ["gunpowderBursts","windDomeBursts","rodBursts","bubbleShieldRipples"])
+          for(const effect of state[key]||[])effect.age+=dt/1000;
+      }
+      updateFacing(dt);render(now);
+      state.animation=a;if(session.isHost&&a)a.elapsed=elapsed;
+      requestAnimationFrame(tick);return;
     }
+    updateFacing(dt);
     advanceRoundAction(dt);
     updateBattleEnding(dt);
     // Each fallen wizard gets its own timeline: play the sequence once,
@@ -5117,7 +5190,39 @@
     switchTesterTarget,
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
-    receiveSnapshot:snapshot=>{const previous=caster(),discard=previous?.discardedRound===state.round?previous.discardedCard:null,previousRound=state.round;const local=state?.selectedCard,copy=state?.selectedHandCopy||0,target=state?.selectedTarget,rune=state?.selectedRune;state=snapshot;state.selectedHandCopy=copy;const mine=state.units.find(u=>u.peerId===window.WizardrySession?.peerId);if(discard&&snapshot.round===previousRound&&snapshot.phase==='planning'&&mine&&!state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);state.planningSide=mine?.team||0;state.humanByTeam={0:null,1:null};if(mine)state.humanByTeam[mine.team]=mine.id;if(mine&&window.WizardrySession?.pendingPlan){const pending=window.WizardrySession.pendingPlan;if(state.phase!=='planning'||pending.round!==state.round||state.plans[mine.id])window.WizardrySession.pendingPlan=null;else state.plans[mine.id]={casterId:mine.id,...pending};}state.selectedCard=mine?.hand.includes(local)&&!state.plans[mine.id]?local:null;state.selectedTarget=state.selectedCard?target:null;state.selectedRune=state.selectedCard==="zen"?rune:null;paintUI();},
+    onlineSnapshot,
+    receiveSnapshot:(snapshot,localOnly=false)=>{
+      const previous=caster(), previousRound=state.round, previousUnits=state.units;
+      const discard=previous?.discardedRound===previousRound?previous.discardedCard:null;
+      const {selectedCard,selectedHandCopy,selectedTarget,selectedRune}=state;
+      const sameBattle=localOnly||snapshot.playback?.id===guestPlayback?.id;
+      state=snapshot;
+      if(!localOnly)acceptGuestPlayback(snapshot.playback,performance.now());
+      if(sameBattle&&snapshot.round===previousRound&&snapshot.phase!=="planning"){
+        for(const u of state.units){
+          const old=previousUnits.find(unit=>unit.id===u.id);
+          if(u.hp<=0&&old?.hp<=0)u.defeatElapsedMs=Math.max(u.defeatElapsedMs||0,old.defeatElapsedMs||0);
+        }
+      }
+      state.selectedHandCopy=selectedHandCopy||0;
+      const session=window.WizardrySession;
+      const mine=state.units.find(u=>u.peerId===session?.peerId);
+      if(discard&&sameBattle&&snapshot.round===previousRound&&snapshot.phase==="planning"&&mine&&
+          !state.plans[mine.id]&&mine.discardedRound!==state.round)discardFromHand(mine,discard);
+      state.planningSide=mine?.team||0;
+      state.humanByTeam={0:null,1:null};
+      if(mine)state.humanByTeam[mine.team]=mine.id;
+      if(mine&&session?.pendingPlan){
+        const pending=session.pendingPlan;
+        if(state.phase!=="planning"||pending.round!==state.round||state.plans[mine.id])session.pendingPlan=null;
+        else state.plans[mine.id]={casterId:mine.id,...pending};
+      }
+      state.selectedCard=mine?.hand.includes(selectedCard)&&!state.plans[mine.id]?selectedCard:null;
+      state.selectedTarget=state.selectedCard?selectedTarget:null;
+      state.selectedRune=state.selectedCard==="zen"?selectedRune:null;
+      const key=guestSnapshotUiKey(state);
+      if(key!==guestUiKey){guestUiKey=key;paintUI();}
+    },
     submitRemotePlan:(peerId,p)=>{const u=state?.units.find(u=>u.peerId===peerId);if(state.phase!=='planning'||!u||u.hp<=0||p.round!==state.round||state.plans[u.id])return false;
       const needsDiscard=p.discardId&&u.discardedRound!==state.round;
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
@@ -5127,7 +5232,7 @@
        if(needsDiscard)discardFromHand(u,p.discardId);
        if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:card.kind==="zen"?p.runeKind:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
-    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
+    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
     drawCardArts,cardInfo,

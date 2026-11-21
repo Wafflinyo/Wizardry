@@ -24,14 +24,23 @@ window.WizardHats=(()=>{
       g.closePath();g.fill();
     }
     if(front){
-      // Draw only the binding above the sprite. The opening remains transparent.
-      facet([[5,-6],[0,0],[-3,9],[-2,16],[1,19],[-4,21],[-6,16],[-7,8],[-4,-2],[2,-8]],trim,.92);
-      facet([[-3,9],[-2,16],[1,19],[-4,21],[-6,16],[-7,8]],trim,.75);
+      if(style==="round"){
+        // Only the near half of the brim crosses in front of the character.
+        const upper=[[-28,-1],[-18,3],[-5,5],[8,5],[20,3],[25,0]];
+        const edge=[[-28,-1],[-22,6],[-10,10],[5,11],[17,8],[24,4],[25,0]];
+        facet([...upper,...edge.slice().reverse()],fabric,1.06);
+        facet([[-22,6],[-10,10],[5,11],[17,8],[24,4],[22,7],[17,10],[5,13],[-10,12],[-22,8]],fabric,.63);
+        facet([[-22,6],[-18,3],[-5,5],[8,5],[5,11],[-10,10]],fabric,1.17);
+      }else{
+        // The binding follows the cut edge above the brow and down the cheek.
+        facet([[19,-1],[13,-2],[7,0],[3,4],[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9],[-2,2],[3,-3],[12,-6],[18,-6]],trim,.93);
+        facet([[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9]],trim,.76);
+      }
       return canvas;
     }
     if(style==="hood"){
       // Tailored cloth stays close to the skull and folds into the shoulder.
-      const hood=[[-32,23],[-24,10],[-24,-7],[-20,-19],[-11,-26],[4,-27],[15,-20],[20,-11],[18,-4],[12,-8],[5,-6],[0,0],[-3,9],[-2,16],[1,19],[-9,24],[-21,28]];
+      const hood=[[-32,23],[-24,10],[-24,-7],[-20,-19],[-11,-26],[4,-27],[15,-20],[19,-9],[19,-1],[13,-2],[7,0],[3,4],[0,10],[0,16],[2,19],[-9,24],[-21,28]];
       facet(hood,fabric,.53);
       facet([hood[2],hood[3],hood[4],[-11,-15],[-17,-4]],fabric,.76);
       facet([hood[4],hood[5],hood[6],[4,-17],[-11,-15]],fabric,1.19);
@@ -41,19 +50,14 @@ window.WizardHats=(()=>{
       facet([hood[0],[-24,18],[-15,12],[-12,20],hood[16]],fabric,.96);
       facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
       facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
-      facet([hood[7],hood[8],hood[9],hood[10],[2,-8],[10,-12],[17,-14]],trim,1.04);
     }else{
       const tall=style==="top";
-      const rim=tall?[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]]:
-        [[-34,-2],[-28,-8],[-15,-11],[5,-12],[22,-10],[33,-6],[37,-1],[30,5],[15,9],[-7,10],[-25,6]];
-      facet(rim,fabric,.97);
-      const outer=rim.slice(4).concat([rim[0]]);
-      facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
-      facet(tall?[[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]]:
-        [[37,-1],[30,5],[15,9],[-7,10],[-25,6],[-24,8],[-7,12],[15,11],[30,7],[37,1]],fabric,.77);
-      if(!tall)facet([[-34,-2],[-20,1],[2,4],[23,2],[37,-1],[30,5],[15,9],[-7,10],[-25,6]],fabric,1.12);
-
       if(tall){
+        const rim=[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]];
+        facet(rim,fabric,.97);
+        const outer=rim.slice(4).concat([rim[0]]);
+        facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
+        facet([[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]],fabric,.77);
         // Short, straight-sided crown with a lid and two visible wall planes.
         const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
         facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);
@@ -66,7 +70,7 @@ window.WizardHats=(()=>{
         facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
         facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);
       }else{
-        // A low bowler crown meets a wide brim with an even rounded edge.
+        // The low crown sits just above the separate foreground brim.
         const dome=[[-25,-2],[-26,-8],[-23,-15],[-16,-21],[-6,-24],[8,-24],[18,-21],[24,-15],[27,-8],[24,-2],[9,3],[-11,3]];
         facet(dome,fabric,.76);
         facet([dome[0],dome[1],dome[2],[-16,-11],dome[11]],fabric,.72);

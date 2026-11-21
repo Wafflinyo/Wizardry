@@ -94,6 +94,10 @@ function recordTowerResult(state){
  const tower=state.tower;
  if(!tower||!active||state.phase!=='finished'||state.winner!==0||active.lastTowerWin===tower.id)return;
  if(tower.online&&!state.units.some(u=>u.peerId===session.peerId&&u.team===0))return;
+ if(active.level!==tower.floor){
+   towerMessage='Floor '+tower.floor+' cleared. Your next progression floor is '+active.level+'.';
+   return;
+ }
  const level=Math.min(20,active.level+1);
  try{
    persistProfile({...active,level,towerCleared:active.towerCleared||tower.floor===20,lastTowerWin:tower.id});
@@ -147,7 +151,7 @@ function renderTowerLobby(){
  const l=session.lobby,mine=l.players.find(p=>p.peerId===session.peerId),floor=partyFloor(l.players);
  const link=new URL('arena.html',location.href);
  link.searchParams.set('lobby',l.hostId);link.searchParams.set('tower','1');
- shell(`<div class="portal-heading"><h1>Caglimot Tower · Floor ${floor}</h1>${btn('Leave Lobby','leave','subtle')}</div><div class="portal-panel"><p>All players fight together on the lowest-level wizard’s floor.</p><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${l.players.map(p=>`<p>${escape(p.profile.name)} · Level ${p.profile.level} · ${p.ready?'Ready':'Not ready'}</p>`).join('')}<div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready','primary')}${session.isHost?`<button class="portal-btn" data-action="startTowerLobby" ${l.players.every(p=>p.ready)?'':'disabled'}>Fight Floor ${floor}</button>`:''}</div></div>`);
+ shell(`<div class="portal-heading"><h1>Caglimot Tower · Floor ${floor}</h1>${btn('Leave Lobby','leave','subtle')}</div><div class="portal-panel"><p>All players fight together on the lowest-level wizard’s floor. A win levels up wizards whose current floor matches the fight.</p><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${l.players.map(p=>`<p>${escape(p.profile.name)} · Level ${p.profile.level} · ${p.ready?'Ready':'Not ready'}</p>`).join('')}<div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready','primary')}${session.isHost?`<button class="portal-btn" data-action="startTowerLobby" ${l.players.every(p=>p.ready)?'':'disabled'}>Fight Floor ${floor}</button>`:''}</div></div>`);
 }
 async function startTowerLobby(){
  const l=session.lobby;

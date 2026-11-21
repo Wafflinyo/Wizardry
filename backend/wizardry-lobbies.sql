@@ -96,7 +96,7 @@ begin
    end if;
    select jsonb_agg(
     jsonb_set(
-     case when r.battle_state->>'winner'='0'
+     case when r.battle_state->>'winner'='0' and (x->'profile'->>'level')::int=(r.battle_state->'tower'->>'floor')::int
       then jsonb_set(x,'{profile}',(x->'profile')||jsonb_build_object(
        'level',least(20,(x->'profile'->>'level')::int+1),
        'lastTowerWin',r.battle_state->'tower'->>'id',

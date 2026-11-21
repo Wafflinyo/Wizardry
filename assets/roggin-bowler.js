@@ -2,7 +2,9 @@
 (()=>{
   const atlas=new Image(),callbacks=[];
   atlas.onload=()=>callbacks.splice(0).forEach(callback=>callback());
-  atlas.src="./assets/roggin-bowler-frames.webp";
+  atlas.src="./assets/roggin-bowler-frames.webp?v=2";
+  const rollSprite=new Image();
+  rollSprite.src="./assets/roggin-bowler-ball.webp";
   const cell=192,scale=1.46,release=2920;
   const poseTimes=[0,235,470,715,1000,1200,1360,1510,1960,2220,2490,2760,2870,release,3090,3360];
   const ground=[183,183,183,183,183,183,183,183,183,183,183,183,182,182,182,182];
@@ -25,22 +27,12 @@
     ctx.save();ctx.globalAlpha=fade;ctx.translate(x,y);ctx.scale(dir,1);
     pose(ctx,index);ctx.restore();
   }
-  const outline=[[-.87,-.48],[-.38,-.95],[.32,-.91],[.85,-.55],[1,.02],[.64,.72],[.12,1],[-.54,.82],[-.94,.36],[-1,-.06]];
-  function boulder(ctx,r){
-    const p=outline.map(([x,y])=>[x*r,y*r]),center=[-.16*r,-.19*r];
-    poly(ctx,p,"#423c30");
-    for(let i=0;i<p.length;i++)poly(ctx,[p[i],p[(i+1)%p.length],center],
-      ["#b3a38a","#c9b99a","#96866f","#746751","#574d3b","#695b49","#81735d","#92836d","#a59781","#ddd0ae"][i]);
-    for(const [x,y] of [[-.30,-.38],[-.12,-.42],[-.23,-.18]]){
-      ctx.fillStyle="#423a30";ctx.beginPath();ctx.ellipse(x*r,y*r,r*.077,r*.056,.2,0,Math.PI*2);ctx.fill();
-    }
-  }
   function projectile(ctx,opts){
     const {x,y,dir,target,elapsed,hitAt}=opts;
     if(elapsed<release||elapsed>hitAt+620)return;
     const q=clamp((elapsed-release)/(hitAt-release)),age=elapsed-hitAt;
     const travel=1-(1-q)**1.35;
-    const px=mix(x+dir*96,target.x,travel),py=mix(y-31,target.y-31,travel)-Math.sin(q*Math.PI)*3;
+    const px=mix(x+dir*82,target.x,travel),py=mix(y-45,target.y-40,travel)-Math.sin(q*Math.PI)*3;
     ctx.save();
     if(age<0){
       for(let i=0;i<8;i++){
@@ -50,15 +42,16 @@
         poly(ctx,[[tx,ty-3],[tx-dir*(24+i*3),ty],[tx,ty+5]],i%2?"#bfa37a":"#dac19b");
       }
       ctx.globalAlpha=.28;ctx.fillStyle="#24211c";ctx.beginPath();
-      ctx.ellipse(px,py+30,37,8,0,0,Math.PI*2);ctx.fill();
+      ctx.ellipse(px,py+40,37,8,0,0,Math.PI*2);ctx.fill();
       ctx.globalAlpha=1;ctx.translate(px,py);
-      ctx.rotate(dir*Math.hypot(px-(x+dir*96),py-(y-31))/23);boulder(ctx,30);
+      ctx.rotate(dir*Math.hypot(px-(x+dir*82),py-(y-45))/40);
+      if(rollSprite.naturalWidth)ctx.drawImage(rollSprite,-46.7,-46.7,93.4,93.4);
     }else{
       const p=clamp(age/620),r=1-p;
       ctx.globalAlpha=r*.65;ctx.fillStyle="#b89972";ctx.beginPath();
       ctx.ellipse(target.x,target.y,25+p*116,8+p*29,0,0,Math.PI*2);ctx.fill();
       ctx.globalAlpha=clamp(1-age/119);
-      poly(ctx,[[target.x-68,target.y-5],[target.x-19,target.y-31],[target.x-8,target.y-85],
+      poly(ctx,[[target.x-68,target.y-5],[target.x-19,target.y-45],[target.x-8,target.y-85],
         [target.x+9,target.y-46],[target.x+55,target.y-64],[target.x+38,target.y-23],[target.x+75,target.y-13],
         [target.x+13,target.y+8]],"#ffe2a6");
       for(let i=0;i<19;i++){

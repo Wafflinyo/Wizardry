@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071422">
   <title>Wizardry : The Fall of Lupen’s Kingdom</title>
-  <link rel="stylesheet" href="./arena.css?v=0.279.0">
+  <link rel="stylesheet" href="./arena.css?v=0.284.0">
   <link rel="stylesheet" href="./assets/spell-cards-v49.css?v=0.49.0">
   <link rel="stylesheet" href="./assets/spell-cards-v51.css?v=0.51.0">
   <link rel="stylesheet" href="./assets/spell-cards-v53.css?v=0.53.0">
@@ -78,16 +78,17 @@
         <p id="statusText"></p>
       </aside>
     </div>
-    <div class="turnbar" aria-live="polite">
-      <span class="turn-orb">✦</span><span id="turnHint">Tap a spell, then an enemy. Confirm to cast.</span>
+    <div class="turnbar">
+      <span class="turn-orb">✦</span><span id="turnHint" aria-live="polite">Tap a spell, then an enemy. Confirm to cast.</span>
       <span class="count" id="queueCount">YOUR TURN</span>
+      <details id="battleRecap" class="battle-recap"><summary>Battle Log</summary><ol id="battleHistory"><li>No actions yet.</li></ol></details>
     </div>
     <div class="initiative" id="initiative" aria-label="Initiative order" hidden></div>
   </section>
   <section class="hand" aria-label="Your wizard's five-card hand">
     <div class="hand-head">
       <div><span class="eyebrow">YOUR GRIMOIRE</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
-      <span class="mana" id="selectedMana">10 / 10 MANA</span>
+      <div class="hand-resources"><span class="mana" id="selectedMana">10 / 10 MANA</span><span id="battleDeckCount">0 / 24 in deck</span></div>
     </div>
     <div class="cards" id="cardHand" role="group" aria-label="Five-card fan. Slide across cards to browse; tap to select a spell."></div>
     <div class="fan-caption">SWIPE TO BROWSE <span>◆</span> TAP TO SELECT</div>
@@ -295,9 +296,9 @@
 <script src="./assets/wizard-hats.js?v=0.280.15" defer></script>
 <script src="./assets/rune-audio.js?v=0.280.42" defer></script>
 <script src="./assets/roggin-bowler.js?v=0.280.49" defer></script>
-<script src="./arena.js?v=0.283.6" defer></script>
+<script src="./arena.js?v=0.284.0" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.283.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.284.0" defer></script>
 <dialog id="matchResults" class="match-results" aria-labelledby="matchResultsTitle"></dialog>
 <dialog id="binderCardDetail" class="match-results binder-detail" aria-labelledby="binderCardTitle"></dialog>
 </body>

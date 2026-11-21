@@ -206,14 +206,22 @@ function renderProgression(){
  const rewards=newCards.length?`<section class="tower-unlocks" aria-labelledby="unlockedSpells"><h2 id="unlockedSpells">New spells unlocked</h2><div class="binder-grid">${newCards.map(card=>`<button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button>`).join('')}</div></section>`:'';
  const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
+ const canEdit=!ready&&!submittingReady;
  const status=winner===0?towerMessage:winner==='draw'?'Floor ended in a draw.':'Floor attempt ended in defeat.';
- shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span>${stats.remaining&&!ready&&!submittingReady?`<button class="portal-btn small" data-progress-skill="${key}" aria-label="Add skill point to ${label}">+</button>`:''}</div>`).join('')}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+ shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span><div class="skill-controls">${canEdit&&(active.skills[key]||0)>0?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="-1" aria-label="Remove skill point from ${label}">−</button>`:''}${stats.remaining&&canEdit&&(active.skills[key]||0)<20?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="1" aria-label="Add skill point to ${label}">+</button>`:''}</div></div>`).join('')}${canEdit&&entries.some(([key])=>active.skills[key]>0)?btn('Reset skill points','resetProgressPoints','small subtle'):''}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
  if(newCards.length)requestAnimationFrame(()=>api.drawCardArts());
 }
-function allocateProgressPoint(key){
- if(view!=='progression'||!active||submittingReady||!['hp','mana',...active.masteries].includes(key)||!B.stats(active).remaining)return;
- if(session.lobby?.players.some(p=>p.peerId===session.peerId&&p.ready)&&session.lobby.phase==='lobby')return;
- const skills={...active.skills,[key]:(active.skills[key]||0)+1};
+function changeProgressPoints(key,delta){
+ if(view!=='progression'||!active||submittingReady)return;
+ if(lastResult?.tower.online&&session.lobby?.players.some(p=>p.peerId===session.peerId&&p.ready)&&session.lobby.phase==='lobby')return;
+ const skills={...active.skills};
+ if(key===null){for(const stat in skills)skills[stat]=0;}
+ else {
+   if(!['hp','mana',...active.masteries].includes(key)||![1,-1].includes(delta))return;
+   const value=(skills[key]||0)+delta;
+   if(value<0||value>20||(delta>0&&!B.stats(active).remaining))return;
+   skills[key]=value;
+ }
  persistProfile(B.normalize({...active,skills},cards,true));onlineProfile=null;render();
 }
 async function nextFloor(){
@@ -311,7 +319,8 @@ portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefi
 portal.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;try{
  if(button.dataset.binderElement){binderElement=button.dataset.binderElement;render();portal.querySelector(`[data-binder-element="${binderElement}"]`)?.focus();return;}
  if(button.dataset.binderCard){inspectBinderCard(button.dataset.binderCard);return;}
- if(button.dataset.progressSkill){allocateProgressPoint(button.dataset.progressSkill);return;}
+ if(button.dataset.progressSkill){changeProgressPoints(button.dataset.progressSkill,Number(button.dataset.delta));return;}
+ if(button.dataset.action==='resetProgressPoints'){changeProgressPoints(null);return;}
  if(button.dataset.hatStyle){draft.hat=button.dataset.hatStyle;for(const choice of portal.querySelectorAll('[data-hat-style]'))choice.setAttribute('aria-pressed',String(choice===button));return;}
  if(button.dataset.step!==undefined){readDraft();const next=Number(button.dataset.step);if(onlineDraft&&next===0)return;step=next;render();return;}
  if(button.dataset.mastery){const key=button.dataset.mastery;if(draft.masteries.includes(key)){draft.masteries=draft.masteries.filter(x=>x!==key);draft.skills[key]=0;draft.deck=draft.deck.filter(id=>cards.find(c=>c.id===id)?.school!==key);}else if(draft.masteries.length<2){draft.masteries.push(key);}else{error('Up to two mastery elements are allowed. Remove one before choosing another.');return;}draft.deck=B.progressionDeck(cards,draft.masteries,draft.level);render();return;}

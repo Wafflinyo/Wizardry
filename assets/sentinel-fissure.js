@@ -1,6 +1,6 @@
 /* Sentinel Fissure: fixed low-poly poses and staggered arena debris. */
 (()=>{
-  const stomp=2700;
+  const stomp=2700,riseDuration=1150,sinkStart=4770,sinkDuration=610;
   const clamp=n=>Math.max(0,Math.min(1,n));
   const ease=n=>{const t=clamp(n);return t*t*(3-2*t);};
   const hash=n=>{const x=Math.sin(n*91.413+6.7)*43758.5453;return x-Math.floor(x);};
@@ -38,8 +38,8 @@
     if(!atlas.naturalWidth)return;
     let index=0;
     while(index+1<poses.length&&elapsed>=poses[index+1])index++;
-    const emerge=(1-ease(elapsed/1150))*113;
-    const sink=ease((elapsed-4770)/610)*300;
+    const emerge=(1-ease(elapsed/riseDuration))*113;
+    const sink=ease((elapsed-sinkStart)/sinkDuration)*300;
     g.save();g.translate(x,y);g.scale(dir,1);
     g.beginPath();g.rect(-320,-410,640,412);g.clip();
     g.translate(0,emerge+sink);
@@ -152,8 +152,14 @@
   function shake(progress,dir,hit){
     const elapsed=progress*5440;
     const stompAge=elapsed-stomp,hitAge=(progress-hit)*5440;
+    const rise=Math.sin(Math.PI*clamp(elapsed/riseDuration));
+    const sink=Math.sin(Math.PI*clamp((elapsed-sinkStart)/sinkDuration));
+    const rumble=rise*6.5+sink*9;
     const strength=(stompAge>=0?19*Math.exp(-stompAge/285):0)+(hitAge>=0?16*Math.exp(-hitAge/225):0);
-    return {x:dir*Math.sin(elapsed*.047)*strength,y:Math.cos(elapsed*.059)*strength*.67};
+    return {
+      x:dir*(Math.sin(elapsed*.047)*strength+Math.sin(elapsed*.083)*rumble*.65),
+      y:Math.cos(elapsed*.059)*strength*.67+Math.cos(elapsed*.071)*rumble
+    };
   }
   window.SentinelFissure={actor,fissures,debris,entries,portrait,shake,onReady};
 })();

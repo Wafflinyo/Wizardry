@@ -69,6 +69,7 @@ begin
    select jsonb_agg(jsonb_set(x,'{ready}',case when x->>'isCpu'='true' then 'true'::jsonb else 'false'::jsonb end)) into r.players from jsonb_array_elements(r.players) x;
   elsif action_name='ready' then
    if r.phase<>'lobby' then raise exception 'The match has started.';end if;
+   p=actor->'profile';
    if tower and payload ? 'towerSkills' then
     if jsonb_typeof(payload->'towerSkills') is distinct from 'object' then raise exception 'Invalid skill allocation.';end if;
     if exists(select 1 from jsonb_each(payload->'towerSkills') as skill(key,value)
@@ -80,12 +81,22 @@ begin
     if (select coalesce(sum(value::text::int),0) from jsonb_each(payload->'towerSkills'))>(actor->'profile'->>'level')::int then
       raise exception 'Skill allocation exceeds the wizard level.';
     end if;
-    select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(jsonb_set(x,'{profile,skills}',payload->'towerSkills'),'{ready}',coalesce(payload->'ready','false')) else x end order by ord)
-    into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
-   else
-    select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(x,'{ready}',coalesce(payload->'ready','false')) else x end order by ord)
-    into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
+    p=jsonb_set(p,'{skills}',payload->'towerSkills');
    end if;
+   if tower and payload ? 'towerDeck' then
+    if jsonb_typeof(payload->'towerDeck') is distinct from 'array' then raise exception 'Invalid Tower deck.';end if;
+    if jsonb_array_length(payload->'towerDeck')<>24 then raise exception 'A Tower deck must contain 24 spells.';end if;
+    -- Match the spell schools from backend/cards.json.
+    if exists(select 1 from jsonb_array_elements_text(payload->'towerDeck') as cards(id)
+      where not coalesce((p->'masteries') ? ('{"poseidon":"water","volt":"lightning","estel":"nature","wind":"wind","vampire":"dark","dragon":"fire","bear":"ice","shark":"water","thunder":"lightning","arrows":"fire","ronin":"wind","reaper":"dark","bender":"earth","frosty":"ice","solidity":"earth","calming":"water","static":"lightning","rage":"fire","turbulence":"wind","soul":"dark","healingaura":"nature","freezing":"ice","scorpion":"earth","octo":"water","devil":"fire","bloom":"nature","rod":"lightning","undead":"dark","centaur":"nature","winddome":"wind","penguins":"ice","blizzard":"ice","thornwrap":"nature","kineticsand":"earth","zeus":"lightning","gunpowderkiss":"fire","flowstate":"water","windfist":"wind","jack":"dark","croc":"water","electricalcharge":"lightning","grillmaster":"fire","venustrap":"nature","heizmann":"ice","boulderweight":"earth","cyclops":"earth","acidair":"wind","decaystrength":"dark","burningpheonix":"fire","electrodisc":"lightning","zen":"wind","scaldingair":"wind","tree":"nature","bulletseed":"nature","yeti":"ice","totallyrad":"ice","lightningball":"lightning","wickedwitch":"dark","kamikaze":"fire","ragingwaters":"water","crabgiant":"water","meteorshower":"earth","manascourge":"dark","soulharvest":"dark","sirensmelody":"water","quicksand":"earth","reikel":"fire","crystalicemirrors":"ice","electriceel":"lightning","growth":"nature","sticksandstones":"wind","darksorcerer":"dark","bubbleshield":"water","drowzyflowers":"nature","stormlizard":"lightning","volcaniceruption":"fire","frozentouch":"ice","wynzor":"wind","sentinelfissure":"earth","rogginbowler":"earth"}'::jsonb->>cards.id),false)
+      group by cards.id)
+      or exists(select 1 from jsonb_array_elements_text(payload->'towerDeck') as cards(id) group by cards.id having count(*)>3) then
+      raise exception 'Use up to three copies of each spell from your mastered elements.';
+    end if;
+    p=jsonb_set(p,'{deck}',payload->'towerDeck');
+   end if;
+   select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(jsonb_set(x,'{profile}',p),'{ready}',coalesce(payload->'ready','false')) else x end order by ord)
+   into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
   elsif action_name='size' then
    if tower then raise exception 'Tower parties fight together against guardians.';end if;
    if not host or r.phase<>'lobby' then raise exception 'Only the host can change match size.';end if;

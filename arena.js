@@ -5,6 +5,13 @@
   let configuredProfile=null,activeRoster=null,camera={scale:1,x:0,y:0};
   const canvas=document.getElementById("battleCanvas"),g=canvas.getContext("2d");
   const $=id=>document.getElementById(id);
+  const gearInputs=Object.entries(document.createElement&&document.querySelector?.(".wizard-style")?Builds?.gear||{}:{}).map(([key,field])=>{
+    const label=document.createElement("label"),input=document.createElement("select");
+    label.append(field.label.toUpperCase(),input);
+    for(const [value,name] of Object.entries(field.options))input.add(new Option(name,value));
+    $("wizardHeadHair").closest(".wizard-style").append(label);
+    return [input,key];
+  });
   const ui={mode:$("modeControls"),sizes:$("sizeControls"),round:$("roundLabel"),phase:$("phaseLabel"),
     badge:$("battleBadge"),hint:$("turnHint"),queueCount:$("queueCount"),initiative:$("initiative"),allies:$("allyRoster"),
     enemies:$("enemyRoster"),hand:$("cardHand"),handTitle:$("handTitle"),mana:$("selectedMana"),
@@ -292,6 +299,14 @@
       [58,46],[58,46],[58,45],[58,45]],
     defeat:[[60,49],[59,44],[57,36],[58,52],[60,59],[63,74],[73,86],[73,87]]
   };
+  const hairDyes=new Map();
+  function hairShade(base,color){
+    if(!color||color==="original")return base;
+    const key=color+base;if(hairDyes.has(key))return hairDyes.get(key);
+    const shade=parseInt(base.slice(1,3),16)/105;
+    const result="rgb("+[1,3,5].map(i=>Math.min(255,Math.round(parseInt(color.slice(i,i+2),16)*shade))).join(",")+")";
+    hairDyes.set(key,result);return result;
+  }
   function drawHeadHair(ctx,look,kind,frame,top,time){
     const style=look?.headHair;
     const curly=style==="curlyMedium"||style==="curlyLong";
@@ -313,7 +328,7 @@
         const drift=(long?1.1:.3)*flex*Math.cos(lag*.5+offset);
         return [rootX-length*t+drift,rootY+drop*(1-(1-t)**2)+sway+edge*width];
       }
-      ctx.fillStyle=color;
+      ctx.fillStyle=hairShade(color,look.hairColor);
       ctx.beginPath();
       ctx.moveTo(...point(0,-.45));
       ctx.bezierCurveTo(...point(.3,-.65),...point(.72,-.25),...point(.96,-.13));
@@ -338,7 +353,7 @@
           if(previous){
             ctx.beginPath();ctx.moveTo(...previous);ctx.lineTo(px,py);
             ctx.lineWidth=(long?3.85:2.15)*(1-.64*t);
-            ctx.strokeStyle=Math.cos(angle)>.24?["#795443","#875f48","#76503f","#815a44"][layer]:["#483029","#593c30","#644437","#50372d"][layer];
+            ctx.strokeStyle=hairShade(Math.cos(angle)>.24?["#795443","#875f48","#76503f","#815a44"][layer]:["#483029","#593c30","#644437","#50372d"][layer],look.hairColor);
             ctx.stroke();
           }
           previous=[px,py];
@@ -438,7 +453,7 @@
     if(saved&&typeof saved==="object"&&!Array.isArray(saved))savedLooks=saved;}catch{}
   function saveLook(u){
     savedLooks[u.id]={hat:u.hat,robe:u.robe,robeColor:u.robeColor,
-      headHair:u.headHair,facialHair:u.facialHair,hatColor:u.hatColor,skinColor:u.skinColor};
+      ...Builds.gearLook(u),headHair:u.headHair,facialHair:u.facialHair,hatColor:u.hatColor,skinColor:u.skinColor};
     try{localStorage.setItem(LOOK_STORAGE_KEY,JSON.stringify(savedLooks));}catch{}
   }
   // Rune drawings play automatically in the arena for all combatants.
@@ -459,6 +474,7 @@
       robe:"classic",
       robeColor:profile?.robeColor||pick(custom.robeColor,colors?.robeColors,preset.robeColor),
       hatColor:profile?.hatColor||pick(custom.hatColor,colors?.hatColors,preset.hatColor),
+      ...Builds?.gearLook?.(!entry&&!savedProfile?custom:profile),
       headHair:(!entry&&!savedProfile?custom.headHair:profile?.headHair)||"none",
       facialHair:(!entry&&!savedProfile?custom.facialHair:profile?.facialHair)||"original",
       skinColor:profile?.skinColor||pick(custom.skinColor,colors?.skinColors,preset.skinColor),
@@ -472,7 +488,7 @@
     u.wizardDummy=type==="wizard";
     if(!u.wizardDummy){u.name="Training Dummy";return;}
     const look=createUnit(ENEMIES[0],1,0,true);
-    for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair"])u[key]=look[key];
+    for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair",...Object.keys(Builds.gear)])u[key]=look[key];
   }
   function switchTesterTarget(type){
     if(state?.mode!=="tester"||state.phase!=="planning"||!["wood","wizard"].includes(type))return;
@@ -2480,6 +2496,7 @@
     const canDress=planning&&!!c&&(c.team===0||state.mode==="pvp");
     ui.hat.disabled=ui.robe.disabled=ui.robeColor.disabled=
       ui.hatColor.disabled=ui.headHair.disabled=ui.facialHair.disabled=ui.skinColor.disabled=!canDress;
+    for(const [input,key] of gearInputs){input.disabled=!canDress;if(c)input.value=c[key]||"original";}
     if(c){
       ui.hat.value=c.hat;ui.robe.value=c.robe;
       ui.robeColor.value=c.robeColor;
@@ -2718,7 +2735,7 @@
     ui.queue.onclick=()=>{};
     ui.auto.onclick=()=>{};
     ui.resolve.onclick=()=>{};
-    for(const [input,field] of [[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"],
+    for(const [input,field] of [...gearInputs,[ui.hat,"hat"],[ui.robe,"robe"],[ui.robeColor,"robeColor"],
         [ui.hatColor,"hatColor"],[ui.skinColor,"skinColor"],[ui.headHair,"headHair"],[ui.facialHair,"facialHair"]]){
       input.onchange=()=>{
         const u=caster();

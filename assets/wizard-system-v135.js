@@ -2,7 +2,16 @@
 (function(root){'use strict';
 const elements=['water','earth','lightning','nature','wind','dark','fire','ice'];
 const colors=['#6f4ab4','#3269c1','#128e9e','#2c8a64','#b83a55','#d08a34','#ad5c9d','#44526b','#dfd8c7','#30293c'];
-const skins=['#cca084','#f1cfad','#e7b081','#c7885b','#a96b4a','#805036','#58382f','#81b9c8','#b197c5'];
+const skins=['#cca084','#f1cfad','#e7b081','#c7885b','#a96b4a','#805036','#58382f','#81b9c8','#b197c5','#f8e0cc','#dfb798','#be906e','#995e43','#684332','#432b26','#899e81'];
+const dyes={"#322c33":"Raven","#694839":"Chestnut","#ae6045":"Copper","#d6b06e":"Honey","#eee2d2":"Pearl","#84919e":"Silver","#645486":"Violet","#297c80":"Teal","#aa394e":"Ruby","#3176ad":"Sapphire","#459366":"Emerald"};
+const dyeOptions={original:"Original",...dyes};
+const gear={
+ hairColor:{label:"Hair color",options:dyeOptions},beardColor:{label:"Facial hair color",options:dyeOptions},
+ crystalColor:{label:"Staff crystal",options:dyeOptions},bootColor:{label:"Boot color",options:dyeOptions},
+ robeTrim:{label:"Robe trim",options:dyeOptions},hatTrim:{label:"Hat band",options:dyeOptions},
+ staffSculpt:{label:"Staff sculpt",options:{original:"Smooth wood",spiral:"Spiral ridges",rings:"Raised rings"}}
+};
+function gearLook(p){return Object.fromEntries(Object.entries(gear).map(([key,field])=>[key,Object.hasOwn(field.options,p?.[key])?p[key]:"original"]));}
 const names={water:'Water',earth:'Earth',lightning:'Lightning',nature:'Nature',wind:'Wind',dark:'Dark',fire:'Fire',ice:'Ice'};
 function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+Math.floor(level/5)*100+(level===20?100:0),mana:12+Math.floor(level/5),points:level};}
 function normalize(input,cards){
@@ -15,7 +24,7 @@ function normalize(input,cards){
  if(deck.length!==24)throw Error('Your grimoire must contain exactly 24 cards from your two mastery elements.');
  const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>3)throw Error('A grimoire can hold up to 3 copies of each spell.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
- return {id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
+ return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}
@@ -37,5 +46,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<20;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level:20,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,baseline,normalize,stats,multiplier,healAmount,healing,effectText,rollVariant,range,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,multiplier,healAmount,healing,effectText,rollVariant,range,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

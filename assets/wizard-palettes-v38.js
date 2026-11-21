@@ -13,7 +13,7 @@
   const skinColors=Object.freeze({
     "#cca084":"Classic","#f1cfad":"Fair","#e7b081":"Warm",
     "#c7885b":"Golden Tan","#a96b4a":"Bronze","#805036":"Deep Brown",
-    "#58382f":"Espresso","#81b9c8":"Frost Blue","#b197c5":"Lavender"
+    "#58382f":"Espresso","#81b9c8":"Frost Blue","#b197c5":"Lavender","#f8e0cc": "Porcelain", "#dfb798": "Sand", "#be906e": "Olive tan", "#995e43": "Sienna", "#684332": "Umber", "#432b26": "Deep mahogany", "#899e81": "Sage"
   });
   const sources=new WeakMap(),colored=new Map();
   function rgb(hex){
@@ -72,12 +72,35 @@
     found={original,width,height,positions};
     sources.set(source,found);return found;
   }
+  const materialRuns={};
+  function paintGear(pixels,base,look,kind,variant){
+    const encoded=global.WizardMaterialMasks?.[kind];
+    if(!encoded)return;
+    const runs=materialRuns[kind]||(materialRuns[kind]=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));
+    const dyes=[null,variant==="clean"?null:rgb(look.beardColor),rgb(look.crystalColor),rgb(look.bootColor),rgb(look.hatTrim),rgb(look.robeTrim)];
+    const levels=[0,218,222,125,224,224];
+    let pixel=0;
+    for(let i=0;i<runs.length;i+=4){
+      pixel+=runs[i]*256+runs[i+1];
+      const count=runs[i+2],role=runs[i+3],end=pixel+count;
+      const target=dyes[role];
+      const ridge=role<8?0:look.staffSculpt==="spiral"?(role-8)%3:look.staffSculpt==="rings"?Math.floor((role-8)/3):0;
+      if(target||ridge)for(let j=pixel;j<end;j++){
+        const at=j*4,src=base.original.data;
+        const light=Math.max(.12,Math.max(src[at],src[at+1],src[at+2])/levels[role]);
+        for(let c=0;c<3;c++)pixels.data[at+c]=target?target[c]*light:ridge===1?src[at+c]*1.35+22:src[at+c]*.63;
+      }
+      pixel=end;
+    }
+  }
   function recolor(source,look,kind,variant){
     const robe=paletteColors[look.robeColor]?look.robeColor:DEFAULT;
     const hat=paletteColors[look.hatColor]?look.hatColor:DEFAULT;
     const skin=skinColors[look.skinColor]?look.skinColor:DEFAULT_SKIN;
-    if(robe===DEFAULT&&hat===DEFAULT&&skin===DEFAULT_SKIN)return source;
-    const key=variant+"|"+kind+"|"+robe+"|"+hat+"|"+skin;
+    const gear=[look.beardColor,look.crystalColor,look.bootColor,look.hatTrim,look.robeTrim,look.staffSculpt];
+    const dyed=gear.some(v=>v&&v!=="original");
+    if(robe===DEFAULT&&hat===DEFAULT&&skin===DEFAULT_SKIN&&!dyed)return source;
+    const key=variant+"|"+kind+"|"+robe+"|"+hat+"|"+skin+"|"+gear.join("|");
     if(colored.has(key)){
       const v=colored.get(key);colored.delete(key);colored.set(key,v);return v;
     }
@@ -102,6 +125,7 @@
         pixels.data[at+2]=Math.min(255,Math.round(target[2]*light));
       }
     }
+    if(dyed)paintGear(pixels,base,look,kind,variant);
     ctx.putImageData(pixels,0,0);
     colored.set(key,out);
     if(colored.size>MAX_CACHE)colored.delete(colored.keys().next().value);

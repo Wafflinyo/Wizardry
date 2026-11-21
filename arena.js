@@ -1,6 +1,6 @@
 /* Wizardry 0.136 — 2.5D battles, level-20 builds and host-authoritative test lobbies. */
 (()=>{"use strict";
-  const W=1000,H=620,MAX_MANA=16,MAX_SLOTS=3;
+  const W=1000,H=620,MAX_MANA=20,MAX_SLOTS=3;
   const Builds=window.WizardryBuilds;
   let configuredProfile=null,activeRoster=null,camera={scale:1,x:0,y:0};
   const canvas=document.getElementById("battleCanvas"),g=canvas.getContext("2d");
@@ -86,7 +86,7 @@
     {id:"undead",name:"Undead Rampage",school:"dark",cost:3,target:"enemy",kind:"damage",damage:200,fearChance:.10,accuracy:.85,icon:"☠",rarity:"RARE",duration:4500,hit:.80,short:"85% ACCURACY",description:"A gaunt hooded zombie rips one arm through the ground, then the other, hauls itself free, screeches and pounces onto one enemy for a 200-damage Dark claw strike. On a successful hit, 10% chance to Fear: skips the target only if they have not acted yet this round. No effect if they already acted; never carries into the next round."}
 ,
     {id:"centaur",name:"Forrest Centaur",school:"nature",cost:6,target:"enemy",kind:"damage",damage:570,accuracy:.90,icon:"❀",rarity:"EPIC",duration:5000,hit:.724,short:"90% ACCURACY",description:"A centaur in woodland leaves, vines and bark garments gallops into position, plants his hooves, draws and charges his bow, then snipes one enemy with a Nature arrow for 570 damage."},
-    {id:"winddome",name:"Wind Dome",school:"wind",cost:4,target:"ally",kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself or a living ally. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking. Replaces any active Wind Dome or Bubble Shield."},
+    {id:"winddome",name:"Wind Dome",school:"wind",cost:3,target:"ally",kind:"winddome",accuracy:1,icon:"≋",rarity:"EPIC",duration:2600,hit:.72,short:"100% ACCURACY",description:"Rapidly rotating wind forms a protective dome around yourself or a living ally. Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses, support spells and all damage from debuffs preserve it. Lasts until used; reapplying refreshes one shield without stacking. Replaces any active Wind Dome or Bubble Shield."},
     {id:"penguins",name:"Ninja Penguins",school:"ice",cost:3,target:"enemy",kind:"penguins",damage:100,accuracy:.90,icon:"❄",rarity:"EPIC",duration:6000,hit:.99,frostChance:0.15,frostDamage:50,frostTurns:3,short:"90% ACCURACY",description:"Three ninja penguins flip into the arena with ice kunai. Two launch their teammate diagonally above one enemy; he spins and throws 3 fast kunai for 100 damage each. Each hit has a 15% chance of Frostbite: 50 damage per turn for 3 turns. Frostbite cannot stack or refresh from later kunai."},
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Extreme Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
@@ -148,6 +148,16 @@
   CARDS.push({id:"rogginbowler",name:"Roggin’ Bowler",school:"earth",cost:6,target:"enemy",kind:"damage",
     damage:610,accuracy:.85,icon:"◆",rarity:"RARE",duration:4490,hit:3510/4490,short:"85% ACCURACY",
     description:"An ogre hefts a bowling boulder onto its shoulder, points at the enemy, then winds up and rolls it into them for 610 base Earth damage."});
+  CARDS.push(
+    {"id":"iceblast","name":"Ice Blast","school":"ice","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Ice blast deals 75 base damage to one enemy."},
+    {"id":"blazingembers","name":"Blazing Embers","school":"fire","cost":1,"accuracy":0.95,"damage":85,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Fire blast deals 85 base damage to one enemy."},
+    {"id":"rockblast","name":"Rock Blast","school":"earth","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Earth blast deals 75 base damage to one enemy."},
+    {"id":"solarblast","name":"Solar Blast","school":"nature","cost":1,"accuracy":0.95,"damage":65,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Nature blast deals 65 base damage to one enemy."},
+    {"id":"darkblast","name":"Dark Blast","school":"dark","cost":1,"accuracy":0.95,"damage":80,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Dark blast deals 80 base damage to one enemy."},
+    {"id":"shockblast","name":"Shock Blast","school":"lightning","cost":1,"accuracy":0.9,"damage":90,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Lightning blast deals 90 base damage to one enemy."},
+    {"id":"waterblast","name":"Water Blast","school":"water","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Water blast deals 70 base damage to one enemy."},
+    {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Wind blast deals 70 base damage to one enemy."}
+  );
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -209,7 +219,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.slice(0,2);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -234,7 +244,7 @@
     u.drawPile=shuffleDeck(legal);
     if(includeNewest)for(const id of FEATURED_TEST_CARDS){
       const index=u.drawPile.indexOf(id);
-      if(index>=0){u.drawPile.splice(index,1);u.hand.push(id);}
+      if(index>=0&&u.hand.length<MAX_HAND_SIZE){u.drawPile.splice(index,1);u.hand.push(id);}
     }
     while(u.hand.length<Math.min(MAX_HAND_SIZE,CARDS.length)&&u.drawPile.length)
       drawCard(u);
@@ -3690,8 +3700,37 @@
     const scale=Math.min(Math.max(1,width-6)/bounds.w,Math.max(1,height-6)/bounds.h),w=bounds.w*scale,h=bounds.h*scale;
     output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
   }
+  const BLAST_COLORS={
+    ice:["#e5faff","#82d4ef","#548cb7"],fire:["#ffe6a3","#ffa35e","#df6246"],
+    earth:["#dfc39a","#b79268","#765942"],nature:["#fff5a3","#cbe878","#80b86b"],
+    dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
+    water:["#d5fbff","#65d7e5","#4192ba"],wind:["#ecfff5","#b2e6d4","#79aeb2"]
+  };
+  function drawStarterBlast(ctx,school,from,to,progress,hit,scale=1){
+    const palette=BLAST_COLORS[school];
+    const frame=Math.min(18,Math.floor(clamp(progress,0,1)*19))/18;
+    const travel=clamp(frame/hit,0,1),burst=clamp((frame-hit)/(1-hit),0,1);
+    const dir=to.x>=from.x?1:-1;
+    const x=lerp(from.x,to.x,travel),y=lerp(from.y,to.y,travel)-Math.sin(Math.PI*travel)*13*scale;
+    ctx.save();
+    for(let i=0;i<13;i++){
+      const angle=i*2.39996,spread=(i%3+1)*scale;
+      const dx=burst?Math.cos(angle)*burst*spread*17:-dir*i*2.4*scale;
+      const dy=Math.sin(angle)*spread*(3+burst*10);
+      const size=(i%4+3.4)*scale*(1-burst*.56);
+      ctx.globalAlpha=(.83-i*.033)*(1-burst)**1.2;
+      ctx.fillStyle=palette[i%3];ctx.beginPath();
+      ctx.moveTo(x+dx+size*dir,y+dy);
+      ctx.lineTo(x+dx,y+dy-size*.65);
+      ctx.lineTo(x+dx-size*dir,y+dy-size*.17);
+      ctx.lineTo(x+dx-size*.3*dir,y+dy+size*.74);
+      ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
   function paintCardPortrait(card,c,width,height){
-      if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
+      if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.25,y:height*.65},{x:width*.81,y:height*.38},.46,card.hit,Math.min(width,height)/50);
+      else if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
       else if(card.id==="frozentouch")window.FrozenTouch?.portrait(c,width,height);
       else if(card.id==="volcaniceruption")window.VolcanicEruption?.portrait(c,width,height);
       else if(card.id==="rogginbowler")window.RogginBowler?.portrait(c,width,height);
@@ -4110,7 +4149,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(["wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4427,6 +4466,16 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.starterBlast&&action.stage==="summon"){
+      const source=getUnit(action.source),target=getUnit(action.target);
+      if(source&&target){
+        const dir=target.x>=source.x?1:-1;
+        const from={x:source.x+dir*28,y:source.y-75},to={x:target.x,y:target.y-61};
+        renderables.push({type:"starter-blast",depthY:target.y+.1,priority:2,draw:()=>{
+          drawStarterBlast(g,action.card.school,from,to,action.elapsed/action.duration,action.card.hit);
+        }});
       }
     }
     if(action?.card?.id==="crabgiant"&&action.stage==="summon"){

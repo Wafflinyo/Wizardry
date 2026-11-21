@@ -8,7 +8,7 @@ api.startLobby([{peerId:'host',profile,team:1,slot:1},{peerId:'guest',profile:{.
     [wizard.hand[1],wizard.drawPile[index]]=[wizard.drawPile[index],wizard.hand[1]];
   }
 }
-host.statuses.push({kind:'trap',value:.25});guest.statuses.push({kind:'trap',value:.25});assert.ok(host.hand.includes('zen'));assert.ok(guest.hand.includes('zen'));assert.equal(host.maxHp,2000);assert.equal(host.maxMana,16);
+host.statuses.push({kind:'trap',value:.25});guest.statuses.push({kind:'trap',value:.25});assert.ok(host.hand.includes('zen'));assert.ok(guest.hand.includes('zen'));assert.equal(host.maxHp,2000);assert.equal(host.maxMana,20);
 assert.equal(api.submitRemotePlan('spoof',{pass:true,round:1}),false);assert.equal(api.submitRemotePlan('guest',{cardId:'reaper',targetId:guest.id,round:1}),false);assert.equal(api.submitRemotePlan('guest',{pass:true,round:999}),false);
 assert.equal(api.submitRemotePlan('host',{cardId:'zen',runeKind:'trap',targetId:guest.id,round:1}),false);
 assert.equal(api.submitRemotePlan('host',{cardId:'zen',runeKind:'trap',targetId:host.id,round:1}),true);assert.equal(s.phase,'planning','host waits for remaining human');assert.equal(api.submitRemotePlan('host',{pass:true,round:1}),false);assert.equal(api.submitRemotePlan('guest',{cardId:'zen',runeKind:'trap',targetId:guest.id,round:1}),true);assert.equal(s.phase,'resolving');assert.equal(s.sequence.length,4);assert.ok(s.animation);assert.ok(s.units.every(u=>[...u.hand,...u.drawPile,...u.discardPile].every(id=>u.masteries.includes(api.cards.find(c=>c.id===id).school))));

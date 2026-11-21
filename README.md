@@ -6,9 +6,9 @@ The original duel has been retired. `index.html` opens the current game.
 
 ## Wizard setup
 
-Create or load a wizard, customize their appearance, and choose **one or two elemental masteries**. Wizards gain one skill point per level, up to 20. At level 20, base stats are **2,000 HP and 16 mana**. Each HP point adds 150 HP, each mana point adds 2 capacity, and each elemental mastery point adds 1.5% to that element’s damage and healing. For example, 20 Fire points give +30% Fire damage and healing.
+Create or load a wizard, customize their appearance, and choose **one or two elemental masteries**. Wizards gain one skill point per level, up to 20. Base mana increases by 2 every five levels. At level 20, base stats are **2,000 HP and 20 mana**. Each HP point adds 150 HP, each mana point adds 2 capacity, and each elemental mastery point adds 1.5% to that element’s damage and healing. For example, 20 Fire points give +30% Fire damage and healing.
 
-Grimoires contain **24 cards** with **up to four copies of each spell**, drawn from unlocked spells in the wizard’s masteries. Tower progression unlocks the full spell pool by level 15. Wizard saves stay in the current browser.
+Grimoires contain **24 cards** with **up to four copies of each spell**, drawn from unlocked spells in the wizard’s masteries. Tower progression starts with five unlocked spells per element for dual mastery and seven for single mastery. The full spell pool unlocks by level 15. Wizard saves stay in the current browser.
 
 Each damaging spell rolls one of three equally likely variants: 90%, 100%, or 110% of base damage, then applies elemental mastery and existing combat modifiers. One variant is shared across every hit/target of the cast. Cards display their damage ranges including mastery. Healing scales with elemental mastery and never rolls the damage variants. Damage-over-time effects use the values listed on the cards.
 

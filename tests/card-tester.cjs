@@ -153,6 +153,12 @@ const assert = require('node:assert/strict');
   assert.equal(dummies.length,4);
   element('testerTarget').onchange({target:{value:'wizard'}});
   assert.ok(dummies.every(unit=>unit.wizardDummy));
+  const frostIndex = getOrder().indexOf('frozentouch');
+  const discardedForFrost = Math.max(0,frostIndex-teamTest.units[0].hand.length+1);
+  for (const id of getOrder().slice(0,discardedForFrost)) {
+    api.chooseCard(id);
+    assert.ok(api.discardSelected(), 'discard '+id);
+  }
   api.chooseCard('frozentouch');
   const protectedWizard=teamTest.units.find(unit=>unit.team===0&&unit.id!==teamTest.selectedCaster);
   api.selectTarget(protectedWizard.id);
@@ -163,7 +169,7 @@ const assert = require('node:assert/strict');
   assert.equal(teamTest.selectedTarget,teamTest.selectedCaster,'Frozen Touch accepts self');
   teamTest.units[0].skills.wind=0;
   dummies.forEach(unit=>{unit.hp=1;});
-  for (const id of getOrder().slice(0,getOrder().indexOf('sticksandstones'))) {
+  for (const id of getOrder().slice(discardedForFrost,getOrder().indexOf('sticksandstones'))) {
     api.chooseCard(id);
     assert.ok(api.discardSelected(), 'discard '+id);
   }

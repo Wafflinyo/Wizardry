@@ -14,20 +14,20 @@ const gear={
 };
 function gearLook(p){return Object.fromEntries(Object.entries(gear).map(([key,field])=>[key,Object.hasOwn(field.options,p?.[key])?p[key]:"original"]));}
 const names={water:'Water',earth:'Earth',lightning:'Lightning',nature:'Nature',wind:'Wind',dark:'Dark',fire:'Fire',ice:'Ice'};
-function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+Math.floor(level/5)*100+(level===20?100:0),mana:12+Math.floor(level/5),points:level};}
+function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+Math.floor(level/5)*100+(level===20?100:0),mana:12+2*Math.floor(level/5),points:level};}
 function orderedSpells(cards,school){
  return cards.filter(c=>c.school===school).sort((a,b)=>a.cost-b.cost||(a.id<b.id?-1:a.id>b.id?1:0));
 }
 // Unlock order mixes direct damage, support, and debuffs. Binder display sorts separately.
 const UNLOCK_ORDER=Object.fromEntries(Object.entries({
- water:"octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon",
- earth:"scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure",
- lightning:"electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus",
- nature:"bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree",
- wind:"scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor",
- dark:"undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper",
- fire:"devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix",
- ice:"totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann",
+ water:"waterblast octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon",
+ earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure",
+ lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus",
+ nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree",
+ wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor",
+ dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper",
+ fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix",
+ ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann",
 }).map(([school,ids])=>[school,ids.split(" ")]));
 function unlockOrder(cards,school){
  const order=UNLOCK_ORDER[school]||[];
@@ -38,7 +38,7 @@ function unlockOrder(cards,school){
 const MAX_COPIES=4;
 function unlockLevel(index,masteryCount){
  const single=masteryCount===1;
- const starters=single?6:4;
+ const starters=single?7:5;
  if(index<starters)return 1;
  return Math.min(15,5*(1+Math.floor((index-starters)/(single?1:2))));
 }

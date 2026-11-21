@@ -11,11 +11,15 @@ Deno.serve(async(req:Request)=>{
   if(req.method!=='POST')throw Error('POST required.');
   const text=await req.text();if(text.length>150000)throw Error('Request is too large.');const body=JSON.parse(text);
   if(!/^[a-f0-9]{64}$/.test(body.token||''))throw Error('Invalid player session.');
-  const actions=['create','join','seat','ready','size','start','plan','sync','poll','leave','cpuAdd','cpuRemove'];if(!actions.includes(body.action))throw Error('Invalid lobby action.');
+  const actions=['create','join','seat','ready','size','start','plan','sync','poll','leave','cpuAdd','cpuRemove','towerStart','towerNext'];if(!actions.includes(body.action))throw Error('Invalid lobby action.');
   const payload=body.payload||{};
   if(['create','join','cpuAdd'].includes(body.action)){
    if(!payload.profile||payload.profile.deck?.length>24)throw Error('Invalid wizard.');
-   payload.profile=(globalThis as any).WizardryBuilds.normalize(payload.profile,cards);if(payload.profile.level!==20)throw Error('This test requires a level-20 wizard.');
+   const builds=(globalThis as any).WizardryBuilds;
+   const tower=payload.tower===true&&body.action!=='cpuAdd';
+   const wizard=builds.normalize(payload.profile,cards);
+   if(!tower&&(wizard.level!==20||builds.stats(wizard).remaining!==0))throw Error('Online Battles requires a level-20 build with all skill points allocated.');
+   payload.profile={...wizard,towerLobby:tower};
   }
   if(body.action==='ready'&&typeof payload.ready!=='boolean')throw Error('Invalid ready state.');
   if(body.action==='seat'&&(![0,1].includes(payload.team)||!Number.isInteger(payload.slot)||payload.slot<0||payload.slot>3))throw Error('Invalid seat.');

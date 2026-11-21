@@ -517,7 +517,7 @@
     for(const dummy of sideUnits(1))fitTesterTarget(dummy,type);
     paintUI();
   }
-  function setBattle(mode="story",size=4){
+  function setBattle(mode="story",size=4,tower=null){
     const testing=mode==="tester";
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
@@ -538,7 +538,7 @@
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
-    state={mode,size,units,desktopArena,round:1,phase:"planning",planningSide:0,
+    state={mode,size,units,desktopArena,tower,round:1,phase:"planning",planningSide:0,
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
       humanByTeam:{0:"a0",1:mode==="pvp"?"e0":null},
@@ -867,6 +867,7 @@
     state.phase="finished";
     ui.hint.textContent=state.winner==="draw"?"Draw!":(state.winner===0?"Allies":"Enemy team")+" wins!";
     ui.status.textContent=ui.hint.textContent;paintUI();
+    if(state.tower)window.WizardryTower?.recordResult(state);
   }
   function runResolution(){
     if(state.phase!=="planning")return;
@@ -4702,6 +4703,16 @@
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
+    startTower:(players,floor,online=false)=>{
+      const humans=players.map((entry,slot)=>({...entry,team:0,slot}));
+      const enemies=humans.map((_,slot)=>({team:1,slot,isCpu:true,profile:{
+        ...Builds.cpu(CARDS,floor+slot,Math.random,floor),name:"Caglimot Guardian "+(slot+1)
+      }}));
+      activeRoster=[...humans,...enemies];
+      setBattle(online?'online':'story',humans.length,{id:crypto.randomUUID(),floor,online});
+      if(online)state.humanByTeam[0]=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.id||null;
+      paintUI();
+    },
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
     switchTesterTarget,
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},

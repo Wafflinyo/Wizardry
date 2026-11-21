@@ -3786,15 +3786,110 @@
       blastPoly(ctx,light,[[-26,14],[-13,1],[-6,8],[10,15],[-9,18]]);
     },
     wind(ctx,t,f,[light,mid,shade]){
-      const turn=f?Math.sin(t*35)*.24:t*3-1.4;
-      ctx.rotate(turn);
-      for(let i=-1;i<=1;i++){
-        const y=i*15;
-        blastPoly(ctx,shade,[[-33,y+8],[-20,y-5],[4,y-11],[26,y-6],[36,y+3],[20,y+1],[-1,y+6],[-23,y+11]]);
-        blastPoly(ctx,i===0?light:mid,[[-33,y+8],[-20,y-5],[4,y-11],[26,y-6],[36,y+3],[17,y-3],[-2,y],[-22,y+6]]);
+      const ripple=Math.sin(t*39)*4;
+      for(let i=0;i<3;i++){
+        const y=(i-1)*13;
+        blastPoly(ctx,i===1?mid:shade,[[-50,y+8],[-25,y-4],[0,y-6],[20,y+1],[-7,y+2+ripple],[-28,y+4]]);
       }
+      blastPoly(ctx,shade,[[-28,12],[-9,-12],[13,-17],[34,-1],[17,12],[-7,17]]);
+      blastPoly(ctx,mid,[[-28,12],[-9,-12],[13,-17],[34,-1],[10,-4],[-9,6]]);
+      blastPoly(ctx,light,[[-9,-12],[13,-17],[34,-1],[13,-10]]);
     }
   };
+  function blastStone(ctx,x,y,size,turn){
+    ctx.save();ctx.translate(x,y);ctx.rotate(turn);ctx.scale(size,size);
+    blastPoly(ctx,"#453e36",[[-12,-5],[-5,-12],[7,-10],[13,-2],[9,9],[-3,12],[-11,6]]);
+    blastPoly(ctx,"#9e8873",[[-12,-5],[-5,-12],[7,-10],[2,-4],[-5,1]]);
+    blastPoly(ctx,"#736150",[[-12,-5],[-5,1],[-3,12],[-11,6]]);
+    blastPoly(ctx,"#bcaa91",[[2,-4],[7,-10],[13,-2],[5,2],[-5,1]]);
+    blastPoly(ctx,"#66584b",[[-5,1],[5,2],[9,9],[-3,12]]);
+    ctx.restore();
+  }
+  const ROCK_CHARGE=[
+    [0,0,0],[.12,.14,0],[.28,.32,0],[.47,.46,0],[.65,.62,.14],
+    [.81,.74,.22],[.94,.85,.39],[1,.93,.58],[.92,.98,.77],[1,1,.93],[1,1,1]
+  ];
+  const ROCK_PIECES=[
+    [-57,27,-10,-11,1.30,0], [43,33,15,3,1.18,.11], [-32,40,-8,15,1.06,.22],
+    [56,18,13,-15,.88,.32], [-49,35,-21,5,.80,.39], [25,41,5,19,.90,.47]
+  ];
+  function drawRockCharge(ctx,charge,palette){
+    const [lift,pull,join]=ROCK_CHARGE[Math.min(10,Math.floor(charge*11))];
+    for(let i=0;i<ROCK_PIECES.length;i++){
+      const [sx,sy,ex,ey,size,delay]=ROCK_PIECES[i];
+      const up=clamp((lift-delay)/(1-delay),0,1),inward=clamp((pull-delay)/(1-delay),0,1);
+      if(up===0)continue;
+      const x=lerp(sx,ex,inward),y=lerp(sy+33,ey,up)-Math.sin(up*Math.PI)*18;
+      const compression=clamp((join-.48)*1.9,0,1);
+      if(compression<1)blastStone(ctx,x,y,size*(1-compression),i*.64+up*(i%2?2:-2));
+      for(let chip=0;chip<3;chip++){
+        const drop=clamp((up-(.24+chip*.22))*2.2,0,1);
+        if(drop>0&&drop<1)blastStone(ctx,x+(i%2?1:-1)*drop*(10+chip*6),y+drop*drop*37,.28*(1-drop),i+drop*7);
+      }
+    }
+    if(join>0){
+      ctx.save();ctx.scale(join,join);STARTER_SHAPES.earth(ctx,0,false,palette);ctx.restore();
+    }
+  }
+  const WIND_CHARGE=[
+    [62,34,0],[59,30,.15],[53,28,.30],[50,23,.43],[45,20,.56],[42,16,.70],
+    [39,14,.86],[35,11,1],[32,9,1],[36,7,1],[39,5,1]
+  ];
+  function drawWindCharge(ctx,charge,[light,mid,shade]){
+    const index=Math.min(10,Math.floor(charge*11)),[radius,height,body]=WIND_CHARGE[index];
+    for(let i=0;i<6;i++){
+      const angle=index*.66+i*Math.PI/3;
+      const x=Math.cos(angle)*radius,y=Math.sin(angle)*height+i%2*4;
+      const back=Math.sin(angle)<0,thickness=2+body*3;
+      ctx.save();ctx.translate(x,y);ctx.rotate(Math.cos(angle)*.62);
+      blastPoly(ctx,back?shade:mid,[[-20,4],[-10,-thickness],[9,-thickness-2],[23,1],[8,0],[-7,2]]);
+      if(!back)blastPoly(ctx,light,[[-10,-thickness],[9,-thickness-2],[23,1],[8,-thickness+1]]);
+      ctx.restore();
+    }
+    if(body>.55){
+      const nose=18+body*16;
+      blastPoly(ctx,shade,[[-28,12],[-9,-12],[13,-17],[nose,-1],[17,12],[-7,17]]);
+      blastPoly(ctx,mid,[[-28,12],[-9,-12],[13,-17],[nose,-1],[10,-4],[-9,6]]);
+      blastPoly(ctx,light,[[-9,-12],[13,-17],[nose,-1],[13,-10]]);
+    }
+  }
+  function drawElementCharge(ctx,school,charge,palette){
+    if(school==="earth"){ drawRockCharge(ctx,charge,palette);return; }
+    if(school==="wind"){ drawWindCharge(ctx,charge,palette);return; }
+    const count={ice:5,fire:3,nature:8,dark:3,lightning:3,water:7}[school];
+    const frame=Math.floor(charge*15),[light,mid,shade]=palette;
+    for(let i=0;i<count;i++){
+      const build=clamp((frame-i*.85)/9,0,1);
+      if(!build)continue;
+      const a=i*2.399+frame*.44,reach=46*(1-build),x=Math.cos(a)*reach,y=Math.sin(a)*reach*.64;
+      ctx.save();ctx.translate(x,y);
+      if(school==="ice")blastCrystal(ctx,(i-2)*8,8,4+build*3,8+build*21,(i-2)*.27,palette);
+      if(school==="fire")blastPoly(ctx,i%2?mid:shade,[[-11,9],[1,-15-build*12],[10,4],[5,15],[-5,17]]);
+      if(school==="nature"){
+        ctx.rotate(i*Math.PI/4);ctx.translate(13,0);
+        blastPoly(ctx,i%2?mid:light,[[0,-6],[18,-9],[24+build*8,0],[17,8],[0,5]]);
+      }
+      if(school==="dark"){
+        ctx.rotate(a);ctx.translate(16,0);
+        blastPoly(ctx,i%2?mid:shade,[[4,-11],[23,-15],[19,4],[2,14],[9,2],[-9,5]]);
+      }
+      if(school==="lightning"){
+        const y=(i-1)*16;
+        blastPoly(ctx,i===1?light:mid,[[-28,y+6],[-8,y-10],[4,y-2],[25,y-9],[10,y+6],[-6,y-2]]);
+      }
+      if(school==="water"){
+        const height=6+build*10;
+        ctx.translate((i-3)*6,10-Math.abs(i-3)*3);ctx.rotate(a);
+        blastPoly(ctx,mid,[[0,-height],[6,0],[4,6],[-3,8],[-7,2]]);
+        blastPoly(ctx,light,[[0,-height],[6,0],[1,3],[-4,1]]);
+      }
+      ctx.restore();
+    }
+    const merge=clamp((frame-8)/7,0,1);
+    if(merge){
+      ctx.save();ctx.scale(merge,merge);STARTER_SHAPES[school](ctx,charge*.61,false,palette);ctx.restore();
+    }
+  }
   const BLAST_DEBRIS={
     ice:[8,29,7,2],fire:[13,39,3,1],earth:[7,31,7,1],nature:[12,44,4,1],
     dark:[6,37,9,2],lightning:[9,42,5,3],water:[11,36,5,1],wind:[5,56,6,3]
@@ -3812,14 +3907,19 @@
     };
     if(progress<hit){
       const flying=frame>=BLAST_RELEASE;
-      if(flying){
-        for(let i=3;i>0;i--){
-          const lag=Math.max(0,travel-i*.045);
-          place(lerp(from.x,to.x,lag),lerp(from.y,to.y,lag),scale*(.60-i*.12),.21-i*.035,true);
-        }
+      if(!flying){
+        ctx.save();ctx.translate(from.x,from.y);ctx.scale(scale*dir,scale);
+        ctx.globalAlpha=Math.min(1,charged*5);
+        drawElementCharge(ctx,school,charged,palette);
+        ctx.restore();
+        return;
+      }
+      for(let i=3;i>0;i--){
+        const lag=Math.max(0,travel-i*.045);
+        place(lerp(from.x,to.x,lag),lerp(from.y,to.y,lag),scale*(.60-i*.12),.21-i*.035,true);
       }
       place(lerp(from.x,to.x,travel),lerp(from.y,to.y,travel),
-        scale*(flying?.77:.12+.88*Math.pow(charged,.78)),Math.min(1,charged*2.2),flying);
+        scale*.88,1,true);
       return;
     }
     const [count,distance,size,stretch]=BLAST_DEBRIS[school],fade=1-burst;

@@ -42,6 +42,40 @@
     }
   };
 
+  const sparks={
+    water:[[0,370,.16],[.39,615,.10],[.74,945,.13]],
+    earth:[[0,154,.21],[.32,218,.12],[.71,339,.16]],
+    lightning:[[0,490,.18],[.23,860,.14],[.52,550,.13],[.78,1130,.16]],
+    nature:[[0,425,.15],[.31,568,.12],[.65,842,.15]],
+    wind:[[0,520,.16],[.36,690,.12],[.73,1050,.15]],
+    dark:[[0,250,.19],[.28,179,.13],[.69,132,.17]],
+    fire:[[0,243,.18],[.26,490,.11],[.49,615,.12],[.76,942,.16]],
+    ice:[[0,745,.15],[.27,1125,.12],[.58,1680,.11],[.80,1220,.13]]
+  };
+
+  function castSparks(output,origin,duration,elapsed,school){
+    for(const [offset,pitch,volume] of sparks[school]||sparks.wind){
+      const at=offset*duration;
+      if(at+.045<elapsed)continue;
+      const start=origin+Math.max(0,at-elapsed);
+      const end=Math.min(origin+duration-elapsed,start+.42);
+      if(end-start<.025)continue;
+      const carrier=audio.createOscillator(),modulator=audio.createOscillator();
+      const depth=audio.createGain(),envelope=audio.createGain();
+      carrier.frequency.value=pitch;
+      modulator.frequency.value=pitch*(school==="lightning"?2.79:1.64);
+      depth.gain.setValueAtTime(pitch*1.8,start);
+      depth.gain.exponentialRampToValueAtTime(pitch*.055,end);
+      modulator.connect(depth).connect(carrier.frequency);
+      envelope.gain.setValueAtTime(.0001,start);
+      envelope.gain.linearRampToValueAtTime(volume,start+.012);
+      envelope.gain.exponentialRampToValueAtTime(.0001,end);
+      carrier.connect(envelope).connect(output);
+      carrier.start(start);modulator.start(start);
+      carrier.stop(end);modulator.stop(end);
+    }
+  }
+
   function contour(param,values,start,span,fraction){
     const [first,middle,last]=values;
     const initial=fraction<.5?first*(middle/first)**(fraction*2):middle*(last/middle)**((fraction-.5)*2);
@@ -57,8 +91,8 @@
     const start=origin+Math.max(0,first-elapsed),end=start+span;
     const gain=audio.createGain();
     gain.gain.setValueAtTime(0,start);
-    gain.gain.linearRampToValueAtTime(volume,start+span*.28);
-    gain.gain.linearRampToValueAtTime(volume*.72,start+span*.63);
+    gain.gain.linearRampToValueAtTime(volume,start+Math.min(.033,span*.2));
+    gain.gain.linearRampToValueAtTime(volume*.49,start+span*.55);
     gain.gain.linearRampToValueAtTime(0,end);
     gain.connect(output);
     return {gain,start,span,end,fraction:Math.max(0,(elapsed-first)/(last-first))};
@@ -90,6 +124,7 @@
         tone.start(cue.start);tone.stop(cue.end);
       }
     }
+    castSparks(filter,origin,duration,elapsed,cast.card?.school);
     return {gain,end};
   }
   function follow(cast,round){

@@ -27,7 +27,7 @@
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
       icon:"♆",description:"On success: recharge 1 round & Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
-    {id:"volt",name:"Professor Volt",school:"lightning",cost:4,target:"enemy",kind:"summon",damage:280,
+    {id:"volt",name:"Professor Volt",school:"lightning",cost:3,target:"enemy",kind:"summon",damage:280,
       icon:"⚡",description:"15% Stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
       stunChance:.15,duration:2950,hit:.66,artFrame:2},
     {id:"estel",name:"Lady Estel",school:"nature",cost:5,target:"ally",

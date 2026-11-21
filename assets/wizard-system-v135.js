@@ -27,7 +27,9 @@ function normalize(input,cards){
  return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
-function multiplier(p,school){return 1+.02*(p?.skills?.[school]||0);}
+const masteryPercentPerPoint=1.5;
+function masteryBonusPercent(p,school){return masteryPercentPerPoint*(p?.skills?.[school]||0);}
+function multiplier(p,school){return 1+masteryBonusPercent(p,school)/100;}
 function healAmount(base,p,school){return Math.floor(base*multiplier(p,school));}
 function healing(card,p){return healAmount(card.healPerTurn||card.heal||0,p,card.school)*(card.healPerTurn?(card.healTurns||1):1);}
 function effectText(card,p){
@@ -46,5 +48,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<20;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level:20,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,multiplier,healAmount,healing,effectText,rollVariant,range,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

@@ -14,145 +14,59 @@
   document.addEventListener("pointerup",unlock,{capture:true,passive:true});
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
-  // Resonance entries specify material, frequency contour, time window and level.
-  const schools={
-    water:{
-      resonances:[["glass",[235,305,268],0,1,.27],["glass",[440,610,490],.14,.72,.19],["glass",[700,940,1140],.52,.96,.12]]
-    },
-    earth:{
-      resonances:[["stone",[100,129,116],0,1,.39],["stone",[185,150,118],.02,.39,.22],["glass",[410,332,258],.55,.96,.16]]
-    },
-    lightning:{
-      resonances:[["stone",[250,890,570],0,.42,.18],["electric",[320,635,870],.15,1,.12],["glass",[770,1380,1010],.57,.97,.18]]
-    },
-    nature:{
-      resonances:[["glass",[284,322,304],0,1,.22],["glass",[438,525,480],.03,.68,.23],["glass",[680,830,760],.29,.62,.17],["glass",[605,925,880],.58,.99,.21]]
-    },
-    wind:{
-      resonances:[["glass",[350,495,635],0,1,.24],["glass",[760,605,910],.18,.87,.21],["glass",[970,1310,1035],.66,1,.17]]
-    },
-    dark:{
-      resonances:[["stone",[202,155,105],0,1,.37],["glass",[322,266,181],.10,.91,.26],["glass",[640,424,268],.51,1,.20]]
-    },
-    fire:{
-      resonances:[["ember",[118,290,237],0,1,.17],["stone",[260,435,390],.07,.83,.22],["glass",[650,1050,765],.53,.97,.17]]
-    },
-    ice:{
-      resonances:[["glass",[467,480,464],0,1,.26],["glass",[1020,1030,1000],.03,.55,.20],["glass",[1480,1510,1492],.32,.89,.17],["glass",[1960,2020,2000],.59,1,.15]]
-    }
+  // Each theme has a melody, two supporting notes, and its own bell timbre.
+  const themes={
+    water:    {notes:[69,72,76,74,72,76], harmony:[57,64], finish:69, color:.21},
+    earth:    {notes:[55,62,64,59,62,67], harmony:[43,50], finish:55, color:.12},
+    lightning:{notes:[67,73,71,76,74,79], harmony:[55,62], finish:79, color:.30},
+    nature:   {notes:[64,67,72,71,69,74], harmony:[48,55], finish:72, color:.16},
+    wind:     {notes:[74,76,81,78,76,83], harmony:[62,69], finish:81, color:.16},
+    dark:     {notes:[67,63,62,60,65,59], harmony:[48,55], finish:60, color:.24},
+    fire:     {notes:[60,64,67,72,71,76], harmony:[48,55], finish:72, color:.28},
+    ice:      {notes:[76,83,81,86,84,88], harmony:[60,67], finish:84, color:.32}
   };
+  const themeFor=school=>Object.hasOwn(themes,school)?themes[school]:themes.wind;
+  const frequency=note=>440*2**((note-69)/12);
 
-  const sparks={
-    water:[[0,370,.16],[.39,615,.10],[.74,945,.13]],
-    earth:[[0,154,.21],[.32,218,.12],[.71,339,.16]],
-    lightning:[[0,490,.18],[.23,860,.14],[.52,550,.13],[.78,1130,.16]],
-    nature:[[0,425,.15],[.31,568,.12],[.65,842,.15]],
-    wind:[[0,520,.16],[.36,690,.12],[.73,1050,.15]],
-    dark:[[0,250,.19],[.28,179,.13],[.69,132,.17]],
-    fire:[[0,243,.18],[.26,490,.11],[.49,615,.12],[.76,942,.16]],
-    ice:[[0,745,.15],[.27,1125,.12],[.58,1680,.11],[.80,1220,.13]]
-  };
-
-  function castSparks(output,origin,duration,elapsed,school){
-    for(const [offset,pitch,volume] of sparks[school]||sparks.wind){
-      const at=offset*duration;
-      if(at+.045<elapsed)continue;
-      const start=origin+Math.max(0,at-elapsed);
-      const end=Math.min(origin+duration-elapsed,start+.53);
-      if(end-start<.025)continue;
-      const carrier=audio.createOscillator(),modulator=audio.createOscillator();
-      const depth=audio.createGain(),envelope=audio.createGain();
-      carrier.frequency.value=pitch;
-      modulator.frequency.value=pitch*(school==="lightning"?2.79:1.64);
-      depth.gain.setValueAtTime(pitch*1.15,start);
-      depth.gain.exponentialRampToValueAtTime(pitch*.055,end);
-      modulator.connect(depth).connect(carrier.frequency);
-      envelope.gain.setValueAtTime(.0001,start);
-      envelope.gain.linearRampToValueAtTime(volume,start+.012);
-      envelope.gain.exponentialRampToValueAtTime(.0001,end);
-      carrier.connect(envelope).connect(output);
-
-      // The first strike leaves a pair of higher, quieter crystal reflections.
-      for(const [delay,ratio,level] of [[.030,2.13,.26],[.091,3.29,.14]]){
-        const reflectionStart=start+delay;
-        if(end-reflectionStart<.025)continue;
-        const reflection=audio.createOscillator(),ring=audio.createGain();
-        reflection.frequency.value=pitch*ratio;
-        ring.gain.setValueAtTime(.0001,reflectionStart);
-        ring.gain.linearRampToValueAtTime(volume*level,reflectionStart+.009);
-        ring.gain.exponentialRampToValueAtTime(.0001,end);
-        reflection.connect(ring).connect(output);
-        reflection.start(reflectionStart);reflection.stop(end);
-      }
-      carrier.start(start);modulator.start(start);
-      carrier.stop(end);modulator.stop(end);
+  function bell(output,note,start,length,volume,color){
+    const pitch=frequency(note),end=start+length;
+    for(const [ratio,level,decay] of [[1,1,1],[2,.29,.67],[3.79,color,.40]]){
+      const tone=audio.createOscillator(),gain=audio.createGain();
+      const stop=start+length*decay;
+      tone.frequency.value=pitch*ratio;
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.linearRampToValueAtTime(volume*level,start+Math.min(.024,length*.09));
+      gain.gain.exponentialRampToValueAtTime(.0001,stop);
+      tone.connect(gain).connect(output);
+      tone.start(start);tone.stop(Math.min(end,stop));
     }
-  }
-
-  function contour(param,values,start,span,fraction){
-    const [first,middle,last]=values;
-    const initial=fraction<.5?first*(middle/first)**(fraction*2):middle*(last/middle)**((fraction-.5)*2);
-    param.setValueAtTime(initial,start);
-    if(fraction<.5)param.exponentialRampToValueAtTime(middle,start+span*(.5-fraction)/(1-fraction));
-    param.exponentialRampToValueAtTime(last,start+span);
-  }
-
-  function layer(output,origin,duration,elapsed,from,to,volume){
-    const first=from*duration,last=to*duration;
-    const span=last-Math.max(elapsed,first);
-    if(span<.025)return null;
-    const start=origin+Math.max(0,first-elapsed),end=start+span;
-    const gain=audio.createGain();
-    gain.gain.setValueAtTime(0,start);
-    gain.gain.linearRampToValueAtTime(volume,start+Math.min(.033,span*.2));
-    gain.gain.linearRampToValueAtTime(volume*.49,start+span*.55);
-    gain.gain.linearRampToValueAtTime(0,end);
-    gain.connect(output);
-    return {gain,start,span,end,fraction:Math.max(0,(elapsed-first)/(last-first))};
   }
 
   function begin(cast){
     const elapsed=Math.max(0,cast.elapsed)/1000,duration=cast.duration/1000;
-    const origin=audio.currentTime+.006,end=origin+duration-elapsed;
-    const gain=audio.createGain(),filter=audio.createBiquadFilter();
-    filter.type="lowpass";filter.frequency.value=4600;filter.Q.value=.25;
-    gain.gain.value=.42;
-    filter.connect(gain).connect(audio.destination);
-    const {resonances}=schools[cast.card?.school]||schools.wind;
-    for(const [character,frequencies,from,to,volume] of resonances){
-      const cue=layer(filter,origin,duration,elapsed,from,to,volume*.65);
-      if(!cue)continue;
-      // Inharmonic partials give each voice a ringing edge without a breath layer.
-      const partials=character==="glass"?[[1,.61],[2.41,.23],[4.17,.15]]:
-        character==="stone"?[[1,.69],[1.61,.23],[3.72,.12]]:
-        character==="electric"?[[1,.56],[2.72,.28],[4.51,.14]]:
-        [[1,.60],[1.91,.23],[3.36,.16]];
-      for(const [ratio,level] of partials){
-        const tone=audio.createOscillator(),mix=audio.createGain();
-        tone.type=ratio===1&&character!=="glass"?"triangle":"sine";
-        contour(tone.frequency,frequencies.map(hz=>hz*ratio),cue.start,cue.span,cue.fraction);
-        mix.gain.setValueAtTime(level,cue.start);
-        if(ratio!==1)mix.gain.exponentialRampToValueAtTime(level*.24,cue.end);
-        tone.connect(mix).connect(cue.gain);
-        tone.start(cue.start);tone.stop(cue.end);
-      }
+    const start=audio.currentTime+.006,end=start+duration-elapsed;
+    const gain=audio.createGain();
+    gain.gain.value=.63;
+    gain.connect(audio.destination);
+    const theme=themeFor(cast.card?.school);
+    const beats=[0,.15,.32,.48,.63,.78];
+    for(const [i,note] of theme.notes.entries()){
+      const offset=beats[i]*duration;
+      if(offset+.06<elapsed)continue;
+      const on=start+Math.max(0,offset-elapsed);
+      bell(gain,note,on,end-on,.12+(i===0?.03:0),theme.color);
     }
-    castSparks(filter,origin,duration,elapsed,cast.card?.school);
+    for(const [i,note] of theme.harmony.entries()){
+      const offset=(i===0?.04:.40)*duration;
+      const on=start+Math.max(0,offset-elapsed);
+      if(end-on>.10)bell(gain,note,on,end-on,.07,theme.color*.43);
+    }
     return {gain,end};
   }
+
   function completeRune(school){
-    const pitch=(sparks[school]||sparks.wind).at(-1)[1];
-    const start=audio.currentTime+.006;
-    for(const [ratio,level,delay,decay] of [[1,.065,0,.22],[1.5,.044,.022,.30],[2.16,.022,.051,.34]]){
-      const at=start+delay,stop=at+decay;
-      const chime=audio.createOscillator(),gain=audio.createGain();
-      chime.frequency.value=pitch*ratio;
-      gain.gain.setValueAtTime(.0001,at);
-      gain.gain.linearRampToValueAtTime(level,at+.010);
-      gain.gain.exponentialRampToValueAtTime(.0001,stop);
-      chime.connect(gain).connect(audio.destination);
-      chime.start(at);chime.stop(stop);
-    }
+    const theme=themeFor(school);
+    bell(audio.destination,theme.finish,audio.currentTime+.006,.38,.073,theme.color);
   }
 
   function follow(cast,round){

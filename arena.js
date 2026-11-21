@@ -27,9 +27,9 @@
   const CARDS=[
     {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:1200,
       icon:"♆",description:"On success: recharge 1 round & Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
-    {id:"volt",name:"Professor Volt",school:"lightning",cost:5,target:"enemy",kind:"summon",damage:450,
-      icon:"⚡",description:"20% stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
-      stunChance:.20,duration:2950,hit:.66,artFrame:2},
+    {id:"volt",name:"Professor Volt",school:"lightning",cost:4,target:"enemy",kind:"summon",damage:280,
+      icon:"⚡",description:"15% Stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
+      stunChance:.15,duration:2950,hit:.66,artFrame:2},
     {id:"estel",name:"Lady Estel",school:"nature",cost:5,target:"ally",
       kind:"heal",heal:750,icon:"❀",description:"Blesses one ally: up to 750 HP",
       short:"90% ACCURACY",accuracy:.90,duration:3200,hit:.66,artFrame:3},
@@ -126,7 +126,7 @@
   CARDS.push({"id":"quicksand","name":"Quick Sand","school":"earth","cost":4,"target":"enemy","kind":"quicksand","accuracy":1,"icon":"◆","rarity":"RARE","duration":1750,"hit":0.65,"short":"100% ACCURACY","sinkDamage":530,"turns":5,"description":"Lasts 5 rounds. The target sinks on each cast attempt, even on a miss. On the third attempt, they take 530 damage and the curse ends."});
   CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":7,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
   CARDS.push({"id":"crystalicemirrors","name":"Crystal Ice Mirrors","school":"ice","cost":4,"target":"enemy","kind":"crystalicemirrors","accuracy":1,"icon":"❄","rarity":"EPIC","duration":2250,"hit":0.67,"short":"100% ACCURACY","reflectChance":0.4,"turns":3,"description":"Mark one enemy for 3 rounds. Each damaging cast has a 40% chance to turn its damage back on the caster instead. Multi-hit spells roll once. Team attacks reflect one target’s share."});
-  CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to cancel their pending action this round."});
+  CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to Stun, skipping their pending action this round."});
   CARDS.push({"id":"growth","name":"Growth","school":"nature","cost":2,"target":"ally","kind":"growth","boost":0.25,"accuracy":1,"icon":"❧","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Bless yourself or a living ally. Their next direct Nature heal or damaging cast gains 25% across every hit and target. Rune ticks, misses, and fully blocked casts preserve Growth. Does not stack."});
   CARDS.push({"id":"sticksandstones","name":"Sticks and Stones","school":"wind","cost":6,"target":"all_enemies","kind":"sticksandstones","damage":320,"decayChance":0.15,"decayBoost":0.2,"accuracy":0.85,"icon":"≋","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"A cloud rider lifts one stone per living enemy and bats them in succession. Each stone deals 320 base Wind damage and has its own 15% chance to apply Decay of Strength."});
   CARDS.push({"id":"darksorcerer","name":"Dark Sorcerer","school":"dark","cost":8,"target":"all_enemies","kind":"darksorcerer","damage":570,"curseChance":0.2,"curseDamage":50,"curseTurns":3,"accuracy":0.8,"duration":4600,"hit":0.68,"icon":"☠","rarity":"EPIC","short":"80% ACCURACY","description":"Slashes every living enemy for 570 base Dark damage. Each enemy hit has a 20% chance to suffer Curse for 50 base damage per round for 3 rounds."});
@@ -160,7 +160,7 @@
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const CARD_EFFECTS={
-    poseidon:"Rest 1 round. Next Water hit +30%.",volt:"20% stun chance.",wind:"Next cast gains 10 accuracy points.",
+    poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
     dragon:"150 adjacent splash. 25% burn: 50 × 3 rounds.",arrows:"10% burn per enemy: 50 × 3 rounds.",
     ronin:"Three hits of 150.",reaper:"Next damaging spell against target deals 20% more.",
@@ -189,7 +189,7 @@
     manascourge:"Blocks the target’s next round-end mana gain.",soulharvest:"250 extra damage after 3 rounds.",
     quicksand:"530 damage on the third cast attempt within 5 rounds.",
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
-    electriceel:"25% chance to cancel the target’s pending action.",growth:"Next direct Nature heal or damaging spell gains 25%.",
+    electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
@@ -2548,7 +2548,7 @@
         damage(c,t,card.damage,card,anim);
         if(anim.runeResult==="success"&&card.id==="undead"&&!preventsHitEffects(anim,t))
           attemptUndeadFear(c,t,card,anim.fearRoll??Math.random());
-        // The independent 20% stun roll happens ONLY after a successful
+        // The independent stun roll happens ONLY after a successful
         // lightning rune and beam impact against a surviving target.
         if(anim.runeResult==="success"&&card.id==="volt"&&t.hp>0&&!preventsHitEffects(anim,t))
           attemptVoltStun(c,t,card);

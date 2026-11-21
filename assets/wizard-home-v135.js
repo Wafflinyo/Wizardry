@@ -79,7 +79,7 @@ function binderFace(card,profile,expanded=false){
  const amount=card.heal?`${B.healing(card,profile).toLocaleString()} healing`:range?`${range.low.toLocaleString()}–${range.high.toLocaleString()} damage`:'';
  const effect=info.effect===info.target?'':info.effect;
  const name=expanded?`<h2 id="binderCardTitle">${escape(card.name)}</h2>`:`<strong>${escape(card.name)}</strong>`;
- return `<span class="binder-card-top"><span class="binder-rune" aria-hidden="true">${window.WIZARDRY_ELEMENT_TRACE_V45.svgFor(card.school)}</span><span>${card.cost} mana</span></span><span class="binder-art" data-binder-art data-card="${card.id}"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>${name}<span class="binder-effect"><b>${amount?amount+' · ':''}${target}</b>${effect?`<span>${escape(effect)}</span>`:''}</span>`;
+ return `<span class="binder-card-top"><span class="binder-rune" aria-hidden="true">${window.WIZARDRY_ELEMENT_TRACE_V45.svgFor(card.school)}</span><span>${card.cost} mana</span></span><span class="binder-art" data-binder-art data-card="${card.id}"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>${name}<span class="binder-meta">${escape(info.accuracy)}</span><span class="binder-effect"><b>${amount?amount+' · ':''}${target}</b>${effect?`<span>${escape(effect)}</span>`:''}</span>`;
 }
 function renderBinder(profile){
  if(!B.elements.includes(binderElement))binderElement=profile.masteries[0]||B.elements[0];

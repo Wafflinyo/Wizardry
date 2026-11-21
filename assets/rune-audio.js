@@ -27,7 +27,7 @@
 
     // Airy friction is the body of the stroke. A moving resonance follows its pressure.
     if(!paper){
-      paper=audio.createBuffer(1,Math.ceil(audio.sampleRate*2),audio.sampleRate);
+      paper=audio.createBuffer(1,Math.ceil(audio.sampleRate*3),audio.sampleRate);
       const samples=paper.getChannelData(0);
       let seed=1789,previous=0;
       for(let i=0;i<samples.length;i++){
@@ -39,10 +39,10 @@
     }
     const stroke=audio.createBufferSource(),resonance=audio.createBiquadFilter();
     stroke.buffer=paper;stroke.loop=true;
-    resonance.type="bandpass";resonance.Q.value=.72;
+    resonance.type="bandpass";resonance.Q.value=.58;
     const pressure=audio.createGain();
     const positions=[0,.17,.34,.51,.68,.84,1];
-    const centers=[1180,1770,1380,2050,1570,2260,1580];
+    const centers=[980,1370,1120,1590,1260,1730,1260];
     const weights=[.58,.93,.69,1,.76,.94,.63];
     resonance.frequency.setValueAtTime(centers[0],start);
     pressure.gain.setValueAtTime(weights[0],start);
@@ -56,10 +56,10 @@
 
     // A quiet gliding overtone gives the friction a magical edge.
     const shimmer=audio.createOscillator(),mix=audio.createGain();
-    mix.gain.value=.14;
-    shimmer.frequency.setValueAtTime(805,start);
-    shimmer.frequency.exponentialRampToValueAtTime(1130,start+remaining*.58);
-    shimmer.frequency.exponentialRampToValueAtTime(930,end);
+    mix.gain.value=.026;
+    shimmer.frequency.setValueAtTime(640,start);
+    shimmer.frequency.exponentialRampToValueAtTime(780,start+remaining*.58);
+    shimmer.frequency.exponentialRampToValueAtTime(670,end);
     shimmer.connect(mix).connect(gain);
     shimmer.start(start);shimmer.stop(end+.10);
     return {gain,end};

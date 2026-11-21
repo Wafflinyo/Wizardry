@@ -425,7 +425,7 @@
     }
     ctx.restore();return true;
   }
-  const ARM_RAISE_MS=300,AUTO_TRACE_MS=1600,ARM_LOWER_MS=340,FIZZLE_MS=360;
+  const ARM_RAISE_MS=300,AUTO_TRACE_MS=2200,ARM_LOWER_MS=340,FIZZLE_MS=360;
   const RUNE_GLOW_MS=620,RUNE_CRUMBLE_MS=700;
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Original full Golem animation: emerge, clasp, wind up, slam,

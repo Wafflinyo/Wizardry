@@ -3706,72 +3706,136 @@
     dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
     water:["#d5fbff","#65d7e5","#4192ba"],wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
-  const BLAST_FACETS={ice:6,fire:7,earth:5,nature:8,dark:5,lightning:4,water:8,wind:9};
   const BLAST_RELEASE=.61;
-  function blastFacet(ctx,x,y,r,angle,sides,stretch=1){
+  function blastPoly(ctx,color,points){
+    ctx.fillStyle=color;
     ctx.beginPath();
-    for(let i=0;i<sides;i++){
-      const t=2*Math.PI*i/sides+angle;
-      const px=x+Math.cos(t)*r*stretch,py=y+Math.sin(t)*r;
-      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
-    }
+    points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
     ctx.closePath();
+    ctx.fill();
   }
+  function blastCrystal(ctx,x,y,width,height,angle,colors){
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+    const [light,mid,shade]=colors;
+    blastPoly(ctx,shade,[[0,-height],[width*.72,-height*.46],[width,height*.57],[0,height],[-width,height*.44],[-width*.73,-height*.49]]);
+    blastPoly(ctx,mid,[[0,-height],[width*.72,-height*.46],[width,height*.57],[0,height],[0,-height*.34]]);
+    blastPoly(ctx,light,[[0,-height],[0,-height*.34],[0,height],[-width,height*.44],[-width*.73,-height*.49]]);
+    ctx.restore();
+  }
+  const STARTER_SHAPES={
+    ice(ctx,t,f,[light,mid,shade]){
+      const fan=f?.46:.26;
+      for(let i=-2;i<=2;i++){
+        blastCrystal(ctx,-Math.abs(i)*7,i*10,6-Math.abs(i)*.8,30-Math.abs(i)*6,
+          (f?Math.PI*.5:0)+i*fan,[light,mid,shade]);
+      }
+    },
+    fire(ctx,t,f,[light,mid,shade]){
+      for(let i=0;i<3;i++){
+        ctx.save();ctx.translate(-i*10,(i-1)*13);ctx.rotate(f?Math.PI*.5+i*.12:(i-1)*.46);
+        const flicker=Math.sin(t*34+i*2)*7;
+        blastPoly(ctx,shade,[[0,-30-flicker],[14,-9],[17,10],[8,19],[-7,19],[-16,6],[-8,-11]]);
+        blastPoly(ctx,mid,[[0,-30-flicker],[8,-8],[12,8],[4,16],[-8,12],[-4,-4]]);
+        blastPoly(ctx,light,[[1,-12],[7,7],[1,13],[-5,7]]);
+        ctx.restore();
+      }
+    },
+    earth(ctx,t,f,[light,mid,shade]){
+      ctx.rotate(t*(f?6:1.6));
+      blastPoly(ctx,shade,[[-28,-15],[-12,-29],[15,-26],[29,-8],[24,18],[5,28],[-22,17]]);
+      blastPoly(ctx,mid,[[-28,-15],[-8,-13],[9,4],[5,28],[-22,17]]);
+      blastPoly(ctx,"#94704e",[[-8,-13],[15,-26],[29,-8],[9,4]]);
+      blastPoly(ctx,light,[[-12,-29],[15,-26],[-8,-13],[-28,-15]]);
+      blastPoly(ctx,mid,[[29,-8],[24,18],[5,28],[9,4]]);
+    },
+    nature(ctx,t,f,[light,mid,shade]){
+      ctx.rotate(t*2.2);
+      for(let i=0;i<8;i++){
+        ctx.save();ctx.rotate(i*Math.PI/4);
+        blastPoly(ctx,shade,[[4,-8],[23,-10],[39,0],[23,11],[4,9]]);
+        blastPoly(ctx,mid,[[4,-8],[23,-10],[39,0],[20,1],[4,5]]);
+        blastPoly(ctx,light,[[9,-5],[23,-8],[32,0],[17,1]]);
+        ctx.restore();
+      }
+      blastPoly(ctx,light,[[0,-15],[13,-8],[13,8],[0,15],[-13,8],[-13,-8]]);
+    },
+    dark(ctx,t,f,[light,mid,shade]){
+      for(let i=0;i<3;i++){
+        ctx.save();ctx.rotate(i*2*Math.PI/3-t*3.4);
+        blastPoly(ctx,shade,[[35,-15],[31,9],[17,27],[-13,32],[-26,21],[-3,22],[16,7],[18,-4]]);
+        blastPoly(ctx,mid,[[35,-15],[17,27],[-13,32],[-3,22],[16,7]]);
+        blastPoly(ctx,light,[[35,-15],[27,8],[17,15],[20,4]]);
+        ctx.restore();
+      }
+      blastPoly(ctx,"#1c1229",[[0,-13],[12,-6],[11,8],[0,14],[-12,7],[-12,-7]]);
+    },
+    lightning(ctx,t,f,[light,mid,shade]){
+      if(!f)ctx.rotate(-Math.PI*.40);
+      const spark=Math.sin(t*81)*3;
+      for(let i=-1;i<=1;i++){
+        const y=i*16+spark;
+        blastPoly(ctx,shade,[[-37,y+5],[-15,y-10],[0,y+1],[19,y-10],[35,y-2],[17,y+9],[0,y+9],[-15,y-2]]);
+        blastPoly(ctx,i===0?light:mid,[[-37,y+5],[-15,y-10],[0,y+1],[19,y-10],[35,y-2],[14,y-5],[0,y+5],[-15,y-6]]);
+      }
+    },
+    water(ctx,t,f,[light,mid,shade]){
+      if(!f)ctx.rotate(-Math.PI*.35+Math.sin(t*12)*.28);
+      blastPoly(ctx,shade,[[-34,18],[-23,-2],[-6,-21],[13,-25],[27,-14],[33,3],[21,18],[1,22]]);
+      blastPoly(ctx,mid,[[-34,18],[-14,1],[-6,-21],[13,-25],[27,-14],[27,0],[15,-7],[4,-4],[-5,10],[10,15]]);
+      blastPoly(ctx,light,[[-6,-21],[13,-25],[27,-14],[27,0],[21,-9],[11,-15],[0,-13]]);
+      blastPoly(ctx,light,[[-26,14],[-13,1],[-6,8],[10,15],[-9,18]]);
+    },
+    wind(ctx,t,f,[light,mid,shade]){
+      const turn=f?Math.sin(t*35)*.24:t*3-1.4;
+      ctx.rotate(turn);
+      for(let i=-1;i<=1;i++){
+        const y=i*15;
+        blastPoly(ctx,shade,[[-33,y+8],[-20,y-5],[4,y-11],[26,y-6],[36,y+3],[20,y+1],[-1,y+6],[-23,y+11]]);
+        blastPoly(ctx,i===0?light:mid,[[-33,y+8],[-20,y-5],[4,y-11],[26,y-6],[36,y+3],[17,y-3],[-2,y],[-22,y+6]]);
+      }
+    }
+  };
+  const BLAST_DEBRIS={
+    ice:[8,29,7,2],fire:[13,39,3,1],earth:[7,31,7,1],nature:[12,44,4,1],
+    dark:[6,37,9,2],lightning:[9,42,5,3],water:[11,36,5,1],wind:[5,56,6,3]
+  };
   function drawStarterBlast(ctx,school,from,to,progress,hit,scale=1){
-    const palette=BLAST_COLORS[school],sides=BLAST_FACETS[school];
-    const frame=Math.floor(clamp(progress,0,1)*59)/59;
-    const charge=clamp(frame/BLAST_RELEASE,0,1);
-    const flight=clamp((frame-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1);
+    const palette=BLAST_COLORS[school],shape=STARTER_SHAPES[school];
+    const frame=Math.floor(clamp(progress,0,1)*47)/47;
+    const charged=clamp(frame/BLAST_RELEASE,0,1);
+    const travel=Math.pow(clamp((frame-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1),1.6);
     const burst=clamp((frame-hit)/(1-hit),0,1);
     const dir=to.x>=from.x?1:-1;
-    ctx.save();
-    ctx.translate(from.x,from.y);
-    ctx.scale(scale,scale);
-    const dx=(to.x-from.x)/scale,dy=(to.y-from.y)/scale;
-    if(frame<BLAST_RELEASE){
-      const radius=4+24*Math.pow(charge,.66),spin=charge*3.1;
-      const ring=radius+27*(1-charge);
-      ctx.globalAlpha=.18+charge*.24;ctx.strokeStyle=palette[1];ctx.lineWidth=1.7;
-      blastFacet(ctx,0,0,ring,spin*.55,sides);ctx.stroke();
-      for(let i=0;i<12;i++){
-        const angle=i*Math.PI/6+spin;
-        const drift=radius+11+38*(1-charge)+(i%3)*5;
-        ctx.fillStyle=palette[i%3];ctx.globalAlpha=.22+charge*.49;
-        blastFacet(ctx,Math.cos(angle)*drift,Math.sin(angle)*drift*.76,2+charge*(i%3+1),angle,3);
-        ctx.fill();
-      }
-      ctx.globalAlpha=charge*.98;ctx.fillStyle=palette[2];
-      blastFacet(ctx,0,0,radius,spin,sides);ctx.fill();
-      ctx.fillStyle=palette[1];
-      blastFacet(ctx,-3,-4,radius*.77,-spin*.68,sides);ctx.fill();
-      ctx.fillStyle=palette[0];
-      blastFacet(ctx,-4,-5,radius*.43,spin*.55,sides);ctx.fill();
-    }else{
-      const travel=Math.pow(flight,1.45),x=dx*travel,y=dy*travel;
-      if(burst<.42){
-        ctx.globalAlpha=(1-burst/.42)*.76;ctx.fillStyle=palette[2];ctx.beginPath();
-        ctx.moveTo(x+22*dir,y);ctx.lineTo(x-12*dir,y-15);ctx.lineTo(x-95*dir*Math.min(1,flight*4),y-dy*.24);
-        ctx.lineTo(x-15*dir,y+13);ctx.closePath();ctx.fill();
-        ctx.fillStyle=palette[1];blastFacet(ctx,x,y,17,flight*2.1,sides,1.53);ctx.fill();
-        ctx.fillStyle=palette[0];blastFacet(ctx,x+7*dir,y-3,9,flight,sides,1.48);ctx.fill();
-      }
-      if(frame>=hit){
-        const fade=1-burst;
-        ctx.globalAlpha=fade*.78;ctx.strokeStyle=palette[0];ctx.lineWidth=2.6*fade;
-        blastFacet(ctx,dx,dy,11+burst*39,burst*.5,sides,1.16);ctx.stroke();
-        for(let i=0;i<15;i++){
-          const angle=i*2.39996,r=12+burst*(30+i%5*8);
-          ctx.globalAlpha=fade*fade*.9;ctx.fillStyle=palette[i%3];
-          blastFacet(ctx,dx+Math.cos(angle)*r+dir*burst*17,dy+Math.sin(angle)*r*.77,
-            (3+i%4)*fade,angle+burst,3);
-          ctx.fill();
+    const place=(x,y,size,alpha,flight)=>{
+      ctx.save();ctx.translate(x,y);ctx.scale(size*dir,size);ctx.globalAlpha=alpha;
+      shape(ctx,frame,flight,palette);ctx.restore();
+    };
+    if(progress<hit){
+      const flying=frame>=BLAST_RELEASE;
+      if(flying){
+        for(let i=3;i>0;i--){
+          const lag=Math.max(0,travel-i*.045);
+          place(lerp(from.x,to.x,lag),lerp(from.y,to.y,lag),scale*(.60-i*.12),.21-i*.035,true);
         }
       }
+      place(lerp(from.x,to.x,travel),lerp(from.y,to.y,travel),
+        scale*(flying?.77:.12+.88*Math.pow(charged,.78)),Math.min(1,charged*2.2),flying);
+      return;
+    }
+    const [count,distance,size,stretch]=BLAST_DEBRIS[school],fade=1-burst;
+    place(to.x,to.y,scale*(.52+burst*.52),fade*fade*.82,true);
+    ctx.save();ctx.translate(to.x,to.y);ctx.scale(scale*dir,scale);
+    for(let i=0;i<count;i++){
+      const angle=i*Math.PI*2/count+.23,reach=7+burst*(distance+i%3*9);
+      const x=Math.cos(angle)*reach,y=Math.sin(angle)*reach*.72+(school==="earth"?burst*burst*24:0);
+      const shard=size*fade*(.5+i%3*.20);
+      ctx.globalAlpha=fade*.84;
+      blastPoly(ctx,palette[i%3],[[x+shard*stretch,y],[x-shard,y-shard],[x-shard*.36,y+shard*.65]]);
     }
     ctx.restore();
   }
   function paintCardPortrait(card,c,width,height){
-      if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.25,y:height*.65},{x:width*.81,y:height*.38},.46,card.hit,Math.min(width,height)/50);
+      if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.49,y:height*.51},{x:width*.81,y:height*.38},.54,card.hit,Math.min(width,height)/88);
       else if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
       else if(card.id==="frozentouch")window.FrozenTouch?.portrait(c,width,height);
       else if(card.id==="volcaniceruption")window.VolcanicEruption?.portrait(c,width,height);

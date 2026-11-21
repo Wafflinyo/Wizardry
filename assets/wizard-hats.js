@@ -13,35 +13,74 @@ window.WizardHats=(()=>{
     });
     stripped.set(source,canvas);return canvas;
   }
+  const designs=new Map();
+  function makeHat(style,fabric,trim){
+    // Rasterize at the same texel density as the 128px character frames.
+    const canvas=document.createElement("canvas");canvas.width=80;canvas.height=88;
+    const g=canvas.getContext("2d");g.translate(40,52);
+    function facet(points,dye,light){
+      g.fillStyle="rgb("+[1,3,5].map(i=>Math.min(255,Math.round(parseInt(dye.slice(i,i+2),16)*light))).join(",")+")";
+      g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
+      g.closePath();g.fill();
+    }
+    if(style==="hood"){
+      // A folded mantle widens at the nape, then turns under the jaw.
+      const edge=[[-29,17],[-22,4],[-23,-11],[-18,-23],[-7,-31],[5,-30],[14,-22],[21,-7]];
+      const fold=[[-25,20],[-16,5],[-15,-8],[-11,-18],[-5,-23],[3,-22],[11,-17],[20,-6]];
+      const lip=[[-12,19],[-6,8],[-5,-2],[-1,-9],[4,-13],[9,-14],[15,-12],[21,-6]];
+      facet([[-27,18],[-19,-17],[-5,-28],[12,-22],[21,-6],[19,0],[9,1],[4,10],[-8,22]],fabric,.43);
+      for(let i=0;i<7;i++){
+        facet([edge[i],edge[i+1],fold[i+1]],fabric,[.57,.68,.88,1.08,1.13,1.02,.92][i]);
+        facet([edge[i],fold[i+1],fold[i]],fabric,[.67,.78,.97,1.02,1.08,.95,.87][i]);
+        facet([fold[i],fold[i+1],lip[i+1],lip[i]],fabric,[.55,.61,.72,.81,.91,.87,.71][i]);
+      }
+      const lining=[[-15,21],[-8,9],[-7,-2],[-2,-11],[3,-15],[9,-16],[16,-13],[21,-6]];
+      for(let i=0;i<7;i++)facet([lining[i],lining[i+1],lip[i+1],lip[i]],trim,[.62,.73,.88,.99,1.08,1.02,.84][i]);
+      facet([[-29,17],[-16,9],[-21,17],[-13,20],[-22,23]],fabric,.64);
+    }else{
+      // Cross-sections share their vertices so the bevel, ribbon and crown meet.
+      const count=12;
+      function ring(rx,ry,height,curl=0,dx=0){
+        return Array.from({length:count},(_,i)=>{
+          const t=2*Math.PI*i/count,c=Math.cos(t),s=Math.sin(t);
+          return [dx+rx*c,height+ry*s-curl*c*c];
+        });
+      }
+      function course(lower,upper,dye,level){
+        for(let i=0;i<count/2;i++){
+          const j=i+1,lit=.78+.17*Math.cos((i+.5)*2*Math.PI/count)+.09*Math.sin((i+.5)*2*Math.PI/count);
+          facet([lower[i],lower[j],upper[j],upper[i]],dye,level*lit);
+        }
+      }
+      const tall=style==="top",w=tall?26:23;
+      const rim=ring(w,6,1,3),rimBottom=ring(w,6,3.3,3);
+      facet(rim,fabric,1.02);course(rimBottom,rim,fabric,.73);
+      let lower=ring(16,4,-1);
+      const sections=tall?[[15,4,-8,0],[15,4,-20,-1],[19,4,-32,-2],[18,4,-34,-2]]:
+        [[18,5,-7,0],[18,5,-13,0],[15,4,-21,-1],[9,3,-27,-1],[3,1,-29,-1]];
+      for(const [rx,ry,y,dx] of sections){
+        const upper=ring(rx,ry,y,0,dx);
+        facet(upper,fabric,1.08);course(lower,upper,fabric,1);lower=upper;
+      }
+      course(ring(16.8,4.6,-2),ring(tall?16:18.1,4.8,-7),trim,1.06);
+      const gem=[[8,-4],[10,-8],[14,-8],[16,-5],[13,-1],[10,-1]];
+      facet(gem,trim,1.2);
+      const center=[12,-4];
+      for(let i=0;i<6;i++){
+        const inset=p=>[center[0]+.68*(p[0]-center[0]),center[1]+.68*(p[1]-center[1])];
+        facet([center,inset(gem[i]),inset(gem[(i+1)%6])],"#64d4e6",[.87,1.13,1.04,.78,.68,.8][i]);
+      }
+    }
+    return canvas;
+  }
   function draw(ctx,look,x,y,angle){
     const fabric=look.hatColor||"#6f4ab4",trim=look.hatTrim&&look.hatTrim!=="original"?look.hatTrim:"#ecaf49";
-    const shade=(hex,k)=>"rgb("+[1,3,5].map(i=>Math.min(255,Math.round(parseInt(hex.slice(i,i+2),16)*k))).join(",")+")";
-    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
-    function shape(path,color,k){ctx.fillStyle=shade(color,k);ctx.fill(new Path2D(path));}
-    if(look.hat==="hood"){
-      shape("M-20 10 Q-22 -12 -9 -20 Q9 -30 21 -4 L17 3 Q7 2 2 8 L-13 20Z",fabric,.44);
-      shape("M-23 14 Q-24 4 -20 -11 Q-18 -23 -6 -27 Q6 -30 14 -19 L21 -4 Q13 -6 6 -2 L1 8 Q-3 17 -11 21 L-26 19Z",fabric,.72);
-      shape("M-20 -6 L-16 -19 -6 -26 6 -26 14 -19 5 -15 -4 -10 -12 8 -22 16Z",fabric,.97);
-      shape("M-18 -16 Q-8 -31 5 -26 L11 -22 0 -23 -11 -17Z",fabric,1.14);
-      shape("M-25 19 Q-10 13 -6 2 Q1 -13 14 -18 L21 -4 Q10 -6 4 2 Q0 16 -10 21Z",fabric,.55);
-      shape("M-23 19 Q-9 14 -5 3 Q1 -9 11 -12 L20 -5 Q9 -6 2 4 Q-2 17 -13 21Z",trim,.88);
-    }else{
-      shape("M-26 3 Q-28 -1 -16 -5 Q3 -11 21 -8 Q29 -6 24 -2 Q9 5 -13 7 Q-24 8 -26 3Z",fabric,.66);
-      if(look.hat==="top"){
-        shape("M-15 -3 L-21 -29 Q-11 -36 13 -34 L17 -31 12 -7 Q0 0 -15 -3Z",fabric,.86);
-        shape("M-18 -28 L-11 -30 -8 -4 -15 -3Z",fabric,.63);
-        shape("M1 -31 L13 -33 10 -8 3 -6Z",fabric,1.05);
-        shape("M-21 -30 Q-9 -37 13 -34 L17 -31 Q7 -26 -15 -26Z",fabric,1.18);
-      }else{
-        shape("M-17 -3 Q-21 -24 -7 -28 Q8 -33 15 -20 Q18 -14 14 -7 Q1 -1 -17 -3Z",fabric,.87);
-        shape("M-16 -6 Q-20 -19 -10 -25 Q-5 -28 0 -27 Q-11 -22 -9 -6Z",fabric,.67);
-        shape("M-4 -26 Q7 -30 13 -19 L14 -14 Q8 -23 -4 -26Z",fabric,1.15);
-      }
-      shape("M-16 -8 Q-4 -6 14 -13 L13 -7 Q0 -1 -16 -3Z",trim,.95);
-      shape("M8 -11 L12 -13 15 -10 12 -6 8 -7Z",trim,1.18);
-      shape("M9 -10 L12 -12 14 -10 12 -7Z","#66d8ec",1);
+    const key=[look.hat,fabric,trim].join("|");
+    if(!designs.has(key)){
+      if(designs.size>=64)designs.delete(designs.keys().next().value);
+      designs.set(key,makeHat(look.hat,fabric,trim));
     }
-    ctx.restore();
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.drawImage(designs.get(key),-40,-52);ctx.restore();
   }
   return {withoutHat,draw};
 })();

@@ -149,14 +149,14 @@
     damage:610,accuracy:.85,icon:"◆",rarity:"RARE",duration:4490,hit:3510/4490,short:"85% ACCURACY",
     description:"An ogre hefts a bowling boulder onto its shoulder, points at the enemy, then winds up and rolls it into them for 610 base Earth damage."});
   CARDS.push(
-    {"id":"iceblast","name":"Ice Blast","school":"ice","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Ice blast deals 75 base damage to one enemy."},
-    {"id":"blazingembers","name":"Blazing Embers","school":"fire","cost":1,"accuracy":0.95,"damage":85,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Fire blast deals 85 base damage to one enemy."},
-    {"id":"rockblast","name":"Rock Blast","school":"earth","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Earth blast deals 75 base damage to one enemy."},
-    {"id":"solarblast","name":"Solar Blast","school":"nature","cost":1,"accuracy":0.95,"damage":65,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Nature blast deals 65 base damage to one enemy."},
-    {"id":"darkblast","name":"Dark Blast","school":"dark","cost":1,"accuracy":0.95,"damage":80,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Dark blast deals 80 base damage to one enemy."},
-    {"id":"shockblast","name":"Shock Blast","school":"lightning","cost":1,"accuracy":0.9,"damage":90,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Lightning blast deals 90 base damage to one enemy."},
-    {"id":"waterblast","name":"Water Blast","school":"water","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Water blast deals 70 base damage to one enemy."},
-    {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":620,"hit":0.62,"description":"A quick Wind blast deals 70 base damage to one enemy."}
+    {"id":"iceblast","name":"Ice Blast","school":"ice","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Ice blast deals 75 base damage to one enemy."},
+    {"id":"blazingembers","name":"Blazing Embers","school":"fire","cost":1,"accuracy":0.95,"damage":85,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Fire blast deals 85 base damage to one enemy."},
+    {"id":"rockblast","name":"Rock Blast","school":"earth","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Earth blast deals 75 base damage to one enemy."},
+    {"id":"solarblast","name":"Solar Blast","school":"nature","cost":1,"accuracy":0.95,"damage":65,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Nature blast deals 65 base damage to one enemy."},
+    {"id":"darkblast","name":"Dark Blast","school":"dark","cost":1,"accuracy":0.95,"damage":80,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Dark blast deals 80 base damage to one enemy."},
+    {"id":"shockblast","name":"Shock Blast","school":"lightning","cost":1,"accuracy":0.9,"damage":90,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Lightning blast deals 90 base damage to one enemy."},
+    {"id":"waterblast","name":"Water Blast","school":"water","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Water blast deals 70 base damage to one enemy."},
+    {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Wind blast deals 70 base damage to one enemy."}
   );
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -3706,25 +3706,67 @@
     dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
     water:["#d5fbff","#65d7e5","#4192ba"],wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
+  const BLAST_FACETS={ice:6,fire:7,earth:5,nature:8,dark:5,lightning:4,water:8,wind:9};
+  const BLAST_RELEASE=.61;
+  function blastFacet(ctx,x,y,r,angle,sides,stretch=1){
+    ctx.beginPath();
+    for(let i=0;i<sides;i++){
+      const t=2*Math.PI*i/sides+angle;
+      const px=x+Math.cos(t)*r*stretch,py=y+Math.sin(t)*r;
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+  }
   function drawStarterBlast(ctx,school,from,to,progress,hit,scale=1){
-    const palette=BLAST_COLORS[school];
-    const frame=Math.min(18,Math.floor(clamp(progress,0,1)*19))/18;
-    const travel=clamp(frame/hit,0,1),burst=clamp((frame-hit)/(1-hit),0,1);
+    const palette=BLAST_COLORS[school],sides=BLAST_FACETS[school];
+    const frame=Math.floor(clamp(progress,0,1)*59)/59;
+    const charge=clamp(frame/BLAST_RELEASE,0,1);
+    const flight=clamp((frame-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1);
+    const burst=clamp((frame-hit)/(1-hit),0,1);
     const dir=to.x>=from.x?1:-1;
-    const x=lerp(from.x,to.x,travel),y=lerp(from.y,to.y,travel)-Math.sin(Math.PI*travel)*13*scale;
     ctx.save();
-    for(let i=0;i<13;i++){
-      const angle=i*2.39996,spread=(i%3+1)*scale;
-      const dx=burst?Math.cos(angle)*burst*spread*17:-dir*i*2.4*scale;
-      const dy=Math.sin(angle)*spread*(3+burst*10);
-      const size=(i%4+3.4)*scale*(1-burst*.56);
-      ctx.globalAlpha=(.83-i*.033)*(1-burst)**1.2;
-      ctx.fillStyle=palette[i%3];ctx.beginPath();
-      ctx.moveTo(x+dx+size*dir,y+dy);
-      ctx.lineTo(x+dx,y+dy-size*.65);
-      ctx.lineTo(x+dx-size*dir,y+dy-size*.17);
-      ctx.lineTo(x+dx-size*.3*dir,y+dy+size*.74);
-      ctx.closePath();ctx.fill();
+    ctx.translate(from.x,from.y);
+    ctx.scale(scale,scale);
+    const dx=(to.x-from.x)/scale,dy=(to.y-from.y)/scale;
+    if(frame<BLAST_RELEASE){
+      const radius=4+24*Math.pow(charge,.66),spin=charge*3.1;
+      const ring=radius+27*(1-charge);
+      ctx.globalAlpha=.18+charge*.24;ctx.strokeStyle=palette[1];ctx.lineWidth=1.7;
+      blastFacet(ctx,0,0,ring,spin*.55,sides);ctx.stroke();
+      for(let i=0;i<12;i++){
+        const angle=i*Math.PI/6+spin;
+        const drift=radius+11+38*(1-charge)+(i%3)*5;
+        ctx.fillStyle=palette[i%3];ctx.globalAlpha=.22+charge*.49;
+        blastFacet(ctx,Math.cos(angle)*drift,Math.sin(angle)*drift*.76,2+charge*(i%3+1),angle,3);
+        ctx.fill();
+      }
+      ctx.globalAlpha=charge*.98;ctx.fillStyle=palette[2];
+      blastFacet(ctx,0,0,radius,spin,sides);ctx.fill();
+      ctx.fillStyle=palette[1];
+      blastFacet(ctx,-3,-4,radius*.77,-spin*.68,sides);ctx.fill();
+      ctx.fillStyle=palette[0];
+      blastFacet(ctx,-4,-5,radius*.43,spin*.55,sides);ctx.fill();
+    }else{
+      const travel=Math.pow(flight,1.45),x=dx*travel,y=dy*travel;
+      if(burst<.42){
+        ctx.globalAlpha=(1-burst/.42)*.76;ctx.fillStyle=palette[2];ctx.beginPath();
+        ctx.moveTo(x+22*dir,y);ctx.lineTo(x-12*dir,y-15);ctx.lineTo(x-95*dir*Math.min(1,flight*4),y-dy*.24);
+        ctx.lineTo(x-15*dir,y+13);ctx.closePath();ctx.fill();
+        ctx.fillStyle=palette[1];blastFacet(ctx,x,y,17,flight*2.1,sides,1.53);ctx.fill();
+        ctx.fillStyle=palette[0];blastFacet(ctx,x+7*dir,y-3,9,flight,sides,1.48);ctx.fill();
+      }
+      if(frame>=hit){
+        const fade=1-burst;
+        ctx.globalAlpha=fade*.78;ctx.strokeStyle=palette[0];ctx.lineWidth=2.6*fade;
+        blastFacet(ctx,dx,dy,11+burst*39,burst*.5,sides,1.16);ctx.stroke();
+        for(let i=0;i<15;i++){
+          const angle=i*2.39996,r=12+burst*(30+i%5*8);
+          ctx.globalAlpha=fade*fade*.9;ctx.fillStyle=palette[i%3];
+          blastFacet(ctx,dx+Math.cos(angle)*r+dir*burst*17,dy+Math.sin(angle)*r*.77,
+            (3+i%4)*fade,angle+burst,3);
+          ctx.fill();
+        }
+      }
     }
     ctx.restore();
   }
@@ -4471,8 +4513,7 @@
     if(action?.card?.starterBlast&&action.stage==="summon"){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
-        const dir=target.x>=source.x?1:-1;
-        const from={x:source.x+dir*28,y:source.y-75},to={x:target.x,y:target.y-61};
+        const from={x:500,y:372},to={x:target.x,y:target.y-61};
         renderables.push({type:"starter-blast",depthY:target.y+.1,priority:2,draw:()=>{
           drawStarterBlast(g,action.card.school,from,to,action.elapsed/action.duration,action.card.hit);
         }});

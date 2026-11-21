@@ -2,8 +2,7 @@
 (()=>{
   const Audio=window.AudioContext||window.webkitAudioContext;
   if(!Audio)return;
-  let audio,lastStage,lastCast,lastTap;
-  const beats=8;
+  let audio,flow,lastStage,lastCast;
 
   function unlock(){
     try{
@@ -16,29 +15,47 @@
   document.addEventListener("pointerup",unlock,{capture:true,passive:true});
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
-  function tap(start){
-    // A short wooden knock with a quiet, tuned overtone.
-    for(const [pitch,volume,decay] of [[740,.17,.066],[1480,.045,.034],[2220,.018,.020]]){
-      const tone=audio.createOscillator(),gain=audio.createGain();
+  function begin(remaining){
+    const start=audio.currentTime+.006;
+    const end=start+remaining;
+    const gain=audio.createGain();
+    gain.gain.setValueAtTime(0,start);
+    gain.gain.linearRampToValueAtTime(.15,start+Math.min(.16,remaining*.4));
+    gain.gain.setValueAtTime(.15,end-Math.min(.18,remaining*.4));
+    gain.gain.linearRampToValueAtTime(0,end);
+    gain.connect(audio.destination);
+
+    // Blend soft harmonics into a single sustained, slightly airy note.
+    for(const [pitch,level] of [[440,.71],[660,.16],[880,.095],[1320,.035]]){
+      const tone=audio.createOscillator(),partial=audio.createGain();
       tone.frequency.value=pitch;
-      gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(volume,start+.003);
-      gain.gain.exponentialRampToValueAtTime(.0001,start+decay);
-      tone.connect(gain).connect(audio.destination);
-      tone.start(start);tone.stop(start+decay);
+      partial.gain.value=level;
+      tone.connect(partial).connect(gain);
+      tone.start(start);tone.stop(end+.10);
     }
+    return {gain,end};
   }
   function follow(cast,round){
     const stage=cast?.stage;
     const key=cast&&[round,cast.source,cast.card?.id].join("|");
-    if(stage!==lastStage||key!==lastCast){
-      lastStage=stage;lastCast=key;lastTap=-1;
+    const changed=stage!==lastStage||key!==lastCast;
+    if(changed){
+      if(flow&&audio.currentTime<flow.end){
+        const now=audio.currentTime;
+        const level=flow.gain.gain;
+        if(typeof level.cancelAndHoldAtTime==="function"){
+          level.cancelAndHoldAtTime(now);
+        }else{
+          level.cancelScheduledValues(now);
+          level.setValueAtTime(level.value,now);
+        }
+        level.linearRampToValueAtTime(0,now+.07);
+      }
+      flow=null;lastStage=stage;lastCast=key;
     }
-    if(audio?.state!=="running"||stage!=="tracing-auto")return;
-    const beat=Math.min(beats-1,Math.floor(beats*cast.elapsed/Math.max(1,cast.duration)));
-    if(beat<=lastTap)return;
-    lastTap=beat;
-    tap(audio.currentTime+.006);
+    if(flow||stage!=="tracing-auto"||audio?.state!=="running")return;
+    const remaining=(cast.duration-cast.elapsed)/1000;
+    if(remaining>.12)flow=begin(remaining);
   }
   window.WizardryRuneAudio={follow};
 })();

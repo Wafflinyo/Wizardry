@@ -24,63 +24,65 @@ window.WizardHats=(()=>{
       g.closePath();g.fill();
     }
     if(style==="hood"){
-      // Broad crown planes and a folded opening, with a mantle behind the nape.
-      const crown=[[-31,10],[-28,-10],[-23,-23],[-12,-34],[3,-35],[15,-28],[23,-17],[24,-7],[11,-10],[2,-6],[-7,5],[-10,16],[-4,21],[-16,28],[-31,25],[-38,20]];
-      facet(crown,fabric,.50);
-      facet([[-28,-10],[-23,-23],[-12,-34],[-8,-20],[-18,-10]],fabric,.72);
-      facet([[-12,-34],[3,-35],[15,-28],[4,-21],[-8,-20]],fabric,1.25);
-      facet([[-8,-20],[4,-21],[15,-28],[23,-17],[11,-14],[-2,-10]],fabric,1.05);
-      facet([[-28,-10],[-18,-10],[-8,-20],[-2,-10],[-13,3],[-22,12],[-31,10]],fabric,.88);
-      facet([[-31,10],[-22,12],[-29,22],[-38,20]],fabric,.66);
-      facet([[-22,12],[-13,3],[-10,16],[-16,23],[-29,22]],fabric,.94);
-      facet([[-29,22],[-16,23],[-4,21],[-16,28],[-31,25]],fabric,.70);
-      facet([[-2,-10],[11,-14],[23,-17],[24,-7],[11,-10],[2,-6],[-7,5],[-10,16],[-13,3]],fabric,.38);
-      facet([[-2,-10],[11,-14],[23,-17],[24,-13],[11,-11],[0,-7]],trim,1.03);
-      facet([[-2,-10],[0,-7],[-9,5],[-11,15],[-14,18],[-13,3]],trim,.75);
-      facet([[-14,18],[-11,15],[-10,16],[-4,21],[-9,23]],trim,.54);
+      // A fitted cowl follows the forehead and opens around the cheek.
+      const shoulder=[-36,22],nape=[-21,11],seam=[-14,22],neck=[-3,20];
+      const rear=[-26,-8],crown=[-15,-25],ridge=[-3,-29],front=[12,-24];
+      const brow=[19,-12],opening=[7,-11],cheek=[-3,1],jaw=[-8,14];
+      facet([shoulder,nape,rear,[-24,-18],crown,ridge,front,brow,opening,cheek,jaw,neck,[-14,29],[-30,28]],fabric,.54);
+      facet([rear,[-24,-18],crown,[-15,-13],[-19,-3]],fabric,.73);
+      facet([crown,ridge,front,[0,-19],[-15,-13]],fabric,1.16);
+      facet([[-15,-13],[0,-19],front,brow,opening,[0,-9]],fabric,.94);
+      facet([rear,[-19,-3],[-15,-13],[0,-9],cheek,[-13,8],nape],fabric,.83);
+      facet([[-19,-3],[-13,8],seam,nape],fabric,.62);
+      facet([nape,seam,[-14,29],[-30,28],shoulder],fabric,.92);
+      facet([nape,[-13,8],cheek,jaw,seam],fabric,.68);
+      facet([seam,jaw,neck,[-14,29]],fabric,.77);
+      facet([[2,-13],[10,-15],[18,-16],brow,opening,[-1,-8]],trim,.98);
+      facet([[-1,-8],opening,cheek,jaw,[-12,17],[-8,0]],trim,.70);
+      facet([[-12,17],jaw,neck,[-8,23],seam],trim,.56);
     }else{
       const tall=style==="top";
-      // Build each shape from broad planes with a beveled brim and a raised band.
-      const brim=tall?[[-34,-1],[-24,-8],[15,-9],[32,-5],[39,-9],[35,1],[24,7],[0,8],[-24,5]]:
-        [[-25,-1],[-20,-6],[13,-7],[26,-4],[31,0],[24,7],[3,9],[-19,6]];
-      facet(brim,fabric,1.04);
-      const edge=brim.slice(4).concat([brim[0]]);
-      const underside=edge.map(([x,y])=>[x,y+3]).reverse();
-      facet([...edge,...underside],fabric,.48);
-      facet(tall?[[0,8],[24,7],[35,1],[39,-9],[35,4],[24,10],[0,11]]:
-        [[3,9],[24,7],[31,0],[24,10],[3,12]],fabric,.73);
+      const rim=tall?[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]]:
+        [[-27,-3],[-22,-7],[7,-10],[24,-9],[32,-4],[33,0],[24,7],[5,9],[-20,5]];
+      facet(rim,fabric,.97);
+      const outer=rim.slice(4).concat([rim[0]]);
+      facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
+      facet(tall?[[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]]:
+        [[5,9],[24,7],[33,0],[33,3],[24,10],[5,12]],fabric,.77);
 
       if(tall){
-        const upper=[[-22,-39],[-14,-46],[11,-47],[25,-42],[27,-35],[13,-29],[-12,-31]];
-        facet([upper[0],upper[6],[-10,2],[-20,-2]],fabric,.61);
-        facet([upper[6],upper[5],[10,3],[-10,2]],fabric,1.01);
-        facet([upper[5],upper[4],upper[3],[20,-2],[10,3]],fabric,.75);
-        facet(upper,fabric,1.21);
-        facet([upper[0],upper[1],upper[2],[-3,-37],upper[6]],fabric,1.09);
-        facet([upper[2],upper[3],upper[4],upper[5],[-3,-37]],fabric,.96);
-        facet([[-21,-10],[-11,-6],[-10,2],[-20,-2]],trim,.62);
-        facet([[-11,-6],[11,-5],[10,3],[-10,2]],trim,1.04);
-        facet([[11,-5],[22,-10],[20,-2],[10,3]],trim,.76);
+        // Short, straight-sided crown with a lid and two visible wall planes.
+        const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
+        facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);
+        facet([lid[6],lid[5],[12,2],[-9,2]],fabric,1.03);
+        facet([lid[5],lid[4],[20,-3],[12,2]],fabric,.76);
+        facet(lid,fabric,1.16);
+        facet([lid[0],lid[1],lid[2],[-1,-28],lid[6]],fabric,1.24);
+        facet([lid[2],lid[3],lid[4],lid[5],[-1,-28]],fabric,.94);
+        facet([[-18,-9],[-9,-5],[-9,2],[-17,-2]],trim,.59);
+        facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
+        facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);
       }else{
-        const shoulder=[[-24,-11],[-14,-14],[7,-13],[24,-13],[27,-5]];
-        facet([[-22,0],[-7,4],[14,4],[25,0],shoulder[4],shoulder[3],[16,-24],[5,-32],[-7,-34],[-18,-29],[-24,-21],shoulder[0]],fabric,.66);
-        facet([shoulder[0],[-24,-21],[-18,-29],[-14,-14]],fabric,.81);
-        facet([[-18,-29],[-7,-34],[5,-32],[16,-24],[0,-21],[-14,-14]],fabric,1.22);
-        facet([[-14,-14],[0,-21],[7,-13],[14,4],[-7,4]],fabric,1.03);
-        facet([[0,-21],[16,-24],shoulder[3],[7,-13]],fabric,.89);
-        facet([[7,-13],shoulder[3],shoulder[4],[25,0],[14,4]],fabric,.74);
-        facet([[-23,-7],[-8,-3],[-7,4],[-22,0]],trim,.65);
-        facet([[-8,-3],[13,-2],[14,4],[-7,4]],trim,1.02);
-        facet([[13,-2],[26,-6],[25,0],[14,4]],trim,.79);
+        // Low, wide crown with a broad top facet and clipped polygonal shoulders.
+        const dome=[[-23,-3],[-23,-13],[-19,-20],[-10,-26],[4,-28],[16,-25],[23,-19],[26,-11],[24,-2],[9,3],[-11,3]];
+        facet(dome,fabric,.77);
+        facet([dome[0],dome[1],dome[2],[-12,-15],dome[10]],fabric,.69);
+        facet([dome[2],dome[3],dome[4],dome[5],[4,-18],[-12,-15]],fabric,1.19);
+        facet([[4,-18],dome[5],dome[6],dome[7],[12,-12]],fabric,.91);
+        facet([[-12,-15],[4,-18],[12,-12],dome[9],dome[10]],fabric,1.02);
+        facet([[12,-12],dome[7],dome[8],dome[9]],fabric,.66);
+        facet([[-23,-9],[-11,-3],dome[10],dome[0]],trim,.67);
+        facet([[-11,-3],[10,-3],dome[9],dome[10]],trim,1.01);
+        facet([[10,-3],[25,-8],dome[8],dome[9]],trim,.78);
       }
 
-      const gem=tall?[[4,-3],[9,-9],[15,-7],[17,-1],[11,5],[6,2]]:
-        [[9,-2],[13,-7],[18,-5],[20,0],[15,5],[10,3]];
-      facet(gem,trim,1.24);
-      const center=tall?[11,-2]:[15,-1];
-      const inset=gem.map(([x,y])=>[center[0]+.69*(x-center[0]),center[1]+.69*(y-center[1])]);
+      const gem=tall?[[10,-8],[16,-7],[17,-2],[13,3],[8,1],[7,-4]]:
+        [[12,-8],[18,-7],[21,-3],[17,2],[12,1],[10,-3]];
+      const center=tall?[12,-3]:[15,-3];
+      facet(gem,trim,1.19);
+      const inset=gem.map(([x,y])=>[center[0]+.71*(x-center[0]),center[1]+.71*(y-center[1])]);
       for(let i=0;i<inset.length;i++){
-        facet([center,inset[i],inset[(i+1)%inset.length]],"#64d4e6",[1.22,1.05,.81,.62,.75,.94][i]);
+        facet([center,inset[i],inset[(i+1)%inset.length]],"#68cede",[1.19,1.06,.82,.66,.74,.99][i]);
       }
     }
     return canvas;

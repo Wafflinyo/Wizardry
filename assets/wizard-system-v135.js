@@ -18,6 +18,23 @@ function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));ret
 function orderedSpells(cards,school){
  return cards.filter(c=>c.school===school).sort((a,b)=>a.cost-b.cost||(a.id<b.id?-1:a.id>b.id?1:0));
 }
+// Unlock order mixes direct damage, support, and debuffs. Binder display sorts separately.
+const UNLOCK_ORDER=Object.fromEntries(Object.entries({
+ water:"octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon",
+ earth:"scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure",
+ lightning:"electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus",
+ nature:"bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree",
+ wind:"scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor",
+ dark:"undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper",
+ fire:"devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix",
+ ice:"totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann",
+}).map(([school,ids])=>[school,ids.split(" ")]));
+function unlockOrder(cards,school){
+ const order=UNLOCK_ORDER[school]||[];
+ const byId=new Map(orderedSpells(cards,school).map(card=>[card.id,card]));
+ const ranked=order.map(id=>byId.get(id)).filter(Boolean);
+ return [...ranked,...Array.from(byId.values()).filter(card=>!order.includes(card.id))];
+}
 const MAX_COPIES=4;
 function unlockLevel(index,masteryCount){
  const single=masteryCount===1;
@@ -26,7 +43,7 @@ function unlockLevel(index,masteryCount){
  return Math.min(15,5*(1+Math.floor((index-starters)/(single?1:2))));
 }
 function unlockedSpells(cards,masteries,level){
- return masteries.flatMap(school=>orderedSpells(cards,school).filter((_,i)=>unlockLevel(i,masteries.length)<=level));
+ return masteries.flatMap(school=>unlockOrder(cards,school).filter((_,i)=>unlockLevel(i,masteries.length)<=level));
 }
 function deckSize(available){return Math.min(24,MAX_COPIES*available.length);}
 function progressionDeck(cards,masteries,level,current=[]){
@@ -78,5 +95,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random,level=20){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<level;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockOrder,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

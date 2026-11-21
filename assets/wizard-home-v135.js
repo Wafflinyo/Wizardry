@@ -87,8 +87,9 @@ function renderBinder(profile){
  const tabs=B.elements.map(e=>`<button class="portal-btn small" type="button" data-binder-element="${e}" aria-pressed="${e===binderElement}">${title(e)}</button>`).join('');
  const ordered=B.orderedSpells(cards,binderElement);
  const required=B.deckSize(B.unlockedSpells(cards,profile.masteries,profile.level));
- const page=ordered.map((card,index)=>{
-   const unlock=B.unlockLevel(index,profile.masteries.length),locked=profile.level<unlock;
+ const unlocks=new Map(B.unlockOrder(cards,binderElement).map((card,index)=>[card.id,B.unlockLevel(index,profile.masteries.length)]));
+ const page=ordered.map(card=>{
+   const unlock=unlocks.get(card.id),locked=profile.level<unlock;
    const count=profile.deck.filter(id=>id===card.id).length;
    return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}${locked?`<span class="binder-unlock">Unlocks at level ${unlock}</span>`:''}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||locked||count>=B.MAX_COPIES||profile.deck.length>=required?'disabled':''}>+</button></div></article>`;
  }).join('');
@@ -199,7 +200,7 @@ function renderProgression(){
  const floor=coOp?(party.length?partyFloor(party):tower.floor):active.level;
  const leveledUp=winner===0&&active.lastTowerWin===tower.id&&active.level===tower.floor+1;
  const newCards=leveledUp?active.masteries.flatMap(school=>
-   B.orderedSpells(cards,school).filter((_,i)=>B.unlockLevel(i,active.masteries.length)===active.level)):[];
+   B.unlockOrder(cards,school).filter((_,i)=>B.unlockLevel(i,active.masteries.length)===active.level)):[];
  const rewards=newCards.length?`<section class="tower-unlocks" aria-labelledby="unlockedSpells"><h2 id="unlockedSpells">New spells unlocked</h2><div class="binder-grid">${newCards.map(card=>`<button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button>`).join('')}</div></section>`:'';
  const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];

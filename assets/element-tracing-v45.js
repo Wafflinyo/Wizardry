@@ -126,6 +126,25 @@ function prepare(lines){
   return {strokes,length:strokes.reduce((sum,s)=>sum+s.length,0)};
 }
 const GEOMETRY=Object.fromEntries(Object.entries(PATHS).map(([k,v])=>[k,prepare(v)]));
+const STROKE_TIMINGS=Object.fromEntries(Object.entries(GEOMETRY).map(([school,geo])=>{
+  const gap=Math.min(.037,.19/Math.max(1,geo.strokes.length-1));
+  const drawing=1-gap*(geo.strokes.length-1);
+  let distance=0;
+  return [school,geo.strokes.map((stroke,i)=>{
+    const from=distance/geo.length;
+    distance+=stroke.length;
+    const to=distance/geo.length;
+    return {start:from*drawing+i*gap,end:to*drawing+i*gap,from,to};
+  })];
+}));
+const timingFor=school=>STROKE_TIMINGS[school]||STROKE_TIMINGS.arcane;
+function tracedFraction(school,time){
+  for(const {start,end,from,to} of timingFor(school)){
+    if(time<start)return from;
+    if(time<end)return mix(from,to,ease((time-start)/(end-start)));
+  }
+  return 1;
+}
 function pointAlong(geo,fraction){
   let distance=clamp(fraction)*geo.length;
   for(const s of geo.strokes){
@@ -172,7 +191,7 @@ function draw(ctx,options){
   const geo=GEOMETRY[school],color=COLORS[school];
   const ms=Math.max(0,Number(options.elapsed)||0),
     duration=Math.max(1,Number(options.duration)||850),
-    fraction=ease(ms/duration);
+    fraction=tracedFraction(school,ms/duration);
   const cx=Number(options.centerX)||500,cy=Number(options.centerY)||312;
   const scale=Number(options.scale)||5.55;
   const project=p=>[cx+(p[0]-12)*scale,cy+(p[1]-12)*scale];
@@ -214,7 +233,7 @@ function draw(ctx,options){
     for(let i=0;i<13;i++){
       const age=(ms+i*93)%650,born=ms-age;
       if(born<0)continue;
-      const from=project(pointAlong(geo,ease(born/duration)));
+      const from=project(pointAlong(geo,tracedFraction(school,born/duration)));
       const x=from[0]+(hash(i*17)-.5)*22*age/650;
       const y=from[1]-(9+hash(i*7)*34)*age/650;
       const life=1-age/650;
@@ -231,7 +250,7 @@ function draw(ctx,options){
     const age=(ms+i*67)%490;
     const born=ms-age;
     if(born<0)continue;
-    const from=project(pointAlong(geo,ease(born/duration)));
+    const from=project(pointAlong(geo,tracedFraction(school,born/duration)));
     const angle=hash(i*23+4)*TAU;
     const speed=25+hash(i*9+12)*66;
     const dx=Math.cos(angle)*speed*age/1000,
@@ -417,7 +436,7 @@ function drawOutcome(ctx,options){
 }
 
 root.WIZARDRY_ELEMENT_TRACE_V45={
-  draw,drawOutcome,
+  draw,drawOutcome,timingFor,
   drawSymbol:(ctx,school,x,y,size)=>{ctx.save();ctx.translate(x-size/2,y-size/2);ctx.scale(size/24,size/24);ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';for(const points of (PATHS[school]||PATHS.arcane)){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}ctx.restore();},
   svgFor:school=>`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${(PATHS[school]||PATHS.arcane).map(points=>`<polyline points="${points.map(p=>p.join(',')).join(' ')}"/>`).join('')}</svg>`,
   pathFor:school=>(PATHS[school]||PATHS.arcane)[0].map(p=>p.slice()),

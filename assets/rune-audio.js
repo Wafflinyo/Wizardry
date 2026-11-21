@@ -15,7 +15,9 @@
   document.addEventListener("pointerup",unlock,{capture:true,passive:true});
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
-  function begin(remaining){
+  function begin(cast){
+    const elapsed=Math.max(0,cast.elapsed)/1000,duration=cast.duration/1000;
+    const remaining=duration-elapsed;
     const start=audio.currentTime+.006,end=start+remaining;
     const gain=audio.createGain(),filter=audio.createBiquadFilter();
     filter.type="lowpass";
@@ -26,16 +28,25 @@
     filter.connect(gain).connect(audio.destination);
 
     gain.gain.setValueAtTime(0,start);
-    gain.gain.linearRampToValueAtTime(.06,start+remaining*.20);
-    gain.gain.linearRampToValueAtTime(.17,start+remaining*.8);
-    gain.gain.linearRampToValueAtTime(.18,start+remaining*.90);
-    gain.gain.linearRampToValueAtTime(0,end);
+    const strokes=window.WIZARDRY_ELEMENT_TRACE_V45?.timingFor(cast.card?.school)||[{start:0,end:1}];
+    for(const stroke of strokes){
+      const on=start+Math.max(0,stroke.start*duration-elapsed);
+      const off=start+stroke.end*duration-elapsed;
+      const span=off-on;
+      if(span<.018)continue;
+      const level=.075+.11*stroke.end;
+      gain.gain.setValueAtTime(0,on);
+      gain.gain.linearRampToValueAtTime(level*.58,on+Math.min(.055,span*.3));
+      gain.gain.linearRampToValueAtTime(level,off-Math.min(.055,span*.25));
+      gain.gain.linearRampToValueAtTime(0,off);
+    }
 
-    // Sustain one voicing and gradually brighten it over the whole trace.
-    for(const [type,pitch,level] of [["triangle",261.63,.52],["sine",392,.23],["triangle",523.25,.14],["sine",659.25,.08]]){
+    // The same bright voicing continues across the short gaps between strokes.
+    for(const [type,pitch,level] of [["triangle",311.13,.52],["sine",466.16,.23],["triangle",622.25,.14],["sine",739.99,.08]]){
       const tone=audio.createOscillator(),mix=audio.createGain();
       tone.type=type;
-      tone.frequency.value=pitch;
+      tone.frequency.setValueAtTime(pitch,start);
+      tone.frequency.exponentialRampToValueAtTime(pitch*1.045,end);
       mix.gain.value=level;
       tone.connect(mix).connect(filter);
       tone.start(start);tone.stop(end+.08);
@@ -62,7 +73,7 @@
     }
     if(flow||stage!=="tracing-auto"||audio?.state!=="running")return;
     const remaining=(cast.duration-cast.elapsed)/1000;
-    if(remaining>.12)flow=begin(remaining);
+    if(remaining>.12)flow=begin(cast);
   }
   window.WizardryRuneAudio={follow};
 })();

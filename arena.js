@@ -373,7 +373,7 @@
   }
   function drawDressedFrame(ctx,art,kind,i,top,look){
     const hat=look?.hat;
-    if(!["hood","top","round"].includes(hat)){
+    if(!["hood","top"].includes(hat)){
       ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
       return;
     }
@@ -383,7 +383,7 @@
     ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);
     hats.draw(ctx,look,x,y,angle);
     ctx.drawImage(hats.withoutHat(art,kind),(i%4)*128,Math.floor(i/4)*128,128,128,0,0,128,128);
-    if(hat==="hood"||hat==="round")hats.draw(ctx,look,x,y,angle,true);
+    if(hat==="hood")hats.draw(ctx,look,x,y,angle,true);
     ctx.restore();
   }
   function drawDefeatSprite(ctx,elapsedMs,look){

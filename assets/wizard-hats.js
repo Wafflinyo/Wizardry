@@ -24,18 +24,13 @@ window.WizardHats=(()=>{
       g.closePath();g.fill();
     }
     if(front){
-      if(style==="round"){
-        // Only the near half of the brim crosses in front of the character.
-        const upper=[[-28,-1],[-18,3],[-5,5],[8,5],[20,3],[25,0]];
-        const edge=[[-28,-1],[-22,6],[-10,10],[5,11],[17,8],[24,4],[25,0]];
-        facet([...upper,...edge.slice().reverse()],fabric,1.06);
-        facet([[-22,6],[-10,10],[5,11],[17,8],[24,4],[22,7],[17,10],[5,13],[-10,12],[-22,8]],fabric,.63);
-        facet([[-22,6],[-18,3],[-5,5],[8,5],[5,11],[-10,10]],fabric,1.17);
-      }else{
-        // The binding follows the cut edge above the brow and down the cheek.
-        facet([[19,-1],[13,-2],[7,0],[3,4],[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9],[-2,2],[3,-3],[12,-6],[18,-6]],trim,.93);
-        facet([[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9]],trim,.76);
-      }
+      // The near cloth covers the original side of the head up to the binding.
+      // The open face and the lower robe collar remain part of the base sprite.
+      facet([[-23,-8],[-17,-4],[-11,-15],[1,-9],[7,0],[3,4],[0,10],[0,16],[-12,19],[-22,14],[-24,8]],fabric,.88);
+      facet([[-23,-8],[-17,-4],[-15,12],[-22,14],[-24,8]],fabric,.69);
+      facet([[-15,12],[-8,3],[0,10],[0,16],[-12,19]],fabric,.73);
+      facet([[19,-1],[13,-2],[7,0],[3,4],[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9],[-2,2],[3,-3],[12,-6],[18,-6]],trim,.93);
+      facet([[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9]],trim,.76);
       return canvas;
     }
     if(style==="hood"){
@@ -51,41 +46,24 @@ window.WizardHats=(()=>{
       facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
       facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
     }else{
-      const tall=style==="top";
-      if(tall){
-        const rim=[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]];
-        facet(rim,fabric,.97);
-        const outer=rim.slice(4).concat([rim[0]]);
-        facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
-        facet([[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]],fabric,.77);
-        // Short, straight-sided crown with a lid and two visible wall planes.
-        const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
-        facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);
-        facet([lid[6],lid[5],[12,2],[-9,2]],fabric,1.03);
-        facet([lid[5],lid[4],[20,-3],[12,2]],fabric,.76);
-        facet(lid,fabric,1.16);
-        facet([lid[0],lid[1],lid[2],[-1,-28],lid[6]],fabric,1.24);
-        facet([lid[2],lid[3],lid[4],lid[5],[-1,-28]],fabric,.94);
-        facet([[-18,-9],[-9,-5],[-9,2],[-17,-2]],trim,.59);
-        facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
-        facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);
-      }else{
-        // The low crown sits just above the separate foreground brim.
-        const dome=[[-25,-2],[-26,-8],[-23,-15],[-16,-21],[-6,-24],[8,-24],[18,-21],[24,-15],[27,-8],[24,-2],[9,3],[-11,3]];
-        facet(dome,fabric,.76);
-        facet([dome[0],dome[1],dome[2],[-16,-11],dome[11]],fabric,.72);
-        facet([dome[2],dome[3],dome[4],dome[5],[-2,-15],[-16,-11]],fabric,1.20);
-        facet([[-2,-15],dome[5],dome[6],dome[7],[13,-12]],fabric,.99);
-        facet([[-16,-11],[-2,-15],[13,-12],dome[10],dome[11]],fabric,1.04);
-        facet([[13,-12],dome[7],dome[8],dome[9],dome[10]],fabric,.70);
-        facet([[-26,-7],[-11,-2],dome[11],dome[0]],trim,.69);
-        facet([[-11,-2],[10,-2],dome[10],dome[11]],trim,1.03);
-        facet([[10,-2],[27,-7],dome[9],dome[10]],trim,.81);
-      }
-
-      const gem=tall?[[10,-8],[16,-7],[17,-2],[13,3],[8,1],[7,-4]]:
-        [[12,-8],[18,-7],[21,-3],[17,2],[12,1],[10,-3]];
-      const center=tall?[12,-3]:[15,-3];
+      const rim=[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]];
+      facet(rim,fabric,.97);
+      const outer=rim.slice(4).concat([rim[0]]);
+      facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
+      facet([[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]],fabric,.77);
+      // Short, straight-sided crown with a lid and two visible wall planes.
+      const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
+      facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);
+      facet([lid[6],lid[5],[12,2],[-9,2]],fabric,1.03);
+      facet([lid[5],lid[4],[20,-3],[12,2]],fabric,.76);
+      facet(lid,fabric,1.16);
+      facet([lid[0],lid[1],lid[2],[-1,-28],lid[6]],fabric,1.24);
+      facet([lid[2],lid[3],lid[4],lid[5],[-1,-28]],fabric,.94);
+      facet([[-18,-9],[-9,-5],[-9,2],[-17,-2]],trim,.59);
+      facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
+      facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);
+      const gem=[[10,-8],[16,-7],[17,-2],[13,3],[8,1],[7,-4]];
+      const center=[12,-3];
       facet(gem,trim,1.19);
       const inset=gem.map(([x,y])=>[center[0]+.71*(x-center[0]),center[1]+.71*(y-center[1])]);
       for(let i=0;i<inset.length;i++){

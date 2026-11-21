@@ -308,6 +308,7 @@
     hairDyes.set(key,result);return result;
   }
   function drawHeadHair(ctx,look,kind,frame,top,time){
+    if(look?.hat==="hood")return;
     const style=look?.headHair;
     const curly=style==="curlyMedium"||style==="curlyLong";
     if(!curly&&style!=="medium"&&style!=="long")return;
@@ -370,13 +371,23 @@
     }
     ctx.restore();
   }
+  function drawDressedFrame(ctx,art,kind,i,top,look){
+    if(["hood","top","round"].includes(look?.hat)){
+      const [x,y]=hairAnchors[kind][i];
+      const angle=kind==="wizard"?-.19:[-.11,-.19,-.36,-.05,0,.23,.45,.45][i];
+      ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);
+      window.WizardHats.draw(ctx,look,x,y,angle);ctx.restore();
+      art=window.WizardHats.withoutHat(art,kind);
+    }
+    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+  }
   function drawDefeatSprite(ctx,elapsedMs,look){
     if(!defeatAtlasReady())return false;
     const i=defeatFrame(elapsedMs);
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=appearanceAtlas(defeatAtlas,"defeat",look);
     const top=-220+footPadding(defeatAtlas,i)+7;
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+    drawDressedFrame(ctx,art,"defeat",i,top,look);
     drawHeadHair(ctx,look,"defeat",i,top,elapsedMs);
     ctx.restore();return true;
   }
@@ -398,7 +409,7 @@
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=appearanceAtlas(wizardAtlas,"wizard",look);
     const top=-220+footPadding(wizardAtlas,i)+7;
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+    drawDressedFrame(ctx,art,"wizard",i,top,look);
     drawHeadHair(ctx,look,"wizard",i,top,time);
     const armor=armorProgress(look);
     if(armor>0){
@@ -470,7 +481,7 @@
     return {id,team,index,name:profile?.name||d.name,style:'tide',color:d.color,
       hp:build.hp,maxHp:build.hp,mana:build.mana,maxMana:build.mana,level:profile?.level||20,skills:profile?.skills||{},masteries:profile?.masteries,grimoire:profile?.deck,peerId:entry?.isCpu?null:entry?.peerId||null,isHuman:!!entry?.peerId&&!entry?.isCpu,
       speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
-      hat:"pointed",
+      hat:(!entry&&!savedProfile?custom.hat:profile?.hat)||"pointed",
       robe:"classic",
       robeColor:profile?.robeColor||pick(custom.robeColor,colors?.robeColors,preset.robeColor),
       hatColor:profile?.hatColor||pick(custom.hatColor,colors?.hatColors,preset.hatColor),
@@ -3236,7 +3247,7 @@
     // on both teams. Mirror the enemy team so they face the allies.
     // Palette swaps use the approved full-body frames; only changing
     // silhouettes uses the existing geometry-based model fallback.
-    const approvedWizard=u.hat==="pointed"&&u.robe==="classic";
+    const approvedWizard=["pointed","hood","top","round"].includes(u.hat)&&u.robe==="classic";
     const action=!frozen&&state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;

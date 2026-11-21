@@ -521,14 +521,24 @@
     const testing=mode==="tester";
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
-                 ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>mode!=="online"||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
+                 ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>!(tower||mode==="online")||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
     // Online clients share the host's world coordinates for spell effects.
     const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (any-pointer: fine)").matches;
     const teamOffset=desktopArena?120:0;
     for(const u of units){
-      const [x,y]=scenePositions[size][u.team][u.index];
+      const sideSize=tower&&u.team===0?tower.partySize:size;
+      const [x,y]=scenePositions[sideSize][u.team][u.index];
       u.x=x+(u.team?teamOffset:-teamOffset);
       u.y=y;
+      if(tower&&u.team===1){
+        const foe=activeRoster.find(entry=>entry.team===1&&entry.slot===u.index);
+        u.towerRole=foe.profile.towerRole;
+        const extra=1+.08*(tower.partySize-1);
+        const split=tower.partySize===1&&size>1?.72:1;
+        u.hp=u.maxHp=Math.round(u.maxHp*extra*split);
+        u.maxMana+=Math.floor(tower.partySize/2);
+        u.mana=u.maxMana;
+      }
       if(!testing){startHand(u,u.isHuman||(!activeRoster&&u.id==="a0"));continue;}
       if(u.team===1){
         Object.assign(u,{name:"Training Dummy",dummy:true,hp:12000,maxHp:12000,mana:0,hand:[],drawPile:[],discardPile:[]});
@@ -744,6 +754,83 @@
     return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||isRecharging(u)||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
+  const towerHealing=new Set(["heal","teamheal","regen","teamregen"]);
+  const towerBarriers=new Set(["winddome","bubbleshield","shield","frozentouch"]);
+  function towerControl(card){
+    return card.stunChance||card.disableChance||card.flinchChance||
+      ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
+  }
+  function towerDeckScore(card,role){
+    if(towerHealing.has(card.kind))return role==="Support"?10:1;
+    if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
+    if(towerControl(card))return role==="Controller"?10:5;
+    if(!card.damage)return 1;
+    return (role==="Striker"?7:4)+(card.cost<=5?1:0);
+  }
+  function towerProfile(floor,slot,rng=Math.random){
+    const profile=Builds.cpu(CARDS,slot,rng,floor);
+    if(floor<5)return {...profile,name:`Caglimot Scout ${slot+1}`};
+    const role=["Striker","Support","Controller","Guardian"][slot];
+    const pairs={
+      Striker:[["fire","earth"],["dark","fire"],["lightning","ice"]],
+      Support:[["nature","wind"],["nature","water"],["nature","earth"],["water","wind"]],
+      Controller:[["lightning","wind"],["ice","dark"],["earth","lightning"]],
+      Guardian:[["earth","water"],["wind","ice"],["water","earth"]]
+    }[role];
+    const masteries=pairs[Math.floor(rng()*pairs.length)];
+    const skills={hp:0,mana:0};
+    const allocation=role==="Support"?[masteries[0],"hp","mana",masteries[0],masteries[1]]:
+      role==="Guardian"?["hp",masteries[0],"hp","mana",masteries[1]]:
+      [masteries[0],"hp",masteries[0],"mana",masteries[1]];
+    for(let i=0;i<floor;i++){
+      const key=allocation[i%allocation.length];
+      skills[key]=(skills[key]||0)+1;
+    }
+    const ranked=CARDS.filter(c=>masteries.includes(c.school)).map(card=>({
+      card,score:towerDeckScore(card,role)+rng()*(floor>=12?3:7)
+    })).sort((a,b)=>b.score-a.score).map(entry=>entry.card);
+    const core=ranked.slice(0,8);
+    const flexible=ranked.slice(8,12);
+    const deck=[...core.flatMap(c=>[c.id,c.id]),...core.slice(0,8-flexible.length).map(c=>c.id),...flexible.map(c=>c.id)];
+    return {...Builds.normalize({...profile,masteries,skills,deck,name:`Caglimot ${role} ${slot+1}`},CARDS),towerRole:role};
+  }
+  function towerChoice(u,cards){
+    const allies=alive(u.team),opponents=alive(1-u.team),role=u.towerRole;
+    const planned=ally=>Object.values(state.plans).some(plan=>plan.targetId===ally.id&&
+      (towerHealing.has(BY_ID[plan.cardId]?.kind)||towerBarriers.has(BY_ID[plan.cardId]?.kind)));
+    const choices=[];
+    for(const card of cards){
+      const group=card.target==="team"||card.target==="all_enemies";
+      const targets=targetsFor(card,u);
+      for(const target of group?[null]:targets){
+        let score=0;
+        if(towerHealing.has(card.kind)){
+          const healing=(target?[target]:allies).reduce((total,ally)=>{
+            if(planned(ally)||ally.statuses.some(s=>s.kind===(card.kind==="regen"?"calming_waters":card.kind==="teamregen"?"healing_aura":null)))return total;
+            const missing=ally.maxHp-ally.hp;
+            const amount=card.healPerTurn?card.healPerTurn*1.6:card.heal;
+            return total+Math.min(missing,amount)*(ally.hp/ally.maxHp<.45?1.45:1);
+          },0);
+          score=healing*(role==="Support"?1.4:.8);
+        }else if(towerBarriers.has(card.kind)){
+          if(!target||planned(target)||target.statuses.some(s=>["bubble_shield","wind_dome","solidity","frozen_touch"].includes(s.kind)))continue;
+          score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
+          if(target!==u&&target.towerRole==="Support")score+=65;
+        }else if(card.damage||towerControl(card)){
+          const victims=target?[target]:opponents;
+          score=victims.reduce((sum,victim)=>{
+            const damage=(card.damage||0)*Builds.multiplier(u,card.school);
+            return sum+Math.min(victim.hp,damage)*(card.accuracy||1)+(damage>=victim.hp?180:0)+
+              (towerControl(card)?(role==="Controller"?320:120):0);
+          },0);
+        }else if(card.kind==="zen"){
+          score=role==="Support"?360:190;
+        }
+        if(score>0)choices.push({card,target,score:score-card.cost*16+Math.random()*(state.tower.floor<12?140:55)});
+      }
+    }
+    return choices.sort((a,b)=>b.score-a.score)[0];
+  }
   function autoPlan(u){
     if(requiresRest(u))return null;
     const opponents=alive(1-u.team);
@@ -757,8 +844,14 @@
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
       (card.kind!=="zen"||targetsFor(card,u).length>0));
     if(!affordable.length)return null;
-    const card=affordable[Math.floor(Math.random()*affordable.length)];
-    const target=["team","all_enemies"].includes(card.target)?null:
+    const choice=u.towerRole?towerChoice(u,affordable):null;
+    if(u.towerRole&&!choice){
+      // Free a slot when the hand is full of situational spells.
+      if(u.hand.length===MAX_HAND_SIZE)discardFromHand(u,affordable[0].id);
+      return null;
+    }
+    const card=choice?.card||affordable[Math.floor(Math.random()*affordable.length)];
+    const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
       card.kind==="zen"?targetsFor(card,u)[0]:card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
         card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
@@ -4705,11 +4798,14 @@
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));
-      const enemies=humans.map((_,slot)=>({team:1,slot,isCpu:true,profile:{
-        ...Builds.cpu(CARDS,floor+slot,Math.random,floor),name:"Caglimot Guardian "+(slot+1)
-      }}));
+      const partySize=humans.length;
+      const reinforcement=floor>=(partySize===1?10:7)?1:0;
+      const enemyCount=Math.min(4,partySize+reinforcement);
+      const enemies=Array.from({length:enemyCount},(_,slot)=>({
+        team:1,slot,isCpu:true,profile:towerProfile(floor,slot)
+      }));
       activeRoster=[...humans,...enemies];
-      setBattle(online?'online':'story',humans.length,{id:crypto.randomUUID(),floor,online});
+      setBattle(online?'online':'story',enemyCount,{id:crypto.randomUUID(),floor,online,partySize});
       if(online)state.humanByTeam[0]=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.id||null;
       paintUI();
     },

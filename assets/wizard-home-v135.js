@@ -27,10 +27,10 @@ function render(){
  if(view==='lobby')renderLobby();
 }
 const nameLists=["Alden Althea Amara Ansel Arden Aster Audra Bastian Briar Calla Caspian Cedric Celia Cleo Dahlia Dorian Edric Elara Elian Elowen Emrys Esme Estel Evander Faye Felix Flora Galen Gideon Hazel Idris Iona Isolde Jasper Juniper Kellan Kestrel Liora Lucan Lyra Maelis Maren Milo Mira Nadia Nessa Nolan Nyra Orin Orla Perrin Petra Quill Rafe Rhea Rowan Sable Selene Silas Sorrel Sylvie Talia Tamsin Thane Torin Una Vesper Violet Wren Yara Zev","Amber Ash Birch Bloom Bramble Bright Brook Cinder Coral Dawn Dew Dusk Elm Ember Fern Flint Fog Frost Gale Glimmer Glow Gold Grove Hail Hearth Holly Ivory Jade Lark Leaf Lumen Mist Moon Moss Night Oak Onyx Pearl Pine Rain Reed River Rune Sage Shade Silver Sky Snow Spark Star Stone Storm Sun Thorn Tide Vale Wave Wind Winter","bark beam bell bend blaze bloom brook chime crest dancer drift fall feather field fin flare flight forge frost glen glow grove guard harbor haven helm hill hollow keeper lace leaf light lock mantle mark mere mill path peak petal quill reach ridge rise root runner shade shard shine song spire spring step thorn thread tide trail vale veil walker ward watch weaver well whisper wing wood woven"].map(list=>list.split(' '));
-const nameLabels=['Given name','Surname beginning','Surname ending'];
+const nameLabels=['First name','Surname beginning','Surname ending'];
 let nameParts=['','',''],originalDraftName='',deleteId=null;
 function nameFields(){
- return `<div class="field-grid">${nameLists.map((list,i)=>`<div class="field"><label for="namePart${i}">${nameLabels[i]}</label><select id="namePart${i}" data-name-part="${i}"><option value="">Choose ${nameLabels[i].toLowerCase()}</option>${list.map(name=>`<option value="${name}" ${name===nameParts[i]?'selected':''}>${name}</option>`).join('')}</select></div>`).join('')}</div>`;
+ return `<div class="portal-actions">${btn('Randomize name','randomName','small subtle')}</div><div class="field-grid">${nameLists.map((list,i)=>`<div class="field"><label for="namePart${i}">${nameLabels[i]}</label><select id="namePart${i}" data-name-part="${i}"><option value="">Choose ${nameLabels[i].toLowerCase()}</option>${list.map(name=>`<option value="${name}" ${name===nameParts[i]?'selected':''}>${name}</option>`).join('')}</select></div>`).join('')}</div>`;
 }
 function loadNameParts(name){
  const [given,surname]=name.split(' ');
@@ -189,7 +189,18 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.practice){startBattle(Number(button.dataset.practice));return;}
  if(button.dataset.addCpu||button.dataset.removeCpu){const add=!!button.dataset.addCpu,[team,slot]=(button.dataset.addCpu||button.dataset.removeCpu).split(',').map(Number);await command(add?'cpuAdd':'cpuRemove',{team,slot,...(add?{profile:B.cpu(cards,team*4+slot)}:{})});return;}
  if(button.dataset.seat){const [team,slot]=button.dataset.seat.split(',').map(Number);hostSeat(session.peerId,team,slot);return;}
- const action=button.dataset.action;if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.makeDeck(cards,draft.masteries);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
+ const action=button.dataset.action;
+ if(action==='randomName'){
+   nameParts=nameLists.map((list,i)=>{
+     const choices=list.filter(part=>part!==nameParts[i]);
+     return choices[Math.floor(Math.random()*choices.length)];
+   });
+   draft.name=nameParts[0]+' '+nameParts[1]+nameParts[2];
+   nameParts.forEach((part,i)=>{el('namePart'+i).value=part;});
+   el('previewName').textContent=draft.name;
+   return;
+ }
+ if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.makeDeck(cards,draft.masteries);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
  else if(action==='online')openOnline();
  else if(action==='buildOnline')buildOnline();
  else if(action==='useOwn'&&ownBuildReady()){onlineProfile=active;screen('online');}

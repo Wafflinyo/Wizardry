@@ -1,6 +1,6 @@
 /* Sentinel Fissure: fixed low-poly poses and staggered arena debris. */
 (()=>{
-  const stomp=2700,riseDuration=1150,sinkStart=4770,sinkDuration=610;
+  const stomp=2700,riseDuration=1150,sinkStart=5570,sinkDuration=710;
   const clamp=n=>Math.max(0,Math.min(1,n));
   const ease=n=>{const t=clamp(n);return t*t*(3-2*t);};
   const hash=n=>{const x=Math.sin(n*91.413+6.7)*43758.5453;return x-Math.floor(x);};
@@ -150,8 +150,8 @@
     else ready.push(callback);
   }
   function shake(progress,dir,hit){
-    const elapsed=progress*5440;
-    const stompAge=elapsed-stomp,hitAge=(progress-hit)*5440;
+    const elapsed=progress*6340;
+    const stompAge=elapsed-stomp,hitAge=(progress-hit)*6340;
     const rise=Math.sin(Math.PI*clamp(elapsed/riseDuration));
     const sink=Math.sin(Math.PI*clamp((elapsed-sinkStart)/sinkDuration));
     const rumble=rise*6.5+sink*9;

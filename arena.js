@@ -145,7 +145,7 @@
     damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:4700,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
   CARDS.push({id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:8,target:"enemy",kind:"damage",
-    damage:910,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:5440,hit:.80,short:"80% ACCURACY",
+    damage:910,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:6340,hit:4352/6340,short:"80% ACCURACY",
     description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 910 base Earth damage, with a 25% chance to disable its pending action this round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');

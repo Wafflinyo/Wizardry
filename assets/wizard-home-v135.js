@@ -3,7 +3,16 @@
 const api=window.WIZARDRY_ARENA_TEST,B=window.WizardryBuilds,cards=api.cards,portal=document.getElementById('portal'),KEY='wizardry.wizards.v135';
 
 let saved=[],active=null,draft=null,step=0,view='home',previewFrame=0,joinCode=new URLSearchParams(location.search).get('lobby');
-try{saved=JSON.parse(localStorage.getItem(KEY)||'[]').map(p=>B.normalize({...p,deck:p.masteries?.length&&p.deck?.length!==24?B.makeDeck(cards,p.masteries):p.deck?.map(id=>id==='perfectdefense'?'sentinelfissure':id==='golem'?'rogginbowler':id)},cards));}catch{saved=[];}
+function withLegalDeck(profile){
+ const current=Array.isArray(profile.deck)?profile.deck:[];
+ const migrated=current.map(id=>id==='perfectdefense'?'sentinelfissure':id==='golem'?'rogginbowler':id);
+ const deck=B.progressionDeck(cards,profile.masteries,B.baseline(Number(profile.level)||20).level,migrated);
+ return B.normalize({...profile,deck},cards,true);
+}
+try{
+ const profiles=JSON.parse(localStorage.getItem(KEY)||'[]');
+ for(const profile of profiles){try{saved.push(withLegalDeck(profile));}catch{}}
+}catch{}
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
 let binderElement='',deckDraft=null;
 let lastResult=null,startingFloor=false,submittingReady=false;
@@ -49,7 +58,7 @@ function loadNameParts(name){
 function requireName(){
  if(!draft.name||(nameParts.some(Boolean)&&!nameParts.every(Boolean)))throw Error('Choose all three name parts.');
 }
-function create(test=false){onlineDraft=false;binderElement='';nameParts=['','',''];originalDraftName=test?'Test Wizard':'';draft={id:crypto.randomUUID(),name:'',level:test?20:1,masteries:['water','wind'],skills:{hp:0,mana:0,...Object.fromEntries(B.elements.map(e=>[e,0]))},deck:B.makeDeck(cards,['water','wind']),robeColor:B.colors[0],hatColor:B.colors[0],skinColor:B.skins[0]};step=0;if(test){draft.name='Test Wizard';const params=new URLSearchParams(location.search),hair=params.get('hair');if(['hood','top'].includes(params.get('hat')))draft.hat=params.get('hat');if(B.skins.includes(params.get('skin')))draft.skinColor=params.get('skin');if(Object.hasOwn(B.gear.bootColor.options,params.get('boots')))draft.bootColor=params.get('boots');if(['curlyMedium','curlyLong'].includes(hair))draft.headHair=hair;}screen(test?'wizardTester':'create');}
+function create(test=false){onlineDraft=false;binderElement='';nameParts=['','',''];originalDraftName=test?'Test Wizard':'';draft={id:crypto.randomUUID(),name:'',level:test?20:1,masteries:['water','wind'],skills:{hp:0,mana:0,...Object.fromEntries(B.elements.map(e=>[e,0]))},deck:B.progressionDeck(cards,['water','wind'],test?20:1),robeColor:B.colors[0],hatColor:B.colors[0],skinColor:B.skins[0]};step=0;if(test){draft.name='Test Wizard';const params=new URLSearchParams(location.search),hair=params.get('hair');if(['hood','top'].includes(params.get('hat')))draft.hat=params.get('hat');if(B.skins.includes(params.get('skin')))draft.skinColor=params.get('skin');if(Object.hasOwn(B.gear.bootColor.options,params.get('boots')))draft.bootColor=params.get('boots');if(['curlyMedium','curlyLong'].includes(hair))draft.headHair=hair;}screen(test?'wizardTester':'create');}
 function selectOptions(values,value){return values.map(v=>`<option value="${v}" ${value===v?'selected':''}>${escape((window.WizardryPalettes?.robeColors?.[v]||window.WizardryPalettes?.skinColors?.[v]||v))}</option>`).join('');}
 function gearField(key){const field=B.gear[key];return `<div class="field"><label for="gear-${key}">${field.label.toUpperCase()}</label><select id="gear-${key}" data-gear="${key}">${Object.entries(field.options).map(([value,label])=>`<option value="${value}" ${(draft[key]||"original")===value?"selected":""}>${label}</option>`).join("")}</select></div>`;}
 function renderCreator(){
@@ -76,17 +85,20 @@ function renderBinder(profile){
  if(!B.elements.includes(binderElement))binderElement=profile.masteries[0]||B.elements[0];
  const mastered=profile.masteries.includes(binderElement);
  const tabs=B.elements.map(e=>`<button class="portal-btn small" type="button" data-binder-element="${e}" aria-pressed="${e===binderElement}">${title(e)}</button>`).join('');
- const page=cards.filter(c=>c.school===binderElement).map(card=>{
+ const ordered=B.orderedSpells(cards,binderElement);
+ const required=B.deckSize(B.unlockedSpells(cards,profile.masteries,profile.level));
+ const page=ordered.map((card,index)=>{
+   const unlock=B.unlockLevel(index),locked=profile.level<unlock;
    const count=profile.deck.filter(id=>id===card.id).length;
-   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||count>=3||profile.deck.length>=24?'disabled':''}>+</button></div></article>`;
+   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}${locked?`<span class="binder-unlock">Unlocks at level ${unlock}</span>`:''}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||locked||count>=3||profile.deck.length>=required?'disabled':''}>+</button></div></article>`;
  }).join('');
- return `<div class="binder-head"><h2>Grimoire binder</h2><p aria-live="polite">${profile.deck.length} / 24 cards · 3 copies maximum</p></div><nav class="binder-tabs" aria-label="Grimoire elements">${tabs}</nav><div class="binder-tools">${btn('Fill deck','allCards','small subtle')}${btn('Clear deck','clearDeck','small subtle')}</div>${mastered?'':'<p class="portal-note">Choose this element as a mastery to add its cards.</p>'}<div class="binder-grid">${page}</div>`;
+ return `<div class="binder-head"><h2>Grimoire binder</h2><p aria-live="polite">${profile.deck.length} / ${required} cards · 3 copies maximum</p></div><nav class="binder-tabs" aria-label="Grimoire elements">${tabs}</nav><div class="binder-tools">${btn('Fill deck','allCards','small subtle')}${btn('Clear deck','clearDeck','small subtle')}</div>${mastered?'':'<p class="portal-note">Choose this element as a mastery to add its cards.</p>'}<div class="binder-grid">${page}</div>`;
 }
 const cardDialog=el('binderCardDetail');
 function inspectBinderCard(id){
  const card=cards.find(c=>c.id===id);
  if(!card)return;
- const profile=view==='towerDeck'?deckDraft:draft;
+ const profile=view==='progression'?active:view==='towerDeck'?deckDraft:draft;
  cardDialog.innerHTML=`<button type="button" class="portal-btn small" data-close-binder autofocus>Close</button><div class="binder-card school-${card.school}">${binderFace(card,profile,true)}</div>`;
  if(!cardDialog.open)cardDialog.showModal();
  requestAnimationFrame(()=>api.drawCardArts());
@@ -101,7 +113,7 @@ function editTowerDeck(){
  deckDraft=structuredClone(active);binderElement=active.masteries[0];screen('towerDeck');
 }
 function saveTowerDeck(){
- const profile=B.normalize({...active,deck:deckDraft.deck},cards);
+ const profile=B.normalize({...active,deck:deckDraft.deck},cards,true);
  persistProfile(profile);onlineProfile=null;deckDraft=null;screen('progression');
 }
 function animatePreview(p){cancelAnimationFrame(previewFrame);let last=0;function frame(now){const canvas=el('wizardPreview');if(!canvas)return;if(now-last>50){api.drawWizardPreview(canvas,p,el('previewPose')?.value);last=now;}previewFrame=requestAnimationFrame(frame);}previewFrame=requestAnimationFrame(frame);}
@@ -113,7 +125,7 @@ function persistProfile(profile){
 function save(){
  readDraft();requireName();
  if(onlineDraft&&B.stats(draft).remaining)throw Error('Allocate all 20 skill points for your online build.');
- const profile=B.normalize(draft,cards);
+ const profile=B.normalize(draft,cards,true);
  if(onlineDraft){onlineProfile=profile;onlineDraft=false;screen('online');return;}
  persistProfile(profile);onlineProfile=null;api.configureProfile(profile);screen('hub');
 }
@@ -130,7 +142,7 @@ function openOnline(){
  screen('online');
 }
 function buildOnline(){
- onlineDraft=true;binderElement='';draft=structuredClone(active);draft.level=20;
+ onlineDraft=true;binderElement='';draft=structuredClone(active);draft.level=20;draft=withLegalDeck(draft);
  for(const key in draft.skills)draft.skills[key]=0;
  originalDraftName=draft.name;nameParts=loadNameParts(draft.name);step=1;screen('create');
 }
@@ -151,7 +163,7 @@ function recordTowerResult(state){
  }
  const level=Math.min(20,active.level+1);
  try{
-   persistProfile({...active,level,towerCleared:active.towerCleared||tower.floor===20,lastTowerWin:tower.id});
+   persistProfile(withLegalDeck({...active,level,towerCleared:active.towerCleared||tower.floor===20,lastTowerWin:tower.id}));
    onlineProfile=null;
    towerMessage=tower.floor===20?'Caglimot Tower cleared.':level===20?'Level 20 reached. You earned a skill point.':'Level '+level+' reached. You earned a skill point.';
  }catch(err){error(err.message);}
@@ -185,16 +197,21 @@ function renderProgression(){
  const waiting=coOp&&session.lobby?.phase!=='lobby';
  const cleared=coOp?(party.length>0&&party.every(p=>p.profile.towerCleared)):active.towerCleared;
  const floor=coOp?(party.length?partyFloor(party):tower.floor):active.level;
+ const leveledUp=winner===0&&active.lastTowerWin===tower.id&&active.level===tower.floor+1;
+ const newCards=leveledUp?active.masteries.flatMap(school=>
+   B.orderedSpells(cards,school).filter((_,i)=>B.unlockLevel(i)===active.level)):[];
+ const rewards=newCards.length?`<section class="tower-unlocks" aria-labelledby="unlockedSpells"><h2 id="unlockedSpells">New spells unlocked</h2><div class="binder-grid">${newCards.map(card=>`<button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button>`).join('')}</div></section>`:'';
  const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
  const status=winner===0?towerMessage:winner==='draw'?'Floor ended in a draw.':'Floor attempt ended in defeat.';
- shell(`<section class="portal-panel tower-progress"><h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span>${stats.remaining&&!ready&&!submittingReady?`<button class="portal-btn small" data-progress-skill="${key}" aria-label="Add skill point to ${label}">+</button>`:''}</div>`).join('')}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+ shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span>${stats.remaining&&!ready&&!submittingReady?`<button class="portal-btn small" data-progress-skill="${key}" aria-label="Add skill point to ${label}">+</button>`:''}</div>`).join('')}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+ if(newCards.length)requestAnimationFrame(()=>api.drawCardArts());
 }
 function allocateProgressPoint(key){
  if(view!=='progression'||!active||submittingReady||!['hp','mana',...active.masteries].includes(key)||!B.stats(active).remaining)return;
  if(session.lobby?.players.some(p=>p.peerId===session.peerId&&p.ready)&&session.lobby.phase==='lobby')return;
  const skills={...active.skills,[key]:(active.skills[key]||0)+1};
- persistProfile(B.normalize({...active,skills},cards));onlineProfile=null;render();
+ persistProfile(B.normalize({...active,skills},cards,true));onlineProfile=null;render();
 }
 async function nextFloor(){
  if(!lastResult?.tower.online){
@@ -243,7 +260,7 @@ function acceptRoom(data){session.roomId=data.roomId;session.peerId=data.peerId;
    if(towerLobby){
      const profile=data.lobby.players.find(p=>p.peerId===session.peerId)?.profile;
      if(profile?.lastTowerWin&&active?.lastTowerWin!==profile.lastTowerWin){
-       try{persistProfile({...active,level:Math.max(active.level,profile.level),towerCleared:profile.towerCleared,lastTowerWin:profile.lastTowerWin});onlineProfile=null;}catch(err){error(err.message);}
+       try{persistProfile(withLegalDeck({...active,level:Math.max(active.level,profile.level),towerCleared:profile.towerCleared,lastTowerWin:profile.lastTowerWin}));onlineProfile=null;}catch(err){error(err.message);}
      }
    }
    session.active=false;if(!towerLobby||!lastResult)screen('lobby');
@@ -294,13 +311,16 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.progressSkill){allocateProgressPoint(button.dataset.progressSkill);return;}
  if(button.dataset.hatStyle){draft.hat=button.dataset.hatStyle;for(const choice of portal.querySelectorAll('[data-hat-style]'))choice.setAttribute('aria-pressed',String(choice===button));return;}
  if(button.dataset.step!==undefined){readDraft();const next=Number(button.dataset.step);if(onlineDraft&&next===0)return;step=next;render();return;}
- if(button.dataset.mastery){const key=button.dataset.mastery;if(draft.masteries.includes(key)){draft.masteries=draft.masteries.filter(x=>x!==key);draft.skills[key]=0;draft.deck=draft.deck.filter(id=>cards.find(c=>c.id===id)?.school!==key);}else if(draft.masteries.length<2){draft.masteries.push(key);}else{error('Up to two mastery elements are allowed. Remove one before choosing another.');return;}draft.deck=draft.masteries.length?B.makeDeck(cards,draft.masteries):[];render();return;}
+ if(button.dataset.mastery){const key=button.dataset.mastery;if(draft.masteries.includes(key)){draft.masteries=draft.masteries.filter(x=>x!==key);draft.skills[key]=0;draft.deck=draft.deck.filter(id=>cards.find(c=>c.id===id)?.school!==key);}else if(draft.masteries.length<2){draft.masteries.push(key);}else{error('Up to two mastery elements are allowed. Remove one before choosing another.');return;}draft.deck=B.progressionDeck(cards,draft.masteries,draft.level);render();return;}
  if(button.dataset.skill){const key=button.dataset.skill,delta=Number(button.dataset.delta);if(delta<0&&draft.skills[key]>0||delta>0&&B.stats(draft).remaining>0)draft.skills[key]+=delta;render();return;}
  if(button.dataset.deck){
    const profile=view==='towerDeck'?deckDraft:draft;
    const id=button.dataset.deck,delta=Number(button.dataset.delta);
    if(delta<0){const at=profile.deck.indexOf(id);if(at>=0)profile.deck.splice(at,1);}
-   else if(profile.deck.length<24&&profile.deck.filter(x=>x===id).length<3&&cards.some(c=>c.id===id&&profile.masteries.includes(c.school)))profile.deck.push(id);
+   else {
+     const available=B.unlockedSpells(cards,profile.masteries,profile.level);
+     if(profile.deck.length<B.deckSize(available)&&profile.deck.filter(x=>x===id).length<3&&available.some(c=>c.id===id))profile.deck.push(id);
+   }
    render();portal.querySelector(`[data-deck="${id}"][data-delta="${delta}"]:not([disabled])`)?.focus({preventScroll:true});return;
  }
  if(button.dataset.deleteWizard){deleteId=button.dataset.deleteWizard;render();return;}
@@ -321,7 +341,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(action==='editTowerDeck'){editTowerDeck();return;}
  if(action==='saveTowerDeck'){saveTowerDeck();return;}
  if(action==='cancelTowerDeck'){deckDraft=null;screen('progression');return;}
- if(view==='towerDeck'&&action==='allCards'){deckDraft.deck=B.makeDeck(cards,deckDraft.masteries);render();return;}
+ if(view==='towerDeck'&&action==='allCards'){deckDraft.deck=B.progressionDeck(cards,deckDraft.masteries,deckDraft.level);render();return;}
  if(view==='towerDeck'&&action==='clearDeck'){deckDraft.deck=[];render();return;}
  if(action==='nextFloor'){await nextFloor();return;}
  if(action==='leaveProgress'){leaveMatch();return;}
@@ -335,7 +355,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
    el('previewName').textContent=draft.name;
    return;
  }
- if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.makeDeck(cards,draft.masteries);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
+ if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.progressionDeck(cards,draft.masteries,draft.level);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
  else if(action==='online')openOnline();
  else if(action==='buildOnline')buildOnline();
  else if(action==='useOwn'&&ownBuildReady()){onlineProfile=active;screen('online');}

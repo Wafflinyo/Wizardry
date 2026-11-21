@@ -4798,7 +4798,7 @@
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
     getState:()=>state,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
-    configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS);activeRoster=null;},
+    configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));
       const partySize=humans.length;

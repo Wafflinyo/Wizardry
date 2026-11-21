@@ -17,7 +17,7 @@ Deno.serve(async(req:Request)=>{
    if(!payload.profile||payload.profile.deck?.length>24)throw Error('Invalid wizard.');
    const builds=(globalThis as any).WizardryBuilds;
    const tower=payload.tower===true&&body.action!=='cpuAdd';
-   const wizard=builds.normalize(payload.profile,cards);
+   const wizard=builds.normalize(payload.profile,cards,tower);
    if(!tower&&(wizard.level!==20||builds.stats(wizard).remaining!==0))throw Error('Online Battles requires a level-20 build with all skill points allocated.');
    payload.profile={...wizard,towerLobby:tower};
   }

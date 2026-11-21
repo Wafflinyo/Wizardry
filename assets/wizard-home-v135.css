@@ -146,3 +146,5 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-tem
 .binder-detail .binder-art{max-height:36dvh}
 .binder-detail .binder-card h2{font:700 1.35rem/1.15 Georgia,serif;margin:.15rem 0}
 .binder-detail .binder-effect{font-size:.9rem}
+.binder-unlock{color:#f1ddb0;font-size:.74rem;margin-top:auto}
+.tower-unlocks{margin-bottom:1.5rem}

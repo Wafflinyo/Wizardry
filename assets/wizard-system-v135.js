@@ -15,14 +15,37 @@ const gear={
 function gearLook(p){return Object.fromEntries(Object.entries(gear).map(([key,field])=>[key,Object.hasOwn(field.options,p?.[key])?p[key]:"original"]));}
 const names={water:'Water',earth:'Earth',lightning:'Lightning',nature:'Nature',wind:'Wind',dark:'Dark',fire:'Fire',ice:'Ice'};
 function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+Math.floor(level/5)*100+(level===20?100:0),mana:12+Math.floor(level/5),points:level};}
-function normalize(input,cards){
+function orderedSpells(cards,school){
+ return cards.filter(c=>c.school===school).sort((a,b)=>a.cost-b.cost||(a.id<b.id?-1:a.id>b.id?1:0));
+}
+function unlockLevel(index){return index<5?1:5*(1+Math.floor((index-5)/2));}
+function unlockedSpells(cards,masteries,level){
+ return masteries.flatMap(school=>orderedSpells(cards,school).filter((_,i)=>unlockLevel(i)<=level));
+}
+function deckSize(available){return Math.min(24,3*available.length);}
+function progressionDeck(cards,masteries,level,current=[]){
+ const available=unlockedSpells(cards,masteries,level),limit=deckSize(available);
+ const legal=new Set(available.map(c=>c.id)),counts=new Map(),deck=[];
+ function add(id){
+  const copies=counts.get(id)||0;
+  if(deck.length>=limit||copies>=3||!legal.has(id))return;
+  deck.push(id);counts.set(id,copies+1);
+ }
+ current.forEach(add);
+ const choices=shuffle(available);
+ for(let pass=1;pass<=3;pass++)for(const card of choices)if((counts.get(card.id)||0)<pass)add(card.id);
+ return deck;
+}
+function normalize(input,cards,progression=false){
  const p=input||{},masteries=[...new Set((Array.isArray(p.masteries)?p.masteries:[]).filter(e=>elements.includes(e)))];
  if(masteries.length<1||masteries.length>2)throw Error('Choose one or two mastery elements.');
  const level=Math.max(1,Math.min(20,Math.floor(Number(p.level)||20))),skills=Object.fromEntries(['hp','mana',...elements].map(k=>[k,Math.max(0,Math.floor(Number(p.skills?.[k])||0))]));
  for(const e of elements)if(!masteries.includes(e))skills[e]=0;
  if(Object.values(skills).reduce((a,b)=>a+b,0)>level)throw Error('You have allocated more skill points than your level allows.');
- const legal=cards.filter(c=>masteries.includes(c.school)).map(c=>c.id),deck=(Array.isArray(p.deck)?p.deck:[]).filter(id=>legal.includes(id));
- if(deck.length!==24)throw Error('Your grimoire must contain exactly 24 cards from your selected mastery elements.');
+ const available=progression?unlockedSpells(cards,masteries,level):cards.filter(c=>masteries.includes(c.school));
+ const legal=available.map(c=>c.id),deck=(Array.isArray(p.deck)?p.deck:[]).filter(id=>legal.includes(id));
+ const required=progression?deckSize(available):24;
+ if(deck.length!==required||(progression&&deck.length!==p.deck?.length))throw Error('Your grimoire must contain exactly '+required+' unlocked cards from your selected mastery elements.');
  const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>3)throw Error('A grimoire can hold up to 3 copies of each spell.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
  return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,towerCleared:p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
@@ -49,5 +72,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random,level=20){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<level;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,orderedSpells,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

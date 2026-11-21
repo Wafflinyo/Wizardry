@@ -176,7 +176,7 @@
     thornwrap:"150 per spell attempt and −15 accuracy for 3 rounds.",
     zeus:"200 adjacent chain damage. 20% stun per target.",gunpowderkiss:"Fire hits ignite 150 extra damage, up to 3 times.",
     flowstate:"+1 mana per round for the next 3 gains.",windfist:"Ten hits of 50.",
-    jack:"Fear: 30% skip chance each round for 3 rounds.",croc:"10% chance to skip the target’s pending action.",
+    jack:"Fear: 30% skip chance each round for 3 rounds.",croc:"10% chance to Fear, skipping the target’s action if they haven’t acted this round.",
     electricalcharge:"+1 mana per Lightning cast received for 3 rounds.",grillmaster:"20% burn: 50 × 3 rounds.",
     heizmann:"20% freeze chance. If unfrozen, 350 extra damage.",boulderweight:"−30 accuracy points for 3 turns.",
     acidair:"Extreme Poison: 100 × 5 rounds.",decaystrength:"Next damaging spell taken deals 20% more.",

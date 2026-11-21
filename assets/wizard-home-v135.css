@@ -143,3 +143,6 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-tem
 .binder-detail p{line-height:1.5}
 .tower-deck{max-width:62rem;margin-inline:auto}
 @media(max-width:420px){.binder-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}.binder-card{padding:.38rem}}
+.binder-detail .binder-art{max-height:36dvh}
+.binder-detail .binder-card h2{font:700 1.35rem/1.15 Georgia,serif;margin:.15rem 0}
+.binder-detail .binder-effect{font-size:.9rem}

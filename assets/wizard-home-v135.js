@@ -63,9 +63,14 @@ function renderCreator(){
  shell(`<div class="portal-heading"><div><p class="portal-eyebrow">${testing?'UNSAVED TEST BUILD':onlineDraft?'ONLINE BUILD · LEVEL 20':'WIZARD BUILD · LEVEL '+draft.level}</p><h1>${testing?'Wizard Creation Tester':onlineDraft?'Prepare for Online Battles':'Build Your Wizard'}</h1></div>${btn('Cancel','cancelBuild','subtle')}</div><div class="create-grid"><aside class="portal-panel wizard-display" data-creation-step="${step}">${testing||step===0?`<div class="preview-choices"><fieldset class="hair-choices"><legend>Hat style</legend>${Object.entries({hood:'Hood',top:'Top hat',pointed:'Pointed'}).map(([value,label])=>`<button type="button" class="portal-btn small" data-hat-style="${value}" aria-pressed="${value===(draft.hat||'pointed')}">${label}</button>`).join('')}</fieldset></div>`:''}<canvas id="wizardPreview" width="360" height="340"></canvas>${testing?'<label class="field">Preview animation<select id="previewPose"><option value="idle">Idle</option><option value="cast">Cast</option><option value="defeat">Defeat</option></select></label>':''}<h2 id="previewName">${escape(draft.name||'Your wizard')}</h2><p class="portal-note">${draft.masteries.map(title).join(' + ')||'Choose your mastery'}</p>${summary(draft)}<p class="portal-note">${draft.masteries.map(e=>`${title(e)} damage +${B.masteryBonusPercent(draft,e)}%`).join(' · ')}</p></aside><section class="portal-panel"><nav class="step-nav" aria-label="Wizard creation steps">${steps.map((s,i)=>`<button data-step="${i}" ${onlineDraft&&i===0?'disabled':''} class="${step===i?'active':''}">${i+1}. ${s}</button>`).join('')}</nav><div class="build-step">${content}</div><div class="create-bottom">${btn(step>(onlineDraft?1:0)?'Previous':'Cancel',step>(onlineDraft?1:0)?'previous':'cancelBuild','subtle')}${btn(step===3?(testing?'Finish test':'Save wizard'):'Continue',step===3?(testing?'home':'save'):'next','primary')}</div></section></div>`);animatePreview(draft);
  if(step===3)requestAnimationFrame(()=>api.drawCardArts());
 }
-function binderFace(card,expanded=false){
+function binderFace(card,profile,expanded=false){
  const info=api.cardInfo(card);
- return `<span class="binder-card-top"><span class="binder-rune" aria-hidden="true">${window.WIZARDRY_ELEMENT_TRACE_V45.svgFor(card.school)}</span><span>${card.cost} mana</span></span><span class="binder-art" data-binder-art data-card="${card.id}"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span><strong>${escape(card.name)}</strong><span class="binder-meta">${escape(info.accuracy)}</span><span class="binder-effect">${info.base?`<b>${escape(info.base)} · ${escape(info.target)}</b>`:''}${expanded?'':info.effect===info.target&&info.base?'':`<span>${escape(info.effect)}</span>`}</span>`;
+ const target=card.target==='team'||card.target==='all_enemies'?'Multi-target':'Single target';
+ const range=card.heal||!info.base?null:B.range(card,profile);
+ const amount=card.heal?`${B.healing(card,profile).toLocaleString()} healing`:range?`${range.low.toLocaleString()}–${range.high.toLocaleString()} damage`:'';
+ const effect=info.effect===info.target?'':info.effect;
+ const name=expanded?`<h2 id="binderCardTitle">${escape(card.name)}</h2>`:`<strong>${escape(card.name)}</strong>`;
+ return `<span class="binder-card-top"><span class="binder-rune" aria-hidden="true">${window.WIZARDRY_ELEMENT_TRACE_V45.svgFor(card.school)}</span><span>${card.cost} mana</span></span><span class="binder-art" data-binder-art data-card="${card.id}"><canvas class="spell-art-canvas" width="240" height="196" aria-hidden="true"></canvas></span>${name}<span class="binder-effect"><b>${amount?amount+' · ':''}${target}</b>${effect?`<span>${escape(effect)}</span>`:''}</span>`;
 }
 function renderBinder(profile){
  if(!B.elements.includes(binderElement))binderElement=profile.masteries[0]||B.elements[0];
@@ -73,7 +78,7 @@ function renderBinder(profile){
  const tabs=B.elements.map(e=>`<button class="portal-btn small" type="button" data-binder-element="${e}" aria-pressed="${e===binderElement}">${title(e)}</button>`).join('');
  const page=cards.filter(c=>c.school===binderElement).map(card=>{
    const count=profile.deck.filter(id=>id===card.id).length;
-   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card)}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||count>=3||profile.deck.length>=24?'disabled':''}>+</button></div></article>`;
+   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||count>=3||profile.deck.length>=24?'disabled':''}>+</button></div></article>`;
  }).join('');
  return `<div class="binder-head"><h2>Grimoire binder</h2><p aria-live="polite">${profile.deck.length} / 24 cards · 3 copies maximum</p></div><nav class="binder-tabs" aria-label="Grimoire elements">${tabs}</nav><div class="binder-tools">${btn('Fill deck','allCards','small subtle')}${btn('Clear deck','clearDeck','small subtle')}</div>${mastered?'':'<p class="portal-note">Choose this element as a mastery to add its cards.</p>'}<div class="binder-grid">${page}</div>`;
 }
@@ -81,8 +86,8 @@ const cardDialog=el('binderCardDetail');
 function inspectBinderCard(id){
  const card=cards.find(c=>c.id===id);
  if(!card)return;
- const info=api.cardInfo(card);
- cardDialog.innerHTML=`<button type="button" class="portal-btn small" data-close-binder autofocus>Close</button><div class="binder-card school-${card.school}">${binderFace(card,true)}</div><h2 id="binderCardTitle">${escape(card.name)} details</h2><p>${title(card.school)} · ${escape(info.target)}</p><p>${escape(card.description)}</p>`;
+ const profile=view==='towerDeck'?deckDraft:draft;
+ cardDialog.innerHTML=`<button type="button" class="portal-btn small" data-close-binder autofocus>Close</button><div class="binder-card school-${card.school}">${binderFace(card,profile,true)}</div>`;
  if(!cardDialog.open)cardDialog.showModal();
  requestAnimationFrame(()=>api.drawCardArts());
 }

@@ -3943,6 +3943,7 @@
     g.restore();
   }
   function render(time){
+    window.WizardryRuneAudio?.follow(state.animation,state.round);
     const bounds=canvas.getBoundingClientRect(),vw=Math.max(1,bounds.width),vh=Math.max(1,bounds.height),ratio=Math.min(window.devicePixelRatio||1,2);
     const pw=Math.round(vw*ratio),ph=Math.round(vh*ratio);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
     g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#06151f';g.fillRect(0,0,vw,vh);

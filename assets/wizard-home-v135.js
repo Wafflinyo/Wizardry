@@ -88,6 +88,8 @@ function renderBinder(profile){
  const ordered=B.orderedSpells(cards,binderElement);
  const required=B.deckSize(B.unlockedSpells(cards,profile.masteries,profile.level));
  const unlocks=new Map(B.unlockOrder(cards,binderElement).map((card,index)=>[card.id,B.unlockLevel(index,profile.masteries.length)]));
+ // Stable sort keeps the existing mana order within each unlock group.
+ ordered.sort((a,b)=>Number(unlocks.get(a.id)>profile.level)-Number(unlocks.get(b.id)>profile.level));
  const page=ordered.map(card=>{
    const unlock=unlocks.get(card.id),locked=profile.level<unlock;
    const count=profile.deck.filter(id=>id===card.id).length;

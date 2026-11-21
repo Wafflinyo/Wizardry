@@ -73,18 +73,23 @@
     sources.set(source,found);return found;
   }
   const materialRuns={};
+  // Staff roles encode one ternary relief value per sculpt (flat, highlight, shadow).
+  const reliefScale={spiral:1,rings:3,fluted:9,diamond:27,collared:81};
   function paintGear(pixels,base,look,kind,variant){
     const encoded=global.WizardMaterialMasks?.[kind];
     if(!encoded)return;
     const runs=materialRuns[kind]||(materialRuns[kind]=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));
     const dyes=[null,variant==="clean"?null:rgb(look.beardColor),rgb(look.crystalColor),rgb(look.bootColor),rgb(look.hatTrim),rgb(look.robeTrim),look.skinColor!==DEFAULT_SKIN?rgb(look.skinColor):null];
     const levels=[0,218,222,125,224,224,210];
+    const woodDye=rgb(look.staffWood);
+    const sculptScale=reliefScale[look.staffSculpt];
     let pixel=0;
     for(let i=0;i<runs.length;i+=4){
       pixel+=runs[i]*256+runs[i+1];
       const count=runs[i+2],role=runs[i+3],end=pixel+count;
-      const target=role===1&&variant==="clean"?dyes[6]:dyes[role];
-      const ridge=role<8?0:look.staffSculpt==="spiral"?(role-8)%3:look.staffSculpt==="rings"?Math.floor((role-8)/3):0;
+      const isWood=role>=7;
+      const target=isWood?woodDye:role===1&&variant==="clean"?dyes[6]:dyes[role];
+      const ridge=role>=17&&sculptScale?Math.floor((role-17)/sculptScale)%3:0;
       if(target||ridge)for(let j=pixel;j<end;j++){
         const at=j*4,src=base.original.data;
         const skinPixel=role===6||(role===1&&variant==="clean");
@@ -94,8 +99,11 @@
         // Anchor the main face and finger midtones to the selected skin swatch.
         // Keep the contact shadows under the brim, and roll off bright knuckle highlights.
         const light=skinPixel ? (bright<100 ? .28+bright*.0055 : .83+(bright-100)*.0015)
-          : Math.max(.12,bright/levels[role]);
-        for(let c=0;c<3;c++)pixels.data[at+c]=target?target[c]*light:ridge===1?src[at+c]*1.35+22:src[at+c]*.63;
+          : Math.max(.12,bright/(isWood?155:levels[role]));
+        for(let c=0;c<3;c++){
+          const color=target?target[c]*light:src[at+c];
+          pixels.data[at+c]=ridge===1?color*1.35+22:ridge===2?color*.63:color;
+        }
       }
       pixel=end;
     }
@@ -104,7 +112,7 @@
     const robe=paletteColors[look.robeColor]?look.robeColor:DEFAULT;
     const hat=paletteColors[look.hatColor]?look.hatColor:DEFAULT;
     const skin=skinColors[look.skinColor]?look.skinColor:DEFAULT_SKIN;
-    const gear=[look.beardColor,look.crystalColor,look.bootColor,look.hatTrim,look.robeTrim,look.staffSculpt];
+    const gear=[look.beardColor,look.crystalColor,look.bootColor,look.hatTrim,look.robeTrim,look.staffWood,look.staffSculpt];
     const dyed=gear.some(v=>v&&v!=="original");
     if(robe===DEFAULT&&hat===DEFAULT&&skin===DEFAULT_SKIN&&!dyed)return source;
     const key=variant+"|"+kind+"|"+robe+"|"+hat+"|"+skin+"|"+gear.join("|");

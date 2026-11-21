@@ -14,31 +14,58 @@
   document.addEventListener("pointerup",unlock,{capture:true,passive:true});
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
-  // Each theme has a melody, two supporting notes, and its own bell timbre.
+  // Notes use fractions of the trace: [start, length, MIDI note, level].
   const themes={
-    water:    {notes:[69,72,76,74,72,76], harmony:[57,64], finish:69, color:.21},
-    earth:    {notes:[55,62,64,59,62,67], harmony:[43,50], finish:55, color:.12},
-    lightning:{notes:[67,73,71,76,74,79], harmony:[55,62], finish:79, color:.30},
-    nature:   {notes:[64,67,72,71,69,74], harmony:[48,55], finish:72, color:.16},
-    wind:     {notes:[74,76,81,78,76,83], harmony:[62,69], finish:81, color:.16},
-    dark:     {notes:[67,63,62,60,65,59], harmony:[48,55], finish:60, color:.24},
-    fire:     {notes:[60,64,67,72,71,76], harmony:[48,55], finish:72, color:.28},
-    ice:      {notes:[76,83,81,86,84,88], harmony:[60,67], finish:84, color:.32}
+    water:{
+      attack:.075,tail:.37,partials:[[1,1],[2,.23],[3.02,.1]],finish:[69,76],
+      notes:[[0,.95,57,.043],[0,.35,69,.13],[.12,.34,72,.10],[.24,.41,76,.13],[.37,.32,79,.10],[.49,.38,77,.12],[.62,.30,74,.09],[.73,.27,72,.11],[.83,.17,76,.105]]
+    },
+    earth:{
+      attack:.016,tail:.21,partials:[[1,1],[1.56,.35],[2.77,.14]],finish:[43,55],
+      notes:[[0,1,43,.075],[0,.39,55,.18],[.05,.34,62,.08],[.34,.37,50,.16],[.43,.28,59,.13],[.66,.34,48,.14],[.74,.26,55,.13],[.74,.26,64,.08]]
+    },
+    lightning:{
+      attack:.005,tail:.16,partials:[[1,1],[2.71,.34],[4.05,.23]],finish:[71,82],
+      notes:[[0,.94,59,.04],[0,.14,71,.16],[.07,.16,82,.13],[.14,.22,78,.17],[.36,.11,72,.14],[.40,.14,75,.13],[.46,.22,86,.16],[.67,.12,78,.10],[.72,.11,83,.14],[.79,.21,90,.14]]
+    },
+    nature:{
+      attack:.041,tail:.46,partials:[[1,1],[2,.18],[3,.065]],finish:[64,72,79],
+      notes:[[0,.60,48,.056],[0,.29,64,.12],[.16,.42,67,.11],[.30,.27,65,.10],[.40,.39,69,.13],[.44,.54,53,.052],[.57,.28,72,.14],[.68,.32,76,.09],[.76,.24,74,.11],[.84,.16,79,.10]]
+    },
+    wind:{
+      attack:.057,tail:.43,partials:[[1,1],[2.03,.22],[3.91,.17]],finish:[74,81],
+      notes:[[0,1,62,.043],[0,.35,74,.14],[.13,.28,81,.10],[.22,.37,86,.14],[.38,.31,83,.10],[.51,.40,78,.13],[.67,.31,76,.11],[.77,.23,81,.12]]
+    },
+    dark:{
+      attack:.025,tail:.63,partials:[[1,1],[1.49,.31],[2.35,.19]],finish:[48,59],
+      notes:[[0,1,48,.063],[0,.42,67,.15],[.21,.36,63,.12],[.39,.34,62,.10],[.53,.44,54,.062],[.57,.28,59,.16],[.70,.30,55,.12],[.81,.19,51,.115]]
+    },
+    fire:{
+      attack:.009,tail:.24,partials:[[1,1],[2.01,.33],[3.57,.26]],finish:[60,72,76],
+      notes:[[0,.94,48,.06],[0,.22,60,.155],[.12,.24,67,.14],[.27,.15,65,.12],[.34,.24,72,.15],[.46,.15,70,.12],[.55,.23,76,.14],[.68,.20,74,.11],[.76,.24,79,.16],[.81,.19,84,.08]]
+    },
+    ice:{
+      attack:.006,tail:.24,partials:[[1,1],[2.38,.33],[4.16,.28]],finish:[65,77,84],
+      notes:[[0,.95,53,.052],[0,.39,84,.13],[.12,.33,77,.11],[.25,.27,81,.10],[.39,.29,89,.125],[.49,.35,86,.12],[.64,.33,93,.092],[.72,.28,84,.12],[.84,.16,88,.11]]
+    }
   };
   const themeFor=school=>Object.hasOwn(themes,school)?themes[school]:themes.wind;
-  const frequency=note=>440*2**((note-69)/12);
 
-  function bell(output,note,start,length,volume,color){
-    const pitch=frequency(note),end=start+length;
-    for(const [ratio,level,decay] of [[1,1,1],[2,.29,.67],[3.79,color,.40]]){
-      const tone=audio.createOscillator(),gain=audio.createGain();
-      const stop=start+length*decay;
+  function voice(output,theme,note,start,length,volume){
+    const pitch=440*2**((note-69)/12);
+    for(const [i,[ratio,level]] of theme.partials.entries()){
+      const tone=audio.createOscillator(), gain=audio.createGain();
+      const span=length*(1-i*.16),end=start+span;
+      const attack=Math.min(theme.attack,span*.23);
+      const release=start+Math.max(attack+span*.01,span*.68);
+      const peak=volume*level;
       tone.frequency.value=pitch*ratio;
       gain.gain.setValueAtTime(.0001,start);
-      gain.gain.linearRampToValueAtTime(volume*level,start+Math.min(.024,length*.09));
-      gain.gain.exponentialRampToValueAtTime(.0001,stop);
+      gain.gain.linearRampToValueAtTime(peak,start+attack);
+      gain.gain.exponentialRampToValueAtTime(peak*theme.tail,release);
+      gain.gain.exponentialRampToValueAtTime(.0001,end);
       tone.connect(gain).connect(output);
-      tone.start(start);tone.stop(Math.min(end,stop));
+      tone.start(start);tone.stop(end);
     }
   }
 
@@ -46,27 +73,22 @@
     const elapsed=Math.max(0,cast.elapsed)/1000,duration=cast.duration/1000;
     const start=audio.currentTime+.006,end=start+duration-elapsed;
     const gain=audio.createGain();
-    gain.gain.value=.63;
+    gain.gain.value=.66;
     gain.connect(audio.destination);
     const theme=themeFor(cast.card?.school);
-    const beats=[0,.15,.32,.48,.63,.78];
-    for(const [i,note] of theme.notes.entries()){
-      const offset=beats[i]*duration;
-      if(offset+.06<elapsed)continue;
-      const on=start+Math.max(0,offset-elapsed);
-      bell(gain,note,on,end-on,.12+(i===0?.03:0),theme.color);
-    }
-    for(const [i,note] of theme.harmony.entries()){
-      const offset=(i===0?.04:.40)*duration;
-      const on=start+Math.max(0,offset-elapsed);
-      if(end-on>.10)bell(gain,note,on,end-on,.07,theme.color*.43);
+    for(const [offset,length,note,volume] of theme.notes){
+      const on=Math.max(0,offset*duration-elapsed);
+      const remaining=Math.min(1,offset+length)*duration-elapsed-on;
+      if(remaining>.035)voice(gain,theme,note,start+on,remaining,volume);
     }
     return {gain,end};
   }
 
   function completeRune(school){
-    const theme=themeFor(school);
-    bell(audio.destination,theme.finish,audio.currentTime+.006,.38,.073,theme.color);
+    const theme=themeFor(school),start=audio.currentTime+.006;
+    for(const [i,note] of theme.finish.entries()){
+      voice(audio.destination,theme,note,start+i*.022,.32+i*.035,.072/(1+i*.35));
+    }
   }
 
   function follow(cast,round){

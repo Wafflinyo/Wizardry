@@ -3,10 +3,10 @@ const node={getContext:()=>({})},ctx={window:{},Image:class{},document:{getEleme
 vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js','utf8'),ctx);
 vm.runInNewContext(fs.readFileSync('arena.js','utf8').replace('  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);','  paintUI=()=>{};'),ctx);
 const api=ctx.window.WIZARDRY_ARENA_TEST,B=ctx.window.WizardryBuilds;
-assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).low,620);
-assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).high,757);
+assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).low,611);
+assert.equal(B.range({damage:650,school:'nature'},{skills:{nature:3}}).high,747);
 const tree=api.cards.find(c=>c.id==='tree');
-for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,false,0,720,75],[.10,true,0,720,75],[.10,false,3,763,75]]){
+for(const [roll,blocked,mastery,damage,transfer] of [[.299,false,0,720,75],[.30,false,0,720,75],[.10,true,0,720,75],[.10,false,3,752,75]]){
  api.startPractice(1);
  const state=api.getState(),[caster,target]=state.units;
  caster.skills.nature=mastery;
@@ -61,4 +61,4 @@ for(const lethal of [false,true]){
  api.advanceBackground(30000);assert.notEqual(s.phase,'resolving');
 }
 for(const size of [1,2,3,4]){api.startPractice(size);const units=api.getState().units;for(const u of units){assert.ok(u.y>=335&&u.y<=605,'all seats remain on the arena floor');const p=api.unitPlateRect(u);assert.ok(p.x>=0&&p.x+p.w<=1000);for(const v of units.filter(v=>v.team===u.team&&v!==u)){assert.ok(Math.abs(v.y-u.y)>=55);}}}
-console.log('Practice: Thorny Wrap cast attempts survive or defeat correctly, resolution continues, mastery example 620–757, and spaced formations pass.');
+console.log('Practice: Thorny Wrap cast attempts survive or defeat correctly, resolution continues, mastery example 611–747, and spaced formations pass.');

@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
   const nodes = new Map();
   const element = id => {
     if(!nodes.has(id)){
-      nodes.set(id,{ getContext:()=>({}), addEventListener(name,fn){this[name]=fn;} });
+      nodes.set(id,{ getContext:()=>({}), close(){this.open=false;}, showModal(){this.open=true;}, addEventListener(name,fn){this[name]=fn;} });
     }
     return nodes.get(id);
   };
@@ -27,8 +27,9 @@ const assert = require('node:assert/strict');
   const api = ctx.window.WIZARDRY_ARENA_TEST;
   const getOrder = () => Array.from(api.cards,card=>card.id).reverse();
   assert.equal(ctx.document.body.dataset.screen,'home');
+  await element('portal').click({target:{closest:()=>({hasAttribute:()=>false,dataset:{action:'tests'}})}});
   assert.match(element('portal').innerHTML,/data-action="cardTester">New Card Tester/);
-  await element('portal').click({target:{closest:()=>({dataset:{action:'cardTester'}})}});
+  await element('portal').click({target:{closest:()=>({hasAttribute:()=>false,dataset:{action:'cardTester'}})}});
 
   let state = api.getState(), [wizard, dummy] = state.units;
   assert.equal(ctx.document.body.dataset.screen,'battle');
@@ -37,8 +38,8 @@ const assert = require('node:assert/strict');
   assert.equal(dummy.name,'Training Dummy');
   assert.equal(dummy.dummy,true);
   assert.equal(dummy.hand.length,0);
-  assert.equal(wizard.hand[0],'wynzor');
-  assert.equal(wizard.hand[1],'frozentouch');
+  assert.equal(wizard.hand[0],getOrder()[0]);
+  assert.equal(wizard.hand[1],getOrder()[1]);
   assert.deepEqual([...wizard.hand,...wizard.drawPile],getOrder());
   assert.ok(!wizard.masteries.includes('fire'),'tester can use Fire even without Fire mastery');
   assert.ok(wizard.hp<wizard.maxHp,'healing can be tested on the caster');
@@ -49,29 +50,10 @@ const assert = require('node:assert/strict');
   element('testerTarget').onchange({target:{value:'wizard'}});
   assert.equal(dummy.wizardDummy,true);assert.notEqual(dummy.name,'Training Dummy');
   assert.deepEqual([...wizard.hand],opening);
-  for(const id of ['wynzor','frozentouch','volcaniceruption','perfectdefense','stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
-  api.chooseCard('meteorshower');
-  assert.ok(api.discardSelected());
-  api.chooseCard('crabgiant');
-  assert.ok(api.discardSelected());
-  api.chooseCard('ragingwaters');
-  assert.ok(api.discardSelected());
-  api.chooseCard('kamikaze');
-  assert.ok(api.discardSelected());
-  api.chooseCard('wickedwitch');
-  assert.ok(api.discardSelected());
-  api.chooseCard('lightningball');
-  assert.ok(api.discardSelected());
-  api.chooseCard('totallyrad');
-  assert.ok(api.discardSelected());
-  api.chooseCard('yeti');
-  assert.ok(api.discardSelected());
-  api.chooseCard('bulletseed');
-  assert.ok(api.discardSelected());
-  api.chooseCard('tree');
-  assert.ok(api.discardSelected());
-  api.chooseCard('scaldingair');
-  assert.ok(api.discardSelected());
+  for (const id of getOrder().slice(0,getOrder().indexOf('zen'))) {
+    api.chooseCard(id);
+    assert.ok(api.discardSelected(), 'discard '+id);
+  }
   assert.equal(wizard.statuses.length,0,'the player starts without preloaded runes');
   api.chooseCard('zen');
   assert.equal(state.selectedTarget,null,'no eligible target without a negative rune');
@@ -121,7 +103,7 @@ const assert = require('node:assert/strict');
   const next = wizard.drawPile[0];
   assert.ok(api.discardSelected());
   assert.equal(wizard.hand.at(-1),next);
-  const seen = new Set(['wynzor','frozentouch','volcaniceruption','perfectdefense','stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge','meteorshower','crabgiant','ragingwaters','kamikaze','wickedwitch','lightningball','totallyrad','yeti','bulletseed','tree','scaldingair','zen','decaystrength','electrodisc','burningpheonix','electricalcharge','grillmaster','venustrap']);
+  const seen = new Set([...wizard.discardPile,...wizard.hand]);
   while(wizard.drawPile.length){
     seen.add(wizard.hand[0]);
     api.chooseCard(wizard.hand[0]);
@@ -144,15 +126,12 @@ const assert = require('node:assert/strict');
   state = api.getState();
   [wizard,dummy] = state.units;
   assert.notEqual(wizard.name,firstName,'reset rerolls the wizard');
-  assert.equal(wizard.hand[0],'wynzor');
+  assert.equal(wizard.hand[0],getOrder()[0]);
   dummy.hp=1;
-  for(const id of ['wynzor','frozentouch','volcaniceruption','perfectdefense','stormlizard','drowzyflowers','bubbleshield','darksorcerer','sticksandstones','growth','electriceel','crystalicemirrors','reikel','quicksand','sirensmelody','soulharvest','manascourge']){api.chooseCard(id);assert.ok(api.discardSelected());}
-  api.chooseCard('meteorshower');
-  assert.ok(api.discardSelected());
-  api.chooseCard('crabgiant');
-  assert.ok(api.discardSelected());
-  api.chooseCard('ragingwaters');
-  assert.ok(api.discardSelected());
+  for (const id of getOrder().slice(0,getOrder().indexOf('kamikaze'))) {
+    api.chooseCard(id);
+    assert.ok(api.discardSelected(), 'discard '+id);
+  }
   api.chooseCard('kamikaze');
   api.confirmTarget();
   api.advanceBackground(20000);
@@ -162,7 +141,7 @@ const assert = require('node:assert/strict');
   element('battleHome').onclick();
   assert.equal(ctx.document.body.dataset.screen,'home');
   assert.doesNotMatch(element('portal').innerHTML,/data-action="cardTester4"/);
-  await element('portal').click({target:{closest:()=>({dataset:{action:'cardTester'}})}});
+  await element('portal').click({target:{closest:()=>({hasAttribute:()=>false,dataset:{action:'cardTester'}})}});
   for(const size of [2,3,4]){
     element('testerSize').onchange({target:{value:String(size)}});
     assert.equal(api.getState().units.length,size*2);
@@ -184,7 +163,10 @@ const assert = require('node:assert/strict');
   assert.equal(teamTest.selectedTarget,teamTest.selectedCaster,'Frozen Touch accepts self');
   teamTest.units[0].skills.wind=0;
   dummies.forEach(unit=>{unit.hp=1;});
-  for(const id of ['wynzor','frozentouch','volcaniceruption','perfectdefense']){api.chooseCard(id);assert.ok(api.discardSelected());}
+  for (const id of getOrder().slice(0,getOrder().indexOf('sticksandstones'))) {
+    api.chooseCard(id);
+    assert.ok(api.discardSelected(), 'discard '+id);
+  }
   api.chooseCard('sticksandstones');
   api.confirmTarget();
   assert.equal(teamTest.sequence.length,1,'all seven other slots are passive');

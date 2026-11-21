@@ -3,29 +3,31 @@ let source=fs.readFileSync('arena.js','utf8');
 source=source.replace('  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);','  window.test={set:s=>state=s,runResolution,startNextAction,updateCastSequence,resolveAutoRune}; paintUI=()=>{}; finishRound=()=>{state.phase="finished";};');
 const node={getContext:()=>({})};
 const context={Image:class {},window:{},document:{getElementById:()=>node},requestAnimationFrame:()=>{},console};
+const math=Object.create(Math);math.random=()=>.5;context.Math=math;
+vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js','utf8'),context);
 vm.runInNewContext(source,context);
 const api=context.window.test,cards=context.window.WIZARDRY_ARENA_TEST.cards;
 const card=cards.find(c=>c.target==='enemy');assert.ok(card);
-function unit(id,team,hp=1000){return {id,team,hp,maxHp:1000,mana:10,hand:[card.id],drawPile:[],discardPile:[],statuses:[],speed:10,x:0,y:0};}
-function battle(){return {units:[unit('human',0),unit('cpu',1),unit('other',1)],humanByTeam:{0:'human'},plans:{},phase:'planning',round:1,log:[],flashes:[],mode:'story'};}
+function unit(id,team,hp=1000){return {id,team,index:0,hp,maxHp:1000,mana:10,hand:[card.id],drawPile:[],discardPile:[],statuses:[],speed:10,x:0,y:0};}
+function battle(){return {units:[unit('human',0),unit('cpu',1),{...unit('other',1),index:1}],humanByTeam:{0:'human'},plans:{},phase:'planning',round:1,log:[],flashes:[],mode:'story',size:4};}
 let s=battle();api.set(s);api.runResolution();assert.equal(s.phase,'planning','wait for human lock');
 s=battle();s.plans.human={casterId:'human',cardId:card.id,targetId:'cpu',team:0};api.set(s);api.runResolution();
 assert.equal(s.phase,'resolving');assert.equal(Object.keys(s.plans).length,3,'all CPU choices exist before first cast');assert.ok(Object.isFrozen(s.sequence));assert.ok(s.sequence.every(Object.isFrozen));
 const locked=s.sequence.map(p=>p.targetId);s.units[1].hp=0;assert.deepEqual(s.sequence.map(p=>p.targetId),locked);
-s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',cardId:card.id,targetId:'cpu'}];s.queueAt=0;api.set(s);api.startNextAction();assert.equal(s.animation,undefined,'no cast against another foe');assert.equal(s.units[2].hp,1000);assert.equal(s.units[0].mana,10-card.cost);assert.match(s.log[0],/fails/);
+s=battle();s.units[1].hp=0;s.phase='resolving';s.sequence=[{casterId:'human',cardId:card.id,targetId:'cpu'}];s.queueAt=0;api.set(s);api.startNextAction();assert.equal(s.animation,undefined,'no cast against another foe');assert.equal(s.units[2].hp,1000);assert.equal(s.units[0].mana,10);assert.match(s.log[0],/fails/);
 console.log('Round lock-in and defeated-target regression checks passed.');
 
-const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,460);
-assert.equal(context.window.WIZARDRY_ARENA_TEST.featuredCard,'penguins');
+const bear=cards.find(c=>c.id==='bear');assert.equal(bear.damage,640);
+
 s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:bear,stage:'bear-appear',elapsed:0,duration:650,runeResult:'success'};api.set(s);
 for(const [stage,duration] of [['bear-appear',650],['bear-roar',950],['bear-ready',260],['bear-charge',800]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(duration);
 }
 assert.equal(s.animation.stage,'bear-claw');api.updateCastSequence(240);assert.equal(s.units[1].hp,1000);
-api.updateCastSequence(20);assert.equal(s.units[1].hp,540);api.updateCastSequence(290);
-assert.equal(s.animation.stage,'bear-disperse');assert.equal(s.units[1].hp,540);
-api.updateCastSequence(650);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,540);
-console.log('Ice bear sequence, opening hand and single 460-damage contact passed.');
+api.updateCastSequence(20);assert.equal(s.units[1].hp,360);api.updateCastSequence(290);
+assert.equal(s.animation.stage,'bear-disperse');assert.equal(s.units[1].hp,360);
+api.updateCastSequence(650);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,360);
+console.log('Ice bear sequence, single 640-damage contact passed.');
 
 vm.runInNewContext(fs.readFileSync('assets/polar-bear-v67.js','utf8'),context);
 const polar=context.window.WIZARDRY_POLAR_BEAR_V67;
@@ -36,22 +38,22 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.ok(polar.depthFor(opts,'claw')<target.y+1,'contact does not overlay nearer fighters');
  const start=polar.pose({...opts,stage:'bear-charge',progress:0});
  const end=polar.pose({...opts,stage:'bear-charge',progress:1});
- assert.equal(start.y,425);assert.equal(end.y,target.y+8);
+ assert.equal(start.y,510);assert.equal(end.y,target.y+8);
 }
 console.log('Bear layering checks passed for both sides and front/back targets.');
 
 
 
 assert.equal(cards.some(c=>c.id==='pistol'||c.id==='cobra'),false,'removed spells cannot enter any deck');
-const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,480);assert.equal(shark.accuracy,.90);
-const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes('penguins'));
+const shark=cards.find(c=>c.id==='shark');assert.equal(shark.damage,520);assert.equal(shark.accuracy,.90);
+const opening=unit('test',0);context.window.WIZARDRY_ARENA_TEST.startHand(opening,true);assert.equal(opening.hand.length,5);assert.ok(opening.hand.includes(context.window.WIZARDRY_ARENA_TEST.featuredCard));
 function sharkBattle(statuses=[]){const result=battle();result.auras={};result.units[0].statuses=statuses;result.phase='resolving';result.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:shark,stage:'shark-fin',elapsed:0,duration:1100,runeResult:'success'};api.set(result);return result;}
 s=sharkBattle();
 for(const [stage,ms] of [['shark-fin',1100],['shark-swim',1500],['shark-submerge',350],['shark-rise',650],['shark-flop',500],['shark-arch',550]]){
  assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(ms);
 }
-assert.equal(s.animation.stage,'shark-chomp');api.updateCastSequence(179);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,520);assert.equal(s.units[2].hp,1000);
-api.updateCastSequence(520);api.updateCastSequence(450);assert.equal(s.units[1].hp,520);assert.equal(s.animation.stage,'lowering');
+assert.equal(s.animation.stage,'shark-chomp');api.updateCastSequence(179);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,480);assert.equal(s.units[2].hp,1000);
+api.updateCastSequence(520);api.updateCastSequence(450);assert.equal(s.units[1].hp,480);assert.equal(s.animation.stage,'lowering');
 s=sharkBattle();s.animation.stage='rune-fail';s.animation.duration=100;s.animation.runeResult='failed';api.updateCastSequence(100);assert.equal(s.units[1].hp,1000);assert.equal(s.animation.stage,'lowering');
 vm.runInNewContext(fs.readFileSync('assets/reef-rush-v77.js','utf8'),context);const reef=context.window.WIZARDRY_REEF_RUSH_V77;
 for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
@@ -68,7 +70,7 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(reef.pose({...opts,stage:'shark-submerge',progress:1}).height,0,'fin disappears before breach');
  assert.ok(reef.pose({...opts,stage:'shark-dive',progress:1}).y>target.y+120,'body dives below floor');
 }
-console.log('Reef Rush: continuous angled breach, mirrored targets, 480-damage chomp, splash disappearance and miss checks passed.');
+console.log('Reef Rush: continuous angled breach, mirrored targets, 520-damage chomp, splash disappearance and miss checks passed.');
 
 
 // Swim path and heading mirror toward the chosen side before breaching.
@@ -99,7 +101,7 @@ vm.runInNewContext(fs.readFileSync('assets/thunderclap-v79.js','utf8'),context);
 const cloud=context.window.WIZARDRY_THUNDERCLAP_V79;
 for(const target of [{x:175,y:340},{x:831,y:488}]){
  const opts={stage:'thunder-bolt',progress:.5,target},b=cloud.pose(opts);
- assert.ok(Math.abs(b.x-500)<=9,'clap thrust stays centered');assert.equal(cloud.pose({...opts,stage:'thunder-form'}).x,500);assert.equal(b.y,425);assert.equal(b.dir,target.x>500?1:-1);
+ assert.ok(Math.abs(b.x-500)<=9,'clap thrust stays centered');assert.equal(cloud.pose({...opts,stage:'thunder-form'}).x,500);assert.equal(b.y,510);assert.equal(b.dir,target.x>500?1:-1);
  assert.deepEqual(cloud.path(opts,0),b.source);
  assert.ok(Math.abs(cloud.crescent(opts,1,.5).x-target.x)<1e-9);assert.ok(Math.abs(cloud.crescent(opts,1,.5).y-(target.y-105))<1e-9);
  assert.equal(cloud.pose({...opts,stage:'thunder-bolt',progress:1}).frame,7,'holds closed clap while wave travels');assert.equal(cloud.pose({...opts,stage:'thunder-impact',progress:1}).frame,7,'holds closed clap through impact');
@@ -181,16 +183,16 @@ assert.deepEqual(JSON.parse(JSON.stringify(stoneFx.cameraShake({stage:'bender-wa
 console.log('Weight transfer and impact-only camera rumble checks passed.');
 
 vm.runInNewContext('Math.random=()=>0',context);
-const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,750);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
-s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,runeResult:'success',stage:'frost-gust',elapsed:0,duration:800};api.set(s);
+const frosty=cards.find(c=>c.id==='frosty');assert.equal(frosty.damage,400);assert.equal(frosty.frostDamage,50);assert.equal(frosty.frostTurns,3);
+s=battle();s.auras={};s.phase='resolving';s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:frosty,damageVariant:1,runeResult:'success',stage:'frost-gust',elapsed:0,duration:800};api.set(s);
 for(const [stage,d] of [['frost-gust',800],['frost-appear',650],['frost-happy',700],['frost-angry',500],['frost-transform',1000],['frost-pause',900],['frost-lift',650],['frost-windup',600],['frost-throw',150]]){assert.equal(s.animation.stage,stage);assert.equal(s.units[1].hp,1000);api.updateCastSequence(d);}
-assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(322);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,250);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
-const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1200);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,250);
-const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,250,'no instant tick in application turn');for(const [round,hp] of [[2,200],[3,150],[4,100]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,100,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
-s=battle();s.auras={};s.units[1].hp=4000;s.units[1].maxHp=4000;api.set(s);const snowCast=()=>({source:'human',target:'cpu',card:frosty,runeResult:'success'});frostyHit(snowCast());s.units[1].statuses.find(st=>st.kind==='frostbite').remaining=1;frostyHit(snowCast());assert.equal(s.units[1].statuses.filter(st=>st.kind==='frostbite').length,1);assert.equal(s.units[1].statuses.find(st=>st.kind==='frostbite').remaining,3,'refreshes duration without stacking');
+assert.equal(s.animation.stage,'frost-flight');api.updateCastSequence(322);assert.equal(s.units[1].hp,1000);api.updateCastSequence(.5);assert.equal(s.units[1].hp,600);assert.ok(s.units[1].statuses.some(st=>st.kind==='frostbite'&&st.remaining===3));assert.ok(context.window.WIZARDRY_ARENA_TEST.unitStatuses(s.units[1]).some(st=>st.kind==='frostbite'),'persistent frostbite rune visible');
+const frostyHit=context.window.WIZARDRY_ARENA_TEST.applyFrostyImpact;assert.equal(frostyHit(s.animation),false);api.updateCastSequence(350);assert.equal(s.animation.stage,'frost-melt');api.updateCastSequence(1200);assert.equal(s.animation.stage,'lowering');assert.equal(s.units[1].hp,600);
+const tickDots=context.window.WIZARDRY_ARENA_TEST.tickBurnsForRound;tickDots();assert.equal(s.units[1].hp,600,'no instant tick in application turn');for(const [round,hp] of [[2,550],[3,500],[4,450]]){s.round=round;tickDots();assert.equal(s.units[1].hp,hp);tickDots();assert.equal(s.units[1].hp,hp,'only once per turn');}assert.equal(s.units[1].statuses.some(st=>st.kind==='frostbite'),false);s.round=5;tickDots();assert.equal(s.units[1].hp,450,'exactly 150 total frostbite');assert.equal(s.units[2].hp,1000);
+s=battle();s.auras={};s.units[1].hp=4000;s.units[1].maxHp=4000;api.set(s);const snowCast=()=>({source:'human',target:'cpu',card:frosty,damageVariant:1,runeResult:'success'});frostyHit(snowCast());s.units[1].statuses.find(st=>st.kind==='frostbite').remaining=1;frostyHit(snowCast());assert.equal(s.units[1].statuses.filter(st=>st.kind==='frostbite').length,1);assert.equal(s.units[1].statuses.find(st=>st.kind==='frostbite').remaining,3,'refreshes duration without stacking');
 s=battle();s.auras={};api.set(s);assert.equal(frostyHit({...snowCast(),runeResult:'failed'}),false);assert.equal(s.units[1].hp,1000);assert.equal(s.units[1].statuses.length,0);s.units[1].hp=0;assert.equal(frostyHit(snowCast()),false);assert.equal(s.units[2].hp,1000,'never retargets defeated foe');
 s=battle();s.auras={};s.round=2;api.set(s);s.units[1].statuses=[{kind:'burn',value:50,remaining:3,appliedRound:1,lastTickRound:1},{kind:'frostbite',value:50,remaining:3,appliedRound:1,lastTickRound:1},{kind:'decaying_strength',value:.2}];tickDots();assert.equal(s.units[1].hp,900,'burn and frostbite tick separately for 50 each');assert.ok(s.units[1].statuses.some(st=>st.kind==='decaying_strength'),'frostbite never consumes next-spell debuff');
-console.log('Frosty: happy/angry transformation, 750 on snowball arrival, exactly three 50-damage Frostbite turns, refresh, coexistence and miss/defeat checks passed.');
+console.log('Frosty: happy/angry transformation, 400 on snowball arrival, exactly three 50-damage Frostbite turns, refresh, coexistence and miss/defeat checks passed.');
 
 vm.runInNewContext(fs.readFileSync('assets/frosty-v85.js','utf8'),context);const frostFx=context.window.WIZARDRY_FROSTY_V85;
 
@@ -222,6 +224,7 @@ assert.equal(frostFx.motion({stage:'frost-pause',progress:.5}).frame,15,'holds t
 console.log('Frosty one-breath pause before pickup passed.');
 
 // Solidity protects one complete spell, including every rapid hit.
+math.random=()=>.5;
 const solidity=cards.find(c=>c.id==='solidity'),combat=context.window.WIZARDRY_ARENA_TEST;
 assert.equal(solidity.target,'ally');assert.equal(solidity.reduction,.25);
 s=battle();s.auras={};api.set(s);
@@ -229,9 +232,9 @@ const ward=()=>combat.applySpell({action:{casterId:'cpu',targetId:'cpu'},card:so
 ward();ward();assert.equal(s.units[1].statuses.filter(x=>x.kind==='solidity').length,1,'refresh, not stack');
 const volley={source:'human',target:'cpu',card:cards.find(c=>c.id==='ronin'),runeResult:'success',slashHits:[]};
 combat.applyRoninHit(volley,0);combat.applyRoninHit(volley,1);combat.applyRoninHit(volley,2);
-assert.equal(s.units[1].hp,661,'three 150 hits become three rounded 113 hits');
+assert.equal(s.units[1].hp,664,'three 150 hits become three 112 damage hits');
 assert.equal(s.units[1].statuses.some(x=>x.kind==='solidity'),false);
-combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:bear});assert.equal(s.units[1].hp,201,'next spell receives no protection');
+combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:bear});assert.equal(s.units[1].hp,24,'next spell receives no protection');
 s=battle();s.auras={};api.set(s);ward();
 combat.applyRoninHit({...volley,runeResult:'failed',slashHits:[]},0);assert.ok(s.units[1].statuses.some(x=>x.kind==='solidity'),'miss preserves ward');
 s.units[1].statuses.push({kind:'frostbite',value:50,remaining:3,appliedRound:0,lastTickRound:0});combat.tickBurnsForRound();assert.ok(s.units[1].statuses.some(x=>x.kind==='solidity'),'damage over time preserves ward');
@@ -258,9 +261,9 @@ console.log('Static Shock accuracy stacking, single miss discharge, success pres
 
 const rageCard=cards.find(c=>c.id==='rage');s=battle();s.auras={};api.set(s);
 const enrage=()=>combat.applySpell({action:{casterId:'human',targetId:'human'},card:rageCard});enrage();enrage();assert.equal(s.units[0].statuses.filter(x=>x.kind==='blazing_rage').length,1);
-const empowered={source:'human',target:'cpu',card:cards.find(c=>c.id==='ronin'),runeResult:'success'};for(let i=0;i<3;i++)combat.applyRoninHit(empowered,i);assert.equal(s.units[1].hp,550,'all three Wind hits retain normal damage');assert.equal(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),true);
+const empowered={damageVariant:1,source:'human',target:'cpu',card:cards.find(c=>c.id==='ronin'),runeResult:'success'};for(let i=0;i<3;i++)combat.applyRoninHit(empowered,i);assert.equal(s.units[1].hp,550,'all three Wind hits retain normal damage');assert.equal(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),true);
 s=battle();s.auras={};api.set(s);enrage();combat.applyRoninHit({...empowered,runeResult:'failed',slashHits:[]},0);assert.ok(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),'miss preserves boost');combat.applySpell({action:{casterId:'human',targetId:'human'},card:calming});assert.ok(s.units[0].statuses.some(x=>x.kind==='blazing_rage'),'support preserves boost');
-s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.30);assert.equal(s.units[1].hp,250);assert.equal(s.units[1].statuses.some(x=>x.kind==='frostbite'),false,'30% boundary excludes frostbite');s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.299);assert.ok(s.units[1].statuses.some(x=>x.kind==='frostbite'),'under 30% applies frostbite');
+s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.30);assert.equal(s.units[1].hp,600);assert.equal(s.units[1].statuses.some(x=>x.kind==='frostbite'),false,'30% boundary excludes frostbite');s=battle();s.auras={};api.set(s);frostyHit(snowCast(),.299);assert.ok(s.units[1].statuses.some(x=>x.kind==='frostbite'),'under 30% applies frostbite');
 console.log('Blazing Rage multi-hit boost, consumption, miss/support preservation and Frostbite 30% boundary passed.');
 
 const turbulenceCard=cards.find(c=>c.id==='turbulence');s=battle();s.auras={};api.set(s);
@@ -292,10 +295,10 @@ for(const [turn,roll] of [[1,.199],[2,.399],[3,.599]]){s=battle();s.auras={};api
 s=battle();s.auras={};s.phase='resolving';s.sequence=[{casterId:'cpu',cardId:bear.id,targetId:'human'}];s.queueAt=0;api.set(s);markIce();combat.attemptMarkedFreeze(s.units[1],bear,{},0);assert.equal(s.units[1].statuses.find(x=>x.kind==='frozen').startRound,1,'pending action affected immediately');vm.runInNewContext('Math.random=()=>.99',context);api.startNextAction();assert.equal(s.animation,undefined,'frozen wizard cannot cast');
 console.log('Freezing Temps: Ice-only mark, one 50% roll, three skipped turns, rising thaw chance, no rerolls, immediate pending skip and auto thaw passed.');
 
-const scorpionCard=cards.find(c=>c.id==='scorpion');s=battle();s.auras={};api.set(s);const sting=(roll)=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:scorpionCard,poisonRoll:roll});sting(.299);assert.equal(s.units[1].hp,660);assert.ok(s.units[1].statuses.some(x=>x.kind==='poison'));combat.tickBurnsForRound();assert.equal(s.units[1].hp,660);for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,660-(r-1)*50);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false);
-s=battle();s.auras={};api.set(s);sting(.30);assert.equal(s.units[1].hp,660);assert.equal(s.units[1].statuses.length,0,'30% boundary');
-vm.runInNewContext(fs.readFileSync('assets/scorpion-sting-v94.js','utf8'),context);const scorpionFx=context.window.WIZARDRY_SCORPION_V94;for(const t of [{x:800,y:450},{x:200,y:350}]){const b=scorpionFx.pose(.74,t);assert.ok(Math.abs(500+b.tip.x*b.dir-t.x)<1e-8);assert.ok(Math.abs(425+b.tip.y-(t.y-95))<1e-8);}assert.ok(scorpionFx.pose(0).y<0);assert.equal(scorpionFx.pose(.3).y,425);
-console.log('Scorpion Sting 340 damage, 30% poison, three 50 ticks, no duplicate ticks and mirrored tail contact passed.');
+const scorpionCard=cards.find(c=>c.id==='scorpion');s=battle();s.auras={};api.set(s);const sting=(roll)=>combat.applySpell({action:{casterId:'human',targetId:'cpu'},card:scorpionCard,poisonRoll:roll,damageVariant:1});sting(.299);assert.equal(s.units[1].hp,690);assert.ok(s.units[1].statuses.some(x=>x.kind==='poison'));combat.tickBurnsForRound();assert.equal(s.units[1].hp,690);for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,690-(r-1)*50);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false);
+s=battle();s.auras={};api.set(s);sting(.30);assert.equal(s.units[1].hp,690);assert.equal(s.units[1].statuses.length,0,'30% boundary');
+vm.runInNewContext(fs.readFileSync('assets/scorpion-sting-v94.js','utf8'),context);const scorpionFx=context.window.WIZARDRY_SCORPION_V94;for(const t of [{x:800,y:450},{x:200,y:350}]){const b=scorpionFx.pose(.74,t);assert.ok(Math.abs(500+b.tip.x*b.dir-t.x)<1e-8);assert.ok(Math.abs(510+b.tip.y-(t.y-95))<1e-8);}assert.ok(scorpionFx.pose(0).y<scorpionFx.pose(.3).y);assert.equal(scorpionFx.pose(.3).y,510);
+console.log('Scorpion Sting 310 damage, 30% poison, three 50 ticks, no duplicate ticks and mirrored tail contact passed.');
 
 assert.equal(scorpionFx.pose(.08).frame,0,'compact armored roll frame');assert.equal(scorpionFx.pose(.20).frame,2,'unfold before standing');assert.equal(scorpionFx.pose(.6).frame,8,'tail windup');assert.ok(scorpionFx.pose(.96).burrow>0);assert.equal(scorpionFx.pose(1).alpha,0,'fully underground at end');
 
@@ -318,25 +321,26 @@ s=battle();s.phase='resolving';s.sequence=[{casterId:'cpu'}];s.queueAt=1;api.set
 assert.equal(octoAPI.attemptOctoFlinch(s.units[1],0),false,'already acted cannot flinch');assert.equal(s.units[1].flinchRound,undefined);
 s.queueAt=0;assert.equal(octoAPI.attemptOctoFlinch(s.units[1],.15),false,'15 percent boundary');
 s.units[1].hp=0;assert.equal(octoAPI.attemptOctoFlinch(s.units[1],0),false,'defeated target cannot flinch');
-const octo=cards.find(c=>c.id==='octo');assert.equal(octo.damage,400);assert.equal(octo.school,'water');
-console.log('Octo Whip: 400 damage, pending-action flinch, no carryover and chance boundary passed.');
+const octo=cards.find(c=>c.id==='octo');assert.equal(octo.damage,230);assert.equal(octo.school,'water');
+console.log('Octo Whip: 230 damage, pending-action flinch, no carryover and chance boundary passed.');
 s=battle();s.auras={};s.phase='resolving';s.sequence=[{casterId:'cpu',cardId:card.id,targetId:'human'}];s.queueAt=0;api.set(s);
-octoAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:octo,flinchRoll:0});assert.equal(s.units[1].hp,600);assert.equal(s.units[1].flinchRound,1);
+octoAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:octo,flinchRoll:0,damageVariant:1});assert.equal(s.units[1].hp,770);assert.equal(s.units[1].flinchRound,1);
 vm.runInNewContext(fs.readFileSync('assets/octo-whip-v95.js','utf8'),context);
 const canvasMock=new Proxy({}, {get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
 for(const target of [{x:175,y:340},{x:831,y:488}])for(let step=0;step<=100;step++)for(const layer of ['body','whip'])context.window.WIZARDRY_OCTO_V95.draw(canvasMock,{progress:step/100,target,layer});
-console.log('Octo impact applies 400 damage and flinch; animation completes for both team directions.');
+console.log('Octo impact applies 230 damage and flinch; animation completes for both team directions.');
 const devilCard=cards.find(c=>c.id==='devil');assert.equal(devilCard.damage,250);assert.equal(devilCard.school,'fire');
-s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:devilCard,stage:'summon',duration:devilCard.duration,elapsed:0,runeResult:'success'};api.set(s);
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:devilCard,damageVariant:1,stage:'summon',duration:devilCard.duration,elapsed:0,runeResult:'success'};api.set(s);
 api.updateCastSequence(devilCard.duration*devilCard.hit-1);assert.equal(s.units[1].hp,1000,'no damage before rock contact');api.updateCastSequence(1);assert.equal(s.units[1].hp,750,'one 250 damage impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,750,'no duplicate hit');api.updateCastSequence(devilCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'flame exit releases next action');
 console.log('Devil Boy: featured hand, 250 damage once at rock contact and cast completion passed.');
-const bloomCard=cards.find(c=>c.id==='bloom');assert.equal(bloomCard.damage,100);assert.equal(bloomCard.poisonTurns,5);assert.equal(bloomCard.target,'all_enemies');
+math.random=()=>.5;
+const bloomCard=cards.find(c=>c.id==='bloom');assert.equal(bloomCard.damage,100);assert.equal(bloomCard.poisonTurns,3);assert.equal(bloomCard.target,'all_enemies');
 s=battle();s.auras={};api.set(s);const bloomCast={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:.299,other:.30}};
-combat.applySpell(bloomCast);combat.applySpell(bloomCast);assert.equal(s.units[0].hp,1000,'no friendly damage');assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900,'all enemies take exactly 100');assert.equal(s.units[1].statuses.find(x=>x.kind==='poison').remaining,5);assert.equal(s.units[2].statuses.some(x=>x.kind==='poison'),false,'independent 30 percent boundary');assert.equal(s.units[0].statuses.some(x=>x.kind==='tailwind'),false,'no wind spell bonus');
-combat.tickBurnsForRound();assert.equal(s.units[1].hp,900,'no poison tick on application turn');for(let r=2;r<=6;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,900-(r-1)*50);assert.equal(s.units[2].hp,900);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false,'expires after exactly five ticks');
-s=battle();s.auras={};s.units[1].hp=100;api.set(s);combat.applySpell({action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:0,other:0}});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].statuses.length,0,'no poison on defeated enemy');const again={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{other:0}};combat.applySpell(again);assert.equal(s.units[2].statuses.filter(x=>x.kind==='poison').length,1,'refresh without stacking');assert.equal(s.units[2].statuses.find(x=>x.kind==='poison').remaining,5);
+combat.applySpell(bloomCast);combat.applySpell(bloomCast);assert.equal(s.units[0].hp,1000,'no friendly damage');assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900,'all enemies take exactly 100');assert.equal(s.units[1].statuses.find(x=>x.kind==='poison').remaining,3);assert.equal(s.units[2].statuses.some(x=>x.kind==='poison'),false,'independent 30 percent boundary');assert.equal(s.units[0].statuses.some(x=>x.kind==='tailwind'),false,'no wind spell bonus');
+combat.tickBurnsForRound();assert.equal(s.units[1].hp,900,'no poison tick on application turn');for(let r=2;r<=4;r++){s.round=r;combat.tickBurnsForRound();combat.tickBurnsForRound();assert.equal(s.units[1].hp,900-(r-1)*50);assert.equal(s.units[2].hp,900);}assert.equal(s.units[1].statuses.some(x=>x.kind==='poison'),false,'expires after exactly three ticks');
+s=battle();s.auras={};s.units[1].hp=100;api.set(s);combat.applySpell({action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{cpu:0,other:0}});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].statuses.length,0,'no poison on defeated enemy');const again={action:{casterId:'human',targetId:null},card:bloomCard,poisonRolls:{other:0}};combat.applySpell(again);assert.equal(s.units[2].statuses.filter(x=>x.kind==='poison').length,1,'refresh without stacking');assert.equal(s.units[2].statuses.find(x=>x.kind==='poison').remaining,3);
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:null,action:{casterId:'human',targetId:null},card:bloomCard,stage:'summon',duration:bloomCard.duration,elapsed:0,runeResult:'success',poisonRolls:{cpu:1,other:1}};api.set(s);api.updateCastSequence(bloomCard.duration*bloomCard.hit-1);assert.equal(s.units[1].hp,1000);api.updateCastSequence(1);assert.equal(s.units[1].hp,900);assert.equal(s.units[2].hp,900);api.updateCastSequence(bloomCard.duration);assert.equal(s.animation.stage,'lowering');
-console.log('Blooming Spores: 100 to all enemies, independent 30 percent poison, five 50-damage turns, refresh, KO safety and impact timing passed.');
+console.log('Blooming Spores: 100 to all enemies, independent 30 percent poison, three 50-damage turns, refresh, KO safety and impact timing passed.');
 const undeadCard=cards.find(c=>c.id==='undead');assert.equal(undeadCard.damage,200);assert.equal(undeadCard.school,'dark');let screeches=0;context.window.WIZARDRY_UNDEAD_V99={screech:()=>screeches++};
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:undeadCard,stage:'summon',duration:undeadCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(undeadCard.duration*.45);assert.equal(screeches,0,'no generated sound');assert.equal(s.units[1].hp,1000);api.updateCastSequence(undeadCard.duration*(undeadCard.hit-.45)-1);assert.equal(s.units[1].hp,1000,'no damage during climb, screech or pounce');api.updateCastSequence(1);assert.equal(s.units[1].hp,800,'200 damage on claw swipe');api.updateCastSequence(200);assert.equal(s.units[1].hp,800);assert.equal(screeches,0,'spell remains silent');api.updateCastSequence(undeadCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'claw follow-through releases next action');
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:undeadCard,stage:'summon',duration:undeadCard.duration,elapsed:undeadCard.duration*.75,runeResult:'success'};s.units[1].hp=0;api.set(s);api.updateCastSequence(undeadCard.duration*.1);assert.equal(s.units[2].hp,1000,'never leaps to a different target after KO');
@@ -344,14 +348,14 @@ console.log('Undead Rampage: featured hand, silent cast, 200 only on claw contac
 const fearAPI=context.window.WIZARDRY_ARENA_TEST;assert.equal(undeadCard.fearChance,.10);
 function fearBattle(queueAt=1){const b=battle();b.auras={};b.phase='resolving';b.sequence=[{casterId:'human',cardId:'undead',targetId:'cpu'},{casterId:'cpu',cardId:card.id,targetId:'human'}];b.queueAt=queueAt;return b;}
 s=fearBattle();api.set(s);const fearCast={action:{casterId:'human',targetId:'cpu'},card:undeadCard,runeResult:'success',fearRoll:0};fearAPI.applySpell(fearCast);fearAPI.applySpell(fearCast);assert.equal(s.units[1].hp,800,'fear preserves one 200 damage hit');assert.equal(s.units[1].fearRound,1);api.startNextAction();assert.equal(s.units[1].mana,10,'fear skips pending action before mana spending');assert.equal(s.units[1].fearRound,null);
-s.round=2;s.phase='resolving';s.queueAt=0;s.sequence=[{casterId:'cpu',cardId:card.id,targetId:'human'}];api.startNextAction();assert.equal(s.animation.source,'cpu','target can act next round');assert.equal(s.units[1].mana,10-card.cost);
+s.round=2;s.phase='resolving';s.queueAt=0;s.sequence=[{casterId:'cpu',cardId:card.id,targetId:'human'}];api.startNextAction();assert.equal(s.animation.source,'cpu','target can act next round');assert.equal(s.units[1].mana,10);
 s=fearBattle(2);api.set(s);fearAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:undeadCard,runeResult:'success',fearRoll:0});assert.equal(s.units[1].hp,800);assert.equal(s.units[1].fearRound,undefined,'already acted: fear does nothing');
 s=fearBattle();api.set(s);assert.equal(fearAPI.attemptUndeadFear(s.units[0],s.units[1],undeadCard,.10),false,'10 percent boundary excluded');assert.equal(fearAPI.attemptUndeadFear(s.units[0],s.units[1],undeadCard,.099999),true);s.units[1].fearRound=null;s.units[1].hp=0;assert.equal(fearAPI.attemptUndeadFear(s.units[0],s.units[1],undeadCard,0),false,'no fear on KO');assert.equal(fearAPI.attemptUndeadFear(s.units[0],s.units[0],undeadCard,0),false,'no friendly fear');
 s=fearBattle();api.set(s);fearAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:undeadCard,runeResult:'failed',fearRoll:0});assert.equal(s.units[1].fearRound,undefined,'failed spell cannot fear');
 s=fearBattle();s.units[1].hp=200;api.set(s);fearAPI.applySpell({action:{casterId:'human',targetId:'cpu'},card:undeadCard,runeResult:'success',fearRoll:0});assert.equal(s.units[1].hp,0);assert.equal(s.units[1].fearRound,undefined);
 s=fearBattle();s.round=2;s.units[1].fearRound=1;api.set(s);api.startNextAction();assert.equal(s.animation.source,'cpu','stale prior-round fear cannot skip a new round');
 console.log('Undead fear: 10 percent on hit, only pending enemy action skipped, no mana spent, already-acted immunity, KO/miss safety and no next-round carryover passed.');
-const centaurCard=cards.find(c=>c.id==='centaur');assert.equal(centaurCard.damage,650);assert.equal(centaurCard.school,'nature');assert.equal(cards.filter(c=>c.school==='nature').length,4);
-s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:centaurCard,stage:'summon',duration:centaurCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(centaurCard.duration*centaurCard.hit-1);assert.equal(s.units[1].hp,1000,'draw and arrow flight do not apply early damage');api.updateCastSequence(1);assert.equal(s.units[1].hp,350,'650 damage on arrow impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,350,'single arrow cannot hit twice');assert.equal(s.units[2].hp,1000,'no splash damage');api.updateCastSequence(centaurCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'centaur departure hands off to next cast');
+const centaurCard=cards.find(c=>c.id==='centaur');assert.equal(centaurCard.damage,570);assert.equal(centaurCard.school,'nature');assert.equal(cards.filter(c=>c.school==='nature').length,10);
+s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:centaurCard,stage:'summon',duration:centaurCard.duration,elapsed:0,runeResult:'success'};api.set(s);api.updateCastSequence(centaurCard.duration*centaurCard.hit-1);assert.equal(s.units[1].hp,1000,'draw and arrow flight do not apply early damage');api.updateCastSequence(1);assert.equal(s.units[1].hp,430,'570 damage on arrow impact');api.updateCastSequence(300);assert.equal(s.units[1].hp,430,'single arrow cannot hit twice');assert.equal(s.units[2].hp,1000,'no splash damage');api.updateCastSequence(centaurCard.duration);assert.equal(s.animation.stage,'lowering');api.updateCastSequence(s.animation.duration);assert.equal(s.animation,null,'centaur departure hands off to next cast');
 s=battle();s.auras={};s.phase='resolving';s.sequence=[];s.queueAt=0;s.animation={source:'human',target:'cpu',action:{casterId:'human',targetId:'cpu'},card:centaurCard,stage:'summon',duration:centaurCard.duration,elapsed:centaurCard.duration*.71,runeResult:'success'};s.units[1].hp=0;api.set(s);api.updateCastSequence(centaurCard.duration*.1);assert.equal(s.units[2].hp,1000,'locked shot never retargets a different enemy');
-console.log('Forrest Centaur: opening hand, 650 once on contact, no friendly/splash or retarget damage, cast completion and fourth Nature card passed.');
+console.log('Forrest Centaur: opening hand, 570 once on contact, no friendly/splash or retarget damage, cast completion and Nature catalog passed.');

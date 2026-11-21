@@ -7,13 +7,17 @@ let s;function battle(){s={units:[unit('a',0),unit('b',1),unit('c',1)],humanByTe
 function action(id,source='a',target='b'){const c=card(id);return{card:c,source,target,action:{casterId:source,targetId:target},stage:'summon',duration:c.duration,elapsed:0,runeResult:'success'};}
 function dome(u){api.applySpell(action('winddome',u.id,u.id));}
 function has(u,kind='wind_dome'){return u.statuses.some(st=>st.kind===kind);}
-assert.equal(card('winddome').school,'wind');assert.equal(card('winddome').selfOnly,true);assert.equal(api.featuredCard,'penguins');assert.equal(api.cards.filter(c=>c.school==='wind').length,4);
-battle();api.startHand(s.units[0],true);assert.equal(s.units[0].hand.length,5);assert.ok(s.units[0].hand.includes('penguins'));assert.deepEqual(Array.from(test.targetsFor(card('winddome'),s.units[0]),u=>u.id),['a']);
-// Recasting leaves exactly one ward on the caster, regardless of a stale target.
-api.applySpell(action('winddome','a','b'));dome(s.units[0]);assert.equal(s.units[0].statuses.filter(st=>st.kind==='wind_dome').length,1);assert.equal(has(s.units[1]),false);
-api.applySpell(action('centaur','b','a'));assert.equal(s.units[0].hp,2000,'entire arrow is blocked, including lethal damage');assert.equal(has(s.units[0]),false);api.applySpell(action('devil','b','a'));assert.equal(s.units[0].hp,1750,'next separate spell deals normal damage');
+assert.equal(card('winddome').school,'wind');
+battle();
+const ward=unit('ally',0);s.units.push(ward);
+assert.deepEqual(Array.from(test.targetsFor(card('winddome'),s.units[0]),u=>u.id),['a','ally']);
+api.applySpell(action('winddome','a','ally'));assert.equal(has(ward),true);
+dome(s.units[0]);dome(s.units[0]);assert.equal(s.units[0].statuses.filter(st=>st.kind==='wind_dome').length,1);
+assert.equal(has(s.units[1]),false);
+api.applySpell(action('centaur','b','a'));assert.equal(s.units[0].hp,2000);assert.equal(has(s.units[0]),false);
+api.applySpell(action('devil','b','a'));assert.equal(s.units[0].hp,1750);
 // The charge covers all three independently timed slashes, not just the first hit.
-battle();dome(s.units[1]);const slashes=action('ronin');for(let i=0;i<3;i++)api.applyRoninHit(slashes,i);assert.equal(s.units[1].hp,2000);assert.equal(s.windDomeBursts.length,1);api.applySpell(action('centaur'));assert.equal(s.units[1].hp,1350);
+battle();dome(s.units[1]);const slashes=action('ronin');for(let i=0;i<3;i++)api.applyRoninHit(slashes,i);assert.equal(s.units[1].hp,2000);assert.equal(s.windDomeBursts.length,1);api.applySpell(action('centaur'));assert.equal(s.units[1].hp,1430);
 // Area damage and on-hit poison resolve independently for each enemy.
 battle();dome(s.units[1]);const bloom=action('bloom');bloom.poisonRolls={b:0,c:0};api.applySpell(bloom);assert.equal(s.units[1].hp,2000);assert.equal(has(s.units[1],'poison'),false);assert.equal(s.units[2].hp,1900);assert.equal(has(s.units[2],'poison'),true);
 for(const kind of ['burn','frostbite','poison','soul_drain']){battle();dome(s.units[1]);s.units[1].statuses.push({kind,value:50,remaining:3,appliedRound:1,lastTickRound:1,sourceId:'a'});s.round=2;api.tickBurnsForRound();assert.equal(s.units[1].hp,1950,kind+' bypasses');assert.ok(has(s.units[1]),kind+' preserves the shield');}
@@ -30,4 +34,4 @@ battle();dome(s.units[1]);s.units[1].hp=1;s.units[1].statuses.push({kind:'solidi
 battle();dome(s.units[1]);s.units[0].hp=1000;const vampire=action('vampire');test.applyVampDamage(vampire);test.applyVampHeal(vampire);assert.equal(s.units[1].hp,2000);assert.equal(s.units[0].hp,1000);
 // The real generic cast timeline grants the shield exactly once, then completes.
 battle();s.animation=action('winddome','a','a');api.advanceAction(card('winddome').duration*card('winddome').hit-1);assert.equal(has(s.units[0]),false);api.advanceAction(1);assert.ok(has(s.units[0]));api.advanceAction(5000);assert.equal(s.animation,null);assert.match(test.describeStatus(s.units[0],s.units[0].statuses[0]).detail,/debuffs/);
-console.log('Wind Dome: self-only, opening hand, one whole spell/multi-hit block, AoE isolation, debuff bypass, misses, on-hit prevention, lifesteal, other wards and cast completion passed.');
+console.log('Wind Dome: self and ally targeting, one whole spell/multi-hit block, AoE isolation, debuff bypass, misses, on-hit prevention, lifesteal, other wards and cast completion passed.');

@@ -109,7 +109,14 @@ const tester = api.getState();
 const [wizard, dummy] = tester.units;
 wizard.skills.dark = 0;
 const dummyHP = dummy.hp;
-for(const id of ["wynzor","frozentouch","volcaniceruption","perfectdefense","stormlizard","drowzyflowers","bubbleshield","darksorcerer","sticksandstones","growth","electriceel","crystalicemirrors"]){api.chooseCard(id);assert.ok(api.discardSelected());}
+const harvestIndex = wizard.drawPile.indexOf('soulharvest');
+if (!wizard.hand.includes('soulharvest')) {
+  assert.ok(harvestIndex >= 0, 'Soul Harvest is available in the tester deck');
+  for (let draw = 0; draw <= harvestIndex; draw++) {
+    api.chooseCard(wizard.hand[0]);
+    assert.ok(api.discardSelected());
+  }
+}
 api.chooseCard('soulharvest');
 api.confirmTarget();
 while (tester.animation && tester.animation.stage !== 'summon') api.advanceBackground(40);

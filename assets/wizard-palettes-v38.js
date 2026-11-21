@@ -65,7 +65,7 @@
       const yy=y%CELL,xx=x%CELL,hatTop=top[n]===CELL?0:top[n];
       if(isPurple(r,g,b,a)){
         positions[yy<hatTop+CELL*.39?0:1].push(at);
-      }else if(isSkin(r,g,b,a,xx,yy,hatTop,n,kind)){
+      }else if(!global.WizardMaterialMasks?.[kind]&&isSkin(r,g,b,a,xx,yy,hatTop,n,kind)){
         positions[2].push(at);
       }
     }
@@ -77,17 +77,21 @@
     const encoded=global.WizardMaterialMasks?.[kind];
     if(!encoded)return;
     const runs=materialRuns[kind]||(materialRuns[kind]=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0)));
-    const dyes=[null,variant==="clean"?null:rgb(look.beardColor),rgb(look.crystalColor),rgb(look.bootColor),rgb(look.hatTrim),rgb(look.robeTrim)];
-    const levels=[0,218,222,125,224,224];
+    const dyes=[null,variant==="clean"?null:rgb(look.beardColor),rgb(look.crystalColor),rgb(look.bootColor),rgb(look.hatTrim),rgb(look.robeTrim),look.skinColor!==DEFAULT_SKIN?rgb(look.skinColor):null];
+    const levels=[0,218,222,125,224,224,210];
     let pixel=0;
     for(let i=0;i<runs.length;i+=4){
       pixel+=runs[i]*256+runs[i+1];
       const count=runs[i+2],role=runs[i+3],end=pixel+count;
-      const target=dyes[role];
+      const target=role===1&&variant==="clean"?dyes[6]:dyes[role];
       const ridge=role<8?0:look.staffSculpt==="spiral"?(role-8)%3:look.staffSculpt==="rings"?Math.floor((role-8)/3):0;
       if(target||ridge)for(let j=pixel;j<end;j++){
         const at=j*4,src=base.original.data;
-        const light=Math.max(.12,Math.max(src[at],src[at+1],src[at+2])/levels[role]);
+        const skinPixel=role===6||(role===1&&variant==="clean");
+        // Removed beard tips expose cloth or transparency on the shaved atlas.
+        if(role===1&&variant==="clean"&&(src[at+3]===0||src[at+2]>src[at]))continue;
+        const bright=Math.max(src[at],src[at+1],src[at+2]);
+        const light=skinPixel ? .28+.72*bright/210:Math.max(.12,bright/levels[role]);
         for(let c=0;c<3;c++)pixels.data[at+c]=target?target[c]*light:ridge===1?src[at+c]*1.35+22:src[at+c]*.63;
       }
       pixel=end;
@@ -125,7 +129,7 @@
         pixels.data[at+2]=Math.min(255,Math.round(target[2]*light));
       }
     }
-    if(dyed)paintGear(pixels,base,look,kind,variant);
+    if(dyed||skin!==DEFAULT_SKIN)paintGear(pixels,base,look,kind,variant);
     ctx.putImageData(pixels,0,0);
     colored.set(key,out);
     if(colored.size>MAX_CACHE)colored.delete(colored.keys().next().value);

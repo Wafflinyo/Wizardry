@@ -384,18 +384,6 @@
     hats.draw(ctx,look,x,y,angle);
     const frame=hats.withoutHat(art,kind);
     const sx=(i%4)*128,sy=Math.floor(i/4)*128;
-    if(hat==="hood"){
-      // Continue the upper face pixels into the opening using the dyed sprite itself.
-      ctx.save();
-      ctx.translate(x,y);ctx.rotate(angle);
-      ctx.beginPath();
-      ctx.moveTo(5,2);ctx.lineTo(8,-2);ctx.lineTo(14,-4);ctx.lineTo(19,-2);
-      ctx.lineTo(19,5);ctx.lineTo(14,8);ctx.lineTo(7,8);
-      ctx.closePath();ctx.clip();
-      ctx.rotate(-angle);ctx.translate(-x,-y);
-      ctx.drawImage(frame,sx,sy,128,128,0,-4,128,128);
-      ctx.restore();
-    }
     ctx.drawImage(frame,sx,sy,128,128,0,0,128,128);
     if(hat==="hood")hats.draw(ctx,look,x,y,angle,true);
     ctx.restore();

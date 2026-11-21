@@ -15,8 +15,26 @@
   document.addEventListener("pointerup",unlock,{capture:true,passive:true});
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
+  function traceMelody(output,start,duration){
+    const steps=[
+      [0,523.25,.33],[.18,659.25,.33],[.36,783.99,.34],
+      [.54,698.46,.33],[.69,880,.31],[.82,1046.50,.18]
+    ];
+    for(const [offset,pitch,length] of steps){
+      const at=start+duration*offset,span=duration*length;
+      for(const [ratio,volume] of [[1,.28],[2,.065],[3,.018]]){
+        const tone=audio.createOscillator(),note=audio.createGain();
+        tone.frequency.value=pitch*ratio;
+        note.gain.setValueAtTime(0,at);
+        note.gain.linearRampToValueAtTime(volume,at+span*.32);
+        note.gain.exponentialRampToValueAtTime(.001,at+span*.91);
+        note.gain.linearRampToValueAtTime(0,at+span);
+        tone.connect(note).connect(output);
+        tone.start(at);tone.stop(at+span);
+      }
+    }
+  }
   function begin(remaining,school){
-    const water=school==="water";
     const start=audio.currentTime+.006;
     const end=start+remaining;
     const gain=audio.createGain();
@@ -25,6 +43,11 @@
     gain.gain.setValueAtTime(.33,end-Math.min(.18,remaining*.4));
     gain.gain.linearRampToValueAtTime(0,end);
     gain.connect(audio.destination);
+
+    if(school!=="water"){
+      traceMelody(gain,start,remaining);
+      return {gain,end};
+    }
 
     // Airy friction is the body of the stroke. A moving resonance follows its pressure.
     if(!paper){
@@ -40,11 +63,11 @@
     }
     const stroke=audio.createBufferSource(),resonance=audio.createBiquadFilter();
     stroke.buffer=paper;stroke.loop=true;
-    resonance.type="bandpass";resonance.Q.value=water?.58:1.3;
+    resonance.type="bandpass";resonance.Q.value=.58;
     const pressure=audio.createGain();
     const positions=[0,.17,.34,.51,.68,.84,1];
-    const centers=water?[980,1370,1120,1590,1260,1730,1260]:[560,740,660,900,790,970,680];
-    const weights=water?[.58,.93,.69,1,.76,.94,.63]:[.76,.83,.86,.92,.86,.94,.82];
+    const centers=[980,1370,1120,1590,1260,1730,1260];
+    const weights=[.58,.93,.69,1,.76,.94,.63];
     resonance.frequency.setValueAtTime(centers[0],start);
     pressure.gain.setValueAtTime(weights[0],start);
     for(let i=1;i<positions.length;i++){
@@ -55,27 +78,14 @@
     stroke.connect(resonance).connect(pressure).connect(gain);
     stroke.start(start);stroke.stop(end+.1);
 
-    if(water){
-      // A quiet gliding overtone gives the friction a magical edge.
-      const shimmer=audio.createOscillator(),mix=audio.createGain();
-      mix.gain.value=.026;
-      shimmer.frequency.setValueAtTime(640,start);
-      shimmer.frequency.exponentialRampToValueAtTime(780,start+remaining*.58);
-      shimmer.frequency.exponentialRampToValueAtTime(670,end);
-      shimmer.connect(mix).connect(gain);
-      shimmer.start(start);shimmer.stop(end+.10);
-    }else{
-      // Let the stroke excite two glassy resonances. They share its continuous texture.
-      for(const [frequency,level,drift] of [[1280,.52,1.08],[1920,.28,.96]]){
-        const ring=audio.createBiquadFilter(),mix=audio.createGain();
-        ring.type="bandpass";ring.Q.value=5;
-        ring.frequency.setValueAtTime(frequency,start);
-        ring.frequency.linearRampToValueAtTime(frequency*drift,start+remaining*.67);
-        ring.frequency.linearRampToValueAtTime(frequency,end);
-        mix.gain.value=level;
-        stroke.connect(ring).connect(mix).connect(gain);
-      }
-    }
+    // A quiet gliding overtone gives the friction a magical edge.
+    const shimmer=audio.createOscillator(),mix=audio.createGain();
+    mix.gain.value=.026;
+    shimmer.frequency.setValueAtTime(640,start);
+    shimmer.frequency.exponentialRampToValueAtTime(780,start+remaining*.58);
+    shimmer.frequency.exponentialRampToValueAtTime(670,end);
+    shimmer.connect(mix).connect(gain);
+    shimmer.start(start);shimmer.stop(end+.10);
     return {gain,end};
   }
   function follow(cast,round){

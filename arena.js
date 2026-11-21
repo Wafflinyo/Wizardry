@@ -145,8 +145,8 @@
     damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:4700,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
   CARDS.push({id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:8,target:"enemy",kind:"damage",
-    damage:890,accuracy:.80,icon:"◆",rarity:"EPIC",duration:5440,hit:.80,short:"80% ACCURACY",
-    description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 890 base Earth damage."});
+    damage:910,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:5440,hit:.80,short:"80% ACCURACY",
+    description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 910 base Earth damage, with a 25% chance to disable its pending action this round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -1393,6 +1393,10 @@
         state.log=[c.name+" sleeps through this turn.",...state.log].slice(0,5);
         continue;
       }
+      if(consumeStatus(c,"fissure_disable")){
+        flash(c,"DISABLED · TURN SKIPPED","#f1cf96");
+        state.log=[c.name+" loses their action to Sentinel Fissure.",...state.log].slice(0,5);continue;
+      }
       if(c.fearRound===state.round){
         c.fearRound=null;consumeStatus(c,"fear_turn");flash(c,"FEARED · SKIPPED","#d4c0eb");
         state.log=[c.name+" is feared and loses this round's action to "+(c.fearSource||"Undead Rampage")+".",...state.log].slice(0,5);c.fearSource=null;continue;
@@ -1500,7 +1504,7 @@
   }
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
-  const DEBUFFS=new Set(['lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(['lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2156,6 +2160,15 @@
       if(rune.kind==="stun")t.stunRound=null;
       if(rune.kind==="fear_turn"){t.fearRound=null;t.fearSource=null;}
       flash(t,"RUNE CLEANSED","#e1f6a5");
+    }else if(card.id==="sentinelfissure"){
+      if(t?.hp>0&&t.team!==c.team){
+        damage(c,t,card.damage,card,anim);
+        if(t.hp>0&&!preventsHitEffects(anim,t)&&
+          state.sequence.slice(state.queueAt).some(action=>action.casterId===t.id)&&Math.random()<card.disableChance&&
+          addStatus(t,"fissure_disable",null,1,card.school)!==false){
+          flash(t,"DISABLED · THIS ROUND","#f1cf96");
+        }
+      }
     }else if(card.kind==="heizmann"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
@@ -2428,6 +2441,7 @@
   function finishRound(){
     if(checkBattleEnd())return;
     for(const u of state.units)if(Number.isInteger(u.fearRound)&&u.fearRound<=state.round){u.fearRound=null;u.fearSource=null;consumeStatus(u,"fear_turn");}
+    for(const u of state.units)consumeStatus(u,"fissure_disable");
     expireLightningRods();
     for(const team of [0,1]){
       const aura=state.auras[team];
@@ -3332,6 +3346,7 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
       case "fear_turn":return {title:"Fear · This round only",detail:"Creeping Croc frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};

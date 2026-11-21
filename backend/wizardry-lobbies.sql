@@ -69,7 +69,23 @@ begin
    select jsonb_agg(jsonb_set(x,'{ready}',case when x->>'isCpu'='true' then 'true'::jsonb else 'false'::jsonb end)) into r.players from jsonb_array_elements(r.players) x;
   elsif action_name='ready' then
    if r.phase<>'lobby' then raise exception 'The match has started.';end if;
-   select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(x,'{ready}',coalesce(payload->'ready','false')) else x end) into r.players from jsonb_array_elements(r.players) x;
+   if tower and payload ? 'towerSkills' then
+    if jsonb_typeof(payload->'towerSkills') is distinct from 'object' then raise exception 'Invalid skill allocation.';end if;
+    if exists(select 1 from jsonb_each(payload->'towerSkills') as skill(key,value)
+      where jsonb_typeof(value)<>'number' or value::text !~ '^(0|[1-9]|1[0-9]|20)$'
+      or key not in ('hp','mana','water','earth','lightning','nature','wind','dark','fire','ice')
+      or (key not in ('hp','mana') and not (actor->'profile'->'masteries' ? key) and value::text<>'0')) then
+      raise exception 'Invalid skill allocation.';
+    end if;
+    if (select coalesce(sum(value::text::int),0) from jsonb_each(payload->'towerSkills'))>(actor->'profile'->>'level')::int then
+      raise exception 'Skill allocation exceeds the wizard level.';
+    end if;
+    select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(jsonb_set(x,'{profile,skills}',payload->'towerSkills'),'{ready}',coalesce(payload->'ready','false')) else x end order by ord)
+    into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
+   else
+    select jsonb_agg(case when x->>'peerId'=pid then jsonb_set(x,'{ready}',coalesce(payload->'ready','false')) else x end order by ord)
+    into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
+   end if;
   elsif action_name='size' then
    if tower then raise exception 'Tower parties fight together against guardians.';end if;
    if not host or r.phase<>'lobby' then raise exception 'Only the host can change match size.';end if;
@@ -104,7 +120,8 @@ begin
       else x end,'{ready}','false'::jsonb)
     order by ord
    ) into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);
-   r.phase='lobby';r.battle_state=null;r.pending='{}';r.state_version=r.state_version+1;
+   -- Keep the finished snapshot until the next floor starts so every member can see the results.
+   r.phase='lobby';r.pending='{}';r.state_version=r.state_version+1;
   elsif action_name='plan' then
    if r.phase<>'battle' or r.battle_state->>'phase'<>'planning' then raise exception 'Wait for the next planning round.';end if;
    if (payload->'plan'->>'round')::int<>(r.battle_state->>'round')::int then raise exception 'This round has already changed.';end if;

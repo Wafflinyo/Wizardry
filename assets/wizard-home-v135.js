@@ -5,6 +5,7 @@ const api=window.WIZARDRY_ARENA_TEST,B=window.WizardryBuilds,cards=api.cards,por
 let saved=[],active=null,draft=null,step=0,view='home',previewFrame=0,joinCode=new URLSearchParams(location.search).get('lobby');
 try{saved=JSON.parse(localStorage.getItem(KEY)||'[]').map(p=>B.normalize({...p,deck:p.masteries?.length&&p.deck?.length!==24?B.makeDeck(cards,p.masteries):p.deck?.map(id=>id==='perfectdefense'?'sentinelfissure':id==='golem'?'rogginbowler':id)},cards));}catch{saved=[];}
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
+let lastResult=null,startingFloor=false,submittingReady=false;
 const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=id=>document.getElementById(id),title=e=>B.names[e],btn=(text,action,cls='')=>`<button class="portal-btn ${cls}" data-action="${action}">${text}</button>`;
@@ -23,6 +24,7 @@ function render(){
  }
  if(view==='cpu')shell(`<section class="portal-hero"><h1>CPU Battles</h1><div class="practice-sizes">${[1,2,3,4].map(n=>`<button class="portal-btn" data-practice="${n}">${n}v${n}</button>`).join('')}</div>${btn('Back','hub','subtle')}</section>`);
  if(view==='tower'&&active)renderTower();
+ if(view==='progression'&&active)renderProgression();
  if(view==='online'&&active)renderOnline();
  if(view==='lobby')renderLobby();
 }
@@ -102,15 +104,70 @@ function recordTowerResult(state){
  try{
    persistProfile({...active,level,towerCleared:active.towerCleared||tower.floor===20,lastTowerWin:tower.id});
    onlineProfile=null;
-   towerMessage=tower.floor===20?'Caglimot Tower cleared.':level===20?'Level 20 reached.':'Level '+level+' reached. You earned a skill point.';
+   towerMessage=tower.floor===20?'Caglimot Tower cleared.':level===20?'Level 20 reached. You earned a skill point.':'Level '+level+' reached. You earned a skill point.';
  }catch(err){error(err.message);}
 }
-window.WizardryTower={recordResult:recordTowerResult};
+const resultsDialog=el('matchResults');
+function showMatchResults(combat){
+ if(combat.phase!=='finished'||lastResult)return;
+ lastResult=combat;
+ if(combat.tower)recordTowerResult(combat);
+ const columns=[['damage','Damage'],['healing','Healing'],['tanked','Damage Tanked'],['casts','Spells Cast'],['mana','Mana Used']];
+ resultsDialog.innerHTML=`<h1 id="matchResultsTitle">${combat.winner==='draw'?'Draw':combat.winner===0?'Allies win':'Enemies win'}</h1><div class="match-table-scroll"><table><thead><tr><th scope="col">Wizard</th>${columns.map(([,label])=>`<th scope="col">${label}</th>`).join('')}</tr></thead><tbody>${combat.units.map(u=>`<tr><th scope="row">${escape(u.name)}<small>${u.team?'Enemy':'Ally'}</small></th>${columns.map(([key])=>`<td>${(u.matchStats?.[key]||0).toLocaleString()}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="portal-note">Damage Tanked includes HP lost and damage stopped by the wizard’s defenses. Spells Cast includes fizzles.</p><button class="portal-btn primary" autofocus>Continue</button>`;
+ if(!resultsDialog.open)resultsDialog.showModal();
+}
+window.WizardryMatchResults={show:showMatchResults};
+function leaveMatch(){
+ resultsDialog.close();
+ if(session.roomId)closeSession();
+ screen(lastResult?.tower?'tower':lastResult?.mode==='tester'?'tests':active?'hub':'home');
+}
+resultsDialog.addEventListener('cancel',e=>e.preventDefault());
+resultsDialog.addEventListener('click',e=>{
+ if(!e.target.closest('button'))return;
+ resultsDialog.close();
+ if(lastResult?.tower)screen('progression');else leaveMatch();
+});
+function renderProgression(){
+ const {tower,winner}=lastResult;
+ const coOp=tower.online;
+ const party=coOp?session.lobby?.players||[]:[];
+ const ready=party.find(p=>p.peerId===session.peerId)?.ready;
+ const waiting=coOp&&session.lobby?.phase!=='lobby';
+ const cleared=coOp?(party.length>0&&party.every(p=>p.profile.towerCleared)):active.towerCleared;
+ const floor=coOp?(party.length?partyFloor(party):tower.floor):active.level;
+ const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
+ const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
+ const status=winner===0?towerMessage:winner==='draw'?'Floor ended in a draw.':'Floor attempt ended in defeat.';
+ shell(`<section class="portal-panel tower-progress"><h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span>${stats.remaining&&!ready&&!submittingReady?`<button class="portal-btn small" data-progress-skill="${key}" aria-label="Add skill point to ${label}">+</button>`:''}</div>`).join('')}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+}
+function allocateProgressPoint(key){
+ if(view!=='progression'||!active||submittingReady||!['hp','mana',...active.masteries].includes(key)||!B.stats(active).remaining)return;
+ if(session.lobby?.players.some(p=>p.peerId===session.peerId&&p.ready)&&session.lobby.phase==='lobby')return;
+ const skills={...active.skills,[key]:(active.skills[key]||0)+1};
+ persistProfile(B.normalize({...active,skills},cards));onlineProfile=null;render();
+}
+async function nextFloor(){
+ if(!lastResult?.tower.online){
+   if(active.towerCleared)leaveMatch();else startSoloTower();
+   return;
+ }
+ if(submittingReady||session.lobby?.phase!=='lobby')return;
+ if(session.lobby.players.every(p=>p.profile.towerCleared)){leaveMatch();return;}
+ submittingReady=true;render();
+ try{await command('ready',{ready:true,towerSkills:active.skills});}
+ finally{submittingReady=false;if(view==='progression')render();}
+}
 function startSoloTower(){
  towerLobby=false;towerMessage='';
  api.startTower([{profile:active}],active.level);showBattle();
 }
-function showBattle(){el('battleHome').textContent=api.getState().tower?'Return to Tower':'Home';document.body.dataset.screen='battle';cancelAnimationFrame(previewFrame);requestAnimationFrame(()=>api.drawCardArts());}
+function showBattle(){
+ lastResult=null;view='battle';resultsDialog.close();
+ document.body.dataset.screen='battle';
+ el('battleHome').textContent=api.getState().tower?'Return to Tower':'Home';
+ cancelAnimationFrame(previewFrame);requestAnimationFrame(()=>api.drawCardArts());
+}
 function startBattle(size){towerLobby=false;api.configureProfile(active);api.startPractice(size);showBattle();}
 function startCardTester(size=1){towerLobby=false;api.startCardTester(size);showBattle();}
 // Shared lobby transport. Only the host can publish combat state.
@@ -126,7 +183,12 @@ function closeSession(){const old={roomId:session.roomId,token:session.token};ge
 function acceptRoom(data){session.roomId=data.roomId;session.peerId=data.peerId;session.isHost=data.isHost;session.version=data.version;
  const signature=JSON.stringify(data.lobby);session.lobby=data.lobby;towerLobby=data.lobby.tower===true;
  if(data.lobby.phase==='closed'){closeSession();screen(towerLobby?'tower':'online');error('The host closed this lobby.');return;}
- if(!session.isHost&&data.lobby.phase==='battle'&&data.state){session.active=true;api.receiveSnapshot(data.state);recordTowerResult(data.state);showBattle();}
+ if(!session.isHost&&data.lobby.phase==='battle'&&data.state){
+   session.active=true;api.receiveSnapshot(data.state);
+   if(data.state.phase==='finished'){showMatchResults(data.state);}
+   else if(document.body.dataset.screen!=='battle'||lastResult)showBattle();
+ }
+ if(towerLobby&&session.active&&data.lobby.phase==='lobby'&&data.state?.phase==='finished')showMatchResults(data.state);
  if(session.isHost&&session.active){const ids=new Set(data.lobby.players.map(p=>p.peerId));for(const u of api.getState().units)if(u.isHuman&&!ids.has(u.peerId)){u.isHuman=false;u.peerId=null;}for(const [peerId,plan] of Object.entries(data.pending||{})){api.submitRemotePlan(peerId,plan);acks.push({peerId,round:plan.round});}api.autoFill(0);api.autoFill(1);api.runResolution();}
  if(session.active&&data.lobby.phase==='lobby'){
    if(towerLobby){
@@ -135,12 +197,19 @@ function acceptRoom(data){session.roomId=data.roomId;session.peerId=data.peerId;
        try{persistProfile({...active,level:Math.max(active.level,profile.level),towerCleared:profile.towerCleared,lastTowerWin:profile.lastTowerWin});onlineProfile=null;}catch(err){error(err.message);}
      }
    }
-   session.active=false;screen('lobby');
+   session.active=false;if(!towerLobby||!lastResult)screen('lobby');
  }
- if(view==='lobby'&&signature!==lastLobby&&!session.active){lastLobby=signature;render();}
+ if(signature!==lastLobby&&!session.active){
+   lastLobby=signature;if(view==='lobby'||view==='progression')render();
+ }
+ if(view==='progression'&&lastResult?.tower.online&&data.lobby.phase==='lobby'&&session.isHost&&
+   data.lobby.players.every(p=>p.ready)&&!data.lobby.players.every(p=>p.profile.towerCleared))void startTowerLobby();
 }
 async function command(action,payload={}){const g=generation,data=await request(action,payload);if(g===generation)acceptRoom(data);return data;}
-async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version};if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.getState()):'';if(serialized&&serialized!==lastState){payload.state=JSON.parse(serialized);lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload);if(g===generation){failures=0;acceptRoom(data);}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
+async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version};if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.getState()):'';if(serialized&&serialized!==lastState){payload.state=JSON.parse(serialized);lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload);if(g===generation){failures=0;acceptRoom(data);
+ if(session.isHost&&session.active&&api.getState().tower?.online&&api.getState().phase==='finished'){
+   const result=await request('towerNext');if(g===generation)acceptRoom(result);
+ }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
 function startPolling(){clearInterval(broadcastTimer);clearInterval(battleTimer);lastClock=performance.now();session.clockAt=lastClock;broadcastTimer=setInterval(syncRoom,400);battleTimer=setInterval(()=>{const now=performance.now();if(session.active&&session.isHost)api.advanceBackground(now-lastClock);lastClock=now;session.clockAt=now;},40);}
 async function host(tower=false){const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
 async function join(code,tower=false){const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
@@ -155,12 +224,13 @@ function renderTowerLobby(){
 }
 async function startTowerLobby(){
  const l=session.lobby;
- if(!session.isHost||!l?.players.every(p=>p.ready))return;
+ if(!session.isHost||startingFloor||l?.phase!=='lobby'||!l.players.every(p=>p.ready))return;
+ startingFloor=true;
  try{
-   api.startTower(l.players,partyFloor(l.players),true);
+   towerMessage='';api.startTower(l.players,partyFloor(l.players),true);
    const combat=api.getState();await command('towerStart',{state:combat});
    session.active=true;lastState=JSON.stringify(combat);showBattle();
- }catch(err){error(err.message);}
+ }catch(err){error(err.message);}finally{startingFloor=false;}
 }
 async function startOnline(){const l=session.lobby;if(!session.isHost||!l?.players.every(p=>p.isCpu||p.ready)||![0,1].every(t=>l.players.some(p=>p.team===t)))return;try{session.active=true;api.startLobby(l.players,l.size);const state=api.getState();await command('start',{state});lastState=JSON.stringify(state);showBattle();}catch(e){session.active=false;error(e.message);}}
 portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefined){
@@ -170,6 +240,7 @@ portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefi
  return;
  }if(e.target.dataset.gear&&Object.hasOwn(B.gear,e.target.dataset.gear))draft[e.target.dataset.gear]=e.target.value;if(['createRobe','createHat','createSkin','createFacialHair','createHeadHair'].includes(e.target.id)){readDraft();}if(e.target.id==='lobbySize'&&session.isHost){const size=Number(e.target.value);if(session.lobby.players.some(p=>p.slot>=size)){error('Move players out of the higher seats before reducing match size.');e.target.value=session.lobby.size;return;}try{await command('size',{size});}catch(e){error(e.message);}}});
 portal.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;try{
+ if(button.dataset.progressSkill){allocateProgressPoint(button.dataset.progressSkill);return;}
  if(button.dataset.hatStyle){draft.hat=button.dataset.hatStyle;for(const choice of portal.querySelectorAll('[data-hat-style]'))choice.setAttribute('aria-pressed',String(choice===button));return;}
  if(button.dataset.step!==undefined){readDraft();const next=Number(button.dataset.step);if(onlineDraft&&next===0)return;step=next;render();return;}
  if(button.dataset.mastery){const key=button.dataset.mastery;if(draft.masteries.includes(key)){draft.masteries=draft.masteries.filter(x=>x!==key);draft.skills[key]=0;draft.deck=draft.deck.filter(id=>cards.find(c=>c.id===id)?.school!==key);}else if(draft.masteries.length<2){draft.masteries.push(key);}else{error('Up to two mastery elements are allowed. Remove one before choosing another.');return;}draft.deck=draft.masteries.length?B.makeDeck(cards,draft.masteries):[];render();return;}
@@ -190,6 +261,8 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.addCpu||button.dataset.removeCpu){const add=!!button.dataset.addCpu,[team,slot]=(button.dataset.addCpu||button.dataset.removeCpu).split(',').map(Number);await command(add?'cpuAdd':'cpuRemove',{team,slot,...(add?{profile:B.cpu(cards,team*4+slot)}:{})});return;}
  if(button.dataset.seat){const [team,slot]=button.dataset.seat.split(',').map(Number);hostSeat(session.peerId,team,slot);return;}
  const action=button.dataset.action;
+ if(action==='nextFloor'){await nextFloor();return;}
+ if(action==='leaveProgress'){leaveMatch();return;}
  if(action==='randomName'){
    nameParts=nameLists.map((list,i)=>{
      const choices=list.filter(part=>part!==nameParts[i]);
@@ -212,25 +285,12 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  else if(action==='startTowerLobby')await startTowerLobby();
  else if(action==='host')await host();else if(action==='join')await join(joinCode);else if(action==='joinInput')await join(el('joinInput').value);else if(action==='leave'){closeSession();screen(towerLobby?'tower':'online');}else if(action==='ready'){const p=session.lobby.players.find(p=>p.peerId===session.peerId);await command('ready',{ready:!p.ready});}else if(action==='copy'){const input=el('lobbyLink');try{await navigator.clipboard.writeText(input.value);button.textContent='Copied';}catch{input.focus();input.select();error('Select and copy the invitation link.');}}else if(action==='startOnline')await startOnline();else if(['home','load','hub','tests','cpu','tower'].includes(action))screen(action);
  }catch(err){error(err.message);}});
-document.getElementById('battleHome').onclick=async()=>{
+document.getElementById('battleHome').onclick=()=>{
  const combat=api.getState();
- if(combat.tower){
-   recordTowerResult(combat);
-   if(combat.tower.online&&session.active){
-     if(combat.phase==='finished'&&session.isHost){
-       try{await command('sync',{state:combat,ack:acks.splice(0)});await command('towerNext');return;}catch(err){error(err.message);}
-     }
-     if(combat.phase==='finished'&&!session.isHost){uiTowerWaiting();return;}
-     closeSession();
-   }
-   screen('tower');return;
- }
- if(session.active)closeSession();
- screen(combat.mode==='tester'?'tests':active?'hub':'home');
+ if(combat.phase==='finished'){showMatchResults(combat);return;}
+ lastResult=combat;leaveMatch();
 };
-function uiTowerWaiting(){
- const hint=el('turnHint');if(hint)hint.textContent='Waiting for the host to return the party to the tower lobby.';
-}document.getElementById('battleFullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{}};
+document.getElementById('battleFullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{}};
 // Keep practice reset tied to the saved build, never the retired duel.
 document.getElementById('testerSize').onchange=e=>{
  const state=api.getState(),size=Number(e.target.value);

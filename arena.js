@@ -960,7 +960,7 @@
     state.phase="finished";
     ui.hint.textContent=state.winner==="draw"?"Draw!":(state.winner===0?"Allies":"Enemy team")+" wins!";
     ui.status.textContent=ui.hint.textContent;paintUI();
-    if(state.tower)window.WizardryTower?.recordResult(state);
+    window.WizardryMatchResults?.show(state);
   }
   function runResolution(){
     if(state.phase!=="planning")return;
@@ -1015,7 +1015,9 @@
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
     const label=full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    tally(c,"casts",1);
     if(success){
+      tally(c,"mana",Math.min(c.mana,a.card.cost));
       c.mana=Math.max(0,c.mana-a.card.cost);
       // The COMPLETED ELEMENT rune must brighten and hold before any
       // summon begins. Freeze the chosen Golem target for its later fissure.
@@ -1032,7 +1034,7 @@
       // animation has finished. No generic red X or premature fizzle.
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
       flash(c,full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
-      if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);c.hp=Math.max(0,c.hp-amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
+      if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         state.log=[c.name+" takes 100 damage from Static Shock; the curse expires.",...state.log].slice(0,5);
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
       state.log=[c.name+"'s "+a.card.name+" missed ("+label+").",...state.log].slice(0,5);
@@ -1609,12 +1611,30 @@
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
   const BARRIER_RUNES=new Set(["wind_dome","bubble_shield"]);
+  function tally(unit,key,amount){
+    if(unit&&amount>0)(unit.matchStats??={})[key]=(unit.matchStats[key]||0)+amount;
+  }
+  function trackDamage(source,target,amount){
+    tally(source===target?null:source,"damage",amount);
+    tally(target,"tanked",amount);
+  }
+  function loseHp(source,target,amount){
+    const lost=Math.min(target.hp,amount);
+    target.hp-=lost;
+    trackDamage(source,target,lost);
+    return lost;
+  }
+  function restoreHp(source,target,amount){
+    target.hp+=amount;
+    tally(source,"healing",amount);
+  }
   function addStatus(u,kind,_icon,value,school){
     if(BARRIER_RUNES.has(kind)){
       // The newest protection owns the barrier slot. Same-kind recasts refresh it below.
       u.statuses=u.statuses.filter(status=>status.kind===kind||!BARRIER_RUNES.has(status.kind));
     }
     if(DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
+    const sourceId=state.animation?.action?.casterId;
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){
       if(existing.expiresRound!=null||existing.remaining!=null||existing.turnsTested!=null){
@@ -1622,9 +1642,9 @@
       }
       existing.value=value;
       if(school)existing.school=school;
-      existing.charges=1;return;}
+      existing.charges=1;if(sourceId)existing.sourceId=sourceId;return;}
     if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>st.kind!=="decay_mark"&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
-    u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1});
+    u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1,...(sourceId?{sourceId}:{})});
   }
   function applyPeriodicStatus(target,kind,card){
     const prefix=kind==="frostbite"?"frost":kind;
@@ -1641,6 +1661,7 @@
     const label=(extreme?"EXTREME ":"")+kind.toUpperCase();
     const message=refresh?kind[0].toUpperCase()+kind.slice(1)+" reset • "+turns+" Rounds":label+" · "+turns+" TURNS";
     flash(target,message,kind==="burn"?"#ffb178":kind==="poison"?"#b9e878":"#b6eeff");
+    effect.sourceId=state.animation?.action?.casterId||effect.sourceId;
     return true;
   }
   function consumeStatus(u,kind){
@@ -1689,7 +1710,7 @@
       if(owner.hp<=0)continue;
       const healing=Math.min(owner.maxHp-owner.hp,share+Number(index<remainder));
       if(healing<=0)continue;
-      owner.hp+=healing;
+      restoreHp(owner,owner,healing);
       flash(owner,"LIGHTNING ROD · +"+healing+" HP","#a8f9d4");
       healed.push({x:owner.x,y:owner.y});
     }
@@ -1749,6 +1770,7 @@
       const absorbed=Math.min(amount,shield.value);
       shield.value-=absorbed;
       amount-=absorbed;
+      tally(target,"tanked",absorbed);
       (state.bubbleShieldRipples??=[]).push({kind:shield.kind,targetId:target.id,age:0,popped:shield.value===0});
       flash(target,"BUBBLE −"+absorbed,"#9cefff");
       if(!shield.value)consumeStatus(target,shield.kind);
@@ -1785,9 +1807,10 @@
     if(reflected&&(target.id!==spell.mirrorTarget||source.hp<=0))return 0;
     const recipient=reflected?source:target;
     if(base>0&&source.team!==target.team&&card?.school&&card.school!=="fire"&&card.school!=="lightning"){
-      if(spell?.frozenTouchTargets?.[recipient.id])return 0;
+      if(spell?.frozenTouchTargets?.[recipient.id]){tally(recipient,"tanked",Math.floor(base*(spell?.damageVariant||1)*Builds.multiplier(source,card.school)));return 0;}
       if(consumeStatus(recipient,"frozen_touch")){
         if(spell)(spell.frozenTouchTargets??={})[recipient.id]=true;
+        tally(recipient,"tanked",Math.floor(base*(spell?.damageVariant||1)*Builds.multiplier(source,card.school)));
         flash(recipient,"FROZEN TOUCH · BLOCKED","#b8efff").frozenTouchRecipient=recipient.id;
         return 0;
       }
@@ -1813,7 +1836,7 @@
     if(aura&&aura.turns>0){raw*=1+aura.value;notes.push("AURA");}
     if(!reflected){
       gainElectricalChargeMana(target,card,spell);
-      if(blockWithWindDome(source,target,base,spell))return 0;
+      if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));return 0;}
     }
     if(base>0&&card?.school==="nature"){
       const bonus=growthBonus(source,spell);
@@ -1843,15 +1866,15 @@
     let solidity=spell?.solidityTargets?.[target.id];
     if(solidity===undefined){const ward=targetRune("solidity");solidity=ward?.value||0;
       if(spell){if(!spell.solidityTargets)spell.solidityTargets={};spell.solidityTargets[target.id]=solidity;}}
-    if(solidity){raw*=1-solidity;notes.push("SOLIDITY -25%");}
+    if(solidity){tally(recipient,"tanked",Math.floor(raw*solidity));raw*=1-solidity;notes.push("SOLIDITY -25%");}
     const shield=targetRune("shield");
-    if(shield){raw*=1-shield.value;notes.push("BLOCK");}
+    if(shield){tally(recipient,"tanked",Math.floor(raw*shield.value));raw*=1-shield.value;notes.push("BLOCK");}
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
     const amount=absorbBarrierDamage(recipient,impact-redirected);
     if(reflected){
-      source.hp=Math.max(0,source.hp-amount);
+      loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
       state.log=[source.name+" takes "+amount+" reflected damage.",...state.log].slice(0,5);
       if(!source.hp){source.defeatElapsedMs=0;flash(source,"DEFEATED","#ffd5b0");}
@@ -1859,7 +1882,7 @@
       return 0;
     }
     const oldHp=target.hp,wasAlive=target.hp>0;
-    target.hp=Math.max(0,target.hp-amount);
+    loseHp(source,target,amount);
     if(wasAlive&&target.hp===0){
       // Start the one-shot defeat animation at the exact lethal hit.
       // This remains independent of the attacker's ongoing summon/trace.
@@ -1892,7 +1915,7 @@
     const n=c&&c.hp>0?Math.min(Math.max(0,c.maxHp-c.hp),
       Math.max(0,a.vampPotentialHeal||0)):0;
     if(c&&c.hp>0){
-      c.hp+=n;flash(c,n?"+"+n+" HP":"FULL HP","#ffb6c4");
+      restoreHp(c,c,n);flash(c,n?"+"+n+" HP":"FULL HP","#ffb6c4");
       state.log=[c.name+" receives "+n+" HP from the vampire's orb.",
         ...state.log].slice(0,5);
     }
@@ -1936,7 +1959,7 @@
     if(!coat||card?.school!=="fire"||card.id==="gunpowderkiss"||spell?.runeResult==="failed"||state.round>=coat.expiresRound||coat.lastTriggerRound===state.round||(coat.triggers||0)>=3)return 0;
     coat.lastTriggerRound=state.round;coat.triggers=(coat.triggers||0)+1;
     const wasAlive=target.hp>0,amount=Math.min(target.hp,absorbBarrierDamage(target,coat.value||150));
-    target.hp=Math.max(0,target.hp-amount);
+    loseHp(getUnit(coat.sourceId)||getUnit(spell?.action?.casterId),target,amount);
     (state.gunpowderBursts??=[]).push({targetId:target.id,x:target.x,y:target.y,age:0});
     flash(target,"GUNPOWDER −"+amount,"#ffd38b");
     state.log=[target.name+"'s Gunpowder Coat sparks and explodes for "+amount+" damage; the coat remains.",...state.log].slice(0,5);
@@ -2052,7 +2075,7 @@
     message.quickSandDepth=curse.sinks;
     if(final){
       consumeStatus(unit,"quick_sand");
-      unit.hp=Math.max(0,unit.hp-amount);
+      loseHp(getUnit(curse.sourceId),unit,amount);
       if(!unit.hp){unit.defeatElapsedMs=0;flash(unit,"DEFEATED","#ffdb9c");}
     }
     return unit.hp>0;
@@ -2063,7 +2086,7 @@
     const vine=u.statuses.find(st=>st.kind==="thorny_wrap");
     a.thornTriggered=true;
     const amount=absorbBarrierDamage(u,vine.attemptDamage||150);
-    u.hp=Math.max(0,u.hp-amount);
+    loseHp(getUnit(vine.sourceId),u,amount);
     flash(u,"THORNS −"+amount,"#b1e781");
     state.log=[u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for "+amount+" damage.",...state.log].slice(0,5);
     if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2185,7 +2208,7 @@
     for(const u of state.units)for(const kind of ["calming_waters","healing_aura"]){const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));u.hp+=amount;effect.remaining--;
+      effect.lastTickRound=state.round;const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);effect.remaining--;
       flash(u,"+"+amount+" HP","#a8f1ee");state.log=[u.name+" restores "+amount+" HP from "+(kind==="healing_aura"?"Healing Aura":"Calming Waters")+" ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
       if(!effect.remaining)consumeStatus(u,kind);
     }
@@ -2197,10 +2220,10 @@
       const seed=kind==="healing_seed",name=seed?"Healing Seed":"Soul Drain";
       effect.lastTickRound=state.round;
       const drained=Math.min(u.hp,absorbBarrierDamage(u,effect.value));
-      u.hp-=drained;effect.remaining--;
       const caster=getUnit(effect.sourceId);
+      loseHp(caster,u,drained);effect.remaining--;
       const healed=caster?.hp>0?Math.min(drained,Math.max(0,caster.maxHp-caster.hp)):0;
-      if(healed){caster.hp+=healed;flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");}
+      if(healed){restoreHp(caster,caster,healed);flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");}
       flash(u,name.toUpperCase()+" −"+drained,seed?"#a4f5a8":"#d79ce7");
       state.log=[u.name+" loses "+drained+" HP to "+name+(healed?"; "+caster.name+" restores "+healed+" HP":"")+" ("+effect.remaining+" turns remaining).",...state.log].slice(0,5);
       if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2214,7 +2237,7 @@
       if(state.round<curse.expiresRound)continue;
       consumeStatus(u,"soulless");
       const amount=Math.min(u.hp,absorbBarrierDamage(u,curse.value));
-      u.hp-=amount;
+      loseHp(getUnit(curse.sourceId),u,amount);
       flash(u,"SOULLESS −"+amount,"#dfadff");
       state.log=[u.name+" takes "+amount+" damage from Soulless.",...state.log].slice(0,5);
       if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2225,7 +2248,7 @@
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,effect.value||50));u.hp-=amount;effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,effect.value||50));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
       flash(u,(effect.extreme?"EXTREME "+kind.toUpperCase()+" −":kind==="burn"?"BURN −":kind==="poison"?"POISON −":kind==="curse"?"CURSE −":"FROSTBITE −")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       state.log=[u.name+" takes "+amount+" "+(effect.extreme?"Extreme ":"")+kind+" damage ("+effect.remaining+" ticks remaining).",...state.log].slice(0,5);
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2486,7 +2509,7 @@
     } else if(card.kind==="heal"&&t&&t.hp>0&&t.team===c.team){
       // The heal cannot damage an enemy, resurrect a KO, or exceed max HP.
       const n=Math.min(directHealing(card,c,anim,t.hp<t.maxHp),Math.max(0,t.maxHp-t.hp));
-      t.hp+=n;flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
+      restoreHp(c,t,n);flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       state.log=[c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP",
         ...state.log].slice(0,5);
     } else if(card.kind==="freezing"&&canReceiveDebuff(t,"freezing_temps")&&t&&t.hp>0&&t.team!==c.team){
@@ -2496,7 +2519,7 @@
       const healing=directHealing(card,c,anim,allies.some(ally=>ally.hp<ally.maxHp));
       for(const ally of allies){
         const amount=Math.min(healing,Math.max(0,ally.maxHp-ally.hp));
-        ally.hp+=amount;
+        restoreHp(c,ally,amount);
         flash(ally,amount>0?"+"+amount+" HP":"FULL HP","#b6fff3");
       }
       state.log=[c.name+" casts "+card.name+", restoring up to "+healing+" HP to each living ally.",...state.log].slice(0,5);

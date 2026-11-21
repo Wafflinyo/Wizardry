@@ -100,3 +100,14 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-tem
 .studio-credit{display:flex;align-items:center;gap:.55rem;font-size:clamp(.76rem,2.7vw,1rem);letter-spacing:.025em;line-height:1.2}
 .studio-credit span{font-size:1.25em}
 .menu-music{flex:none;min-height:34px;white-space:nowrap}
+
+.match-results{width:min(55rem,calc(100% - 1rem));max-height:85dvh;overflow:auto;background:#102630;color:#edf7f8;border:1px solid #587581;border-radius:1rem;padding:clamp(.8rem,4vw,1.6rem)}
+.match-results::backdrop{background:rgb(3 15 22 / .75)}
+.match-results h1,.tower-progress h1{margin-top:0;color:#f1ddb0}
+.match-table-scroll{overflow-x:auto}
+.match-results table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.match-results th,.match-results td{padding:.6rem .4rem;border-bottom:1px solid #355460;text-align:right}
+.match-results th:first-child{text-align:left}
+.match-results small{display:block;color:#b0c9d1;font-weight:400}
+.tower-progress{max-width:43rem;margin-inline:auto}
+.tower-progress progress{display:block;width:100%;margin:.45rem 0 1rem;accent-color:#d7bc81}

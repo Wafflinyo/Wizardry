@@ -91,7 +91,10 @@
         // Removed beard tips expose cloth or transparency on the shaved atlas.
         if(role===1&&variant==="clean"&&(src[at+3]===0||src[at+2]>src[at]))continue;
         const bright=Math.max(src[at],src[at+1],src[at+2]);
-        const light=skinPixel ? .28+.72*bright/210:Math.max(.12,bright/levels[role]);
+        // Anchor the main face and finger midtones to the selected skin swatch.
+        // Keep the contact shadows under the brim, and roll off bright knuckle highlights.
+        const light=skinPixel ? (bright<100 ? .28+bright*.0055 : .83+(bright-100)*.0015)
+          : Math.max(.12,bright/levels[role]);
         for(let c=0;c<3;c++)pixels.data[at+c]=target?target[c]*light:ridge===1?src[at+c]*1.35+22:src[at+c]*.63;
       }
       pixel=end;

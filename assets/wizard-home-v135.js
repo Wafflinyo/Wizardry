@@ -3,7 +3,7 @@
 const api=window.WIZARDRY_ARENA_TEST,B=window.WizardryBuilds,cards=api.cards,portal=document.getElementById('portal'),KEY='wizardry.wizards.v135';
 
 let saved=[],active=null,draft=null,step=0,view='home',previewFrame=0,joinCode=new URLSearchParams(location.search).get('lobby');
-try{saved=JSON.parse(localStorage.getItem(KEY)||'[]').map(p=>B.normalize({...p,deck:p.masteries?.length===2&&p.deck?.length!==24?B.makeDeck(cards,p.masteries):p.deck?.map(id=>id==='perfectdefense'?'sentinelfissure':id)},cards));}catch{saved=[];}
+try{saved=JSON.parse(localStorage.getItem(KEY)||'[]').map(p=>B.normalize({...p,deck:p.masteries?.length===2&&p.deck?.length!==24?B.makeDeck(cards,p.masteries):p.deck?.map(id=>id==='perfectdefense'?'sentinelfissure':id==='golem'?'rogginbowler':id)},cards));}catch{saved=[];}
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=id=>document.getElementById(id),title=e=>B.names[e],btn=(text,action,cls='')=>`<button class="portal-btn ${cls}" data-action="${action}">${text}</button>`;
 function error(message){let n=el('portalError');if(!n){n=document.createElement('div');n.id='portalError';n.className='portal-error';n.setAttribute('role','alert');portal.prepend(n);}n.textContent=String(message);}

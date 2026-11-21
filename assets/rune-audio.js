@@ -40,18 +40,9 @@
     filter.connect(gain).connect(audio.destination);
 
     gain.gain.setValueAtTime(0,start);
-    const strokes=window.WIZARDRY_ELEMENT_TRACE_V45?.timingFor(cast.card?.school)||[{start:0,end:1}];
-    for(const stroke of strokes){
-      const on=start+Math.max(0,stroke.start*duration-elapsed);
-      const off=start+stroke.end*duration-elapsed;
-      const span=off-on;
-      if(span<.018)continue;
-      const level=.075+.11*stroke.end;
-      gain.gain.setValueAtTime(0,on);
-      gain.gain.linearRampToValueAtTime(level*.58,on+Math.min(.055,span*.3));
-      gain.gain.linearRampToValueAtTime(level,off-Math.min(.055,span*.25));
-      gain.gain.linearRampToValueAtTime(0,off);
-    }
+    gain.gain.linearRampToValueAtTime(.09,start+remaining*.12);
+    gain.gain.linearRampToValueAtTime(.18,start+remaining*.85);
+    gain.gain.linearRampToValueAtTime(0,end);
 
     // Each school has its own harmonic color and pitch motion, with the same stroke timing.
     const carrier=audio.createOscillator(),modulator=audio.createOscillator();

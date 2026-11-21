@@ -40,21 +40,24 @@
     filter.connect(gain).connect(audio.destination);
 
     gain.gain.setValueAtTime(0,start);
-    gain.gain.linearRampToValueAtTime(.09,start+remaining*.12);
-    gain.gain.linearRampToValueAtTime(.18,start+remaining*.85);
+    gain.gain.linearRampToValueAtTime(.11,start+remaining*.075);
+    gain.gain.linearRampToValueAtTime(.16,start+remaining*.34);
+    gain.gain.linearRampToValueAtTime(.21,start+remaining*.76);
+    gain.gain.linearRampToValueAtTime(.16,start+remaining*.93);
     gain.gain.linearRampToValueAtTime(0,end);
 
     // Each school has its own harmonic color and pitch motion, with the same stroke timing.
     const carrier=audio.createOscillator(),modulator=audio.createOscillator();
     const modulation=audio.createGain(),body=audio.createGain(),accent=audio.createOscillator(),spark=audio.createGain();
     for(const [tone,frequency] of [[carrier,pitch],[modulator,pitch*ratio],[accent,pitch*accentRatio]]){
-      tone.frequency.setValueAtTime(frequency,start);
+      tone.frequency.setValueAtTime(frequency*.79,start);
+      tone.frequency.exponentialRampToValueAtTime(frequency,start+remaining*.19);
       tone.frequency.exponentialRampToValueAtTime(frequency*rise,start+remaining*.78);
       tone.frequency.exponentialRampToValueAtTime(frequency*(1+(rise-1)*.68),end);
       tone.start(start);tone.stop(end+.08);
     }
     modulation.gain.setValueAtTime(pitch*depth*.38,start);
-    modulation.gain.linearRampToValueAtTime(pitch*depth,end);
+    modulation.gain.linearRampToValueAtTime(pitch*depth*.8,end);
     modulator.connect(modulation).connect(carrier.frequency);
     body.gain.value=.48;
     carrier.connect(body).connect(filter);
@@ -62,6 +65,21 @@
     spark.gain.linearRampToValueAtTime(accentLevel,start+remaining*.71);
     spark.gain.linearRampToValueAtTime(accentLevel*.48,end);
     accent.connect(spark).connect(filter);
+
+    // Two overlapping upper voices sweep in as the rune develops.
+    for(const [offset,interval,volume] of [[.23,1.50,.22],[.56,2.25,.15]]){
+      const at=start+remaining*offset,span=end-at;
+      const overtone=audio.createOscillator(),envelope=audio.createGain();
+      const frequency=pitch*interval;
+      overtone.frequency.setValueAtTime(frequency*.89,at);
+      overtone.frequency.exponentialRampToValueAtTime(frequency*rise,at+span*.48);
+      overtone.frequency.exponentialRampToValueAtTime(frequency*rise*.97,end);
+      envelope.gain.setValueAtTime(0,at);
+      envelope.gain.linearRampToValueAtTime(volume,at+span*.45);
+      envelope.gain.linearRampToValueAtTime(0,end);
+      overtone.connect(envelope).connect(filter);
+      overtone.start(at);overtone.stop(end);
+    }
 
     if(texture){
       if(!grain){
@@ -76,7 +94,7 @@
       const air=audio.createBufferSource(),color=audio.createBiquadFilter(),mix=audio.createGain();
       air.buffer=grain;air.loop=true;
       color.type="bandpass";color.frequency.value=high*.8;color.Q.value=.85;
-      mix.gain.value=texture;
+      mix.gain.value=texture*.46;
       air.connect(color).connect(mix).connect(filter);
       air.start(start);air.stop(end);
     }

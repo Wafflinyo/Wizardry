@@ -2,7 +2,7 @@
 (()=>{
   const Audio=window.AudioContext||window.webkitAudioContext;
   if(!Audio)return;
-  let audio,grain,flow,lastStage,lastCast;
+  let audio,flow,lastStage,lastCast;
   function unlock(){
     try{
       audio??=new Audio();
@@ -15,39 +15,30 @@
   document.addEventListener("click",unlock,{capture:true,passive:true});
 
   // Resonance entries specify material, frequency contour, time window and level.
-  // Texture entries specify filter type, frequency contour, time window and level.
   const schools={
     water:{
-      resonances:[["glass",[235,305,268],0,1,.27],["glass",[440,610,490],.14,.72,.19],["glass",[700,940,1140],.52,.96,.12]],
-      textures:[["bandpass",[470,880,520],0,1,.25]]
+      resonances:[["glass",[235,305,268],0,1,.27],["glass",[440,610,490],.14,.72,.19],["glass",[700,940,1140],.52,.96,.12]]
     },
     earth:{
-      resonances:[["stone",[100,129,116],0,1,.39],["stone",[185,150,118],.02,.39,.22],["glass",[410,332,258],.55,.96,.16]],
-      textures:[["lowpass",[490,310,200],0,.55,.30],["bandpass",[660,510,310],.48,.98,.23]]
+      resonances:[["stone",[100,129,116],0,1,.39],["stone",[185,150,118],.02,.39,.22],["glass",[410,332,258],.55,.96,.16]]
     },
     lightning:{
-      resonances:[["stone",[250,890,570],0,.42,.18,33],["electric",[320,635,870],.15,1,.12,41],["glass",[770,1380,1010],.57,.97,.18,28]],
-      textures:[["highpass",[1100,2200,1500],0,1,.13],["bandpass",[1800,4300,2400],.66,.95,.21]]
+      resonances:[["stone",[250,890,570],0,.42,.18],["electric",[320,635,870],.15,1,.12],["glass",[770,1380,1010],.57,.97,.18]]
     },
     nature:{
-      resonances:[["glass",[284,322,304],0,1,.22],["glass",[438,525,480],.03,.68,.23,5],["glass",[680,830,760],.29,.62,.17,7],["glass",[605,925,880],.58,.99,.21,6]],
-      textures:[["bandpass",[445,730,600],.10,.96,.10]]
+      resonances:[["glass",[284,322,304],0,1,.22],["glass",[438,525,480],.03,.68,.23],["glass",[680,830,760],.29,.62,.17],["glass",[605,925,880],.58,.99,.21]]
     },
     wind:{
-      resonances:[["glass",[350,495,635],0,1,.24,5],["glass",[760,605,910],.18,.87,.21,8],["glass",[970,1310,1035],.66,1,.17,6]],
-      textures:[["bandpass",[630,1520,960],0,1,.27]]
+      resonances:[["glass",[350,495,635],0,1,.24],["glass",[760,605,910],.18,.87,.21],["glass",[970,1310,1035],.66,1,.17]]
     },
     dark:{
-      resonances:[["stone",[202,155,105],0,1,.37,11],["glass",[322,266,181],.10,.91,.26],["glass",[640,424,268],.51,1,.20,8]],
-      textures:[["lowpass",[750,355,210],0,1,.21]]
+      resonances:[["stone",[202,155,105],0,1,.37],["glass",[322,266,181],.10,.91,.26],["glass",[640,424,268],.51,1,.20]]
     },
     fire:{
-      resonances:[["ember",[118,290,237],0,1,.17],["stone",[260,435,390],.07,.83,.22],["glass",[650,1050,765],.53,.97,.17]],
-      textures:[["bandpass",[610,1500,1020],0,1,.29],["highpass",[3200,5300,2900],.24,.61,.095]]
+      resonances:[["ember",[118,290,237],0,1,.17],["stone",[260,435,390],.07,.83,.22],["glass",[650,1050,765],.53,.97,.17]]
     },
     ice:{
-      resonances:[["glass",[467,480,464],0,1,.26],["glass",[1020,1030,1000],.03,.55,.20],["glass",[1480,1510,1492],.32,.89,.17],["glass",[1960,2020,2000],.59,1,.15]],
-      textures:[["highpass",[2700,3900,3000],.37,1,.10]]
+      resonances:[["glass",[467,480,464],0,1,.26],["glass",[1020,1030,1000],.03,.55,.20],["glass",[1480,1510,1492],.32,.89,.17],["glass",[1960,2020,2000],.59,1,.15]]
     }
   };
 
@@ -73,63 +64,31 @@
     return {gain,start,span,end,fraction:Math.max(0,(elapsed-first)/(last-first))};
   }
 
-  function noiseBuffer(){
-    if(!grain){
-      grain=audio.createBuffer(1,Math.ceil(audio.sampleRate*3),audio.sampleRate);
-      const data=grain.getChannelData(0);
-      let seed=2077;
-      for(let i=0;i<data.length;i++){
-        seed=(Math.imul(seed,1664525)+1013904223)>>>0;
-        data[i]=seed/2147483648-1;
-      }
-    }
-    return grain;
-  }
-
   function begin(cast){
     const elapsed=Math.max(0,cast.elapsed)/1000,duration=cast.duration/1000;
     const origin=audio.currentTime+.006,end=origin+duration-elapsed;
     const gain=audio.createGain(),filter=audio.createBiquadFilter();
     filter.type="lowpass";filter.frequency.value=4600;filter.Q.value=.25;
-    gain.gain.value=.72;
+    gain.gain.value=.42;
     filter.connect(gain).connect(audio.destination);
-    const {resonances,textures}=schools[cast.card?.school]||schools.wind;
-
-    for(const [character,frequencies,from,to,volume,motion] of resonances){
-      const cue=layer(filter,origin,duration,elapsed,from,to,volume*1.55);
-      if(!cue)continue;
-      // Broad, inharmonic resonances respond to coarse grains, like rubbed metal or stone.
-      const source=audio.createBufferSource();
-      source.buffer=noiseBuffer();source.loop=true;
-      const spread=character==="glass"?1.73:character==="stone"?2.31:3.17;
-      for(const [scale,width,level] of [[1,2.6,1],[spread,3.8,.56]]){
-        const resonance=audio.createBiquadFilter(),mix=audio.createGain();
-        resonance.type="bandpass";
-        resonance.Q.value=width;
-        contour(resonance.frequency,frequencies.map(hz=>hz*scale),cue.start,cue.span,cue.fraction);
-        mix.gain.value=level;
-        source.connect(resonance).connect(mix).connect(cue.gain);
-      }
-      if(motion){
-        const flutter=audio.createOscillator(),depth=audio.createGain();
-        flutter.frequency.value=motion*1.29;
-        depth.gain.value=volume*.085;
-        flutter.connect(depth).connect(cue.gain.gain);
-        flutter.start(cue.start);flutter.stop(cue.end);
-      }
-      source.start(cue.start,(from*1.71+frequencies[0]/1000)%1);
-      source.stop(cue.end);
-    }
-
-    for(const [type,frequencies,from,to,volume] of textures){
+    const {resonances}=schools[cast.card?.school]||schools.wind;
+    for(const [character,frequencies,from,to,volume] of resonances){
       const cue=layer(filter,origin,duration,elapsed,from,to,volume);
       if(!cue)continue;
-      const noise=audio.createBufferSource(),color=audio.createBiquadFilter();
-      noise.buffer=noiseBuffer();noise.loop=true;
-      color.type=type;color.Q.value=.65;
-      contour(color.frequency,frequencies,cue.start,cue.span,cue.fraction);
-      noise.connect(color).connect(cue.gain);
-      noise.start(cue.start);noise.stop(cue.end);
+      // Inharmonic partials give each voice a ringing edge without a breath layer.
+      const partials=character==="glass"?[[1,.61],[2.41,.23],[4.17,.15]]:
+        character==="stone"?[[1,.69],[1.61,.23],[3.72,.12]]:
+        character==="electric"?[[1,.56],[2.72,.28],[4.51,.14]]:
+        [[1,.60],[1.91,.23],[3.36,.16]];
+      for(const [ratio,level] of partials){
+        const tone=audio.createOscillator(),mix=audio.createGain();
+        tone.type=ratio===1&&character!=="glass"?"triangle":"sine";
+        contour(tone.frequency,frequencies.map(hz=>hz*ratio),cue.start,cue.span,cue.fraction);
+        mix.gain.setValueAtTime(level,cue.start);
+        if(ratio!==1)mix.gain.exponentialRampToValueAtTime(level*.24,cue.end);
+        tone.connect(mix).connect(cue.gain);
+        tone.start(cue.start);tone.stop(cue.end);
+      }
     }
     return {gain,end};
   }

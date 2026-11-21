@@ -372,14 +372,19 @@
     ctx.restore();
   }
   function drawDressedFrame(ctx,art,kind,i,top,look){
-    if(["hood","top","round"].includes(look?.hat)){
-      const [x,y]=hairAnchors[kind][i];
-      const angle=kind==="wizard"?-.19:[-.11,-.19,-.36,-.05,0,.23,.45,.45][i];
-      ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);
-      window.WizardHats.draw(ctx,look,x,y,angle);ctx.restore();
-      art=window.WizardHats.withoutHat(art,kind);
+    const hat=look?.hat;
+    if(!["hood","top","round"].includes(hat)){
+      ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+      return;
     }
-    ctx.drawImage(art,(i%4)*128,Math.floor(i/4)*128,128,128,-74,top,148,220);
+    const [x,y]=hairAnchors[kind][i];
+    const angle=kind==="wizard"?-.19:[-.11,-.19,-.36,-.05,0,.23,.45,.45][i];
+    const hats=window.WizardHats;
+    ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);
+    hats.draw(ctx,look,x,y,angle);
+    ctx.drawImage(hats.withoutHat(art,kind),(i%4)*128,Math.floor(i/4)*128,128,128,0,0,128,128);
+    if(hat==="hood")hats.draw(ctx,look,x,y,angle,true);
+    ctx.restore();
   }
   function drawDefeatSprite(ctx,elapsedMs,look){
     if(!defeatAtlasReady())return false;

@@ -14,7 +14,7 @@ window.WizardHats=(()=>{
     stripped.set(source,canvas);return canvas;
   }
   const designs=new Map();
-  function makeHat(style,fabric,trim){
+  function makeHat(style,fabric,trim,front){
     // Rasterize at the same texel density as the 128px character frames.
     const canvas=document.createElement("canvas");canvas.width=80;canvas.height=88;
     const g=canvas.getContext("2d");g.translate(40,52);
@@ -23,7 +23,14 @@ window.WizardHats=(()=>{
       g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
       g.closePath();g.fill();
     }
+    if(front){
+      // The near edge sits over the sprite seam at the side of the head.
+      facet([[-9,-2],[-5,1],[-8,9],[-7,16],[-2,20],[-9,23],[-16,16],[-15,7]],fabric,.82);
+      facet([[-9,-2],[-5,1],[-8,9],[-7,16],[-2,20],[-6,22],[-11,17],[-12,10],[-10,2]],trim,.86);
+      return canvas;
+    }
     if(style==="hood"){
+      facet([[-16,-12],[9,-14],[17,-6],[12,2],[3,10],[-5,16],[-18,12]],fabric,.78);
       // Tailored cloth stays close to the skull and folds into the shoulder.
       const hood=[[-32,23],[-24,10],[-24,-7],[-20,-19],[-11,-26],[4,-27],[15,-20],[20,-11],[18,-4],[12,-8],[5,-6],[0,0],[-3,9],[-2,16],[1,19],[-9,24],[-21,28]];
       facet(hood,fabric,.53);
@@ -41,12 +48,12 @@ window.WizardHats=(()=>{
     }else{
       const tall=style==="top";
       const rim=tall?[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]]:
-        [[-33,-5],[-24,-9],[5,-10],[24,-10],[34,-9],[36,-4],[27,4],[7,9],[-19,6]];
+        [[-31,-2],[-24,-8],[5,-10],[23,-9],[30,-6],[33,-2],[27,4],[7,8],[-20,5]];
       facet(rim,fabric,.97);
       const outer=rim.slice(4).concat([rim[0]]);
       facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
       facet(tall?[[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]]:
-        [[7,9],[27,4],[36,-4],[36,-1],[27,7],[7,12]],fabric,.77);
+        [[7,8],[27,4],[33,-2],[33,1],[27,7],[7,11]],fabric,.77);
 
       if(tall){
         // Short, straight-sided crown with a lid and two visible wall planes.
@@ -72,7 +79,7 @@ window.WizardHats=(()=>{
         facet([[-26,-7],[-11,-2],dome[11],dome[0]],trim,.69);
         facet([[-11,-2],[10,-2],dome[10],dome[11]],trim,1.03);
         facet([[10,-2],[27,-7],dome[9],dome[10]],trim,.81);
-        facet([[-33,-5],[-24,1],[-11,5],[7,7],[27,2],[36,-4],[27,4],[7,9],[-19,6]],fabric,1.12);
+        facet([[-31,-2],[-21,2],[-10,4],[7,6],[24,2],[33,-2],[27,4],[7,8],[-20,5]],fabric,1.10);
       }
 
       const gem=tall?[[10,-8],[16,-7],[17,-2],[13,3],[8,1],[7,-4]]:
@@ -86,12 +93,12 @@ window.WizardHats=(()=>{
     }
     return canvas;
   }
-  function draw(ctx,look,x,y,angle){
+  function draw(ctx,look,x,y,angle,front=false){
     const fabric=look.hatColor||"#6f4ab4",trim=look.hatTrim&&look.hatTrim!=="original"?look.hatTrim:"#ecaf49";
-    const key=[look.hat,fabric,trim].join("|");
+    const key=[look.hat,fabric,trim,front].join("|");
     if(!designs.has(key)){
       if(designs.size>=64)designs.delete(designs.keys().next().value);
-      designs.set(key,makeHat(look.hat,fabric,trim));
+      designs.set(key,makeHat(look.hat,fabric,trim,front));
     }
     ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.drawImage(designs.get(key),-40,-52);ctx.restore();
   }

@@ -1,12 +1,10 @@
 /* Sentinel Fissure: fixed low-poly poses and staggered arena debris. */
 (()=>{
-  const stomp=2700,step=75,frameCount=73;
+  const stomp=2700;
   const clamp=n=>Math.max(0,Math.min(1,n));
-  const mix=(a,b,t)=>a+(b-a)*t;
   const ease=n=>{const t=clamp(n);return t*t*(3-2*t);};
   const hash=n=>{const x=Math.sin(n*91.413+6.7)*43758.5453;return x-Math.floor(x);};
   const stone=["#403829","#5d5240","#827056","#a18d6b","#c6ae7f"];
-  const frames=[];
   function poly(g,points,fill){
     g.fillStyle=fill;g.beginPath();g.moveTo(...points[0]);
     for(const point of points.slice(1))g.lineTo(...point);
@@ -22,55 +20,29 @@
     poly(g,[d,e,f,[.27*w,.19*h]],palette[0]);
     g.restore();
   }
-  function limb(g,x,y,tx,ty,width){
-    slab(g,(x+tx)/2,(y+ty)/2,width,Math.hypot(tx-x,ty-y)*1.27,Math.atan2(x-tx,ty-y));
-  }
-  function actorFrame(index){
-    if(frames[index])return frames[index];
-    const frame=document.createElement("canvas");frame.width=440;frame.height=370;
-    const g=frame.getContext("2d"),ms=index*step;
-    const rise=ease(ms/1450),look=ease((ms-1510)/630);
-    const lift=ease((ms-2100)/430)*(1-ease((ms-2530)/170));
-    const stride=ease((ms-2150)/550),settle=Math.sin(Math.PI*ease((ms-stomp)/420));
-    const exit=ease((ms-4770)/590);
-    const hipX=-9+stride*31,hipY=-120+16*(1-rise)+12*settle;
-    const shoulderX=hipX+look*8,shoulderY=hipY-93+lift*8;
-    const footX=28+stride*80,footY=-10-lift*58;
-    g.translate(194,338);
-    g.beginPath();g.rect(-194,-338,440,339);g.clip();
-    g.translate(0,(1-rise)*295+exit*285);
-    const far=["#302b24","#494035","#685946","#8c765d","#a98f6a"];
-    limb(g,hipX-24,hipY,-47,-64,50);
-    limb(g,-47,-64,-49,-16,45);slab(g,-37,-13,73,25,-.06,far);
-    limb(g,shoulderX-30,shoulderY+4,shoulderX-52,shoulderY+45,49);
-    limb(g,shoulderX-52,shoulderY+45,shoulderX-29,shoulderY+79,42);
-    slab(g,hipX,hipY,108,67,.03);
-    const kneeX=mix(hipX+27,footX,.57)+lift*16,kneeY=mix(hipY,footY,.54)-lift*12;
-    limb(g,hipX+27,hipY,kneeX,kneeY,55);
-    slab(g,kneeX,kneeY,58,42,-.12);
-    limb(g,kneeX,kneeY,footX,footY,46);
-    slab(g,footX+10,footY,81,31,lift*.21);
-    slab(g,shoulderX-3,shoulderY+26,153,118,.10+lift*.08);
-    slab(g,shoulderX+11,shoulderY+32,85,66,.12);
-    poly(g,[[shoulderX+7,shoulderY+14],[shoulderX+25,shoulderY+34],
-      [shoulderX+12,shoulderY+51],[shoulderX+1,shoulderY+32]],"#d8a353");
-    poly(g,[[shoulderX+7,shoulderY+14],[shoulderX+12,shoulderY+51],[shoulderX+1,shoulderY+32]],"#f0c982");
-    const headX=shoulderX+12+look*17,headY=shoulderY-56+look*12;
-    slab(g,headX,headY,78,72,look*.27);
-    slab(g,headX+25,headY+6,41,38,look*.24);
-    poly(g,[[headX+12,headY-5],[headX+39,headY+3],[headX+29,headY+9],[headX+13,headY+4]],"#352e23");
-    poly(g,[[headX+16,headY-2],[headX+34,headY+3],[headX+29,headY+5],[headX+17,headY+2]],"#ffd186");
-    const nearX=shoulderX-45,nearY=shoulderY+8,elbowX=nearX-20-lift*13,elbowY=nearY+59;
-    limb(g,nearX,nearY,elbowX,elbowY,60);
-    slab(g,nearX,nearY,80,58,-.22);
-    limb(g,elbowX,elbowY,elbowX+25+stride*18,elbowY+43,57);
-    slab(g,elbowX+30+stride*18,elbowY+47,57,46,-.20);
-    frames[index]=frame;
-    return frame;
+  const atlas=new Image(),ready=[];
+  atlas.onload=()=>ready.splice(0).forEach(callback=>callback());
+  atlas.src="./assets/sentinel-fissure-frames.webp";
+  const cell=256,scale=1.16;
+  // Rear-foot coordinates keep the supporting leg locked as the lead leg moves.
+  const rearX=[67,66,66,66,67,67,68,69,70,71,69,68,66,63,63,62];
+  const rearY=[233,233,233,233,233,233,233,233,234,234,234,234,234,234,234,234];
+  const poses=[0,330,635,930,1240,1510,1710,1950,2160,2310,2410,2560,stomp,2820,2990,3200];
+
+  function drawPose(g,index){
+    g.drawImage(atlas,index%4*cell,Math.floor(index/4)*cell,cell,cell,
+      -61-rearX[index]*scale,-rearY[index]*scale,cell*scale,cell*scale);
   }
   function actor(g,{x,y,dir,elapsed}){
-    g.save();g.translate(x,y);g.scale(dir*.96,.96);
-    g.drawImage(actorFrame(Math.min(frameCount-1,Math.floor(Math.max(0,elapsed)/step))),-194,-338);
+    if(!atlas.naturalWidth)return;
+    let index=0;
+    while(index+1<poses.length&&elapsed>=poses[index+1])index++;
+    const emerge=(1-ease(elapsed/1150))*113;
+    const sink=ease((elapsed-4770)/610)*300;
+    g.save();g.translate(x,y);g.scale(dir,1);
+    g.beginPath();g.rect(-320,-410,640,412);g.clip();
+    g.translate(0,emerge+sink);
+    drawPose(g,index);
     g.restore();
   }
   function fissures(g,{x,y,dir,elapsed}){
@@ -141,9 +113,15 @@
       {x:target.x,y:target.y,at:hitAt,size:107,spire:true,big:true}];
   }
   function portrait(g,w,h){
-    g.save();g.translate(w*.46,h*.91);const scale=h*.88/305;g.scale(scale,scale);
-    g.drawImage(actorFrame(25),-194,-338);
+    if(!atlas.naturalWidth)return;
+    const zoom=Math.min(w/315,h/275)*.91;
+    g.save();g.translate(w*.47,h*.94);g.scale(zoom,zoom);
+    drawPose(g,6);
     g.restore();
+  }
+  function onReady(callback){
+    if(atlas.naturalWidth)callback();
+    else ready.push(callback);
   }
   function shake(progress,dir,hit){
     const elapsed=progress*5440;
@@ -151,5 +129,5 @@
     const strength=(stompAge>=0?11*Math.exp(-stompAge/215):0)+(hitAge>=0?7*Math.exp(-hitAge/165):0);
     return {x:dir*Math.sin(elapsed*.047)*strength,y:Math.cos(elapsed*.059)*strength*.67};
   }
-  window.SentinelFissure={actor,fissures,debris,entries,portrait,shake};
+  window.SentinelFissure={actor,fissures,debris,entries,portrait,shake,onReady};
 })();

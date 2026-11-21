@@ -3677,6 +3677,7 @@
   }
   function setupSprites(){
     window.MeteorShower?.onReady(drawCardArts);
+    window.SentinelFissure?.onReady(drawCardArts);
     window.DarkSorcerer?.onReady(drawCardArts);
     window.SticksAndStones?.onReady(drawCardArts);
     window.CrabGiant?.onReady(drawCardArts);

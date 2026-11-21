@@ -23,12 +23,16 @@ window.WizardHats=(()=>{
       g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
       g.closePath();g.fill();
     }
+    // Match the pointed sprite's darker cloth while retaining each facet's contrast.
+    function cloth(points,light){
+      facet(points,fabric,light*.90-.13);
+    }
     if(front){
       // The near cloth covers the original side of the head up to the binding.
       // The open face and the lower robe collar remain part of the base sprite.
-      facet([[-23,-8],[-17,-4],[-11,-15],[1,-9],[7,3],[3,6],[0,10],[0,16],[-12,19],[-22,14],[-24,8]],fabric,.88);
-      facet([[-23,-8],[-17,-4],[-15,12],[-22,14],[-24,8]],fabric,.69);
-      facet([[-15,12],[-8,3],[0,10],[0,16],[-12,19]],fabric,.73);
+      cloth([[-23,-8],[-17,-4],[-11,-15],[1,-9],[7,3],[3,6],[0,10],[0,16],[-12,19],[-22,14],[-24,8]],.88);
+      cloth([[-23,-8],[-17,-4],[-15,12],[-22,14],[-24,8]],.69);
+      cloth([[-15,12],[-8,3],[0,10],[0,16],[-12,19]],.73);
       facet([[19,3],[13,2],[7,3],[3,6],[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9],[-2,4],[3,0],[12,-2],[18,-2]],trim,.93);
       facet([[0,10],[0,16],[2,19],[-2,21],[-5,17],[-5,9]],trim,.76);
       return canvas;
@@ -36,30 +40,30 @@ window.WizardHats=(()=>{
     if(style==="hood"){
       // Tailored cloth stays close to the skull and folds into the shoulder.
       const hood=[[-25,18],[-24,10],[-24,-7],[-20,-19],[-11,-26],[4,-27],[15,-20],[19,-9],[19,3],[13,2],[7,3],[3,6],[0,10],[0,16],[2,19],[-9,23],[-19,23]];
-      facet(hood,fabric,.53);
-      facet([hood[2],hood[3],hood[4],[-11,-15],[-17,-4]],fabric,.76);
-      facet([hood[4],hood[5],hood[6],[4,-17],[-11,-15]],fabric,1.19);
-      facet([[-11,-15],[4,-17],hood[6],hood[7],hood[9],[1,-9]],fabric,.99);
-      facet([hood[2],[-17,-4],[-11,-15],[1,-9],[-7,3],[-15,12],hood[1]],fabric,.88);
-      facet([[-17,-4],[-15,12],[-24,18],hood[1]],fabric,.69);
-      facet([hood[0],[-24,18],[-15,12],[-12,20],hood[16]],fabric,.96);
-      facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
-      facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
+      cloth(hood,.53);
+      cloth([hood[2],hood[3],hood[4],[-11,-15],[-17,-4]],.76);
+      cloth([hood[4],hood[5],hood[6],[4,-17],[-11,-15]],1.19);
+      cloth([[-11,-15],[4,-17],hood[6],hood[7],hood[9],[1,-9]],.99);
+      cloth([hood[2],[-17,-4],[-11,-15],[1,-9],[-7,3],[-15,12],hood[1]],.88);
+      cloth([[-17,-4],[-15,12],[-24,18],hood[1]],.69);
+      cloth([hood[0],[-24,18],[-15,12],[-12,20],hood[16]],.96);
+      cloth([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],.73);
+      cloth([hood[16],[-12,20],hood[13],hood[14],hood[15]],.62);
     }else{
       const rim=[[-30,-3],[-22,-8],[8,-10],[23,-8],[29,-8],[29,-3],[21,2],[1,8],[-21,5]];
-      facet(rim,fabric,.97);
+      cloth(rim,.97);
       const outer=rim.slice(4).concat([rim[0]]);
       const underside=outer.map(([x,y])=>[x,y+(x>=21?1.2:3)]);
-      facet([...outer,...underside.slice().reverse()],fabric,.52);
-      facet([outer[3],outer[2],outer[1],underside[1],underside[2],underside[3]],fabric,.77);
+      cloth([...outer,...underside.slice().reverse()],.52);
+      cloth([outer[3],outer[2],outer[1],underside[1],underside[2],underside[3]],.77);
       // Short, straight-sided crown with a lid and two visible wall planes.
       const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
-      facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);
-      facet([lid[6],lid[5],[12,2],[-9,2]],fabric,1.03);
-      facet([lid[5],lid[4],[20,-3],[12,2]],fabric,.76);
-      facet(lid,fabric,1.16);
-      facet([lid[0],lid[1],lid[2],[-1,-28],lid[6]],fabric,1.24);
-      facet([lid[2],lid[3],lid[4],lid[5],[-1,-28]],fabric,.94);
+      cloth([lid[0],lid[6],[-9,2],[-17,-2]],.64);
+      cloth([lid[6],lid[5],[12,2],[-9,2]],1.03);
+      cloth([lid[5],lid[4],[20,-3],[12,2]],.76);
+      cloth(lid,1.16);
+      cloth([lid[0],lid[1],lid[2],[-1,-28],lid[6]],1.24);
+      cloth([lid[2],lid[3],lid[4],lid[5],[-1,-28]],.94);
       facet([[-18,-9],[-9,-5],[-9,2],[-17,-2]],trim,.59);
       facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
       facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);

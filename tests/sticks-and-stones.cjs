@@ -35,9 +35,9 @@ for(const [index,entry] of targets.entries()){
   updateCastSequence(entry.hitAt-animation.elapsed-1);
   assert.equal(enemies[index].hp,1000);
   updateCastSequence(1);
-  assert.equal(enemies[index].hp,index===3?1000:680);
+  assert.equal(enemies[index].hp,index===3?1000:730);
   updateCastSequence(1);
-  assert.equal(enemies[index].hp,index===3?1000:680);
+  assert.equal(enemies[index].hp,index===3?1000:730);
 }
 assert.equal(enemies[0].statuses[0].school,'wind');
 assert.equal(enemies[0].statuses[0].kind,'decay_mark');
@@ -72,4 +72,4 @@ for(const dir of [-1,1]){
   assert.equal(calls.at(-1)[2],4*256,'boulder draws from the effects row');
   assert.deepEqual(positions.at(-1),[opts.x+dir*94,opts.y-106],'the stone meets the bat at contact');
 }
-console.log('Sticks and Stones: 1–4 targets, staggered 320 damage, independent Wind runes, Wind Dome, and mirrored sprite cues passed.');
+console.log('Sticks and Stones: 1–4 targets, staggered 270 damage, independent Wind runes, Wind Dome, and mirrored sprite cues passed.');

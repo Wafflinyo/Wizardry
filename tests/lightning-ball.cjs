@@ -23,7 +23,7 @@ for(const [rolls,expected] of [[[.9],1],[[.1,.9],2],[[.1,.1],3]]){
     updateCastSequence(arrive-animation.elapsed-1);
     assert.equal(enemies[index].hp,1000,'no damage in flight');
     updateCastSequence(1);
-    assert.equal(enemies[index].hp,1000-[350,315,283][index],'damage lands on arrival');
+    assert.equal(enemies[index].hp,1000-[315,283,254][index],'damage lands on arrival');
     assert.equal(animation.lightningBallHits.filter(entry=>entry.done).length,index+1);
   }
   updateCastSequence(600);

@@ -1,22 +1,35 @@
-/* One music transport across every menu. Combat uses its own audio cues. */
+/* One music transport for menus and battles. */
 (()=>{
   const Audio=window.AudioContext||window.webkitAudioContext;
   if(!Audio)return;
   const storageKey="wizardry.menuMusic.muted";
   const period=30;
-  let muted=false,context,buffer,loading,source,gain,offset=0,started=0;
+  const tracks={
+    menu:{url:"./assets/wizardry-menu-theme.m4a",volume:.56,offset:0},
+    battle:{url:"./assets/wizardry-battle-theme.m4a",volume:.47,offset:0}
+  };
+  let muted=false,context,playing,unlocked=false;
   try{muted=localStorage.getItem(storageKey)==="1";}catch{}
-  const inMenu=()=>document.body.dataset.screen!=="battle";
-  const canPlay=()=>inMenu()&&!document.hidden&&!muted;
+  const selectedTrack=()=>document.body.dataset.screen==="battle"?tracks.battle:tracks.menu;
 
   function pause(){
-    if(!source)return;
-    offset=(offset+Math.max(0,context.currentTime-started))%source.loopEnd;
-    const old=source;
-    source=null;
+    if(!playing)return;
+    const {track,source,gain,started}=playing;
+    track.offset=(track.offset+Math.max(0,context.currentTime-started))%source.loopEnd;
+    playing=null;
     gain.gain.cancelScheduledValues(context.currentTime);
     gain.gain.setTargetAtTime(0,context.currentTime,.012);
-    old.stop(context.currentTime+.055);
+    source.stop(context.currentTime+.055);
+  }
+
+  function load(track){
+    if(track.buffer||track.loading)return;
+    track.loading=fetch(track.url)
+      .then(response=>{if(!response.ok)throw Error("Music unavailable");return response.arrayBuffer();})
+      .then(bytes=>context.decodeAudioData(bytes))
+      .then(decoded=>{track.buffer=decoded;sync();})
+      .catch(()=>{})
+      .finally(()=>{track.loading=null;});
   }
 
   function sync(){
@@ -25,31 +38,29 @@
       control.textContent=muted?"Music Off":"Music On";
       control.setAttribute("aria-pressed",String(!muted));
     }
-    if(!canPlay()){pause();return;}
-    if(source||!buffer||context?.state!=="running")return;
-    source=context.createBufferSource();gain=context.createGain();
-    source.buffer=buffer;source.loop=true;source.loopEnd=Math.min(period,buffer.duration);
+    const track=selectedTrack();
+    if(playing&&(playing.track!==track||document.hidden||muted))pause();
+    if(track===tracks.menu)tracks.battle.offset=0;
+    if(!unlocked||document.hidden||muted||!context)return;
+    if(!track.buffer){load(track);return;}
+    if(playing||context.state!=="running")return;
+    const source=context.createBufferSource(),gain=context.createGain();
+    source.buffer=track.buffer;source.loop=true;source.loopEnd=Math.min(period,track.buffer.duration);
     gain.gain.setValueAtTime(0,context.currentTime);
-    gain.gain.setTargetAtTime(.56,context.currentTime,.071);
+    gain.gain.setTargetAtTime(track.volume,context.currentTime,.071);
     source.connect(gain).connect(context.destination);
-    started=context.currentTime;
-    source.start(0,offset%source.loopEnd);
+    playing={track,source,gain,started:context.currentTime};
+    source.start(0,track.offset%source.loopEnd);
   }
 
   function unlock(){
-    if(!canPlay())return;
+    if(document.hidden||muted)return;
     try{
       if(!context){context=new Audio();context.addEventListener("statechange",sync);}
+      unlocked=true;
       if(context.state!=="running")context.resume().then(sync).catch(()=>{});
-      if(!buffer&&!loading){
-        loading=fetch("./assets/wizardry-menu-theme.m4a")
-          .then(response=>{if(!response.ok)throw Error("Music unavailable");return response.arrayBuffer();})
-          .then(bytes=>context.decodeAudioData(bytes))
-          .then(decoded=>{buffer=decoded;sync();})
-          .catch(()=>{})
-          .finally(()=>{loading=null;});
-      }
       sync();
+      load(tracks.battle);
     }catch{}
   }
 

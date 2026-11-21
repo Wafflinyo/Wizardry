@@ -6,7 +6,7 @@
   const period=30;
   const tracks={
     menu:{url:"./assets/wizardry-menu-theme.m4a",volume:.56,offset:0},
-    battle:{url:"./assets/wizardry-battle-theme-v2.m4a",volume:.47,offset:0}
+    battle:{url:"./assets/wizardry-battle-theme-v3.m4a",volume:.47,offset:0}
   };
   let muted=false,context,playing,unlocked=false;
   try{muted=localStorage.getItem(storageKey)==="1";}catch{}

@@ -88,11 +88,11 @@ function renderBinder(profile){
  const ordered=B.orderedSpells(cards,binderElement);
  const required=B.deckSize(B.unlockedSpells(cards,profile.masteries,profile.level));
  const page=ordered.map((card,index)=>{
-   const unlock=B.unlockLevel(index),locked=profile.level<unlock;
+   const unlock=B.unlockLevel(index,profile.masteries.length),locked=profile.level<unlock;
    const count=profile.deck.filter(id=>id===card.id).length;
-   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}${locked?`<span class="binder-unlock">Unlocks at level ${unlock}</span>`:''}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||locked||count>=3||profile.deck.length>=required?'disabled':''}>+</button></div></article>`;
+   return `<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}" aria-label="View ${escape(card.name)}">${binderFace(card,profile)}${locked?`<span class="binder-unlock">Unlocks at level ${unlock}</span>`:''}</button><div class="deck-counter"><button type="button" data-deck="${card.id}" data-delta="-1" aria-label="Remove ${escape(card.name)}" ${!count?'disabled':''}>−</button><b aria-label="${count} copies">${count}</b><button type="button" data-deck="${card.id}" data-delta="1" aria-label="Add ${escape(card.name)}" ${!mastered||locked||count>=B.MAX_COPIES||profile.deck.length>=required?'disabled':''}>+</button></div></article>`;
  }).join('');
- return `<div class="binder-head"><h2>Grimoire binder</h2><p aria-live="polite">${profile.deck.length} / ${required} cards · 3 copies maximum</p></div><nav class="binder-tabs" aria-label="Grimoire elements">${tabs}</nav><div class="binder-tools">${btn('Fill deck','allCards','small subtle')}${btn('Clear deck','clearDeck','small subtle')}</div>${mastered?'':'<p class="portal-note">Choose this element as a mastery to add its cards.</p>'}<div class="binder-grid">${page}</div>`;
+ return `<div class="binder-head"><h2>Grimoire binder</h2><p aria-live="polite">${profile.deck.length} / ${required} cards · ${B.MAX_COPIES} copies maximum</p></div><nav class="binder-tabs" aria-label="Grimoire elements">${tabs}</nav><div class="binder-tools">${btn('Fill deck','allCards','small subtle')}${btn('Clear deck','clearDeck','small subtle')}</div>${mastered?'':'<p class="portal-note">Choose this element as a mastery to add its cards.</p>'}<div class="binder-grid">${page}</div>`;
 }
 const cardDialog=el('binderCardDetail');
 function inspectBinderCard(id){
@@ -199,7 +199,7 @@ function renderProgression(){
  const floor=coOp?(party.length?partyFloor(party):tower.floor):active.level;
  const leveledUp=winner===0&&active.lastTowerWin===tower.id&&active.level===tower.floor+1;
  const newCards=leveledUp?active.masteries.flatMap(school=>
-   B.orderedSpells(cards,school).filter((_,i)=>B.unlockLevel(i)===active.level)):[];
+   B.orderedSpells(cards,school).filter((_,i)=>B.unlockLevel(i,active.masteries.length)===active.level)):[];
  const rewards=newCards.length?`<section class="tower-unlocks" aria-labelledby="unlockedSpells"><h2 id="unlockedSpells">New spells unlocked</h2><div class="binder-grid">${newCards.map(card=>`<button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button>`).join('')}</div></section>`:'';
  const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
@@ -319,7 +319,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
    if(delta<0){const at=profile.deck.indexOf(id);if(at>=0)profile.deck.splice(at,1);}
    else {
      const available=B.unlockedSpells(cards,profile.masteries,profile.level);
-     if(profile.deck.length<B.deckSize(available)&&profile.deck.filter(x=>x===id).length<3&&available.some(c=>c.id===id))profile.deck.push(id);
+     if(profile.deck.length<B.deckSize(available)&&profile.deck.filter(x=>x===id).length<B.MAX_COPIES&&available.some(c=>c.id===id))profile.deck.push(id);
    }
    render();portal.querySelector(`[data-deck="${id}"][data-delta="${delta}"]:not([disabled])`)?.focus({preventScroll:true});return;
  }

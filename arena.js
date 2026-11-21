@@ -2784,7 +2784,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of CARDS)for(let copy=0;copy<3;copy++){
+      for(const k of CARDS)for(let copy=0;copy<Builds.MAX_COPIES;copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;

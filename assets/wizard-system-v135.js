@@ -18,22 +18,28 @@ function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));ret
 function orderedSpells(cards,school){
  return cards.filter(c=>c.school===school).sort((a,b)=>a.cost-b.cost||(a.id<b.id?-1:a.id>b.id?1:0));
 }
-function unlockLevel(index){return index<5?1:5*(1+Math.floor((index-5)/2));}
-function unlockedSpells(cards,masteries,level){
- return masteries.flatMap(school=>orderedSpells(cards,school).filter((_,i)=>unlockLevel(i)<=level));
+const MAX_COPIES=4;
+function unlockLevel(index,masteryCount){
+ const single=masteryCount===1;
+ const starters=single?6:4;
+ if(index<starters)return 1;
+ return Math.min(15,5*(1+Math.floor((index-starters)/(single?1:2))));
 }
-function deckSize(available){return Math.min(24,3*available.length);}
+function unlockedSpells(cards,masteries,level){
+ return masteries.flatMap(school=>orderedSpells(cards,school).filter((_,i)=>unlockLevel(i,masteries.length)<=level));
+}
+function deckSize(available){return Math.min(24,MAX_COPIES*available.length);}
 function progressionDeck(cards,masteries,level,current=[]){
  const available=unlockedSpells(cards,masteries,level),limit=deckSize(available);
  const legal=new Set(available.map(c=>c.id)),counts=new Map(),deck=[];
  function add(id){
   const copies=counts.get(id)||0;
-  if(deck.length>=limit||copies>=3||!legal.has(id))return;
+  if(deck.length>=limit||copies>=MAX_COPIES||!legal.has(id))return;
   deck.push(id);counts.set(id,copies+1);
  }
  current.forEach(add);
  const choices=shuffle(available);
- for(let pass=1;pass<=3;pass++)for(const card of choices)if((counts.get(card.id)||0)<pass)add(card.id);
+ for(let pass=1;pass<=MAX_COPIES;pass++)for(const card of choices)if((counts.get(card.id)||0)<pass)add(card.id);
  return deck;
 }
 function normalize(input,cards,progression=false){
@@ -46,7 +52,7 @@ function normalize(input,cards,progression=false){
  const legal=available.map(c=>c.id),deck=(Array.isArray(p.deck)?p.deck:[]).filter(id=>legal.includes(id));
  const required=progression?deckSize(available):24;
  if(deck.length!==required||(progression&&deck.length!==p.deck?.length))throw Error('Your grimoire must contain exactly '+required+' unlocked cards from your selected mastery elements.');
- const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>3)throw Error('A grimoire can hold up to 3 copies of each spell.');}
+ const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>MAX_COPIES)throw Error('A grimoire can hold up to '+MAX_COPIES+' copies of each spell.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
  return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,towerCleared:p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
@@ -72,5 +78,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random,level=20){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<level;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,orderedSpells,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
 })(typeof window!=='undefined'?window:globalThis);

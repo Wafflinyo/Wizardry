@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION public.wizardry_test_action(action_name text, room_id
  LANGUAGE plpgsql
  SET search_path TO 'public', 'pg_temp'
 AS $function$
-declare r public.wizardry_test_lobbies%rowtype; actor jsonb; p jsonb; found_actor boolean; result_players jsonb; idx integer; t integer; s integer; claimed boolean; ack jsonb; host boolean; pid text; v bigint; tower boolean; floor_no integer; unlock_catalog jsonb; legal_deck_size integer;
+declare r public.wizardry_test_lobbies%rowtype; actor jsonb; p jsonb; found_actor boolean; result_players jsonb; idx integer; t integer; s integer; claimed boolean; ack jsonb; host boolean; pid text; v bigint; tower boolean; floor_no integer; unlock_catalog jsonb; legal_deck_size integer; mastery_count integer;
 begin
  if actor_key is null or length(actor_key)<>64 then raise exception 'Invalid session'; end if;
  if action_name='create' then
@@ -86,17 +86,18 @@ begin
    if tower and payload ? 'towerDeck' then
     if jsonb_typeof(payload->'towerDeck') is distinct from 'array' then raise exception 'Invalid Tower deck.';end if;
     -- Mirror the mana-ordered unlock schedule in WizardryBuilds.
-    unlock_catalog='{"acidair":["wind",1],"arrows":["fire",1],"bear":["ice",10],"bender":["earth",1],"blizzard":["ice",5],"bloom":["nature",1],"boulderweight":["earth",1],"bubbleshield":["water",1],"bulletseed":["nature",1],"burningpheonix":["fire",15],"calming":["water",1],"centaur":["nature",10],"crabgiant":["water",10],"croc":["water",10],"crystalicemirrors":["ice",1],"cyclops":["earth",10],"darksorcerer":["dark",10],"decaystrength":["dark",1],"devil":["fire",1],"dragon":["fire",5],"drowzyflowers":["nature",5],"electricalcharge":["lightning",1],"electriceel":["lightning",1],"electrodisc":["lightning",1],"estel":["nature",5],"flowstate":["water",1],"freezing":["ice",1],"frosty":["ice",10],"frozentouch":["ice",1],"grillmaster":["fire",1],"growth":["nature",1],"gunpowderkiss":["fire",1],"healingaura":["nature",10],"heizmann":["ice",15],"jack":["dark",1],"kamikaze":["fire",5],"kineticsand":["earth",5],"lightningball":["lightning",5],"manascourge":["dark",1],"meteorshower":["earth",10],"octo":["water",1],"penguins":["ice",1],"poseidon":["water",15],"quicksand":["earth",1],"rage":["fire",1],"ragingwaters":["water",1],"reaper":["dark",15],"reikel":["fire",10],"rod":["lightning",1],"rogginbowler":["earth",5],"ronin":["wind",5],"scaldingair":["wind",1],"scorpion":["earth",1],"sentinelfissure":["earth",15],"shark":["water",5],"sirensmelody":["water",5],"solidity":["earth",1],"soul":["dark",1],"soulharvest":["dark",5],"static":["lightning",1],"sticksandstones":["wind",5],"stormlizard":["lightning",10],"thornwrap":["nature",1],"thunder":["lightning",10],"totallyrad":["ice",1],"tree":["nature",15],"turbulence":["wind",1],"undead":["dark",1],"vampire":["dark",5],"venustrap":["nature",1],"volcaniceruption":["fire",10],"volt":["lightning",5],"wickedwitch":["dark",10],"wind":["wind",10],"winddome":["wind",1],"windfist":["wind",10],"wynzor":["wind",15],"yeti":["ice",5],"zen":["wind",1],"zeus":["lightning",15]}'::jsonb;
-    select least(24,3*count(*)) into legal_deck_size from jsonb_each(unlock_catalog)
-    where (p->'masteries') ? (value->>0) and (value->>1)::int<=(p->>'level')::int;
+    unlock_catalog='{"acidair":["wind",1,1],"arrows":["fire",1,1],"bear":["ice",10,10],"bender":["earth",1,5],"blizzard":["ice",1,5],"bloom":["nature",1,1],"boulderweight":["earth",1,1],"bubbleshield":["water",1,1],"bulletseed":["nature",1,1],"burningpheonix":["fire",15,15],"calming":["water",1,1],"centaur":["nature",15,15],"crabgiant":["water",10,10],"croc":["water",15,15],"crystalicemirrors":["ice",1,1],"cyclops":["earth",10,10],"darksorcerer":["dark",15,15],"decaystrength":["dark",1,1],"devil":["fire",1,1],"dragon":["fire",5,10],"drowzyflowers":["nature",1,5],"electricalcharge":["lightning",1,1],"electriceel":["lightning",1,5],"electrodisc":["lightning",1,1],"estel":["nature",5,10],"flowstate":["water",1,1],"freezing":["ice",1,1],"frosty":["ice",15,15],"frozentouch":["ice",1,1],"grillmaster":["fire",1,5],"growth":["nature",1,1],"gunpowderkiss":["fire",1,1],"healingaura":["nature",10,10],"heizmann":["ice",15,15],"jack":["dark",1,5],"kamikaze":["fire",1,5],"kineticsand":["earth",1,5],"lightningball":["lightning",1,5],"manascourge":["dark",1,1],"meteorshower":["earth",15,15],"octo":["water",1,5],"penguins":["ice",1,1],"poseidon":["water",15,15],"quicksand":["earth",1,1],"rage":["fire",1,1],"ragingwaters":["water",1,1],"reaper":["dark",15,15],"reikel":["fire",10,10],"rod":["lightning",1,1],"rogginbowler":["earth",5,10],"ronin":["wind",1,5],"scaldingair":["wind",1,1],"scorpion":["earth",1,1],"sentinelfissure":["earth",15,15],"shark":["water",1,5],"sirensmelody":["water",5,10],"solidity":["earth",1,1],"soul":["dark",1,1],"soulharvest":["dark",1,5],"static":["lightning",1,1],"sticksandstones":["wind",5,10],"stormlizard":["lightning",15,15],"thornwrap":["nature",1,1],"thunder":["lightning",10,10],"totallyrad":["ice",1,5],"tree":["nature",15,15],"turbulence":["wind",1,1],"undead":["dark",1,1],"vampire":["dark",5,10],"venustrap":["nature",1,5],"volcaniceruption":["fire",15,15],"volt":["lightning",5,10],"wickedwitch":["dark",10,10],"wind":["wind",10,10],"winddome":["wind",1,5],"windfist":["wind",15,15],"wynzor":["wind",15,15],"yeti":["ice",5,10],"zen":["wind",1,1],"zeus":["lightning",15,15]}'::jsonb;
+    mastery_count=jsonb_array_length(p->'masteries');
+    select least(24,4*count(*)) into legal_deck_size from jsonb_each(unlock_catalog)
+    where (p->'masteries') ? (value->>0) and (value->>mastery_count)::int<=(p->>'level')::int;
     if jsonb_array_length(payload->'towerDeck')<>legal_deck_size then
       raise exception 'A Tower deck must contain % unlocked spells.',legal_deck_size;
     end if;
     if exists(select 1 from jsonb_array_elements_text(payload->'towerDeck') as cards(id)
       where not coalesce((p->'masteries') ? (unlock_catalog->cards.id->>0)
-        and (unlock_catalog->cards.id->>1)::int<=(p->>'level')::int,false))
-      or exists(select 1 from jsonb_array_elements_text(payload->'towerDeck') as cards(id) group by cards.id having count(*)>3) then
-      raise exception 'Use up to three copies of each unlocked spell from your mastered elements.';
+        and (unlock_catalog->cards.id->>mastery_count)::int<=(p->>'level')::int,false))
+      or exists(select 1 from jsonb_array_elements_text(payload->'towerDeck') as cards(id) group by cards.id having count(*)>4) then
+      raise exception 'Use up to four copies of each unlocked spell from your mastered elements.';
     end if;
     p=jsonb_set(p,'{deck}',payload->'towerDeck');
    end if;

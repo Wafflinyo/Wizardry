@@ -93,7 +93,7 @@
       const target=isWood?woodDye:role===1&&variant==="clean"?dyes[6]:dyes[role];
       const relief=role>=17?role-17:0;
       const marked=(Math.floor(relief/27)&sculptFlag)!==0;
-      const ridge=sculptScale?Math.floor(relief/sculptScale)%3:marked?(look.staffSculpt==="dots"?1:2):0;
+      const ridge=sculptScale?Math.floor(relief/sculptScale)%3:marked?1:0;
       if(target||ridge)for(let j=pixel;j<end;j++){
         const at=j*4,src=base.original.data;
         const skinPixel=role===6||(role===1&&variant==="clean");

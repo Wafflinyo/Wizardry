@@ -14,7 +14,7 @@ window.WizardHats=(()=>{
     stripped.set(source,canvas);return canvas;
   }
   const designs=new Map();
-  function makeHat(style,fabric,trim,front,skin){
+  function makeHat(style,fabric,trim,front){
     // Rasterize at the same texel density as the 128px character frames.
     const canvas=document.createElement("canvas");canvas.width=80;canvas.height=88;
     const g=canvas.getContext("2d");g.translate(40,52);
@@ -45,9 +45,6 @@ window.WizardHats=(()=>{
       facet([hood[0],[-24,18],[-15,12],[-12,20],hood[16]],fabric,.96);
       facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
       facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
-      // The atlas ends at the old hat line. Extend the forehead into the new opening.
-      facet([[5,2],[7,-1],[13,-4],[19,-2],[19,4],[15,8],[8,8]],skin,.82);
-      facet([[10,0],[13,-3],[18,-2],[18,4],[13,7]],skin,1.04);
     }else{
       const rim=[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]];
       facet(rim,fabric,.97);
@@ -77,12 +74,10 @@ window.WizardHats=(()=>{
   }
   function draw(ctx,look,x,y,angle,front=false){
     const fabric=look.hatColor||"#6f4ab4",trim=look.hatTrim&&look.hatTrim!=="original"?look.hatTrim:"#ecaf49";
-    const skin=look.hat==="hood"&&!front?(look.skinColor||"#cca084"):"";
-    const forehead=/^#[0-9a-f]{6}$/i.test(skin)&&skin.toLowerCase()!=="#cca084"?skin:"#bd854f";
-    const key=[look.hat,fabric,trim,front,forehead].join("|");
+    const key=[look.hat,fabric,trim,front].join("|");
     if(!designs.has(key)){
       if(designs.size>=64)designs.delete(designs.keys().next().value);
-      designs.set(key,makeHat(look.hat,fabric,trim,front,forehead));
+      designs.set(key,makeHat(look.hat,fabric,trim,front));
     }
     ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.drawImage(designs.get(key),-40,-52);ctx.restore();
   }

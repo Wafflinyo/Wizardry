@@ -58,19 +58,32 @@
       const at=offset*duration;
       if(at+.045<elapsed)continue;
       const start=origin+Math.max(0,at-elapsed);
-      const end=Math.min(origin+duration-elapsed,start+.42);
+      const end=Math.min(origin+duration-elapsed,start+.53);
       if(end-start<.025)continue;
       const carrier=audio.createOscillator(),modulator=audio.createOscillator();
       const depth=audio.createGain(),envelope=audio.createGain();
       carrier.frequency.value=pitch;
       modulator.frequency.value=pitch*(school==="lightning"?2.79:1.64);
-      depth.gain.setValueAtTime(pitch*1.8,start);
+      depth.gain.setValueAtTime(pitch*1.15,start);
       depth.gain.exponentialRampToValueAtTime(pitch*.055,end);
       modulator.connect(depth).connect(carrier.frequency);
       envelope.gain.setValueAtTime(.0001,start);
       envelope.gain.linearRampToValueAtTime(volume,start+.012);
       envelope.gain.exponentialRampToValueAtTime(.0001,end);
       carrier.connect(envelope).connect(output);
+
+      // The first strike leaves a pair of higher, quieter crystal reflections.
+      for(const [delay,ratio,level] of [[.030,2.13,.26],[.091,3.29,.14]]){
+        const reflectionStart=start+delay;
+        if(end-reflectionStart<.025)continue;
+        const reflection=audio.createOscillator(),ring=audio.createGain();
+        reflection.frequency.value=pitch*ratio;
+        ring.gain.setValueAtTime(.0001,reflectionStart);
+        ring.gain.linearRampToValueAtTime(volume*level,reflectionStart+.009);
+        ring.gain.exponentialRampToValueAtTime(.0001,end);
+        reflection.connect(ring).connect(output);
+        reflection.start(reflectionStart);reflection.stop(end);
+      }
       carrier.start(start);modulator.start(start);
       carrier.stop(end);modulator.stop(end);
     }
@@ -107,7 +120,7 @@
     filter.connect(gain).connect(audio.destination);
     const {resonances}=schools[cast.card?.school]||schools.wind;
     for(const [character,frequencies,from,to,volume] of resonances){
-      const cue=layer(filter,origin,duration,elapsed,from,to,volume);
+      const cue=layer(filter,origin,duration,elapsed,from,to,volume*.65);
       if(!cue)continue;
       // Inharmonic partials give each voice a ringing edge without a breath layer.
       const partials=character==="glass"?[[1,.61],[2.41,.23],[4.17,.15]]:
@@ -127,11 +140,29 @@
     castSparks(filter,origin,duration,elapsed,cast.card?.school);
     return {gain,end};
   }
+  function completeRune(school){
+    const pitch=(sparks[school]||sparks.wind).at(-1)[1];
+    const start=audio.currentTime+.006;
+    for(const [ratio,level,delay,decay] of [[1,.065,0,.22],[1.5,.044,.022,.30],[2.16,.022,.051,.34]]){
+      const at=start+delay,stop=at+decay;
+      const chime=audio.createOscillator(),gain=audio.createGain();
+      chime.frequency.value=pitch*ratio;
+      gain.gain.setValueAtTime(.0001,at);
+      gain.gain.linearRampToValueAtTime(level,at+.010);
+      gain.gain.exponentialRampToValueAtTime(.0001,stop);
+      chime.connect(gain).connect(audio.destination);
+      chime.start(at);chime.stop(stop);
+    }
+  }
+
   function follow(cast,round){
     const stage=cast?.stage;
     const key=cast&&[round,cast.source,cast.card?.id].join("|");
     const changed=stage!==lastStage||key!==lastCast;
     if(changed){
+      if(lastStage==="tracing-auto"&&key===lastCast&&stage==="rune-success"&&audio?.state==="running"){
+        completeRune(cast.card?.school);
+      }
       if(flow&&audio.currentTime<flow.end){
         const now=audio.currentTime;
         const level=flow.gain.gain;

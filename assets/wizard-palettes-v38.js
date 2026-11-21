@@ -73,8 +73,9 @@
     sources.set(source,found);return found;
   }
   const materialRuns={};
-  // Staff roles encode one ternary relief value per sculpt (flat, highlight, shadow).
-  const reliefScale={spiral:1,rings:3,fluted:9,diamond:27,collared:81};
+  // Staff runs combine three relief profiles with four engraved or raised marks.
+  const reliefScale={spiral:1,rings:3,collared:9};
+  const cutFlag={vcut:1,circle:2,dots:4,xcut:8};
   function paintGear(pixels,base,look,kind,variant){
     const encoded=global.WizardMaterialMasks?.[kind];
     if(!encoded)return;
@@ -83,13 +84,16 @@
     const levels=[0,218,222,125,224,224,210];
     const woodDye=rgb(look.staffWood);
     const sculptScale=reliefScale[look.staffSculpt];
+    const sculptFlag=cutFlag[look.staffSculpt];
     let pixel=0;
-    for(let i=0;i<runs.length;i+=4){
+    for(let i=0;i<runs.length;i+=5){
       pixel+=runs[i]*256+runs[i+1];
-      const count=runs[i+2],role=runs[i+3],end=pixel+count;
+      const count=runs[i+2],role=runs[i+3]*256+runs[i+4],end=pixel+count;
       const isWood=role>=7;
       const target=isWood?woodDye:role===1&&variant==="clean"?dyes[6]:dyes[role];
-      const ridge=role>=17&&sculptScale?Math.floor((role-17)/sculptScale)%3:0;
+      const relief=role>=17?role-17:0;
+      const marked=(Math.floor(relief/27)&sculptFlag)!==0;
+      const ridge=sculptScale?Math.floor(relief/sculptScale)%3:marked?(look.staffSculpt==="dots"?1:2):0;
       if(target||ridge)for(let j=pixel;j<end;j++){
         const at=j*4,src=base.original.data;
         const skinPixel=role===6||(role===1&&variant==="clean");

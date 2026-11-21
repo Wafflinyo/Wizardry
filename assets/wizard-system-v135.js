@@ -10,7 +10,7 @@ const gear={
  crystalColor:{label:"Staff crystal",options:dyeOptions},bootColor:{label:"Boot color",options:dyeOptions},
  robeTrim:{label:"Robe trim",options:dyeOptions},hatTrim:{label:"Hat band",options:dyeOptions},
  staffWood:{label:"Staff wood color",options:{original:"Original oak","#7b4a30":"Walnut","#633636":"Redwood","#bc8a54":"Honey maple","#c7b8a1":"Pale ash","#413a49":"Ebony","#516744":"Mosswood","#52637a":"Stormwood","#79507f":"Witchwood"}},
- staffSculpt:{label:"Staff sculpt",options:{original:"Smooth wood",spiral:"Spiral ridges",rings:"Raised rings",fluted:"Long flutes",diamond:"Diamond cuts",collared:"Wide collars"}}
+ staffSculpt:{label:"Staff sculpt",options:{original:"Smooth wood",spiral:"Spiral ridges",rings:"Raised rings",collared:"Wide collars",vcut:"V cut",circle:"Circle cut",dots:"Raised dots",xcut:"X cut"}}
 };
 function gearLook(p){return Object.fromEntries(Object.entries(gear).map(([key,field])=>[key,Object.hasOwn(field.options,p?.[key])?p[key]:"original"]));}
 const names={water:'Water',earth:'Earth',lightning:'Lightning',nature:'Nature',wind:'Wind',dark:'Dark',fire:'Fire',ice:'Ice'};

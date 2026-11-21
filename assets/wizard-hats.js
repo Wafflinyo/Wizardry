@@ -24,19 +24,23 @@ window.WizardHats=(()=>{
       g.closePath();g.fill();
     }
     if(style==="hood"){
-      // A folded mantle widens at the nape, then turns under the jaw.
-      const edge=[[-29,17],[-22,4],[-23,-11],[-18,-23],[-7,-31],[5,-30],[14,-22],[21,-7]];
-      const fold=[[-25,20],[-16,5],[-15,-8],[-11,-18],[-5,-23],[3,-22],[11,-17],[20,-6]];
-      const lip=[[-12,19],[-6,8],[-5,-2],[-1,-9],[4,-13],[9,-14],[15,-12],[21,-6]];
-      facet([[-27,18],[-19,-17],[-5,-28],[12,-22],[21,-6],[19,0],[9,1],[4,10],[-8,22]],fabric,.43);
-      for(let i=0;i<7;i++){
-        facet([edge[i],edge[i+1],fold[i+1]],fabric,[.57,.68,.88,1.08,1.13,1.02,.92][i]);
-        facet([edge[i],fold[i+1],fold[i]],fabric,[.67,.78,.97,1.02,1.08,.95,.87][i]);
-        facet([fold[i],fold[i+1],lip[i+1],lip[i]],fabric,[.55,.61,.72,.81,.91,.87,.71][i]);
-      }
-      const lining=[[-15,21],[-8,9],[-7,-2],[-2,-11],[3,-15],[9,-16],[16,-13],[21,-6]];
-      for(let i=0;i<7;i++)facet([lining[i],lining[i+1],lip[i+1],lip[i]],trim,[.62,.73,.88,.99,1.08,1.02,.84][i]);
-      facet([[-29,17],[-16,9],[-21,17],[-13,20],[-22,23]],fabric,.64);
+      // A loose liripipe folds back over the neck. The brow projects forward
+      // while the mantle hangs from the cheek opening onto the rear shoulder.
+      const back=[-25,-19],peak=[-8,-29],brow=[24,-5],temple=[3,-9];
+      facet([[-35,19],[-30,2],back,peak,[6,-22],brow,[15,-1],[4,4],[-4,16],[-14,23],[-28,25]],fabric,.62);
+      facet([back,[-29,-13],[-35,-14],[-39,-8],[-38,-20],[-27,-29],peak],fabric,.82);
+      facet([[ -38,-20],[-27,-29],peak,[-21,-22]],fabric,1.07);
+      facet([[-39,-8],[-35,-14],[-29,-13],[-32,-19]],fabric,.48);
+      facet([back,peak,temple,[-17,-5]],fabric,.94);
+      facet([peak,[5,-24],brow,temple],fabric,1.10);
+      facet([temple,brow,[13,-3],[3,1],[-5,14],[-10,16],[-8,1]],fabric,.40);
+      facet([back,[-17,-5],[-24,9],[-34,20]],fabric,.69);
+      facet([[-17,-5],temple,[-8,1],[-17,13],[-24,9]],fabric,.82);
+      facet([[-34,20],[-18,12],[-8,10],[0,5],[-6,16],[-18,25],[-31,24]],fabric,.53);
+      facet([[-34,20],[-18,12],[0,5],[-12,15],[-25,20]],fabric,.93);
+      facet([[-31,24],[-17,20],[-6,14],[-9,19],[-18,25]],fabric,.72);
+      facet([[0,-9],[8,-10],brow,[14,-6],[5,-6],[-3,1]],trim,.92);
+      facet([[-3,1],[5,-6],[1,-1],[-7,12],[-12,15]],trim,.68);
     }else{
       // Cross-sections share their vertices so the bevel, ribbon and crown meet.
       const count=12;
@@ -52,12 +56,12 @@ window.WizardHats=(()=>{
           facet([lower[i],lower[j],upper[j],upper[i]],dye,level*lit);
         }
       }
-      const tall=style==="top",w=tall?26:23;
-      const rim=ring(w,6,1,3),rimBottom=ring(w,6,3.3,3);
+      const tall=style==="top",w=tall?29:18;
+      const rim=ring(w,tall?7:4,1,tall?7:1),rimBottom=ring(w,tall?7:4,3,tall?7:1);
       facet(rim,fabric,1.02);course(rimBottom,rim,fabric,.73);
       let lower=ring(16,4,-1);
-      const sections=tall?[[15,4,-8,0],[15,4,-20,-1],[19,4,-32,-2],[18,4,-34,-2]]:
-        [[18,5,-7,0],[18,5,-13,0],[15,4,-21,-1],[9,3,-27,-1],[3,1,-29,-1]];
+      const sections=tall?[[14,4,-9,0],[13,4,-18,1],[21,5,-23,0],[22,5,-25,-1],[20,4,-28,-1]]:
+        [[17,4,-6,0],[23,5,-9,-4],[25,5,-15,-6],[20,4,-20,-6],[10,3,-23,-4],[3,1,-24,-3]];
       for(const [rx,ry,y,dx] of sections){
         const upper=ring(rx,ry,y,0,dx);
         facet(upper,fabric,1.08);course(lower,upper,fabric,1);lower=upper;

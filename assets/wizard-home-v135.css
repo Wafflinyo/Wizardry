@@ -96,3 +96,7 @@ body[data-screen=battle] #game.game{grid-template-columns:minmax(0,1fr);grid-tem
 .game-menu h1 span{display:block;font-size:.48em;line-height:1.1;color:var(--gold);margin-top:.3em}
 .menu-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:.7rem;width:min(100%,25rem);margin-inline:auto;align-content:center}
 .menu-stack .portal-btn{width:100%;min-height:45px}
+
+.studio-credit{display:flex;align-items:center;gap:.55rem;font-size:clamp(.76rem,2.7vw,1rem);letter-spacing:.025em;line-height:1.2}
+.studio-credit span{font-size:1.25em}
+.menu-music{flex:none;min-height:34px;white-space:nowrap}

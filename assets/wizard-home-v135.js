@@ -9,7 +9,7 @@ const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=id=>document.getElementById(id),title=e=>B.names[e],btn=(text,action,cls='')=>`<button class="portal-btn ${cls}" data-action="${action}">${text}</button>`;
 function error(message){let n=el('portalError');if(!n){n=document.createElement('div');n.id='portalError';n.className='portal-error';n.setAttribute('role','alert');portal.prepend(n);}n.textContent=String(message);}
-function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark">✦ WIZARDRY</div><div class="portal-tag">THE FALL OF LUPEN’S KINGDOM</div></header>${content}<div class="portal-footer">WIZARDRY</div></div>`;}
+function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark studio-credit"><span aria-hidden="true">✦</span> Wafflinyo Studio Presents</div><button type="button" class="portal-btn small menu-music" data-menu-music aria-label="Menu music" aria-pressed="true">Music On</button></header>${content}</div>`;window.WizardryMenuMusic?.sync();}
 function screen(next){deleteId=null;view=next;document.body.dataset.portalView=next;document.body.dataset.screen='home';cancelAnimationFrame(previewFrame);render();}
 function summary(p){const s=B.stats(p);return `<div class="stats-strip"><span><b>${s.hp.toLocaleString()}</b>HP</span><span><b>${s.mana}</b>Mana</span><span><b>${p.level}</b>Level</span></div>`;}
 function render(){

@@ -24,31 +24,29 @@ window.WizardHats=(()=>{
       g.closePath();g.fill();
     }
     if(style==="hood"){
-      // A fitted cowl follows the forehead and opens around the cheek.
-      const shoulder=[-36,22],nape=[-21,11],seam=[-14,22],neck=[-3,20];
-      const rear=[-26,-8],crown=[-15,-25],ridge=[-3,-29],front=[12,-24];
-      const brow=[19,-12],opening=[7,-11],cheek=[-3,1],jaw=[-8,14];
-      facet([shoulder,nape,rear,[-24,-18],crown,ridge,front,brow,opening,cheek,jaw,neck,[-14,29],[-30,28]],fabric,.54);
-      facet([rear,[-24,-18],crown,[-15,-13],[-19,-3]],fabric,.73);
-      facet([crown,ridge,front,[0,-19],[-15,-13]],fabric,1.16);
-      facet([[-15,-13],[0,-19],front,brow,opening,[0,-9]],fabric,.94);
-      facet([rear,[-19,-3],[-15,-13],[0,-9],cheek,[-13,8],nape],fabric,.83);
-      facet([[-19,-3],[-13,8],seam,nape],fabric,.62);
-      facet([nape,seam,[-14,29],[-30,28],shoulder],fabric,.92);
-      facet([nape,[-13,8],cheek,jaw,seam],fabric,.68);
-      facet([seam,jaw,neck,[-14,29]],fabric,.77);
-      facet([[2,-13],[10,-15],[18,-16],brow,opening,[-1,-8]],trim,.98);
-      facet([[-1,-8],opening,cheek,jaw,[-12,17],[-8,0]],trim,.70);
-      facet([[-12,17],jaw,neck,[-8,23],seam],trim,.56);
+      // Tailored cloth stays close to the skull and folds into the shoulder.
+      const hood=[[-32,23],[-24,10],[-24,-7],[-20,-19],[-11,-26],[4,-27],[15,-20],[20,-11],[18,-4],[12,-8],[5,-6],[0,0],[-3,9],[-2,16],[1,19],[-9,24],[-21,28]];
+      facet(hood,fabric,.53);
+      facet([hood[2],hood[3],hood[4],[-11,-15],[-17,-4]],fabric,.76);
+      facet([hood[4],hood[5],hood[6],[4,-17],[-11,-15]],fabric,1.19);
+      facet([[-11,-15],[4,-17],hood[6],hood[7],hood[9],[1,-9]],fabric,.99);
+      facet([hood[2],[-17,-4],[-11,-15],[1,-9],[-7,3],[-15,12],hood[1]],fabric,.88);
+      facet([[-17,-4],[-15,12],[-24,18],hood[1]],fabric,.69);
+      facet([hood[0],[-24,18],[-15,12],[-12,20],hood[16]],fabric,.96);
+      facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
+      facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
+      facet([hood[7],hood[8],hood[9],hood[10],hood[11],hood[12],hood[13],[-6,15],[-6,6],[-3,-1],[4,-9],[12,-11]],trim,.82);
+      facet([[4,-9],[12,-11],hood[7],hood[8],hood[9],hood[10]],trim,1.06);
+      facet([[-6,15],hood[13],hood[14],[-4,21]],trim,.69);
     }else{
       const tall=style==="top";
       const rim=tall?[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]]:
-        [[-27,-3],[-22,-7],[7,-10],[24,-9],[32,-4],[33,0],[24,7],[5,9],[-20,5]];
+        [[-33,-5],[-24,-9],[5,-10],[24,-10],[34,-9],[36,-4],[27,4],[7,9],[-19,6]];
       facet(rim,fabric,.97);
       const outer=rim.slice(4).concat([rim[0]]);
       facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
       facet(tall?[[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]]:
-        [[5,9],[24,7],[33,0],[33,3],[24,10],[5,12]],fabric,.77);
+        [[7,9],[27,4],[36,-4],[36,-1],[27,7],[7,12]],fabric,.77);
 
       if(tall){
         // Short, straight-sided crown with a lid and two visible wall planes.
@@ -63,17 +61,18 @@ window.WizardHats=(()=>{
         facet([[-9,-5],[13,-5],[12,2],[-9,2]],trim,1.05);
         facet([[13,-5],[21,-10],[20,-3],[12,2]],trim,.82);
       }else{
-        // Low, wide crown with a broad top facet and clipped polygonal shoulders.
-        const dome=[[-23,-3],[-23,-13],[-19,-20],[-10,-26],[4,-28],[16,-25],[23,-19],[26,-11],[24,-2],[9,3],[-11,3]];
-        facet(dome,fabric,.77);
-        facet([dome[0],dome[1],dome[2],[-12,-15],dome[10]],fabric,.69);
-        facet([dome[2],dome[3],dome[4],dome[5],[4,-18],[-12,-15]],fabric,1.19);
-        facet([[4,-18],dome[5],dome[6],dome[7],[12,-12]],fabric,.91);
-        facet([[-12,-15],[4,-18],[12,-12],dome[9],dome[10]],fabric,1.02);
-        facet([[12,-12],dome[7],dome[8],dome[9]],fabric,.66);
-        facet([[-23,-9],[-11,-3],dome[10],dome[0]],trim,.67);
-        facet([[-11,-3],[10,-3],dome[9],dome[10]],trim,1.01);
-        facet([[10,-3],[25,-8],dome[8],dome[9]],trim,.78);
+        // A low bowler crown meets a wide brim with a turned-up edge.
+        const dome=[[-25,-2],[-26,-8],[-23,-15],[-16,-21],[-6,-24],[8,-24],[18,-21],[24,-15],[27,-8],[24,-2],[9,3],[-11,3]];
+        facet(dome,fabric,.76);
+        facet([dome[0],dome[1],dome[2],[-16,-11],dome[11]],fabric,.72);
+        facet([dome[2],dome[3],dome[4],dome[5],[-2,-15],[-16,-11]],fabric,1.20);
+        facet([[-2,-15],dome[5],dome[6],dome[7],[13,-12]],fabric,.99);
+        facet([[-16,-11],[-2,-15],[13,-12],dome[10],dome[11]],fabric,1.04);
+        facet([[13,-12],dome[7],dome[8],dome[9],dome[10]],fabric,.70);
+        facet([[-26,-7],[-11,-2],dome[11],dome[0]],trim,.69);
+        facet([[-11,-2],[10,-2],dome[10],dome[11]],trim,1.03);
+        facet([[10,-2],[27,-7],dome[9],dome[10]],trim,.81);
+        facet([[-33,-5],[-24,1],[-11,5],[7,7],[27,2],[36,-4],[27,4],[7,9],[-19,6]],fabric,1.12);
       }
 
       const gem=tall?[[10,-8],[16,-7],[17,-2],[13,3],[8,1],[7,-4]]:

@@ -46,11 +46,12 @@ window.WizardHats=(()=>{
       facet([[-15,12],[-7,3],hood[12],hood[13],[-12,20]],fabric,.73);
       facet([hood[16],[-12,20],hood[13],hood[14],hood[15]],fabric,.62);
     }else{
-      const rim=[[-30,-3],[-22,-8],[8,-10],[26,-10],[32,-13],[32,-4],[22,4],[1,8],[-21,5]];
+      const rim=[[-30,-3],[-22,-8],[8,-10],[23,-8],[29,-8],[29,-3],[21,2],[1,8],[-21,5]];
       facet(rim,fabric,.97);
       const outer=rim.slice(4).concat([rim[0]]);
-      facet([...outer,...outer.slice().reverse().map(([x,y])=>[x,y+3])],fabric,.52);
-      facet([[1,8],[22,4],[32,-4],[32,-1],[22,7],[1,11]],fabric,.77);
+      const underside=outer.map(([x,y])=>[x,y+(x>=21?1.2:3)]);
+      facet([...outer,...underside.slice().reverse()],fabric,.52);
+      facet([outer[3],outer[2],outer[1],underside[1],underside[2],underside[3]],fabric,.77);
       // Short, straight-sided crown with a lid and two visible wall planes.
       const lid=[[-21,-27],[-13,-34],[8,-37],[22,-34],[24,-28],[14,-22],[-8,-22]];
       facet([lid[0],lid[6],[-9,2],[-17,-2]],fabric,.64);

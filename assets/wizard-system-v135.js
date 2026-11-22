@@ -24,7 +24,7 @@ const UNLOCK_ORDER=Object.fromEntries(Object.entries({
  earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure",
  lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus",
  nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree",
- wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor",
+ wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor windrazor",
  dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper",
  fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix",
  ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann",

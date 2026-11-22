@@ -156,7 +156,8 @@
     {"id":"darkblast","name":"Dark Blast","school":"dark","cost":1,"accuracy":0.95,"damage":80,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Dark blast deals 80 base damage to one enemy."},
     {"id":"shockblast","name":"Shock Blast","school":"lightning","cost":1,"accuracy":0.9,"damage":90,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Lightning blast deals 90 base damage to one enemy."},
     {"id":"waterblast","name":"Water Blast","school":"water","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Water blast deals 70 base damage to one enemy."},
-    {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Wind blast deals 70 base damage to one enemy."}
+    {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Wind blast deals 70 base damage to one enemy."},
+    {"id":"windrazor","name":"Wind Razor","school":"wind","cost":7,"accuracy":0.85,"damage":680,"target":"enemy","kind":"damage","duration":2900,"hit":0.76,"description":"A wind sorcerer hurls a ringed orb of wind at one enemy for 680 base damage."}
   );
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -219,7 +220,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="windrazor"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -3808,6 +3809,7 @@
   }
   function paintCardPortrait(card,c,width,height){
       if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.49,y:height*.51},{x:width*.81,y:height*.38},.54,card.hit,Math.min(width,height)/88);
+      else if(card.id==="windrazor")window.WindRazor?.portrait(c,width,height);
       else if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
       else if(card.id==="frozentouch")window.FrozenTouch?.portrait(c,width,height);
       else if(card.id==="volcaniceruption")window.VolcanicEruption?.portrait(c,width,height);
@@ -4227,7 +4229,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4544,6 +4546,14 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="windrazor"&&action.stage==="summon"){
+      const target=getUnit(action.target),spell=window.WindRazor;
+      if(target&&spell){
+        const p=clamp(action.elapsed/action.duration,0,1),dir=target.x>=500?1:-1;
+        renderables.push({type:"wind-razor-sorcerer",depthY:411,priority:2,draw:()=>spell.caster(g,p,dir)});
+        renderables.push({type:"wind-razor-orb",depthY:target.y+.1,priority:2,draw:()=>spell.projectile(g,p,dir,target,action.card.hit)});
       }
     }
     if(action?.card?.starterBlast&&action.stage==="summon"){

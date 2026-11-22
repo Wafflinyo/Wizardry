@@ -3735,17 +3735,17 @@
     output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
   }
   const BLAST_COLORS={
-    ice:["#e5faff","#82d4ef","#548cb7"],fire:["#ffe6a3","#ffa35e","#df6246"],
     nature:["#fff5a3","#cbe878","#80b86b"],
     dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
     wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
   const BLAST_RELEASE=.61;
-  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image()};
+  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image(),ice:new Image()};
   for(const [school,path] of Object.entries({
     fire:"blazing-embers-frames.webp?v=0.284.1",
     earth:"rock-blast-frames.webp?v=0.284.2",
-    water:"water-blast-frames.webp?v=0.284.5"
+    water:"water-blast-frames.webp?v=0.284.5",
+    ice:"ice-blast-frames.webp?v=0.284.6"
   })){
     STARTER_ATLASES[school].onload=()=>drawCardArts();
     STARTER_ATLASES[school].src="./assets/"+path;
@@ -3762,22 +3762,7 @@
     ctx.closePath();
     ctx.fill();
   }
-  function blastCrystal(ctx,x,y,width,height,angle,colors){
-    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
-    const [light,mid,shade]=colors;
-    blastPoly(ctx,shade,[[0,-height],[width*.72,-height*.46],[width,height*.57],[0,height],[-width,height*.44],[-width*.73,-height*.49]]);
-    blastPoly(ctx,mid,[[0,-height],[width*.72,-height*.46],[width,height*.57],[0,height],[0,-height*.34]]);
-    blastPoly(ctx,light,[[0,-height],[0,-height*.34],[0,height],[-width,height*.44],[-width*.73,-height*.49]]);
-    ctx.restore();
-  }
   const STARTER_SHAPES={
-    ice(ctx,t,f,[light,mid,shade]){
-      const fan=f?.46:.26;
-      for(let i=-2;i<=2;i++){
-        blastCrystal(ctx,-Math.abs(i)*7,i*10,6-Math.abs(i)*.8,30-Math.abs(i)*6,
-          (f?Math.PI*.5:0)+i*fan,[light,mid,shade]);
-      }
-    },
     nature(ctx,t,f,[light,mid,shade]){
       ctx.rotate(t*2.2);
       for(let i=0;i<8;i++){
@@ -3843,14 +3828,13 @@
   }
   function drawElementCharge(ctx,school,charge,palette){
     if(school==="wind"){ drawWindCharge(ctx,charge,palette);return; }
-    const count={ice:5,nature:8,dark:3,lightning:3}[school];
+    const count={nature:8,dark:3,lightning:3}[school];
     const frame=Math.floor(charge*15),[light,mid,shade]=palette;
     for(let i=0;i<count;i++){
       const build=clamp((frame-i*.85)/9,0,1);
       if(!build)continue;
       const a=i*2.399+frame*.44,reach=46*(1-build),x=Math.cos(a)*reach,y=Math.sin(a)*reach*.64;
       ctx.save();ctx.translate(x,y);
-      if(school==="ice")blastCrystal(ctx,(i-2)*8,8,4+build*3,8+build*21,(i-2)*.27,palette);
       if(school==="nature"){
         ctx.rotate(i*Math.PI/4);ctx.translate(13,0);
         blastPoly(ctx,i%2?mid:light,[[0,-6],[18,-9],[24+build*8,0],[17,8],[0,5]]);
@@ -3871,7 +3855,7 @@
     }
   }
   const BLAST_DEBRIS={
-    ice:[8,29,7,2],nature:[12,44,4,1],
+    nature:[12,44,4,1],
     dark:[6,37,9,2],lightning:[9,42,5,3],wind:[5,56,6,3]
   };
   function drawWaterChargeDroplets(ctx,x,y,scale,dir,charge){

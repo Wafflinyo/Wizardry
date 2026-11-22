@@ -429,8 +429,12 @@ body{height:100svh}
 
 .hand-resources{display:grid;justify-items:end;gap:.25rem}
 #battleDeckCount{color:#bad3e1;font-size:.72rem;white-space:nowrap}
-.turnbar{position:relative;z-index:5;overflow:visible}
-.battle-recap{flex:none;color:#e4eff7}
-.battle-recap summary{padding:.2rem .35rem;font-size:clamp(.63rem,1.8vw,.8rem);cursor:pointer;white-space:nowrap;border:1px solid #426579;border-radius:.3rem}
-.battle-recap ol{position:absolute;top:100%;left:0;right:0;margin:0;max-height:min(38dvh,16rem);overflow:auto;background:#10232d;padding:.6rem 1rem;list-style:none;box-shadow:0 .5rem 1rem #0008}
+#game .turnbar{position:absolute;z-index:6;overflow:visible}
+.battle-recap{flex:none;color:#e4eff7;pointer-events:auto}
+.battle-recap summary{padding:.2rem .35rem;font-size:clamp(.63rem,1.8vw,.8rem);cursor:pointer;touch-action:manipulation;white-space:nowrap;border:1px solid #426579;border-radius:.3rem}
+.battle-recap ol{position:absolute;top:100%;left:0;right:0;margin:0;max-height:min(28dvh,15rem);overflow:auto;overscroll-behavior:contain;background:#10232d;padding:.6rem 1rem;list-style:none;box-shadow:0 .5rem 1rem #0008}
 .battle-recap li{padding:.3rem 0;border-bottom:1px solid #33515b;font-size:.8rem}
+
+@media (orientation:landscape) and (max-height:620px), (min-width:1080px){
+  .battle-recap ol{top:auto;bottom:100%}
+}

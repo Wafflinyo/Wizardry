@@ -3736,16 +3736,17 @@
   }
   const BLAST_COLORS={
     nature:["#fff5a3","#cbe878","#80b86b"],
-    dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
+    lightning:["#fff7ca","#e9d16a","#a991dc"],
     wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
   const BLAST_RELEASE=.61;
-  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image(),ice:new Image()};
+  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image(),ice:new Image(),dark:new Image()};
   for(const [school,path] of Object.entries({
     fire:"blazing-embers-frames.webp?v=0.284.1",
     earth:"rock-blast-frames.webp?v=0.284.2",
     water:"water-blast-frames.webp?v=0.284.5",
-    ice:"ice-blast-frames.webp?v=0.284.6"
+    ice:"ice-blast-frames.webp?v=0.284.6",
+    dark:"dark-blast-frames.webp?v=0.284.7"
   })){
     STARTER_ATLASES[school].onload=()=>drawCardArts();
     STARTER_ATLASES[school].src="./assets/"+path;
@@ -3773,16 +3774,6 @@
         ctx.restore();
       }
       blastPoly(ctx,light,[[0,-15],[13,-8],[13,8],[0,15],[-13,8],[-13,-8]]);
-    },
-    dark(ctx,t,f,[light,mid,shade]){
-      for(let i=0;i<3;i++){
-        ctx.save();ctx.rotate(i*2*Math.PI/3-t*3.4);
-        blastPoly(ctx,shade,[[35,-15],[31,9],[17,27],[-13,32],[-26,21],[-3,22],[16,7],[18,-4]]);
-        blastPoly(ctx,mid,[[35,-15],[17,27],[-13,32],[-3,22],[16,7]]);
-        blastPoly(ctx,light,[[35,-15],[27,8],[17,15],[20,4]]);
-        ctx.restore();
-      }
-      blastPoly(ctx,"#1c1229",[[0,-13],[12,-6],[11,8],[0,14],[-12,7],[-12,-7]]);
     },
     lightning(ctx,t,f,[light,mid,shade]){
       if(!f)ctx.rotate(-Math.PI*.40);
@@ -3828,7 +3819,7 @@
   }
   function drawElementCharge(ctx,school,charge,palette){
     if(school==="wind"){ drawWindCharge(ctx,charge,palette);return; }
-    const count={nature:8,dark:3,lightning:3}[school];
+    const count={nature:8,lightning:3}[school];
     const frame=Math.floor(charge*15),[light,mid,shade]=palette;
     for(let i=0;i<count;i++){
       const build=clamp((frame-i*.85)/9,0,1);
@@ -3838,10 +3829,6 @@
       if(school==="nature"){
         ctx.rotate(i*Math.PI/4);ctx.translate(13,0);
         blastPoly(ctx,i%2?mid:light,[[0,-6],[18,-9],[24+build*8,0],[17,8],[0,5]]);
-      }
-      if(school==="dark"){
-        ctx.rotate(a);ctx.translate(16,0);
-        blastPoly(ctx,i%2?mid:shade,[[4,-11],[23,-15],[19,4],[2,14],[9,2],[-9,5]]);
       }
       if(school==="lightning"){
         const y=(i-1)*16;
@@ -3856,7 +3843,7 @@
   }
   const BLAST_DEBRIS={
     nature:[12,44,4,1],
-    dark:[6,37,9,2],lightning:[9,42,5,3],wind:[5,56,6,3]
+    lightning:[9,42,5,3],wind:[5,56,6,3]
   };
   function drawWaterChargeDroplets(ctx,x,y,scale,dir,charge){
     ctx.save();ctx.translate(x,y);ctx.scale(scale*dir,scale);

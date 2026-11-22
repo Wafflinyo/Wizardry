@@ -1,6 +1,6 @@
 (()=>{
   const art=new Image();
-  art.src="./assets/double-pick-frames.webp?v=0.290.0";
+  art.src="./assets/double-pick-frames.webp?v=0.290.1";
   const CELL=256, CENTER=500, GROUND=510, DURATION=4230;
   const RELEASES=[2290,3180];
   const POSE_TIMES=[0,360,900,1250,1790,2000,2290,2460,2740,2960,3180,3390];
@@ -40,7 +40,7 @@
       return;
     }
     const t=clamp((elapsed-release)/(hit-release));
-    const sx=CENTER+dir*105,sy=GROUND-(index===0?153:151);
+    const sx=CENTER+dir*(index===0?105:99),sy=GROUND-(index===0?153:140);
     const x=sx+(tx-sx)*t,y=sy+(ty-sy)*t-30*Math.sin(t*Math.PI);
     frame(g,12+Math.floor((elapsed-release)/70)%2,x,y,119,dir);
   }

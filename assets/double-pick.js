@@ -1,13 +1,13 @@
 (()=>{
   const art=new Image();
-  art.src="./assets/double-pick-frames.webp?v=0.290.4";
+  art.src="./assets/double-pick-frames.webp?v=0.290.6";
   const CELL=256, CENTER=500, GROUND=510, DURATION=5560;
   const RELEASES=[2730,4380];
-  const POSE_TIMES=[0,360,900,1250,1740,2170,2520,2730,2950,3580,4080,4380,4600];
-  // Coordinates marked on the right and left fists, in atlas pixels.
-  const RIGHT_GRIPS=[[93,153],[79,176],[69,151],[73,151],[71,140],[48,52],[86,53]];
-  const LEFT_GRIPS=[[198,157],[202,185],[182,152],[200,152],[196,146],[196,141],
-    [179,141],[165,148],[196,145],[189,145],[179,55]];
+  const POSE_TIMES=[0,360,900,1250,1740,2170,2730,2980,3520,3930,4380,4620,4780,4920,5070,5200];
+  // Each fist has a grip only until its corresponding pick launches.
+  const RIGHT_GRIPS=[[94, 170], [68, 150], [59, 149], [51, 145], [70, 125], [68, 23]];
+  const LEFT_GRIPS=[[211, 167], [204, 155], [206, 152], [213, 148], [203, 151], [207, 151], [199, 151], [201, 153], [205, 103], [187, 42]];
+  const RELEASE_ORIGINS=[[61, 138], [115, 172]];
   const ACTOR_SIZE=239;
   const clamp=n=>Math.max(0,Math.min(1,n));
 
@@ -75,8 +75,7 @@
   }
 
   function caster(g,elapsed,dir,hasSecondTarget){
-    const step=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
-    const pose=step===12?13:step;
+    const pose=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
     g.save();
     g.globalAlpha*=Math.min(clamp(elapsed/220),clamp((DURATION-elapsed)/420));
     g.beginPath();
@@ -84,7 +83,7 @@
     g.fillStyle="rgba(8, 31, 50, .34)";
     g.fill();
     const lean=elapsed<3120?throwLean(elapsed,0):hasSecondTarget?throwLean(elapsed,1):0;
-    actorFrame(g,hasSecondTarget?pose:Math.min(pose,8),CENTER,GROUND,ACTOR_SIZE,dir,lean);
+    actorFrame(g,hasSecondTarget?pose:Math.min(pose,7),CENTER,GROUND,ACTOR_SIZE,dir,lean);
     g.restore();
   }
 
@@ -96,12 +95,15 @@
       const age=(elapsed-hit)/490;
       g.save();
       g.globalAlpha*=1-age;
-      frame(g,age<.45?14:15,tx,ty,138+age*53,dir);
+      frame(g,age<.45?17:18,tx,ty,138+age*53,dir);
       g.restore();
       return;
     }
     const t=clamp((elapsed-release)/(hit-release));
-    const sx=CENTER+dir*90,sy=GROUND-(index===0?122:146);
+    const [handX,handY]=RELEASE_ORIGINS[index];
+    const lean=throwLean(release,index);
+    const sx=CENTER+dir*(handX*Math.cos(lean)+handY*Math.sin(lean));
+    const sy=GROUND+handX*Math.sin(lean)-handY*Math.cos(lean);
     const x=sx+(tx-sx)*t,y=sy+(ty-sy)*t-30*Math.sin(t*Math.PI);
     g.save();
     g.translate(x,y);
@@ -118,7 +120,7 @@
       g.fill();
     }
     g.rotate(t*Math.PI*7);
-    frame(g,12,0,0,199);
+    frame(g,16,0,0,199);
     g.restore();
   }
 

@@ -174,6 +174,7 @@ function recordTowerResult(state){
 const resultsDialog=el('matchResults');
 function showMatchResults(combat){
  if(combat.phase!=='finished'||lastResult)return;
+ el('battleLogPanel')?.close?.();
  lastResult=combat;
  if(combat.tower)recordTowerResult(combat);
  const columns=[['damage','Damage'],['healing','Healing'],['tanked','Damage Tanked'],['casts','Spells Cast'],['mana','Mana Used']];

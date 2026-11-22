@@ -2891,6 +2891,20 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    const logButton=$("battleRecap"),logPanel=$("battleLogPanel");
+    logButton.onclick=()=>{
+      if(logPanel.open)return;
+      const anchor=logButton.getBoundingClientRect();
+      const viewport=document.documentElement.clientHeight;
+      const availableBelow=viewport-anchor.bottom;
+      const opensBelow=availableBelow>=170||availableBelow>=anchor.top;
+      logPanel.style.top=opensBelow?(anchor.bottom+4)+"px":"auto";
+      logPanel.style.bottom=opensBelow?"auto":(viewport-anchor.top+4)+"px";
+      logPanel.style.maxHeight=Math.max(80,Math.min(280,(opensBelow?availableBelow:anchor.top)-12))+"px";
+      logPanel.showModal();
+      logButton.setAttribute("aria-expanded","true");
+    };
+    logPanel.onclose=()=>logButton.setAttribute("aria-expanded","false");
     handSwipe=window.WIZARDRY_HAND_SWIPE_V71?.attach(ui.hand)||null;
     for(const b of ui.mode.querySelectorAll("button[data-mode]"))b.onclick=()=>{
       for(const x of ui.mode.querySelectorAll("button")){const on=x===b;x.classList.toggle("active",on);x.setAttribute("aria-pressed",String(on));}
@@ -3735,18 +3749,18 @@
     output.drawImage(art,bounds.x,bounds.y,bounds.w,bounds.h,(width-w)/2,(height-h)/2,w,h);
   }
   const BLAST_COLORS={
-    lightning:["#fff7ca","#e9d16a","#a991dc"],
     wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
   const BLAST_RELEASE=.61;
-  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image(),ice:new Image(),dark:new Image(),nature:new Image()};
+  const STARTER_ATLASES={fire:new Image(),earth:new Image(),water:new Image(),ice:new Image(),dark:new Image(),nature:new Image(),lightning:new Image()};
   for(const [school,path] of Object.entries({
     fire:"blazing-embers-frames.webp?v=0.284.1",
     earth:"rock-blast-frames.webp?v=0.284.2",
     water:"water-blast-frames.webp?v=0.284.5",
     ice:"ice-blast-frames.webp?v=0.284.6",
     dark:"dark-blast-frames.webp?v=0.284.7",
-    nature:"solar-blast-frames.webp?v=0.284.8"
+    nature:"solar-blast-frames.webp?v=0.284.8",
+    lightning:"shock-blast-frames.webp?v=0.284.9"
   })){
     STARTER_ATLASES[school].onload=()=>drawCardArts();
     STARTER_ATLASES[school].src="./assets/"+path;
@@ -3764,15 +3778,6 @@
     ctx.fill();
   }
   const STARTER_SHAPES={
-    lightning(ctx,t,f,[light,mid,shade]){
-      if(!f)ctx.rotate(-Math.PI*.40);
-      const spark=Math.sin(t*81)*3;
-      for(let i=-1;i<=1;i++){
-        const y=i*16+spark;
-        blastPoly(ctx,shade,[[-37,y+5],[-15,y-10],[0,y+1],[19,y-10],[35,y-2],[17,y+9],[0,y+9],[-15,y-2]]);
-        blastPoly(ctx,i===0?light:mid,[[-37,y+5],[-15,y-10],[0,y+1],[19,y-10],[35,y-2],[14,y-5],[0,y+5],[-15,y-6]]);
-      }
-    },
     wind(ctx,t,f,[light,mid,shade]){
       const ripple=Math.sin(t*39)*4;
       for(let i=0;i<3;i++){
@@ -3806,29 +3811,6 @@
       blastPoly(ctx,light,[[-9,-12],[13,-17],[nose,-1],[13,-10]]);
     }
   }
-  function drawElementCharge(ctx,school,charge,palette){
-    if(school==="wind"){ drawWindCharge(ctx,charge,palette);return; }
-    const count={lightning:3}[school];
-    const frame=Math.floor(charge*15),[light,mid,shade]=palette;
-    for(let i=0;i<count;i++){
-      const build=clamp((frame-i*.85)/9,0,1);
-      if(!build)continue;
-      const a=i*2.399+frame*.44,reach=46*(1-build),x=Math.cos(a)*reach,y=Math.sin(a)*reach*.64;
-      ctx.save();ctx.translate(x,y);
-      if(school==="lightning"){
-        const y=(i-1)*16;
-        blastPoly(ctx,i===1?light:mid,[[-28,y+6],[-8,y-10],[4,y-2],[25,y-9],[10,y+6],[-6,y-2]]);
-      }
-      ctx.restore();
-    }
-    const merge=clamp((frame-8)/7,0,1);
-    if(merge){
-      ctx.save();ctx.scale(merge,merge);STARTER_SHAPES[school](ctx,charge*.61,false,palette);ctx.restore();
-    }
-  }
-  const BLAST_DEBRIS={
-    lightning:[9,42,5,3],wind:[5,56,6,3]
-  };
   function drawWaterChargeDroplets(ctx,x,y,scale,dir,charge){
     ctx.save();ctx.translate(x,y);ctx.scale(scale*dir,scale);
     for(let i=0;i<7;i++){
@@ -3876,7 +3858,7 @@
       if(!flying){
         ctx.save();ctx.translate(from.x,from.y);ctx.scale(scale*dir,scale);
         ctx.globalAlpha=Math.min(1,charged*5);
-        drawElementCharge(ctx,school,charged,palette);
+        drawWindCharge(ctx,charged,palette);
         ctx.restore();
         return;
       }
@@ -3888,7 +3870,7 @@
         scale*.88,1,true);
       return;
     }
-    const [count,distance,size,stretch]=BLAST_DEBRIS[school],fade=1-burst;
+    const [count,distance,size,stretch]=[5,56,6,3],fade=1-burst;
     place(to.x,to.y,scale*(.52+burst*.52),fade*fade*.82,true);
     ctx.save();ctx.translate(to.x,to.y);ctx.scale(scale*dir,scale);
     for(let i=0;i<count;i++){

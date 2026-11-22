@@ -17,10 +17,12 @@ function attach(hand){
   const held=cards();if(!held.length||held.every(b=>b.disabled))return;
   // A fresh deliberate tap is valid immediately after the last swipe.
   suppressUntil=0;
-  // Cache the actual fan geometry once. Browsing follows the card under
-  // the finger, rather than inverted fixed jumps from the middle card.
-  const centers=held.map(b=>{const r=b.getBoundingClientRect();return r.left+r.width/2;});
-  gesture={id:event.pointerId,x:event.clientX,y:event.clientY,swiping:false,centers};
+  // Enlarged cards share a visual center. Navigate by hand order instead.
+  const current=held.indexOf(browseId);
+  const pressed=held.indexOf(event.target?.closest?.('button[data-card]'));
+  const index=current>=0?current:pressed>=0?pressed:Math.floor((held.length-1)/2);
+  const step=Math.max(32,Math.min(88,(hand.clientWidth||360)*.12));
+  gesture={id:event.pointerId,x:event.clientX,y:event.clientY,swiping:false,index,step};
  });
  hand.addEventListener('pointermove',event=>{
   if(!gesture||event.pointerId!==gesture.id)return;
@@ -31,29 +33,29 @@ function attach(hand){
    gesture.swiping=true;hand.classList.add('is-browsing');hand.setPointerCapture(event.pointerId);
   }
   event.preventDefault();
-  let index=0,distance=Infinity;
-  for(let i=0;i<gesture.centers.length;i++){
-   const d=Math.abs(event.clientX-gesture.centers[i]);
-   if(d<distance){distance=d;index=i;}
-  }
-  focus(index);
+  const distance=Math.abs(dx);
+  const steps=distance<7?0:Math.sign(dx)*Math.max(1,Math.round(distance/gesture.step));
+  focus(gesture.index+steps);
  },{passive:false});
  function finish(event){
   if(!gesture||gesture.id!==event.pointerId)return;
   if(gesture.swiping)suppressUntil=Date.now()+500;
   hand.classList.remove('is-browsing');
-  if(hand.hasPointerCapture(event.pointerId))hand.releasePointerCapture(event.pointerId);
   gesture=null;
+  if(hand.hasPointerCapture(event.pointerId))hand.releasePointerCapture(event.pointerId);
  }
  hand.addEventListener('pointerup',finish);
  hand.addEventListener('pointercancel',finish);
+ hand.addEventListener('lostpointercapture',finish);
  hand.addEventListener('click',event=>{
   if(Date.now()<suppressUntil&&event.detail!==0){event.preventDefault();event.stopImmediatePropagation();}
  },true);
  hand.addEventListener('keydown',event=>{
   if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
-  const held=cards(),index=held.indexOf(browseId);
-  event.preventDefault();focus((index<0?Math.floor((held.length-1)/2):index)+(event.key==='ArrowRight'?1:-1));
+  const held=cards(),index=held.indexOf(browseId??event.target);
+  event.preventDefault();
+  focus((index<0?Math.floor((held.length-1)/2):index)+(event.key==='ArrowRight'?1:-1));
+  browseId?.focus({preventScroll:true});
  });
  return {reset,focusCard};
 }

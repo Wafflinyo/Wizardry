@@ -173,7 +173,7 @@
     description:"A hovering solar warrior hurls a blazing sun at one enemy for 650 base Fire damage. 45% chance of Extreme Burn: 100 damage per turn for 5 turns."});
   CARDS.push({id:"landray",name:"Land Ray",school:"earth",cost:5,target:"enemy",
     kind:"damage",damage:400,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
-    duration:5175,hit:2815/5175,
+    duration:6305,hit:3945/6305,
     description:"A buried land ray strikes one enemy with its barbed tail for 400 base Earth damage. 20% chance to Shock and skip their pending action this round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');

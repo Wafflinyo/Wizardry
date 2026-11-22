@@ -2,9 +2,9 @@
   const art=new Image();
   art.src="./assets/land-ray-frames.webp?v=0.289.4";
   const CELL=256, SIZE=330;
-  const DURATION=5175, IMPACT=2815;
-  const POSE_TIMES=[0,1400,1540,1690,1830,1980,2130,2280,2430,2580,2730,2775,IMPACT,3565,3795,4000,4230,4460,4690];
-  const POSES=[0,1,2,3,4,5,6,5,4,5,7,8,9,10,11,12,13,14,15];
+  const DURATION=6305, IMPACT=3945;
+  const POSE_TIMES=[0,1400,1540,1690,1830,2060,2290,2520,2750,2980,3210,3860,3905,IMPACT,4695,4925,5130,5360,5590,5820];
+  const POSES=[0,1,2,3,4,5,6,5,4,5,3,7,8,9,10,11,12,13,14,15];
   const TAIL_REACH={7:.12,8:.37,9:.73};
   const clamp=n=>Math.max(0,Math.min(1,n));
 

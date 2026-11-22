@@ -191,6 +191,10 @@
   CARDS.push({id:"aromatherapy",name:"Aromatherapy",school:"wind",cost:3,target:"team",
     kind:"aromatherapy",accuracy:.90,heal:100,healTurns:3,icon:"≋",rarity:"RARE",duration:1800,hit:.73,
     description:"A pink gust leaves a cleansable debuff rune on the caster. Each living teammate, including the caster, recovers 100 base HP over the next 3 rounds."});
+  CARDS.push({id:"flamingflamingo",name:"Flaming Flamingo",school:"fire",cost:4,target:"all_enemies",
+    kind:"flamingflamingo",accuracy:.85,damage:225,burnChance:.20,burnDamage:50,burnTurns:3,
+    icon:"♨",rarity:"RARE",duration:3600,hit:.64,
+    description:"A one-legged flamingo sweeps the enemy team with fire for 225 base damage each. Each enemy hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -241,6 +245,7 @@
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
+    flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
     darkgrounds:"+10% Dark damage. Only Dark healing works. Healing Seed cannot trigger.",
@@ -261,7 +266,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="aromatherapy"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="flamingflamingo"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -2689,6 +2694,11 @@
         gainElectricalChargeMana(c,card,anim);
         applyLightningRod(c);
       }
+    }else if(card.kind==="flamingflamingo"){
+      for(const enemy of alive(1-c.team)){
+        damage(c,enemy,card.damage,card,anim);
+        if(enemy.hp>0)trySpellBurn(enemy,card,anim,anim.burnRolls?.[enemy.id]);
+      }
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
@@ -2926,7 +2936,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
     ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
-      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
+      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -4005,6 +4015,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
       else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
@@ -4435,7 +4446,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4772,6 +4783,17 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="flamingflamingo"&&action.stage==="summon"){
+      const source=getUnit(action.source),spell=window.FlamingFlamingo;
+      if(source&&spell){
+        const progress=clamp(action.elapsed/action.duration,0,1);
+        const dir=source.team===0?1:-1,targets=sideUnits(1-source.team);
+        renderables.push({type:"flaming-flamingo",depthY:spell.ground,priority:2,
+          draw:()=>spell.bird(g,progress,dir)});
+        renderables.push({type:"flaming-flamingo-breath",depthY:Math.max(spell.ground,...targets.map(u=>u.y))+.12,priority:2,
+          draw:()=>spell.breath(g,progress,dir,targets)});
       }
     }
     function drawAromatherapyGust(team,progress){

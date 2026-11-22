@@ -5,6 +5,7 @@
 #game #cardHand.cards>button.spell.card-ornate{
  display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:24px minmax(20px,1fr) 34px 38px 54px;
  width:var(--card-width)!important;max-width:none!important;min-width:0!important;height:var(--card-height)!important;min-height:0!important;max-height:none!important;
+ left:calc(50% + (var(--fan-index) + var(--fan-offset,0))*var(--fan-step) + var(--fan-drag,0px));
  padding:6px!important;gap:2px!important;top:6px!important;overflow:hidden;--fan-drop:0px!important;
  transform:translateX(-50%) rotate(calc(var(--fan-index)*3deg))!important;transform-origin:50% 100%;
 }
@@ -21,16 +22,16 @@
 #game #cardHand.cards>button.spell.card-ornate .spell-effect{grid-row:5;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-height:0!important;max-height:none!important;flex:none!important;font-size:11px!important;line-height:1.18!important;padding:2px!important;margin:0!important;white-space:normal;overflow-wrap:anywhere;width:100%;overflow:hidden;text-align:center}
 #game #cardHand.cards>button.spell.card-ornate .spell-effect b,#game #cardHand.cards>button.spell.card-ornate .spell-effect span{font-size:inherit!important;line-height:inherit!important;white-space:normal}
 #game #cardHand.cards>button.spell.card-ornate.chosen:not(.browsed){z-index:var(--fan-z)}
-#game #cardHand.cards>button.spell.card-ornate.browsed{left:50%!important;width:194px!important;height:280px!important;grid-template-rows:26px minmax(30px,1fr) 42px 42px 66px;transform:translateX(-50%) translateY(-22px)!important;z-index:100!important}
-#game #cardHand.cards>button.spell.card-ornate.browsed .spell-name{font-size:17px!important}
-#game #cardHand.cards>button.spell.card-ornate.browsed .spell-combat b{font-size:16px!important}
-#game #cardHand.cards>button.spell.card-ornate.browsed .spell-effect{font-size:12.5px!important}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed{left:50%!important;width:194px!important;height:280px!important;grid-template-rows:26px minmax(30px,1fr) 42px 42px 66px;transform:translateX(-50%) translateY(-22px)!important;z-index:100!important}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed .spell-name{font-size:17px!important}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed .spell-combat b{font-size:16px!important}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed .spell-effect{font-size:12.5px!important}
 @media(max-width:700px) and (orientation:portrait){
  body[data-screen=battle] #game.game{grid-template-rows:32px minmax(0,1fr) clamp(380px,46dvh,420px)}
  #game .hand{grid-template-rows:24px minmax(0,1fr) 110px}
  #game #cardHand.cards{--card-height:220px;--card-width:150px;--fan-step:clamp(35px,10vw,46px)}
  #game #cardHand.cards>button.spell.card-ornate .spell-name{font-size:13px!important}
- #game #cardHand.cards>button.spell.card-ornate.browsed{transform:translateX(-50%) translateY(-44px)!important}
+ #game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed{transform:translateX(-50%) translateY(-44px)!important}
 }
 @media(min-width:1000px) and (min-height:621px){
  body[data-screen=battle] #game.game{grid-template-rows:40px minmax(0,1fr) 320px}
@@ -42,9 +43,9 @@
  #game #cardHand.cards>button.spell.card-ornate .spell-name{font-size:11px!important}
  #game #cardHand.cards>button.spell.card-ornate .spell-combat b{font-size:12px!important}
  #game #cardHand.cards>button.spell.card-ornate .spell-effect{font-size:9px!important}
- #game #cardHand.cards>button.spell.card-ornate.browsed{height:240px!important;width:180px!important;grid-template-rows:24px minmax(12px,1fr) 36px 36px 58px;transform:translateX(-50%) translateY(-16px)!important}
- #game #cardHand.cards>button.spell.card-ornate.browsed .spell-name{font-size:15px!important}
- #game #cardHand.cards>button.spell.card-ornate.browsed .spell-effect{font-size:11px!important}
+ #game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed{height:240px!important;width:180px!important;grid-template-rows:24px minmax(12px,1fr) 36px 36px 58px;transform:translateX(-50%) translateY(-16px)!important}
+ #game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed .spell-name{font-size:15px!important}
+ #game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed .spell-effect{font-size:11px!important}
 }
 #game #cardHand.cards>button.spell.card-ornate[hidden]{display:none!important;visibility:hidden!important}
 #game #cardHand.cards>button.spell.card-ornate::before{display:none!important}
@@ -55,8 +56,14 @@
 #game #cardHand.cards>button.spell.card-ornate .spell-header{position:absolute;top:5px;left:6px;z-index:5;width:27px;height:27px;min-height:0;background:#0b253bbd;border-radius:4px}
 #game #cardHand.cards>button.spell.card-ornate .spell-mana-cost{z-index:5}
 #game #cardHand.cards>button.spell.card-ornate .spell-name{padding:1px 3px!important}
-#game #cardHand.cards>button.spell.card-ornate.browsed{grid-template-rows:0 minmax(65px,1fr) 32px 38px 58px}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed{grid-template-rows:0 minmax(65px,1fr) 32px 38px 58px}
 @media(orientation:landscape) and (max-height:620px){
 #game #cardHand.cards>button.spell.card-ornate{grid-template-rows:0 minmax(20px,1fr) 26px 28px 40px}
-#game #cardHand.cards>button.spell.card-ornate.browsed{grid-template-rows:0 minmax(40px,1fr) 32px 34px 52px}
+#game #cardHand.cards:not(.is-browsing)>button.spell.card-ornate.browsed{grid-template-rows:0 minmax(40px,1fr) 32px 34px 52px}
+}
+
+/* All cards use their fan positions while the hand follows a drag. */
+#game #cardHand.cards.is-browsing>button.spell.card-ornate{
+ transition:none;
+ z-index:var(--fan-z);
 }

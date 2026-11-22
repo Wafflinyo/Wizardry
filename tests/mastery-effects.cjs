@@ -48,3 +48,14 @@ console.log('Mastery effects: fixed boosted direct/periodic healing, boosted poi
   cast('wynzor',u,enemy,1);
   assert.equal(enemy.hp,4090,'Wynzor deals 910 base Wind damage');
 }
+
+for(const [variant,ward,expectedRefund] of [[.9,null,0],[1,null,0],[1.1,null,1],[1.1,'wind_dome',0]]){
+  const {u,enemy}=setup();
+  u.mana=5;
+  enemy.hp=5000;
+  if(ward)api.addStatus(enemy,ward,null,1);
+  const action=cast('windrazor',u,enemy,variant);
+  assert.equal(u.mana,5+expectedRefund,'Wind Razor refunds mana only when a max-roll hit deals damage');
+  api.applySpell(action);
+  assert.equal(u.mana,5+expectedRefund,'a resolved cast cannot refund twice');
+}

@@ -157,7 +157,7 @@
     {"id":"shockblast","name":"Shock Blast","school":"lightning","cost":1,"accuracy":0.9,"damage":90,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Lightning blast deals 90 base damage to one enemy."},
     {"id":"waterblast","name":"Water Blast","school":"water","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Water blast deals 70 base damage to one enemy."},
     {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Wind blast deals 70 base damage to one enemy."},
-    {"id":"windrazor","name":"Wind Razor","school":"wind","cost":7,"accuracy":0.85,"damage":680,"target":"enemy","kind":"damage","duration":2900,"hit":0.76,"description":"A wind sorcerer hurls a ringed orb of wind at one enemy for 680 base damage."}
+    {"id":"windrazor","name":"Wind Razor","school":"wind","cost":7,"accuracy":0.85,"damage":680,"target":"enemy","kind":"damage","duration":2900,"hit":0.76,"description":"A wind sorcerer hurls a ringed orb of wind at one enemy for 680 base damage. Refunds 1 mana on a critical hit (maximum damage roll)."}
   );
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -205,7 +205,8 @@
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
-    sentinelfissure:"25% chance to cancel the target’s pending action."
+    sentinelfissure:"25% chance to cancel the target’s pending action.",
+    windrazor:"Refunds 1 mana on a critical hit (maximum damage roll)."
   };
   const CARD_TARGETS={enemy:"One enemy",all_enemies:"Each enemy",ally:"Self or ally",team:"Each living ally"};
   function cardInfo(card){
@@ -2573,7 +2574,12 @@
         if(canReceiveDebuff(t,"poison")&&t.hp>0&&!preventsHitEffects(anim,t)&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",card);}}
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
-        damage(c,t,card.damage,card,anim);
+        const dealt=damage(c,t,card.damage,card,anim);
+        if(card.id==="windrazor"&&dealt>0&&anim.damageVariant===1.1&&c.mana<c.maxMana){
+          c.mana++;
+          flash(c,"CRIT · +1 MANA","#b9ffe7");
+          recordBattleEvent(c.name+" refunds 1 mana from a critical Wind Razor.");
+        }
         if(anim.runeResult==="success"&&card.id==="undead"&&!preventsHitEffects(anim,t))
           attemptUndeadFear(c,t,card,anim.fearRoll??Math.random());
         // The independent stun roll happens ONLY after a successful

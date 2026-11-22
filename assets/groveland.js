@@ -3,9 +3,12 @@
   art.src="./assets/groveland-frames.webp?v=0.292.0";
   const SWAY=[4,5,6,7,6,5];
   const BANDS=[
-    {y:.53,scale:.17,count:8},
-    {y:.74,scale:.24,count:6},
-    {y:.97,scale:.32,count:5}
+    {y:.13,scale:.14,count:11},
+    {y:.30,scale:.16,count:9},
+    {y:.47,scale:.19,count:8},
+    {y:.64,scale:.22,count:7},
+    {y:.81,scale:.25,count:6},
+    {y:1.02,scale:.30,count:5}
   ];
 
   function frame(g,index,x,y,width,height){
@@ -25,10 +28,10 @@
 
     const beat=Math.floor(time/160);
     for(const [row,band] of BANDS.entries()){
-      for(let i=0;i<band.count;i++){
-        const index=strength<1?Math.min(3,Math.floor(strength*4)):SWAY[(beat+i+row*2)%SWAY.length];
+      for(let i=-1;i<=band.count;i++){
+        const index=strength<1?Math.min(3,Math.floor(strength*4)):SWAY[(beat+i+1+row*2)%SWAY.length];
         const w=width*band.scale*(.78+.1*((i+2*row)%4));
-        const h=height*band.scale*(.73+.11*((i+row)%3));
+        const h=height*Math.max(.24,band.scale)*(.94+.09*((i+row+1)%3));
         const x=width*(i+.12+(row%2)*.34)/band.count-w*.4;
         frame(g,index,x,height*band.y-h*.83,w,h);
       }

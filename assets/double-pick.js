@@ -56,8 +56,11 @@
     g.rotate(lean);
     const left=pose%4*CELL,top=Math.floor(pose/4)*CELL;
     const offsetX=-CELL/2,offsetY=-CELL*.90;
+    const farGrip=LEFT_GRIPS[pose];
+    const farPickBehind=(pose>=8&&pose<=11)||pose===21||pose===22;
+    if(farGrip&&farPickBehind)heldPick(g,farGrip[0]+offsetX,farGrip[1]+offsetY);
     g.drawImage(art,left,top,CELL,CELL,offsetX,offsetY,CELL,CELL);
-    const grips=[LEFT_GRIPS[pose],RIGHT_GRIPS[pose]].filter(Boolean);
+    const grips=[farPickBehind?null:farGrip,RIGHT_GRIPS[pose]].filter(Boolean);
     for(const [gx,gy] of grips)heldPick(g,gx+offsetX,gy+offsetY);
     // Repaint the fists over the handles so the fingers close around each grip.
     for(const [gx,gy] of grips){

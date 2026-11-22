@@ -3,7 +3,7 @@
   art.src="./assets/double-pick-frames.webp?v=0.290.4";
   const CELL=256, CENTER=500, GROUND=510, DURATION=5560;
   const RELEASES=[2730,4380];
-  const POSE_TIMES=[0,360,900,1250,1740,2040,2370,2730,2990,3520,3930,4380,4670];
+  const POSE_TIMES=[0,360,900,1250,1740,2170,2520,2730,2950,3580,4080,4380,4600];
   // Coordinates marked on the right and left fists, in atlas pixels.
   const RIGHT_GRIPS=[[93,153],[79,176],[69,151],[73,151],[71,140],[48,52],[86,53]];
   const LEFT_GRIPS=[[198,157],[202,185],[182,152],[200,152],[196,146],[196,141],
@@ -43,15 +43,35 @@
     g.restore();
   }
 
-  function actorFrame(g,pose,x,y,size,dir){
-    frame(g,pose,x,y,size,dir,.90);
+  function actorFrame(g,pose,x,y,size,dir,lean=0){
+    if(!art.complete||!art.naturalWidth)return;
     g.save();
     g.translate(x,y);
     g.scale(dir*size/CELL,size/CELL);
-    for(const grip of [LEFT_GRIPS[pose],RIGHT_GRIPS[pose]]){
-      if(grip)heldPick(g,grip[0]-CELL/2,grip[1]-CELL*.90);
+    g.rotate(lean);
+    const left=pose%4*CELL,top=Math.floor(pose/4)*CELL;
+    const offsetX=-CELL/2,offsetY=-CELL*.90;
+    g.drawImage(art,left,top,CELL,CELL,offsetX,offsetY,CELL,CELL);
+    const grips=[LEFT_GRIPS[pose],RIGHT_GRIPS[pose]].filter(Boolean);
+    for(const [gx,gy] of grips)heldPick(g,gx+offsetX,gy+offsetY);
+    // Repaint the fists over the handles so the fingers close around each grip.
+    for(const [gx,gy] of grips){
+      g.save();
+      g.beginPath();
+      g.ellipse(gx+offsetX,gy+offsetY,12,10,-.22,0,Math.PI*2);
+      g.clip();
+      g.drawImage(art,left,top,CELL,CELL,offsetX,offsetY,CELL,CELL);
+      g.restore();
     }
     g.restore();
+  }
+
+  function throwLean(elapsed,index){
+    const release=RELEASES[index];
+    const load=clamp((elapsed-(release-670))/670);
+    const follow=clamp((elapsed-release)/330);
+    return elapsed<release?-.065*Math.sin(load*Math.PI/2):
+      (-.065*Math.cos(follow*Math.PI)+.026*Math.sin(follow*Math.PI))*(1-follow);
   }
 
   function caster(g,elapsed,dir,hasSecondTarget){
@@ -63,7 +83,8 @@
     g.ellipse(CENTER,GROUND,38,8,0,0,Math.PI*2);
     g.fillStyle="rgba(8, 31, 50, .34)";
     g.fill();
-    actorFrame(g,hasSecondTarget?pose:Math.min(pose,8),CENTER,GROUND,ACTOR_SIZE,dir);
+    const lean=elapsed<3120?throwLean(elapsed,0):hasSecondTarget?throwLean(elapsed,1):0;
+    actorFrame(g,hasSecondTarget?pose:Math.min(pose,8),CENTER,GROUND,ACTOR_SIZE,dir,lean);
     g.restore();
   }
 
@@ -80,7 +101,7 @@
       return;
     }
     const t=clamp((elapsed-release)/(hit-release));
-    const sx=CENTER+dir*(index===0?98:99),sy=GROUND-(index===0?116:140);
+    const sx=CENTER+dir*90,sy=GROUND-(index===0?122:146);
     const x=sx+(tx-sx)*t,y=sy+(ty-sy)*t-30*Math.sin(t*Math.PI);
     g.save();
     g.translate(x,y);

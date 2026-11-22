@@ -180,6 +180,10 @@
     kind:"doublepick",damage:440,hitDamage:220,hits:2,accuracy:.90,icon:"❄",rarity:"RARE",
     duration:5560,hit:DOUBLE_PICK_HITS[1]/5560,
     description:"Throw two ice picks for 220 base Ice damage each. If the first defeats the target, the second flies at a random surviving enemy."});
+  CARDS.push({id:"darkgrounds",name:"Dark Grounds",school:"dark",cost:6,target:"team",
+    kind:"darkgrounds",accuracy:.85,icon:"☠",rarity:"EPIC",duration:1650,hit:.7,
+    fieldRounds:5,fieldBoost:.10,
+    description:"Covers both teams through the next 5 rounds. Dark damage +10%. Only Dark spells can heal. Healing Seed cannot trigger. Replaces the current environmental rune."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -230,13 +234,14 @@
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
+    darkgrounds:"+10% Dark damage. Only Dark healing works. Healing Seed cannot trigger.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
     waterprison:"150 Water damage per turn for 3 turns.",
     windrazor:"Refunds 1 mana on a critical hit (maximum damage roll)."
   };
   const CARD_TARGETS={enemy:"One enemy",all_enemies:"Each enemy",ally:"Self or ally",team:"Each living ally"};
   function cardInfo(card){
-    const target=card.kind==="lightningfield"?"Entire battlefield":card.selfOnly?"Self":CARD_TARGETS[card.target];
+    const target=card.fieldRounds?"Entire battlefield":card.selfOnly?"Self":CARD_TARGETS[card.target];
     const damage=card.id==="ronin"||card.id==="penguins"?card.damage*3:card.damage;
     const delayed=["static","soul"].includes(card.id);
     const base=card.heal?`${card.heal.toLocaleString()} base healing`:
@@ -247,7 +252,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="doublepick"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="darkgrounds"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -857,7 +862,7 @@
   function towerDeckScore(card,role){
     if(towerHealing.has(card.kind))return role==="Support"?10:1;
     if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
-    if(card.kind==="lightningfield")return role==="Support"?7:3;
+    if(card.fieldRounds)return role==="Support"?7:3;
     if(towerControl(card))return role==="Controller"?10:5;
     if(!card.damage)return 1;
     return (role==="Striker"?7:4)+(card.cost<=5?1:0);
@@ -900,6 +905,7 @@
       for(const target of group?[null]:targets){
         let score=0;
         if(towerHealing.has(card.kind)){
+          if(healingSuppressed(card.school))continue;
           const healing=(target?[target]:allies).reduce((total,ally)=>{
             if(planned(ally)||ally.statuses.some(s=>s.kind===(card.kind==="regen"?"calming_waters":card.kind==="teamregen"?"healing_aura":null)))return total;
             const missing=ally.maxHp-ally.hp;
@@ -911,10 +917,10 @@
           if(!target||planned(target)||target.statuses.some(s=>s.kind===({bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
-        }else if(card.kind==="lightningfield"){
-          if(state.lightningField)continue;
-          const lightning=u=>u.masteries?.includes("lightning");
-          score=145+80*(allies.filter(lightning).length-opponents.filter(lightning).length);
+        }else if(card.fieldRounds){
+          if(state.environment?.id===card.id)continue;
+          const hasMastery=u=>u.masteries?.includes(card.school);
+          score=145+80*(allies.filter(hasMastery).length-opponents.filter(hasMastery).length);
         }else if(card.damage||towerControl(card)){
           const victims=target?[target]:opponents;
           score=victims.reduce((sum,victim)=>{
@@ -1105,7 +1111,8 @@
     a.effectiveAccuracy=testing?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
     const full=target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
-    const success=!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
+    const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
+    const success=!sealed&&!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
     a.runeResult=success?"success":"failed";
     if(used){
@@ -1116,7 +1123,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=sealed?"healing sealed by Dark Grounds":full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     tally(c,"casts",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1136,7 +1143,7 @@
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
+      flash(c,sealed?"HEALING SEALED":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -1647,7 +1654,7 @@
         flash(c,"RUNE ALREADY GONE","#d1edaa");
         continue;
       }
-      if(state.lightningField&&!c.masteries?.includes("lightning")&&Math.random()<BY_ID.lightningfield.shockChance){
+      if(state.environment?.id==="lightningfield"&&!c.masteries?.includes("lightning")&&Math.random()<BY_ID.lightningfield.shockChance){
         c.passedRound=state.round;
         // Plans move their card out of hand before resolution and can recycle the discard pile.
         const pile=c.discardPile?.includes(card.id)?c.discardPile:c.drawPile;
@@ -1664,7 +1671,7 @@
         applied:false,traceMs:0,source:c.id,target:action.targetId,
         automatic:!!action.auto||(state.mode==="story"&&c.team===1),
         runeResult:null,runeScore:null};
-      const targetName=card.kind==="lightningfield"?null:card.target==="team"?"all allies":card.target==="all_enemies"?"all enemies":getUnit(action.targetId)?.name;
+      const targetName=card.fieldRounds?null:card.target==="team"?"all allies":card.target==="all_enemies"?"all enemies":getUnit(action.targetId)?.name;
       recordBattleEvent(c.name+" casts "+card.name+(targetName?" on "+targetName:"")+".");
       ui.hint.textContent=c.name+" raises their staff toward the center...";
       paintUI();
@@ -1750,6 +1757,13 @@
     trackDamage(source,target,lost);
     return lost;
   }
+  function healingSuppressed(school){
+    return state.environment?.id==="darkgrounds"&&school!=="dark";
+  }
+  function environmentDamageMultiplier(school){
+    const field=BY_ID[state.environment?.id];
+    return field?.school===school&&field?.fieldBoost?1+field.fieldBoost:1;
+  }
   function restoreHp(source,target,amount){
     target.hp+=amount;
     tally(source,"healing",amount);
@@ -1831,7 +1845,7 @@
       rune=>rune.kind==="lightning_rod" && rune.expiresRound>=state.round));
   }
   function healFromLightningRod(owners,amount,target){
-    if(!amount)return;
+    if(!amount||healingSuppressed("lightning"))return;
     const share=Math.floor(amount/owners.length),remainder=amount%owners.length;
     const healed=[];
     for(const [index,owner] of owners.entries()){
@@ -1949,9 +1963,10 @@
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
     let raw=base*spellPower(source,card,spell),notes=[];
-    if(base>0&&card?.school==="lightning"&&state.lightningField){
-      raw*=1+BY_ID.lightningfield.fieldBoost;
-      notes.push("LIGHTNING FIELD +10%");
+    const fieldBoost=environmentDamageMultiplier(card?.school);
+    if(base>0&&fieldBoost>1){
+      raw*=fieldBoost;
+      notes.push(BY_ID[state.environment.id].name.toUpperCase()+" +10%");
     }
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
     // spell, a fizzle, or a spell without a living target cannot consume it.
@@ -2076,7 +2091,7 @@
   }
   function tryHealingSeed(source,target,cast){
     const card=cast.card;
-    if(preventsHitEffects(cast,target)||!canReceiveDebuff(target,"healing_seed")||
+    if(healingSuppressed(card.school)||preventsHitEffects(cast,target)||!canReceiveDebuff(target,"healing_seed")||
        (cast.seedRoll??Math.random())>=card.seedChance)return;
     addStatus(target,"healing_seed","❧",card.seedDamage,card.school);
     Object.assign(target.statuses.find(st=>st.kind==="healing_seed"),{
@@ -2347,7 +2362,13 @@
     for(const u of state.units)for(const kind of ["calming_waters","healing_aura"]){const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);effect.remaining--;
+      effect.lastTickRound=state.round;
+      effect.remaining--;
+      if(healingSuppressed(effect.school??statusSchool(effect,u))){
+        if(!effect.remaining)consumeStatus(u,kind);
+        continue;
+      }
+      const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);
       flash(u,"+"+amount+" HP","#a8f1ee");recordBattleEvent(u.name+" restores "+amount+" HP from "+(kind==="healing_aura"?"Healing Aura":"Calming Waters")+" ("+effect.remaining+" turns remaining).");
       if(!effect.remaining)consumeStatus(u,kind);
     }
@@ -2358,7 +2379,12 @@
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       const seed=kind==="healing_seed",name=seed?"Healing Seed":"Soul Drain";
       effect.lastTickRound=state.round;
-      const drained=Math.min(u.hp,absorbBarrierDamage(u,effect.value));
+      if(seed&&healingSuppressed(effect.school??"nature")){
+        if(!--effect.remaining)consumeStatus(u,kind);
+        continue;
+      }
+      const drain=Math.floor(effect.value*environmentDamageMultiplier(effect.school??(seed?"nature":"dark")));
+      const drained=Math.min(u.hp,absorbBarrierDamage(u,drain));
       const caster=getUnit(effect.sourceId);
       loseHp(caster,u,drained);effect.remaining--;
       const healed=caster?.hp>0?Math.min(drained,Math.max(0,caster.maxHp-caster.hp)):0;
@@ -2375,7 +2401,7 @@
       if(u.hp<=0){consumeStatus(u,"soulless");continue;}
       if(state.round<curse.expiresRound)continue;
       consumeStatus(u,"soulless");
-      const amount=Math.min(u.hp,absorbBarrierDamage(u,curse.value));
+      const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor(curse.value*environmentDamageMultiplier("dark"))));
       loseHp(getUnit(curse.sourceId),u,amount);
       flash(u,"SOULLESS −"+amount,"#dfadff");
       recordBattleEvent(u.name+" takes "+amount+" damage from Soulless.");
@@ -2387,7 +2413,7 @@
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,effect.value||50));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor((effect.value||50)*environmentDamageMultiplier(effect.school??statusSchool(effect,u)))));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
       const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
       flash(u,label.toUpperCase()+" −"+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       recordBattleEvent(u.name+" takes "+amount+" "+label+" damage ("+effect.remaining+" ticks remaining).");
@@ -2406,7 +2432,7 @@
     const {action,card}=anim,c=getUnit(action.casterId),t=getUnit(action.targetId);
     if(!c||c.hp<=0)return;
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
-    if(anim.runeResult==="failed")return;
+    if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
     if(card.kind==="zen"){
       const rune=zenRunes(t).find(st=>st.kind===action.runeKind);
@@ -2701,9 +2727,11 @@
     } else if(card.kind==="trap"&&canReceiveDebuff(t,"trap")&&t&&t.hp>0){
       addStatus(t,"trap",null,.35,card.school);flash(t,"TRAP","#e8ba91");
       recordBattleEvent("Trap attached to "+t.name);
-    } else if(card.kind==="lightningfield"){
-      state.lightningField={expiresRound:state.round+card.fieldRounds};
-      recordBattleEvent(c.name+" electrifies the entire battlefield with Lightning Field.");
+    } else if(card.fieldRounds){
+      const previous=BY_ID[state.environment?.id];
+      state.environment={id:card.id,expiresRound:state.round+card.fieldRounds};
+      recordBattleEvent(c.name+" covers the battlefield with "+card.name+
+        (previous&&previous.id!==card.id?", replacing "+previous.name+".":"."));
     } else if(card.kind==="aura"){
       state.auras[c.team]={turns:2,value:.20};
       recordBattleEvent("Two-round damage aura for "+(c.team?"Team B":"Team A"));
@@ -2732,9 +2760,9 @@
         consumeStatus(u,"stun");u.stunRound=null;
       }
     }
-    if(state.lightningField&&state.round>=state.lightningField.expiresRound){
-      state.lightningField=null;
-      recordBattleEvent("Lightning Field dissipates.");
+    if(state.environment&&state.round>=state.environment.expiresRound){
+      recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
+      state.environment=null;
     }
     state.round++;
     tickBurnsForRound();
@@ -2784,7 +2812,7 @@
     const testing=state.mode==="tester";
     ui.badge.textContent=testing?state.size+"v"+state.size+" CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
       (state.mode==="story"?"PRACTICE":"ONLINE LOBBY");
-    if(state.lightningField)ui.badge.textContent+=" · ϟ LIGHTNING FIELD";
+    if(state.environment)ui.badge.textContent+=" · "+BY_ID[state.environment.id].name.toUpperCase();
     $("testerTargetRow").hidden=!testing;
     $("testerSize").disabled=!planning;
     $("testerSize").value=String(state.size);
@@ -2796,7 +2824,7 @@
     if(planning)ui.hint.textContent=c?
       (sleepingThisRound(c)?"Asleep · skips this round.":isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(card.kind==="lightningfield"?"Confirm Lightning Field across the entire battlefield.":card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
+       card?(card.fieldRounds?"Confirm "+card.name+" across the entire battlefield.":card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
@@ -2833,7 +2861,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.kind==="lightningfield"?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -2850,7 +2878,7 @@
       c.mana>=card.cost&&!state.plans[c.id]&&(card.kind!=="zen"||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&card?.kind==="zen"&&runes.length);
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=card?.kind==="lightningfield"?"Cast Lightning Field":card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=card?.fieldRounds?"Cast "+card.name:card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -3479,7 +3507,7 @@
     if(u.hp>0&&u.id===first)
       ellipse(g,0,5,77*scale,27*scale,"#46aaff30","#65bfff",4);
     // Green eligibility markers for heal targets, gold for enemies.
-    if(state.phase==="planning"&&currentCard()&&currentCard().kind!=="lightningfield"&&caster()&&u.hp>0&&
+    if(state.phase==="planning"&&currentCard()&&!currentCard().fieldRounds&&caster()&&u.hp>0&&
        targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
       ellipse(g,0,5,87*scale,30*scale,
         ["ally","team"].includes(currentCard().target)?"#57ec9628":
@@ -3906,6 +3934,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
@@ -4301,12 +4330,14 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(!background)drawBackground(g);
-    const formingField=state.animation?.card.id==="lightningfield"&&state.animation.stage==="summon";
-    if(state.lightningField||formingField){
-      const strength=state.lightningField?1:clamp(state.animation.elapsed/(state.animation.duration*state.animation.card.hit),0,1);
+    const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
+    const fieldId=formingField?.card.id??state.environment?.id;
+    if(fieldId){
+      const strength=state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
+      const effect=fieldId==="darkgrounds"?window.DarkGrounds:window.LightningField;
       g.save();
       g.setTransform(ratio,0,0,ratio,0,0);
-      window.LightningField?.draw(g,{width:vw,height:vh,time,strength});
+      effect?.draw(g,{width:vw,height:vh,time,strength});
       g.restore();
     }
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
@@ -4328,7 +4359,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&

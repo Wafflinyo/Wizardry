@@ -195,6 +195,9 @@
     kind:"flamingflamingo",accuracy:.85,damage:225,burnChance:.20,burnDamage:50,burnTurns:3,
     icon:"♨",rarity:"RARE",duration:3600,hit:.64,
     description:"A one-legged flamingo sweeps the enemy team with fire for 225 base damage each. Each enemy hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
+  CARDS.push({id:"earthquake",name:"Earthquake",school:"earth",cost:5,target:"all_enemies",
+    kind:"earthquake",accuracy:.80,damage:300,icon:"◆",rarity:"RARE",duration:2250,hit:.40,
+    description:"Shatters the active environmental rune and deals 300 base damage to each living enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -246,6 +249,7 @@
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
+    earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
     darkgrounds:"+10% Dark damage. Only Dark healing works. Healing Seed cannot trigger.",
@@ -266,7 +270,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="flamingflamingo"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="earthquake"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1828,6 +1832,15 @@
     effect.sourceId=state.animation?.action?.casterId||effect.sourceId;
     return true;
   }
+  function clearEnvironment(){
+    if(!state.environment)return;
+    const owner=getUnit(state.environment.ownerId);
+    if(owner)consumeStatus(owner,ENVIRONMENT_RUNE);
+    if(state.environment){
+      recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
+      state.environment=null;
+    }
+  }
   function consumeStatus(u,kind){
     const at=u.statuses.findIndex(s=>s.kind===kind);
     if(at<0)return null;
@@ -2694,6 +2707,9 @@
         gainElectricalChargeMana(c,card,anim);
         applyLightningRod(c);
       }
+    }else if(card.kind==="earthquake"){
+      clearEnvironment();
+      for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
     }else if(card.kind==="flamingflamingo"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
@@ -2830,14 +2846,7 @@
         consumeStatus(u,"stun");u.stunRound=null;
       }
     }
-    if(state.environment&&state.round>=state.environment.expiresRound){
-      const owner=getUnit(state.environment.ownerId);
-      if(owner)consumeStatus(owner,ENVIRONMENT_RUNE);
-      if(state.environment){
-        recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
-        state.environment=null;
-      }
-    }
+    if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
     tickBurnsForRound();
     if(checkBattleEnd())return;
@@ -2936,7 +2945,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
     ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
-      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
+      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -4015,6 +4024,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
       else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
@@ -4400,7 +4410,9 @@
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
     const impactFx=state.animation?.card?.id==="sentinelfissure"?window.SentinelFissure:state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
-    const impactShake=impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
+    const earthquakeProgress=state.animation?.card?.id==="earthquake"&&state.animation.stage==="summon"
+      ?clamp(state.animation.elapsed/state.animation.duration,0,1):null;
+    const impactShake=earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
@@ -4427,6 +4439,7 @@
       effect?.draw(g,{width:vw,height:vh,time,strength});
       g.restore();
     }
+    if(earthquakeProgress!==null)window.Earthquake?.draw(g,earthquakeProgress);
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     // Render environmental VFX first. Movable summons and airborne
@@ -4446,7 +4459,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&

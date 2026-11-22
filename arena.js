@@ -3736,17 +3736,22 @@
   }
   const BLAST_COLORS={
     ice:["#e5faff","#82d4ef","#548cb7"],fire:["#ffe6a3","#ffa35e","#df6246"],
-    earth:["#dfc39a","#b79268","#765942"],nature:["#fff5a3","#cbe878","#80b86b"],
+    nature:["#fff5a3","#cbe878","#80b86b"],
     dark:["#f0cbfa","#b67bcf","#72517f"],lightning:["#fff7ca","#e9d16a","#a991dc"],
     water:["#d5fbff","#65d7e5","#4192ba"],wind:["#ecfff5","#b2e6d4","#79aeb2"]
   };
   const BLAST_RELEASE=.61;
-  const embersFrames=new Image();
-  embersFrames.onload=()=>drawCardArts();
-  embersFrames.src="./assets/blazing-embers-frames.webp?v=0.284.1";
-  function drawEmbersFrame(ctx,frame,x,y,scale,dir){
+  const STARTER_ATLASES={fire:new Image(),earth:new Image()};
+  for(const [school,path] of Object.entries({
+    fire:"blazing-embers-frames.webp?v=0.284.1",
+    earth:"rock-blast-frames.webp?v=0.284.2"
+  })){
+    STARTER_ATLASES[school].onload=()=>drawCardArts();
+    STARTER_ATLASES[school].src="./assets/"+path;
+  }
+  function drawStarterFrame(ctx,atlas,frame,x,y,scale,dir){
     ctx.save();ctx.translate(x,y);ctx.scale(scale*dir,scale);
-    ctx.drawImage(embersFrames,(frame%4)*192,Math.floor(frame/4)*192,192,192,-86,-86,172,172);
+    ctx.drawImage(atlas,(frame%4)*192,Math.floor(frame/4)*192,192,192,-86,-86,172,172);
     ctx.restore();
   }
   function blastPoly(ctx,color,points){
@@ -3771,14 +3776,6 @@
         blastCrystal(ctx,-Math.abs(i)*7,i*10,6-Math.abs(i)*.8,30-Math.abs(i)*6,
           (f?Math.PI*.5:0)+i*fan,[light,mid,shade]);
       }
-    },
-    earth(ctx,t,f,[light,mid,shade]){
-      ctx.rotate(t*(f?6:1.6));
-      blastPoly(ctx,shade,[[-28,-15],[-12,-29],[15,-26],[29,-8],[24,18],[5,28],[-22,17]]);
-      blastPoly(ctx,mid,[[-28,-15],[-8,-13],[9,4],[5,28],[-22,17]]);
-      blastPoly(ctx,"#94704e",[[-8,-13],[15,-26],[29,-8],[9,4]]);
-      blastPoly(ctx,light,[[-12,-29],[15,-26],[-8,-13],[-28,-15]]);
-      blastPoly(ctx,mid,[[29,-8],[24,18],[5,28],[9,4]]);
     },
     nature(ctx,t,f,[light,mid,shade]){
       ctx.rotate(t*2.2);
@@ -3828,41 +3825,6 @@
       blastPoly(ctx,light,[[-9,-12],[13,-17],[34,-1],[13,-10]]);
     }
   };
-  function blastStone(ctx,x,y,size,turn){
-    ctx.save();ctx.translate(x,y);ctx.rotate(turn);ctx.scale(size,size);
-    blastPoly(ctx,"#453e36",[[-12,-5],[-5,-12],[7,-10],[13,-2],[9,9],[-3,12],[-11,6]]);
-    blastPoly(ctx,"#9e8873",[[-12,-5],[-5,-12],[7,-10],[2,-4],[-5,1]]);
-    blastPoly(ctx,"#736150",[[-12,-5],[-5,1],[-3,12],[-11,6]]);
-    blastPoly(ctx,"#bcaa91",[[2,-4],[7,-10],[13,-2],[5,2],[-5,1]]);
-    blastPoly(ctx,"#66584b",[[-5,1],[5,2],[9,9],[-3,12]]);
-    ctx.restore();
-  }
-  const ROCK_CHARGE=[
-    [0,0,0],[.12,.14,0],[.28,.32,0],[.47,.46,0],[.65,.62,.14],
-    [.81,.74,.22],[.94,.85,.39],[1,.93,.58],[.92,.98,.77],[1,1,.93],[1,1,1]
-  ];
-  const ROCK_PIECES=[
-    [-57,27,-10,-11,1.30,0], [43,33,15,3,1.18,.11], [-32,40,-8,15,1.06,.22],
-    [56,18,13,-15,.88,.32], [-49,35,-21,5,.80,.39], [25,41,5,19,.90,.47]
-  ];
-  function drawRockCharge(ctx,charge,palette){
-    const [lift,pull,join]=ROCK_CHARGE[Math.min(10,Math.floor(charge*11))];
-    for(let i=0;i<ROCK_PIECES.length;i++){
-      const [sx,sy,ex,ey,size,delay]=ROCK_PIECES[i];
-      const up=clamp((lift-delay)/(1-delay),0,1),inward=clamp((pull-delay)/(1-delay),0,1);
-      if(up===0)continue;
-      const x=lerp(sx,ex,inward),y=lerp(sy+33,ey,up)-Math.sin(up*Math.PI)*18;
-      const compression=clamp((join-.48)*1.9,0,1);
-      if(compression<1)blastStone(ctx,x,y,size*(1-compression),i*.64+up*(i%2?2:-2));
-      for(let chip=0;chip<3;chip++){
-        const drop=clamp((up-(.24+chip*.22))*2.2,0,1);
-        if(drop>0&&drop<1)blastStone(ctx,x+(i%2?1:-1)*drop*(10+chip*6),y+drop*drop*37,.28*(1-drop),i+drop*7);
-      }
-    }
-    if(join>0){
-      ctx.save();ctx.scale(join,join);STARTER_SHAPES.earth(ctx,0,false,palette);ctx.restore();
-    }
-  }
   const WIND_CHARGE=[
     [62,34,0],[59,30,.15],[53,28,.30],[50,23,.43],[45,20,.56],[42,16,.70],
     [39,14,.86],[35,11,1],[32,9,1],[36,7,1],[39,5,1]
@@ -3886,7 +3848,6 @@
     }
   }
   function drawElementCharge(ctx,school,charge,palette){
-    if(school==="earth"){ drawRockCharge(ctx,charge,palette);return; }
     if(school==="wind"){ drawWindCharge(ctx,charge,palette);return; }
     const count={ice:5,nature:8,dark:3,lightning:3,water:7}[school];
     const frame=Math.floor(charge*15),[light,mid,shade]=palette;
@@ -3922,7 +3883,7 @@
     }
   }
   const BLAST_DEBRIS={
-    ice:[8,29,7,2],earth:[7,31,7,1],nature:[12,44,4,1],
+    ice:[8,29,7,2],nature:[12,44,4,1],
     dark:[6,37,9,2],lightning:[9,42,5,3],water:[11,36,5,1],wind:[5,56,6,3]
   };
   function drawStarterBlast(ctx,school,from,to,progress,hit,scale=1){
@@ -3932,16 +3893,19 @@
     const travel=Math.pow(clamp((frame-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1),1.6);
     const burst=clamp((frame-hit)/(1-hit),0,1);
     const dir=to.x>=from.x?1:-1;
-    if(school==="fire"){
-      if(!embersFrames.complete||!embersFrames.naturalWidth)return;
+    const atlas=STARTER_ATLASES[school];
+    if(atlas){
+      if(!atlas.complete||!atlas.naturalWidth)return;
       if(progress<BLAST_RELEASE){
-        drawEmbersFrame(ctx,Math.min(7,Math.floor(progress/BLAST_RELEASE*8)),from.x,from.y,scale,dir);
+        const charge=clamp(progress/BLAST_RELEASE,0,1);
+        const rise=school==="earth"?Math.max(0,1-charge*1.5)*36:0;
+        drawStarterFrame(ctx,atlas,Math.min(7,Math.floor(charge*8)),from.x,from.y+rise,scale,dir);
       }else if(progress<hit){
         const flight=clamp((progress-BLAST_RELEASE)/(hit-BLAST_RELEASE),0,1),dash=flight**1.6;
-        drawEmbersFrame(ctx,Math.min(11,8+Math.floor(flight*4)),lerp(from.x,to.x,dash),lerp(from.y,to.y,dash),scale,dir);
+        drawStarterFrame(ctx,atlas,Math.min(11,8+Math.floor(flight*4)),lerp(from.x,to.x,dash),lerp(from.y,to.y,dash),scale,dir);
       }else{
         const impact=clamp((progress-hit)/(1-hit),0,1);
-        drawEmbersFrame(ctx,Math.min(15,12+Math.floor(impact*4)),to.x,to.y,scale,dir);
+        drawStarterFrame(ctx,atlas,Math.min(15,12+Math.floor(impact*4)),to.x,to.y,scale,dir);
       }
       return;
     }

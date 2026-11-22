@@ -184,6 +184,10 @@
     kind:"darkgrounds",accuracy:.85,icon:"☠",rarity:"EPIC",duration:1650,hit:.7,
     fieldRounds:5,fieldBoost:.10,
     description:"Covers both teams through the next 5 rounds. Dark damage +10%. Only Dark spells can heal. Healing Seed cannot trigger. Replaces the current environmental rune."});
+  CARDS.push({id:"groveland",name:"Groveland",school:"nature",cost:5,target:"team",
+    kind:"groveland",accuracy:.85,icon:"❀",rarity:"EPIC",duration:1650,hit:.7,
+    fieldRounds:5,fieldBoost:.10,
+    description:"Covers both teams through the next 5 rounds. Nature heals and debuffs are 10% stronger. Healing and standalone debuff casts cannot miss. Nature debuffs on damage spells always trigger on hit."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -234,6 +238,7 @@
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
+    groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
     darkgrounds:"+10% Dark damage. Only Dark healing works. Healing Seed cannot trigger.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
     waterprison:"150 Water damage per turn for 3 turns.",
@@ -252,7 +257,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="darkgrounds"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="groveland"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -816,7 +821,8 @@
     if(sleep.lastRollRound===state.round)return true;
     const roundIndex=state.round-sleep.startRound;
     sleep.lastRollRound=state.round;
-    if(roundIndex>=3 || (roll??Math.random())<[.2,.3,.4][roundIndex]){
+    const wakeResistance=2-grovelandMultiplier("nature");
+    if(roundIndex>=3 || (roll??Math.random())<[.2,.3,.4][roundIndex]*wakeResistance){
       consumeStatus(unit,"sleep");
       flash(unit,"WOKE UP","#fff0b4");
       return false;
@@ -1108,11 +1114,12 @@
     const used=consumeStatus(c,"tailwind"),shock=c.statuses.find(st=>st.kind==="static_shock"),turbulence=consumeStatus(c,"turbulence"),bonus=(used?.value||0)-(shock?.value||0)-(turbulence?.value||0)-thornAccuracyPenalty(c)-boulderPenalty(c);
     a.accuracyBonusUsed=bonus;
     const testing=state.mode==="tester";
-    a.effectiveAccuracy=testing?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
+    const guaranteed=grovelandGuarantees(a.card);
+    a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
     const full=a.card.fieldRounds?!canReceiveDebuff(c):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
-    const success=!sealed&&!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
+    const success=!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
     a.runeResult=success?"success":"failed";
     if(used){
@@ -1762,9 +1769,15 @@
   function healingSuppressed(school){
     return state.environment?.id==="darkgrounds"&&school!=="dark";
   }
+  function grovelandMultiplier(school){
+    return school==="nature"&&state.environment?.id==="groveland"?1+BY_ID.groveland.fieldBoost:1;
+  }
+  function grovelandGuarantees(card){
+    return grovelandMultiplier(card.school)>1&&(towerHealing.has(card.kind)||DEBUFF_SPELLS.has(card.kind));
+  }
   function environmentDamageMultiplier(school){
     const field=BY_ID[state.environment?.id];
-    return field?.school===school&&field?.fieldBoost?1+field.fieldBoost:1;
+    return field?.id!=="groveland"&&field?.school===school&&field?.fieldBoost?1+field.fieldBoost:1;
   }
   function restoreHp(source,target,amount){
     target.hp+=amount;
@@ -1940,7 +1953,7 @@
 
   function directHealing(card,caster,spell,canHeal){
     const bonus=card.school==="nature"&&card.heal>0&&canHeal?growthBonus(caster,spell):0;
-    return Math.floor(Builds.healing(card,caster)*(1+bonus));
+    return Math.floor(Builds.healing(card,caster)*(1+bonus)*grovelandMultiplier(card.school));
   }
 
   function damage(source,target,base,card,spell=null){
@@ -2098,7 +2111,7 @@
   function tryHealingSeed(source,target,cast){
     const card=cast.card;
     if(healingSuppressed(card.school)||preventsHitEffects(cast,target)||!canReceiveDebuff(target,"healing_seed")||
-       (cast.seedRoll??Math.random())>=card.seedChance)return;
+       (grovelandMultiplier(card.school)===1&&(cast.seedRoll??Math.random())>=card.seedChance))return;
     addStatus(target,"healing_seed","❧",card.seedDamage,card.school);
     Object.assign(target.statuses.find(st=>st.kind==="healing_seed"),{
       sourceId:source.id,remaining:card.seedTurns,appliedRound:state.round,lastTickRound:state.round
@@ -2223,7 +2236,7 @@
   }
   function thornAccuracyPenalty(u){
     const vine=u?.statuses.find(st=>st.kind==="thorny_wrap");
-    return vine&&u.hp>0&&state.round<vine.expiresRound?.15:0;
+    return vine&&u.hp>0&&state.round<vine.expiresRound?(vine.value??.15)*grovelandMultiplier("nature"):0;
   }
   function triggerQuickSand(unit){
     const curse=unit.statuses.find(st=>st.kind==="quick_sand");
@@ -2246,7 +2259,7 @@
     if(!thornAccuracyPenalty(u)||a.thornTriggered)return u.hp>0;
     const vine=u.statuses.find(st=>st.kind==="thorny_wrap");
     a.thornTriggered=true;
-    const amount=absorbBarrierDamage(u,vine.attemptDamage||150);
+    const amount=absorbBarrierDamage(u,Math.floor((vine.attemptDamage||150)*grovelandMultiplier("nature")));
     loseHp(getUnit(vine.sourceId),u,amount);
     flash(u,"THORNS −"+amount,"#b1e781");
     recordBattleEvent(u.name+" attempts "+a.card.name+"; Thorny Wrap tightens for "+amount+" damage.");
@@ -2374,7 +2387,7 @@
         if(!effect.remaining)consumeStatus(u,kind);
         continue;
       }
-      const amount=Math.min(effect.value,Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);
+      const amount=Math.min(Math.floor(effect.value*grovelandMultiplier(effect.school??statusSchool(effect,u))),Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);
       flash(u,"+"+amount+" HP","#a8f1ee");recordBattleEvent(u.name+" restores "+amount+" HP from "+(kind==="healing_aura"?"Healing Aura":"Calming Waters")+" ("+effect.remaining+" turns remaining).");
       if(!effect.remaining)consumeStatus(u,kind);
     }
@@ -2389,7 +2402,7 @@
         if(!--effect.remaining)consumeStatus(u,kind);
         continue;
       }
-      const drain=Math.floor(effect.value*environmentDamageMultiplier(effect.school??(seed?"nature":"dark")));
+      const drain=Math.floor(effect.value*(seed?grovelandMultiplier(effect.school??"nature"):environmentDamageMultiplier(effect.school??"dark")));
       const drained=Math.min(u.hp,absorbBarrierDamage(u,drain));
       const caster=getUnit(effect.sourceId);
       loseHp(caster,u,drained);effect.remaining--;
@@ -2419,7 +2432,7 @@
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor((effect.value||50)*environmentDamageMultiplier(effect.school??statusSchool(effect,u)))));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor((effect.value||50)*environmentDamageMultiplier(effect.school??statusSchool(effect,u))*grovelandMultiplier(effect.school??statusSchool(effect,u)))));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
       const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
       flash(u,label.toUpperCase()+" −"+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       recordBattleEvent(u.name+" takes "+amount+" "+label+" damage ("+effect.remaining+" ticks remaining).");
@@ -2644,7 +2657,7 @@
     }else if(card.kind==="spores"){
       for(const enemy of alive(1-c.team)){
         damage(c,enemy,card.damage,card,anim);
-        if(canReceiveDebuff(enemy,"poison")&&enemy.hp>0&&!preventsHitEffects(anim,enemy)&&(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance){
+        if(canReceiveDebuff(enemy,"poison")&&enemy.hp>0&&!preventsHitEffects(anim,enemy)&&(grovelandMultiplier(card.school)>1||(anim.poisonRolls?.[enemy.id]??Math.random())<card.poisonChance)){
           applyPeriodicStatus(enemy,"poison",card);
         }
       }
@@ -3955,6 +3968,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
@@ -4355,7 +4369,7 @@
     const fieldId=formingField?.card.id??state.environment?.id;
     if(fieldId){
       const strength=state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
-      const effect=fieldId==="darkgrounds"?window.DarkGrounds:window.LightningField;
+      const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField,groveland:window.Groveland}[fieldId];
       g.save();
       g.setTransform(ratio,0,0,ratio,0,0);
       effect?.draw(g,{width:vw,height:vh,time,strength});
@@ -5328,7 +5342,7 @@
     getEffectiveAccuracy:(unitId,cardId)=>{
       const u=getUnit(unitId),card=BY_ID[cardId];
       if(!u||!card)return null;
-      if(state.mode==="tester")return 1;
+      if(state.mode==="tester"||grovelandGuarantees(card))return 1;
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },

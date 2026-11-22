@@ -1,13 +1,18 @@
 (()=>{
   const art=new Image();
-  art.src="./assets/double-pick-frames.webp?v=0.290.6";
+  art.src="./assets/double-pick-frames.webp?v=0.290.7";
   const CELL=256, CENTER=500, GROUND=510, DURATION=5560;
   const RELEASES=[2730,4380];
-  const POSE_TIMES=[0,360,900,1250,1740,2170,2730,2980,3520,3930,4380,4620,4780,4920,5070,5200];
+  const POSE_TIMES=[
+    0,270,590,990,1480,1700,1870,2070,2320,2550,
+    2730,2820,2940,3070,3200,3330,
+    3460,3580,3690,3800,3920,4030,4150,4290,
+    4380,4490,4610,4730,4880,5030,5170,5310
+  ];
   // Each fist has a grip only until its corresponding pick launches.
-  const RIGHT_GRIPS=[[94, 170], [68, 150], [59, 149], [51, 145], [70, 125], [68, 23]];
-  const LEFT_GRIPS=[[211, 167], [204, 155], [206, 152], [213, 148], [203, 151], [207, 151], [199, 151], [201, 153], [205, 103], [187, 42]];
-  const RELEASE_ORIGINS=[[61, 138], [115, 172]];
+  const RIGHT_GRIPS=[[94, 175], [65, 154], [59, 153], [55, 151], [75, 130], [62, 126], [44, 120], [78, 26], [85, 26], [117, 20]];
+  const LEFT_GRIPS=[[210, 175], [202, 157], [208, 155], [212, 155], [201, 154], [205, 154], [204, 154], [207, 154], [201, 153], [199, 154], [182, 150], [208, 156], [202, 158], [205, 158], [205, 162], [207, 164], [207, 177], [211, 129], [204, 89], [184, 42], [201, 50], [89, 22], [113, 19], [204, 98]];
+  const RELEASE_ORIGINS=[[91, 142], [109, 161]];
   const ACTOR_SIZE=239;
   const clamp=n=>Math.max(0,Math.min(1,n));
 
@@ -83,7 +88,7 @@
     g.fillStyle="rgba(8, 31, 50, .34)";
     g.fill();
     const lean=elapsed<3120?throwLean(elapsed,0):hasSecondTarget?throwLean(elapsed,1):0;
-    actorFrame(g,hasSecondTarget?pose:Math.min(pose,7),CENTER,GROUND,ACTOR_SIZE,dir,lean);
+    actorFrame(g,hasSecondTarget?pose:Math.min(pose,15),CENTER,GROUND,ACTOR_SIZE,dir,lean);
     g.restore();
   }
 
@@ -95,7 +100,7 @@
       const age=(elapsed-hit)/490;
       g.save();
       g.globalAlpha*=1-age;
-      frame(g,age<.45?17:18,tx,ty,138+age*53,dir);
+      frame(g,age<.45?33:34,tx,ty,138+age*53,dir);
       g.restore();
       return;
     }
@@ -120,7 +125,7 @@
       g.fill();
     }
     g.rotate(t*Math.PI*7);
-    frame(g,16,0,0,199);
+    frame(g,32,0,0,199);
     g.restore();
   }
 

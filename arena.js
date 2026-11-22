@@ -163,6 +163,10 @@
     kind:"waterprison",accuracy:1,icon:"≈",rarity:"RARE",duration:1550,hit:.72,
     water_prisonDamage:150,water_prisonTurns:3,
     description:"Trap one enemy in a rectangular prison of water. They take 150 Water damage at the start of each of the next 3 turns."});
+  CARDS.push({id:"lightningfield",name:"Lightning Field",school:"lightning",cost:4,target:"team",
+    kind:"lightningfield",accuracy:1,icon:"ϟ",rarity:"EPIC",duration:1500,hit:.68,
+    fieldRounds:5,fieldBoost:.10,shockChance:.15,
+    description:"Storm covers both teams through the next 5 rounds. Lightning spell damage +10%. Wizards without Lightning mastery have a 15% chance to get shocked when casting, skipping for bonus mana."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -210,12 +214,13 @@
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
+    lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
     waterprison:"150 Water damage per turn for 3 turns.",
     windrazor:"Refunds 1 mana on a critical hit (maximum damage roll)."
   };
   const CARD_TARGETS={enemy:"One enemy",all_enemies:"Each enemy",ally:"Self or ally",team:"Each living ally"};
   function cardInfo(card){
-    const target=card.selfOnly?"Self":CARD_TARGETS[card.target];
+    const target=card.kind==="lightningfield"?"Entire battlefield":card.selfOnly?"Self":CARD_TARGETS[card.target];
     const damage=card.id==="ronin"||card.id==="penguins"?card.damage*3:card.damage;
     const delayed=["static","soul"].includes(card.id);
     const base=card.heal?`${card.heal.toLocaleString()} base healing`:
@@ -226,7 +231,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="waterprison"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="lightningfield"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -836,6 +841,7 @@
   function towerDeckScore(card,role){
     if(towerHealing.has(card.kind))return role==="Support"?10:1;
     if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
+    if(card.kind==="lightningfield")return role==="Support"?7:3;
     if(towerControl(card))return role==="Controller"?10:5;
     if(!card.damage)return 1;
     return (role==="Striker"?7:4)+(card.cost<=5?1:0);
@@ -889,6 +895,10 @@
           if(!target||planned(target)||target.statuses.some(s=>s.kind===({bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
+        }else if(card.kind==="lightningfield"){
+          if(state.lightningField)continue;
+          const lightning=u=>u.masteries?.includes("lightning");
+          score=145+80*(allies.filter(lightning).length-opponents.filter(lightning).length);
         }else if(card.damage||towerControl(card)){
           const victims=target?[target]:opponents;
           score=victims.reduce((sum,victim)=>{
@@ -1618,12 +1628,24 @@
         flash(c,"RUNE ALREADY GONE","#d1edaa");
         continue;
       }
+      if(state.lightningField&&!c.masteries?.includes("lightning")&&Math.random()<BY_ID.lightningfield.shockChance){
+        c.passedRound=state.round;
+        // Plans move their card out of hand before resolution and can recycle the discard pile.
+        const pile=c.discardPile?.includes(card.id)?c.discardPile:c.drawPile;
+        const index=pile?.lastIndexOf(card.id)??-1;
+        if(index>=0&&c.hand.length<MAX_HAND_SIZE)c.hand.push(pile.splice(index,1)[0]);
+        state.skipCue={source:c.id,remaining:900,reason:"lightning_field"};
+        flash(c,"SHOCKED · TURN SKIPPED","#ead2ff");
+        recordBattleEvent(c.name+" is shocked by Lightning Field and skips this turn for bonus mana.");
+        paintUI();
+        return;
+      }
       c.armRaise=0;
       state.animation={action,card,stage:"raising",elapsed:0,duration:ARM_RAISE_MS,
         applied:false,traceMs:0,source:c.id,target:action.targetId,
         automatic:!!action.auto||(state.mode==="story"&&c.team===1),
         runeResult:null,runeScore:null};
-      const targetName=card.target==="team"?"all allies":card.target==="all_enemies"?"all enemies":getUnit(action.targetId)?.name;
+      const targetName=card.kind==="lightningfield"?null:card.target==="team"?"all allies":card.target==="all_enemies"?"all enemies":getUnit(action.targetId)?.name;
       recordBattleEvent(c.name+" casts "+card.name+(targetName?" on "+targetName:"")+".");
       ui.hint.textContent=c.name+" raises their staff toward the center...";
       paintUI();
@@ -1907,6 +1929,10 @@
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
     let raw=base*spellPower(source,card,spell),notes=[];
+    if(base>0&&card?.school==="lightning"&&state.lightningField){
+      raw*=1+BY_ID.lightningfield.fieldBoost;
+      notes.push("LIGHTNING FIELD +10%");
+    }
     // Echo applies to a SUCCESSFUL damaging Water spell only. An Earth
     // spell, a fizzle, or a spell without a living target cannot consume it.
     if(card?.school==="water"){
@@ -2644,6 +2670,9 @@
     } else if(card.kind==="trap"&&canReceiveDebuff(t,"trap")&&t&&t.hp>0){
       addStatus(t,"trap",null,.35,card.school);flash(t,"TRAP","#e8ba91");
       recordBattleEvent("Trap attached to "+t.name);
+    } else if(card.kind==="lightningfield"){
+      state.lightningField={expiresRound:state.round+card.fieldRounds};
+      recordBattleEvent(c.name+" electrifies the entire battlefield with Lightning Field.");
     } else if(card.kind==="aura"){
       state.auras[c.team]={turns:2,value:.20};
       recordBattleEvent("Two-round damage aura for "+(c.team?"Team B":"Team A"));
@@ -2671,6 +2700,10 @@
       if(u.stunRound!==null&&u.stunRound<=state.round){
         consumeStatus(u,"stun");u.stunRound=null;
       }
+    }
+    if(state.lightningField&&state.round>=state.lightningField.expiresRound){
+      state.lightningField=null;
+      recordBattleEvent("Lightning Field dissipates.");
     }
     state.round++;
     tickBurnsForRound();
@@ -2720,6 +2753,7 @@
     const testing=state.mode==="tester";
     ui.badge.textContent=testing?state.size+"v"+state.size+" CARD TESTER":sideUnits(0).length+" vs "+sideUnits(1).length+" · "+
       (state.mode==="story"?"PRACTICE":"ONLINE LOBBY");
+    if(state.lightningField)ui.badge.textContent+=" · ϟ LIGHTNING FIELD";
     $("testerTargetRow").hidden=!testing;
     $("testerSize").disabled=!planning;
     $("testerSize").value=String(state.size);
@@ -2731,7 +2765,7 @@
     if(planning)ui.hint.textContent=c?
       (sleepingThisRound(c)?"Asleep · skips this round.":isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
-       card?(card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
+       card?(card.kind==="lightningfield"?"Confirm Lightning Field across the entire battlefield.":card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
@@ -2746,7 +2780,7 @@
       history.lastMarkup=logMarkup;
       history.innerHTML=logMarkup||"<li>No actions yet.</li>";
     }
-    if(state.skipCue)ui.hint.textContent=(getUnit(state.skipCue.source)?.name||"Wizard")+" · Skip";
+    if(state.skipCue)ui.hint.textContent=(getUnit(state.skipCue.source)?.name||"Wizard")+(state.skipCue.reason==="lightning_field"?" · Shocked by Lightning Field":" · Skip");
     else if(!planning&&state.animation?.stage==="raising")ui.hint.textContent=getUnit(state.animation.source)?.name+" raises their staff toward the center...";
     ui.handTitle.textContent=(c?c.name:"Your wizard")+" · "+(c?.hand?.length||0)+"/5";
     ui.mana.textContent=(c?c.mana:0)+" / "+(c?.maxMana||MAX_MANA)+" MANA";
@@ -2768,7 +2802,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.kind==="lightningfield"?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -2785,7 +2819,7 @@
       c.mana>=card.cost&&!state.plans[c.id]&&(card.kind!=="zen"||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&card?.kind==="zen"&&runes.length);
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=card?.kind==="lightningfield"?"Cast Lightning Field":card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -3414,7 +3448,7 @@
     if(u.hp>0&&u.id===first)
       ellipse(g,0,5,77*scale,27*scale,"#46aaff30","#65bfff",4);
     // Green eligibility markers for heal targets, gold for enemies.
-    if(state.phase==="planning"&&currentCard()&&caster()&&u.hp>0&&
+    if(state.phase==="planning"&&currentCard()&&currentCard().kind!=="lightningfield"&&caster()&&u.hp>0&&
        targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
       ellipse(g,0,5,87*scale,30*scale,
         ["ally","team"].includes(currentCard().target)?"#57ec9628":
@@ -3838,6 +3872,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
       else if(card.id==="darksorcerer")window.DarkSorcerer?.portrait(c,width,height);
@@ -4232,6 +4267,14 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(!background)drawBackground(g);
+    const formingField=state.animation?.card.id==="lightningfield"&&state.animation.stage==="summon";
+    if(state.lightningField||formingField){
+      const strength=state.lightningField?1:clamp(state.animation.elapsed/(state.animation.duration*state.animation.card.hit),0,1);
+      g.save();
+      g.setTransform(ratio,0,0,ratio,0,0);
+      window.LightningField?.draw(g,{width:vw,height:vh,time,strength});
+      g.restore();
+    }
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     // Render environmental VFX first. Movable summons and airborne
@@ -4251,7 +4294,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4315,6 +4358,11 @@
       const target=getUnit(burst.targetId);
       if(target)renderables.push({type:"water-prison-release",depthY:target.y+.06,priority:2,
         draw:()=>window.WaterPrison?.draw(g,{target,time,release:Math.max(.001,burst.age/.62),layer:"back"})});
+    }
+    if(state.skipCue?.reason==="lightning_field"){
+      const target=getUnit(state.skipCue.source);
+      if(target)renderables.push({type:"lightning-field-shock",depthY:target.y+.14,priority:2,
+        draw:()=>window.LightningField?.shock(g,target,time)});
     }
     for(const ripple of state.bubbleShieldRipples||[]){
       const target=getUnit(ripple.targetId);

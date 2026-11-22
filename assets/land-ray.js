@@ -2,15 +2,17 @@
   const art=new Image();
   art.src="./assets/land-ray-frames.webp?v=0.289.0";
   const CELL=256, SIZE=330;
-  const POSE_TIMES=[0,720,930,1180,1430,1640,1910,2170,2290,2460,2630,2800,2980,3150,3320,3520];
-  const DURATION=3900, IMPACT=2170;
+  const DURATION=4530, IMPACT=2170;
+  const POSE_TIMES=[0,720,930,1180,1430,1640,1910,IMPACT,2920,3090,3260,3430,3610,3780,3950,4150];
+  const TAIL_REACH=[0,0,0,0,0,.13,.34,.57,.26];
   const clamp=n=>Math.max(0,Math.min(1,n));
 
-  function frame(g,pose,x,y,size,dir,anchorY){
+  function frame(g,pose,x,y,size,dir,anchorY,reach=0){
     if(!art.complete||!art.naturalWidth)return;
     g.save();
     g.translate(x,y);
     g.scale(dir,1);
+    if(reach)g.transform(1,0,-reach,1,0,0);
     g.drawImage(art,pose%4*CELL,Math.floor(pose/4)*CELL,CELL,CELL,-size/2,-size*anchorY,size,size);
     g.restore();
   }
@@ -42,10 +44,10 @@
     const pose=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
     const scale=.60+.30*clamp((target.y-288)/235);
     const size=SIZE*scale;
-    const x=target.x-dir*size*.45,y=target.y+size*.09;
+    const x=target.x-dir*size*.62,y=target.y+size*.09;
     g.save();
     g.globalAlpha*=Math.min(clamp(elapsed/170),clamp((DURATION-elapsed)/330));
-    frame(g,pose,x,y,size,dir,.90);
+    frame(g,pose,x,y,size,dir,.90,TAIL_REACH[pose]);
     g.restore();
     strike(g,target.x,target.y-70*scale,dir,elapsed-IMPACT);
   }

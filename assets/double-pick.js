@@ -1,13 +1,13 @@
 (()=>{
   const art=new Image();
-  art.src="./assets/double-pick-frames.webp?v=0.290.2";
-  const CELL=256, CENTER=500, GROUND=510, DURATION=4230;
-  const RELEASES=[2290,3180];
-  const POSE_TIMES=[0,360,900,1250,1790,2000,2290,2460,2740,2960,3180,3390];
+  art.src="./assets/double-pick-frames.webp?v=0.290.4";
+  const CELL=256, CENTER=500, GROUND=510, DURATION=5560;
+  const RELEASES=[2730,4380];
+  const POSE_TIMES=[0,360,900,1250,1740,2040,2370,2730,2990,3520,3930,4380,4670];
   // Coordinates marked on the right and left fists, in atlas pixels.
-  const RIGHT_GRIPS=[[113,208],[73,165],[63,149],[64,149],[52,82],[47,48]];
-  const LEFT_GRIPS=[[193,209],[196,169],[180,151],[200,153],[196,148],[193,138],
-    [152,141],[158,145],[189,145],[179,55]];
+  const RIGHT_GRIPS=[[93,153],[79,176],[69,151],[73,151],[71,140],[48,52],[86,53]];
+  const LEFT_GRIPS=[[198,157],[202,185],[182,152],[200,152],[196,146],[196,141],
+    [179,141],[165,148],[196,145],[189,145],[179,55]];
   const ACTOR_SIZE=239;
   const clamp=n=>Math.max(0,Math.min(1,n));
 
@@ -55,14 +55,15 @@
   }
 
   function caster(g,elapsed,dir,hasSecondTarget){
-    const pose=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
+    const step=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
+    const pose=step===12?13:step;
     g.save();
     g.globalAlpha*=Math.min(clamp(elapsed/220),clamp((DURATION-elapsed)/420));
     g.beginPath();
     g.ellipse(CENTER,GROUND,38,8,0,0,Math.PI*2);
     g.fillStyle="rgba(8, 31, 50, .34)";
     g.fill();
-    actorFrame(g,hasSecondTarget?pose:Math.min(pose,7),CENTER,GROUND,ACTOR_SIZE,dir);
+    actorFrame(g,hasSecondTarget?pose:Math.min(pose,8),CENTER,GROUND,ACTOR_SIZE,dir);
     g.restore();
   }
 
@@ -79,9 +80,25 @@
       return;
     }
     const t=clamp((elapsed-release)/(hit-release));
-    const sx=CENTER+dir*(index===0?105:99),sy=GROUND-(index===0?153:140);
+    const sx=CENTER+dir*(index===0?98:99),sy=GROUND-(index===0?116:140);
     const x=sx+(tx-sx)*t,y=sy+(ty-sy)*t-30*Math.sin(t*Math.PI);
-    frame(g,12+Math.floor((elapsed-release)/70)%2,x,y,119,dir);
+    g.save();
+    g.translate(x,y);
+    g.scale(dir,1);
+    // A short wake follows the flight path while the pick tumbles around its center.
+    for(let i=0;i<3;i++){
+      const length=38+i*17;
+      g.fillStyle=["#7bdbff70","#b9efff8c","#56c7f55c"][i];
+      g.beginPath();
+      g.moveTo(-25,i*12-13);
+      g.lineTo(-25-length,i*9-17);
+      g.lineTo(-15,i*12-8);
+      g.closePath();
+      g.fill();
+    }
+    g.rotate(t*Math.PI*7);
+    frame(g,12,0,0,199);
+    g.restore();
   }
 
   function portrait(g,width,height){

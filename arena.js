@@ -175,10 +175,10 @@
     kind:"damage",damage:400,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
     duration:6305,hit:3945/6305,
     description:"A buried land ray strikes one enemy with its barbed tail for 400 base Earth damage. 20% chance to Shock and skip their pending action this round."});
-  const DOUBLE_PICK_HITS=[2650,3540];
+  const DOUBLE_PICK_HITS=[3190,4840];
   CARDS.push({id:"doublepick",name:"Double Pick",school:"ice",cost:3,target:"enemy",
     kind:"doublepick",damage:440,hitDamage:220,hits:2,accuracy:.90,icon:"❄",rarity:"RARE",
-    duration:4230,hit:DOUBLE_PICK_HITS[1]/4230,
+    duration:5560,hit:DOUBLE_PICK_HITS[1]/5560,
     description:"Throw two ice picks for 220 base Ice damage each. If the first defeats the target, the second flies at a random surviving enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');

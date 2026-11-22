@@ -188,6 +188,9 @@
     kind:"groveland",accuracy:.85,icon:"❀",rarity:"EPIC",duration:1650,hit:.7,
     fieldRounds:5,fieldBoost:.10,
     description:"Covers both teams through the next 5 rounds. Nature heals and debuffs are 10% stronger. Healing and standalone debuff casts cannot miss. Nature debuffs on damage spells always trigger on hit."});
+  CARDS.push({id:"aromatherapy",name:"Aromatherapy",school:"wind",cost:3,target:"team",
+    kind:"aromatherapy",accuracy:.90,heal:100,healTurns:3,icon:"≋",rarity:"RARE",duration:1800,hit:.73,
+    description:"A pink gust leaves a cleansable debuff rune on the caster. Each living teammate, including the caster, recovers 100 base HP over the next 3 rounds."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -238,6 +241,7 @@
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
+    aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
     darkgrounds:"+10% Dark damage. Only Dark healing works. Healing Seed cannot trigger.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
@@ -257,7 +261,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="groveland"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="aromatherapy"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -859,7 +863,7 @@
     return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||isRecharging(u)||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
-  const towerHealing=new Set(["heal","teamheal","regen","teamregen"]);
+  const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
   const towerBarriers=new Set(["winddome","bubbleshield","shield","frozentouch"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
@@ -911,7 +915,7 @@
       for(const target of group?[null]:targets){
         let score=0;
         if(towerHealing.has(card.kind)){
-          if(healingSuppressed(card.school))continue;
+          if(healingSuppressed(card.school)||(card.kind==="aromatherapy"&&!canReceiveDebuff(u,"aromatherapy")))continue;
           const healing=(target?[target]:allies).reduce((total,ally)=>{
             if(planned(ally)||ally.statuses.some(s=>s.kind===(card.kind==="regen"?"calming_waters":card.kind==="teamregen"?"healing_aura":null)))return total;
             const missing=ally.maxHp-ally.hp;
@@ -1117,7 +1121,7 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const success=!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
@@ -1130,7 +1134,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     tally(c,"casts",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1741,7 +1745,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set([ENVIRONMENT_RUNE,'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set([ENVIRONMENT_RUNE,"aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1762,6 +1766,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
+    if(target.hp<=0)consumeStatus(target,"aromatherapy");
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     return lost;
@@ -2370,8 +2375,28 @@
       damage(caster,neighbor,a.card.splash,a.card,a);
     return true;
   }
+  function tickAromatherapy(caster){
+    const rune=caster.statuses.find(st=>st.kind==="aromatherapy");
+    if(!rune||caster.hp<=0||rune.lastTickRound>=state.round)return;
+    rune.lastTickRound=state.round;
+    const amount=Math.ceil(rune.healingLeft/rune.remaining);
+    rune.healingLeft-=amount;
+    rune.remaining--;
+    if(!healingSuppressed("wind")){
+      for(const ally of alive(caster.team)){
+        const healing=Math.min(amount,Math.max(0,ally.maxHp-ally.hp));
+        if(healing>0){
+          restoreHp(caster,ally,healing);
+          flash(ally,"AROMATHERAPY · +"+healing+" HP","#ffc6eb");
+        }
+      }
+    }
+    if(!rune.remaining)consumeStatus(caster,"aromatherapy");
+  }
+
   function tickBurnsForRound(){
     expireGunpowderCoats();
+    for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
     for(const u of state.units)for(const kind of ["static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors"]){
@@ -2534,6 +2559,13 @@
       addStatus(t,nature?"growth":"raging_waters",null,card.boost,card.school);
       flash(t,nature?"GROWTH +25%":"RAGING WATERS +25%",nature?"#ccf7a3":"#a8eeff");
       recordBattleEvent(t.name+(nature?" gains +25% on their next direct Nature heal or damaging cast.":" gains +25% damage on their next damaging Water spell."));
+    }else if(card.kind==="aromatherapy"){
+      if(!canReceiveDebuff(c,"aromatherapy"))return;
+      addStatus(c,"aromatherapy",null,0,card.school);
+      Object.assign(c.statuses.find(st=>st.kind==="aromatherapy"),{
+        remaining:card.healTurns,healingLeft:Builds.healing(card,c),lastTickRound:state.round
+      });
+      flash(c,"AROMATHERAPY · 3 ROUNDS","#ffc6eb");
     }else if(card.kind==="drowzyflowers"){
       if(t?.hp>0 && t.team!==c.team)applyFlowerSleep(t);
     }else if(card.kind==="waterprison"){
@@ -2890,7 +2922,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?"All living allies · 200 HP × 3 turns each":allEnemies?
+    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -3645,6 +3677,8 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "aromatherapy":return {title:"Aromatherapy · Wind debuff",detail:
+        "Restores up to "+st.healingLeft+" HP per living teammate over "+st.remaining+" remaining rounds. Cleansing this rune ends the healing."};
       case ENVIRONMENT_RUNE:{
         const field=BY_ID[st.fieldId];
         const rounds=Math.max(0,st.expiresRound-state.round);
@@ -3968,6 +4002,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
       else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
@@ -4397,7 +4432,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4734,6 +4769,15 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="aromatherapy"&&action.stage==="summon"){
+      const source=getUnit(action.source),effect=window.Aromatherapy;
+      if(source&&effect){
+        const progress=clamp(action.elapsed/action.duration,0,1);
+        const allies=alive(source.team);
+        renderables.push({type:"aromatherapy-gust",depthY:Math.max(...allies.map(u=>u.y))+.1,priority:2,
+          draw:()=>effect.draw(g,allies,progress,source.team===0?1:-1)});
       }
     }
     if(action?.card?.id==="doublepick"&&action.stage==="summon"){

@@ -1,14 +1,13 @@
 (()=>{
-  const art=new Image();
+  const art=new Image(),meadow=new Image();
   art.src="./assets/groveland-frames.webp?v=0.292.0";
+  meadow.src="./assets/groveland-arena.webp?v=0.292.2";
   const SWAY=[4,5,6,7,6,5];
-  const BANDS=[
-    {y:.13,scale:.14,count:11},
-    {y:.30,scale:.16,count:9},
-    {y:.47,scale:.19,count:8},
-    {y:.64,scale:.22,count:7},
-    {y:.81,scale:.25,count:6},
-    {y:1.02,scale:.30,count:5}
+  // Positions are anchored to the painted arena surface, with varied depth and spacing.
+  const FERNS=[
+    [.16,.55,.088],[.29,.53,.048],[.68,.52,.052],[.85,.57,.087],
+    [.095,.70,.12],[.27,.70,.053],[.64,.65,.046],[.91,.73,.095],
+    [.20,.83,.105],[.39,.79,.057],[.62,.86,.069],[.79,.85,.11],[.47,.92,.12]
   ];
 
   function frame(g,index,x,y,width,height){
@@ -16,32 +15,26 @@
     g.drawImage(art,index%4*288,Math.floor(index/4)*224,288,224,x,y,width,height);
   }
 
-  function draw(g,{width,height,time,strength=1}){
+  function landscape(g,{x,y,width,height,time,strength}){
     g.save();
     g.globalAlpha*=strength;
-    const tint=g.createLinearGradient(0,0,0,height);
-    tint.addColorStop(0,"#12361983");
-    tint.addColorStop(.46,"#21542780");
-    tint.addColorStop(1,"#234e20b6");
-    g.fillStyle=tint;
-    g.fillRect(0,0,width,height);
-
+    if(meadow.complete&&meadow.naturalWidth)g.drawImage(meadow,x,y,width,height);
     const beat=Math.floor(time/160);
-    for(const [row,band] of BANDS.entries()){
-      for(let i=-1;i<=band.count;i++){
-        const index=strength<1?Math.min(3,Math.floor(strength*4)):SWAY[(beat+i+1+row*2)%SWAY.length];
-        const w=width*band.scale*(.78+.1*((i+2*row)%4));
-        const h=height*Math.max(.24,band.scale)*(.94+.09*((i+row+1)%3));
-        const x=width*(i+.12+(row%2)*.34)/band.count-w*.4;
-        frame(g,index,x,height*band.y-h*.83,w,h);
-      }
+    for(const [i,[u,v,size]] of FERNS.entries()){
+      const index=strength<1?Math.min(3,Math.floor(strength*4)):SWAY[(beat+i*2)%SWAY.length];
+      const w=width*size,h=w*224/288;
+      frame(g,index,x+u*width-w*.5,y+v*height-h*.82,w,h);
     }
     g.restore();
   }
-  window.Groveland={draw,portrait(g,width,height){
-    g.fillStyle="#183a21";
-    g.fillRect(0,0,width,height);
-    frame(g,4,-width*.09,-height*.18,width*1.18,height*1.35);
+  window.Groveland={landscape,portrait(g,width,height){
+    if(meadow.complete&&meadow.naturalWidth){
+      g.drawImage(meadow,178,276,644,344,0,0,width,height);
+    }else{
+      g.fillStyle="#183a21";
+      g.fillRect(0,0,width,height);
+      frame(g,4,-width*.09,-height*.18,width*1.18,height*1.35);
+    }
   }};
-  art.addEventListener("load",()=>window.WIZARDRY_ARENA_TEST?.drawCardArts());
+  meadow.addEventListener("load",()=>window.WIZARDRY_ARENA_TEST?.drawCardArts());
 })();

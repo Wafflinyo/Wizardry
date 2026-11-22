@@ -4352,10 +4352,16 @@
     // while reserving visible space below front-row feet for attached labels.
     const impactFx=state.animation?.card?.id==="sentinelfissure"?window.SentinelFissure:state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
     const impactShake=impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
+    const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
+    const fieldId=formingField?.card.id??state.environment?.id;
+    const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
     if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(impactShake?.x||0)*fit,dy=(impactShake?.y||0)*fit;
       const margin=Math.max(Math.abs(dx)/vw,Math.abs(dy)/vh)*2;
       g.save();g.translate(vw/2+dx,vh/2+dy);g.scale(1+margin,1+margin);g.translate(-vw/2,-vh/2);
-      g.drawImage(background,(vw-W*cover)/2,diamondY-414*cover,W*cover,H*cover);g.restore();}
+      const x=(vw-W*cover)/2,y=diamondY-414*cover,width=W*cover,height=H*cover;
+      g.drawImage(background,x,y,width,height);
+      if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
+      g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
     if(impactShake){
       const dx=impactShake.x*fit,dy=impactShake.y*fit;
@@ -4365,11 +4371,8 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y)){g.translate(W/2,H/2);g.scale(1.012,1.012);g.translate(-W/2+quake.x,-H/2+quake.y);}
     if(!background)drawBackground(g);
-    const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
-    const fieldId=formingField?.card.id??state.environment?.id;
-    if(fieldId){
-      const strength=state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
-      const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField,groveland:window.Groveland}[fieldId];
+    if(fieldId&&fieldId!=="groveland"){
+      const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];
       g.save();
       g.setTransform(ratio,0,0,ratio,0,0);
       effect?.draw(g,{width:vw,height:vh,time,strength});

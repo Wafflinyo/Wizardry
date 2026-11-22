@@ -1,10 +1,11 @@
 (()=>{
   const art=new Image();
-  art.src="./assets/land-ray-frames.webp?v=0.289.0";
+  art.src="./assets/land-ray-frames.webp?v=0.289.4";
   const CELL=256, SIZE=330;
-  const DURATION=4275, IMPACT=1915;
-  const POSE_TIMES=[0,1400,1540,1680,1830,1855,1880,IMPACT,2665,2835,3005,3175,3355,3525,3695,3895];
-  const TAIL_REACH=[0,0,0,0,0,.13,.34,.57,.26];
+  const DURATION=5175, IMPACT=2815;
+  const POSE_TIMES=[0,1400,1540,1690,1830,1980,2130,2280,2430,2580,2730,2775,IMPACT,3565,3795,4000,4230,4460,4690];
+  const POSES=[0,1,2,3,4,5,6,5,4,5,7,8,9,10,11,12,13,14,15];
+  const TAIL_REACH={7:.12,8:.37,9:.73};
   const clamp=n=>Math.max(0,Math.min(1,n));
 
   function frame(g,pose,x,y,size,dir,anchorY,reach=0){
@@ -41,7 +42,7 @@
   }
 
   function draw(g,elapsed,dir,target){
-    const pose=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
+    const pose=POSES[Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms))];
     const scale=.60+.30*clamp((target.y-288)/235);
     const size=SIZE*scale;
     const x=target.x-dir*size*.62,y=target.y+size*.09;

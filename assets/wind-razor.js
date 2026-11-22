@@ -3,7 +3,9 @@
   art.src="./assets/wind-razor-frames.webp?v=0.285.0";
   wind.src="./assets/wind-blast-frames.webp?v=0.284.10";
 
-  const CENTER=500, GROUND=411, SIZE=230, RELEASE=.64;
+  const CENTER=500, GROUND=372, SIZE=230;
+  const CHARGE_START=560, WINDUP_START=2384, RELEASE=2756;
+  const DURATION=3800;
   const clamp=n=>Math.min(1,Math.max(0,n));
   function frame(g,sheet,index,x,y,width,height,dir){
     if(!sheet.complete||!sheet.naturalWidth)return;
@@ -13,11 +15,14 @@
     g.restore();
   }
   function caster(g,p,dir){
-    const pose=p<RELEASE?Math.min(9,Math.floor(p/RELEASE*10)):
-      Math.min(14,10+Math.floor((p-RELEASE)/(1-RELEASE)*7));
+    const elapsed=p*DURATION;
+    const pose=elapsed<CHARGE_START?Math.floor(elapsed/CHARGE_START*3):
+      elapsed<WINDUP_START?3+Math.floor((elapsed-CHARGE_START)/(WINDUP_START-CHARGE_START)*5):
+      elapsed<RELEASE?8+Math.floor((elapsed-WINDUP_START)/(RELEASE-WINDUP_START)*2):
+      Math.min(14,10+Math.floor((elapsed-RELEASE)/(DURATION-RELEASE)*7));
     g.save();
     g.globalAlpha*=Math.min(clamp(p/.055),clamp((1-p)/.14));
-    frame(g,art,pose,CENTER,GROUND-SIZE/2,SIZE,SIZE,dir);
+    frame(g,art,pose,CENTER,GROUND-SIZE*.44,SIZE,SIZE,dir);
     g.restore();
   }
   function ring(g,front,rotation){
@@ -36,17 +41,19 @@
     g.restore();
   }
   function projectile(g,p,dir,target,hit){
-    if(p<RELEASE)return;
+    const releaseProgress=RELEASE/DURATION;
+    if(p<releaseProgress)return;
     const tx=target.x,ty=target.y-62;
     if(p>=hit){
       const age=clamp((p-hit)/(1-hit));
       frame(g,wind,Math.min(15,12+Math.floor(age*4)),tx,ty,168,168,dir);
       return;
     }
-    const travel=clamp((p-RELEASE)/(hit-RELEASE));
+    const travel=clamp((p-releaseProgress)/(hit-releaseProgress));
     const t=travel**1.5;
     const x=CENTER+93*dir+(tx-CENTER-93*dir)*t;
-    const y=248+(ty-248)*t-12*Math.sin(Math.PI*t);
+    const palmY=GROUND-SIZE*.65;
+    const y=palmY+(ty-palmY)*t-12*Math.sin(Math.PI*t);
     g.save();g.translate(x,y);g.scale(dir,1);
     const tilt=-.29+Math.sin(travel*Math.PI)*.12;
     ring(g,false,tilt);
@@ -58,6 +65,6 @@
     const size=Math.min(width,height)*.93;
     frame(g,art,7,width/2,height/2,size,size,1);
   }
-  window.WindRazor={caster,projectile,portrait};
+  window.WindRazor={caster,projectile,portrait,ground:GROUND};
   art.addEventListener("load",()=>window.WIZARDRY_ARENA_TEST?.drawCardArts());
 })();

@@ -3745,7 +3745,7 @@
   for(const [school,path] of Object.entries({
     fire:"blazing-embers-frames.webp?v=0.284.1",
     earth:"rock-blast-frames.webp?v=0.284.2",
-    water:"water-blast-frames.webp?v=0.284.4"
+    water:"water-blast-frames.webp?v=0.284.5"
   })){
     STARTER_ATLASES[school].onload=()=>drawCardArts();
     STARTER_ATLASES[school].src="./assets/"+path;

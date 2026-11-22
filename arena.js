@@ -175,6 +175,11 @@
     kind:"damage",damage:400,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
     duration:6305,hit:3945/6305,
     description:"A buried land ray strikes one enemy with its barbed tail for 400 base Earth damage. 20% chance to Shock and skip their pending action this round."});
+  const DOUBLE_PICK_HITS=[2650,3540];
+  CARDS.push({id:"doublepick",name:"Double Pick",school:"ice",cost:3,target:"enemy",
+    kind:"doublepick",damage:440,hitDamage:220,hits:2,accuracy:.90,icon:"❄",rarity:"RARE",
+    duration:4230,hit:DOUBLE_PICK_HITS[1]/4230,
+    description:"Throw two ice picks for 220 base Ice damage each. If the first defeats the target, the second flies at a random surviving enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -222,6 +227,7 @@
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
+    doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
@@ -241,7 +247,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="landray"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="doublepick"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1181,6 +1187,9 @@
     else caster.armRaise=1;
     if(a.stage==="summon"&&a.card.id==="windfist"&&a.runeResult==="success")
       for(let i=0;i<WIND_FIST_HIT_TIMES.length;i++)if(p>=WIND_FIST_HIT_TIMES[i])applyWindFistHit(a,i);
+    if(a.stage==="summon"&&a.card.id==="doublepick"&&a.runeResult==="success")
+      for(let i=0;i<DOUBLE_PICK_HITS.length;i++)
+        if(a.elapsed>=DOUBLE_PICK_HITS[i])applyRepeatedHit(a,i);
     if(a.stage==="summon"&&a.card.id==="electrodisc"&&a.runeResult==="success")
       for(let i=0;i<ELECTRO_DISC_HIT_TIMES.length;i++)
         if(p>=ELECTRO_DISC_HIT_TIMES[i])applyRepeatedHit(a,i);
@@ -2050,9 +2059,17 @@
     if(state.phase==="ending"||state.phase==="finished"||a.runeResult==="failed")return false;
     if(!Number.isInteger(index)||index<0||index>=a.card.hits)return false;
     a.repeatedHits??=[];if(a.repeatedHits[index])return false;a.repeatedHits[index]=true;
-    const source=getUnit(a.source||a.action.casterId),target=getUnit(a.target||a.action.targetId);
+    const source=getUnit(a.source||a.action.casterId);
+    const targetId=a.card.kind==="doublepick"&&index===1?a.secondPickTarget:a.target||a.action.targetId;
+    const target=getUnit(targetId);
     if(!source||source.hp<=0||!target||target.hp<=0||source.team===target.team)return false;
     damage(source,target,a.card.hitDamage,a.card,a);
+    if(a.card.kind==="doublepick"&&index===0){
+      const survivors=target.hp<=0?alive(1-source.team):[];
+      const next=target.hp>0?target:survivors[Math.floor(Math.random()*survivors.length)];
+      a.secondPickTarget=next?.id??null;
+      if(next&&next!==target)recordBattleEvent("Double Pick's second throw targets "+next.name+".");
+    }
     if(a.card.kind==="bulletseed"&&index===a.card.hits-1)tryHealingSeed(source,target,a);
     return true;
   }
@@ -2460,7 +2477,7 @@
       }
     }else if(card.kind==="windfist"){
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
-    }else if(card.kind==="electrodisc"||card.kind==="bulletseed"){
+    }else if(card.kind==="doublepick"||card.kind==="electrodisc"||card.kind==="bulletseed"){
       for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
     }else if(card.kind==="ragingwaters"||card.kind==="growth"){
       const nature=card.kind==="growth";
@@ -3877,6 +3894,7 @@
   }
   function paintCardPortrait(card,c,width,height){
       if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.49,y:height*.51},{x:width*.81,y:height*.38},.54,card.hit,Math.min(width,height)/88);
+      else if(card.id==="doublepick")window.DoublePick?.portrait(c,width,height);
       else if(card.id==="landray")window.LandRay?.portrait(c,width,height);
       else if(card.id==="sunfire")window.Sunfire?.portrait(c,width,height);
       else if(card.id==="windrazor")window.WindRazor?.portrait(c,width,height);
@@ -4309,7 +4327,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4646,6 +4664,18 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="doublepick"&&action.stage==="summon"){
+      const spell=window.DoublePick,first=getUnit(action.target),second=getUnit(action.secondPickTarget);
+      if(spell&&first){
+        const elapsed=action.elapsed,dir=first.team===1?1:-1;
+        const targets=[first,second];
+        renderables.push({type:"double-pick-berserker",depthY:spell.ground,priority:2,
+          draw:()=>spell.caster(g,elapsed,dir,Boolean(second))});
+        for(const [index,target] of targets.entries())if(target)renderables.push({
+          type:"double-pick-projectile",depthY:target.y+.15,priority:2,
+          draw:()=>spell.projectile(g,elapsed,dir,target,index,DOUBLE_PICK_HITS[index])});
       }
     }
     if(action?.card?.id==="landray"&&action.stage==="summon"){

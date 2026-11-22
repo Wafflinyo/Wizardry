@@ -14,11 +14,12 @@
     const index=release>0?12+Math.min(3,Math.floor(release*4)):
       growth<1?Math.min(3,Math.floor(growth*4)):LOOP[Math.floor(time/105)%LOOP.length];
     const scale=.60+.30*clamp((target.y-288)/235);
-    const width=257*scale,height=269*scale;
+    const width=257*scale,height=281*scale;
+    const top=target.y-232*scale;
     // The front sheet is translucent so the target remains visible behind it.
     g.save();
     g.globalAlpha*=(layer==="back"?.82:.38)*(release>0?1-release*.72:1);
-    frame(g,index,target.x-width/2,target.y-height*.92,width,height);
+    frame(g,index,target.x-width/2,top,width,height);
     g.restore();
   }
 

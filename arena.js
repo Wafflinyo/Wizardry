@@ -4777,7 +4777,7 @@
         const progress=clamp(action.elapsed/action.duration,0,1);
         const allies=alive(source.team);
         renderables.push({type:"aromatherapy-gust",depthY:Math.max(...allies.map(u=>u.y))+.1,priority:2,
-          draw:()=>effect.draw(g,allies,progress,source.team===0?1:-1)});
+          draw:()=>effect.draw(g,allies,progress)});
       }
     }
     if(action?.card?.id==="doublepick"&&action.stage==="summon"){

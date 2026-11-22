@@ -171,6 +171,10 @@
     kind:"damage",accuracy:.85,damage:650,burnChance:.45,burnDamage:100,burnTurns:5,
     icon:"♨",rarity:"EPIC",duration:4200,hit:3350/4200,
     description:"A hovering solar warrior hurls a blazing sun at one enemy for 650 base Fire damage. 45% chance of Extreme Burn: 100 damage per turn for 5 turns."});
+  CARDS.push({id:"landray",name:"Land Ray",school:"earth",cost:5,target:"enemy",
+    kind:"damage",damage:400,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
+    duration:3900,hit:2170/3900,
+    description:"A buried land ray strikes one enemy with its barbed tail for 400 base Earth damage. 20% chance to Shock and skip their pending action this round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -218,6 +222,7 @@
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
+    landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
     waterprison:"150 Water damage per turn for 3 turns.",
@@ -236,7 +241,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="sunfire"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="landray"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1849,17 +1854,17 @@
     return true;
   }
   function attemptVoltStun(source,target,card,roll=Math.random()){
-    if(!["volt","zeus","wickedwitch","electriceel"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
+    if(!["volt","zeus","wickedwitch","electriceel","landray"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
       return false;
     // If the target is still due to act this round, cancel that cast;
     // otherwise reserve the stun for their next round. Never double-skip.
     const pending=state.phase==="resolving"&&state.sequence
-      .slice(state.queueAt).some(a=>a.casterId===target.id&&(card.id!=="electriceel"||!!BY_ID[a.cardId]));
-    if((["wickedwitch","electriceel"].includes(card.id)&&!pending)||!canReceiveDebuff(target,"stun"))return false;
+      .slice(state.queueAt).some(a=>a.casterId===target.id&&(!["electriceel","landray"].includes(card.id)||!!BY_ID[a.cardId]));
+    if((["wickedwitch","electriceel","landray"].includes(card.id)&&!pending)||!canReceiveDebuff(target,"stun"))return false;
     target.stunRound=pending?state.round:state.round+1;
     addStatus(target,"stun",null,1,card.id==="wickedwitch"?"lightning":card.school);
-    flash(target,"STUNNED","#96f3ff");
-    recordBattleEvent(source.name+"'s "+card.name+" stuns "+target.name+
+    flash(target,card.id==="landray"?"SHOCKED · THIS ROUND":"STUNNED","#96f3ff");
+    recordBattleEvent(source.name+"'s "+card.name+(card.id==="landray"?" shocks ":" stuns ")+target.name+
       " for one action!");
     return true;
   }
@@ -2620,6 +2625,8 @@
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         const dealt=damage(c,t,card.damage,card,anim);
+        if(card.id==="landray"&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))
+          attemptVoltStun(c,t,card,anim.stunRoll);
         if(card.id==="sunfire"&&t.hp>0)trySpellBurn(t,card,anim,anim.burnRoll);
         if(card.id==="windrazor"&&dealt>0&&anim.damageVariant===1.1&&c.mana<c.maxMana){
           c.mana++;
@@ -3870,6 +3877,7 @@
   }
   function paintCardPortrait(card,c,width,height){
       if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.49,y:height*.51},{x:width*.81,y:height*.38},.54,card.hit,Math.min(width,height)/88);
+      else if(card.id==="landray")window.LandRay?.portrait(c,width,height);
       else if(card.id==="sunfire")window.Sunfire?.portrait(c,width,height);
       else if(card.id==="windrazor")window.WindRazor?.portrait(c,width,height);
       else if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
@@ -4301,7 +4309,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4638,6 +4646,14 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="landray"&&action.stage==="summon"){
+      const target=getUnit(action.target),spell=window.LandRay;
+      if(target&&spell){
+        const elapsed=action.elapsed,dir=target.team===1?1:-1;
+        renderables.push({type:"land-ray",depthY:target.y+.08,priority:2,
+          draw:()=>spell.draw(g,elapsed,dir,target)});
       }
     }
     if(action?.card?.id==="sunfire"&&action.stage==="summon"){

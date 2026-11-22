@@ -1,0 +1,60 @@
+(()=>{
+  const art=new Image();
+  art.src="./assets/land-ray-frames.webp?v=0.289.0";
+  const CELL=256, SIZE=330;
+  const POSE_TIMES=[0,720,930,1180,1430,1640,1910,2170,2290,2460,2630,2800,2980,3150,3320,3520];
+  const DURATION=3900, IMPACT=2170;
+  const clamp=n=>Math.max(0,Math.min(1,n));
+
+  function frame(g,pose,x,y,size,dir,anchorY){
+    if(!art.complete||!art.naturalWidth)return;
+    g.save();
+    g.translate(x,y);
+    g.scale(dir,1);
+    g.drawImage(art,pose%4*CELL,Math.floor(pose/4)*CELL,CELL,CELL,-size/2,-size*anchorY,size,size);
+    g.restore();
+  }
+
+  function strike(g,x,y,dir,age){
+    if(age<0||age>=310)return;
+    const progress=age/310;
+    g.save();
+    g.translate(x,y);
+    g.scale(dir,1);
+    g.globalAlpha*=1-progress;
+    for(let i=0;i<8;i++){
+      const angle=i*Math.PI/4;
+      const reach=12+progress*(38+i%3*11);
+      const dx=Math.cos(angle),dy=Math.sin(angle);
+      g.fillStyle=i%2?"#f5c278":"#ffe7b5";
+      g.beginPath();
+      g.moveTo(dx*reach,dy*reach);
+      g.lineTo(dx*(reach+13)-dy*3,dy*(reach+13)+dx*3);
+      g.lineTo(dx*(reach+24),dy*(reach+24));
+      g.lineTo(dx*(reach+9)+dy*3,dy*(reach+9)-dx*3);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+  }
+
+  function draw(g,elapsed,dir,target){
+    const pose=Math.max(0,POSE_TIMES.findLastIndex(ms=>elapsed>=ms));
+    const scale=.60+.30*clamp((target.y-288)/235);
+    const size=SIZE*scale;
+    const x=target.x-dir*size*.45,y=target.y+size*.09;
+    g.save();
+    g.globalAlpha*=Math.min(clamp(elapsed/170),clamp((DURATION-elapsed)/330));
+    frame(g,pose,x,y,size,dir,.90);
+    g.restore();
+    strike(g,target.x,target.y-70*scale,dir,elapsed-IMPACT);
+  }
+
+  function portrait(g,width,height){
+    const size=Math.min(width,height)*1.1;
+    frame(g,15,width/2,height/2,size,1,.50);
+  }
+
+  window.LandRay={draw,portrait};
+  art.addEventListener("load",()=>window.WIZARDRY_ARENA_TEST?.drawCardArts());
+})();

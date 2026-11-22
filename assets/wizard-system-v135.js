@@ -26,7 +26,7 @@ const UNLOCK_ORDER=Object.fromEntries(Object.entries({
  nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree",
  wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor windrazor",
  dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper",
- fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix",
+ fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix sunfire",
  ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann",
 }).map(([school,ids])=>[school,ids.split(" ")]));
 function unlockOrder(cards,school){

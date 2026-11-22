@@ -167,6 +167,10 @@
     kind:"lightningfield",accuracy:1,icon:"ϟ",rarity:"EPIC",duration:1500,hit:.68,
     fieldRounds:5,fieldBoost:.10,shockChance:.15,
     description:"Storm covers both teams through the next 5 rounds. Lightning spell damage +10%. Wizards without Lightning mastery have a 15% chance to get shocked when casting, skipping for bonus mana."});
+  CARDS.push({id:"sunfire",name:"Sunfire",school:"fire",cost:7,target:"enemy",
+    kind:"damage",accuracy:.85,damage:650,burnChance:.45,burnDamage:100,burnTurns:5,
+    icon:"♨",rarity:"EPIC",duration:4200,hit:3350/4200,
+    description:"A hovering solar warrior hurls a blazing sun at one enemy for 650 base Fire damage. 45% chance of Extreme Burn: 100 damage per turn for 5 turns."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -214,6 +218,7 @@
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
+    sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     lightningfield:"+10% Lightning damage. 15% cast skip without Lightning mastery.",
     waterprison:"150 Water damage per turn for 3 turns.",
     windrazor:"Refunds 1 mana on a critical hit (maximum damage roll)."
@@ -231,7 +236,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="lightningfield"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="sunfire"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -2615,6 +2620,7 @@
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         const dealt=damage(c,t,card.damage,card,anim);
+        if(card.id==="sunfire"&&t.hp>0)trySpellBurn(t,card,anim,anim.burnRoll);
         if(card.id==="windrazor"&&dealt>0&&anim.damageVariant===1.1&&c.mana<c.maxMana){
           c.mana++;
           flash(c,"CRIT · +1 MANA","#b9ffe7");
@@ -3864,6 +3870,7 @@
   }
   function paintCardPortrait(card,c,width,height){
       if(card.starterBlast)drawStarterBlast(c,card.school,{x:width*.49,y:height*.51},{x:width*.81,y:height*.38},.54,card.hit,Math.min(width,height)/88);
+      else if(card.id==="sunfire")window.Sunfire?.portrait(c,width,height);
       else if(card.id==="windrazor")window.WindRazor?.portrait(c,width,height);
       else if(card.id==="wynzor")window.Wynzor?.portrait(c,width,height);
       else if(card.id==="frozentouch")window.FrozenTouch?.portrait(c,width,height);
@@ -4294,7 +4301,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4631,6 +4638,16 @@
           renderables.push({type:"meteor",depthY:entry.y+.12,priority:2,
             draw:()=>spell.draw(g,{entry:{...entry,dir},index,age})});
         }
+      }
+    }
+    if(action?.card?.id==="sunfire"&&action.stage==="summon"){
+      const target=getUnit(action.target),spell=window.Sunfire;
+      if(target&&spell){
+        const p=clamp(action.elapsed/action.duration,0,1),dir=target.x>=500?1:-1;
+        renderables.push({type:"sunfire-warrior",depthY:spell.ground,priority:2,
+          draw:()=>spell.caster(g,p,dir)});
+        renderables.push({type:"sunfire-orb",depthY:target.y+.14,priority:2,
+          draw:()=>spell.projectile(g,p,dir,target,action.card.hit)});
       }
     }
     if(action?.card?.id==="windrazor"&&action.stage==="summon"){

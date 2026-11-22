@@ -2383,7 +2383,10 @@
     rune.healingLeft-=amount;
     rune.remaining--;
     if(!healingSuppressed("wind")){
-      for(const ally of alive(caster.team)){
+      const allies=alive(caster.team);
+      if(amount>0&&allies.some(ally=>ally.hp<ally.maxHp))
+        (state.aromatherapyGusts??=[]).push({team:caster.team,elapsed:0});
+      for(const ally of allies){
         const healing=Math.min(amount,Math.max(0,ally.maxHp-ally.hp));
         if(healing>0){
           restoreHp(caster,ally,healing);
@@ -4771,15 +4774,18 @@
         }
       }
     }
-    if(action?.card?.id==="aromatherapy"&&action.stage==="summon"){
-      const source=getUnit(action.source),effect=window.Aromatherapy;
-      if(source&&effect){
-        const progress=clamp(action.elapsed/action.duration,0,1);
-        const allies=alive(source.team);
-        renderables.push({type:"aromatherapy-gust",depthY:Math.max(...allies.map(u=>u.y))+.1,priority:2,
-          draw:()=>effect.draw(g,allies,progress)});
-      }
+    function drawAromatherapyGust(team,progress){
+      const allies=alive(team),effect=window.Aromatherapy;
+      if(!effect||!allies.length||progress>=1)return;
+      renderables.push({type:"aromatherapy-gust",depthY:Math.max(...allies.map(u=>u.y))+.1,priority:2,
+        draw:()=>effect.draw(g,allies,progress)});
     }
+    if(action?.card?.id==="aromatherapy"&&action.stage==="summon"){
+      const source=getUnit(action.source);
+      if(source)drawAromatherapyGust(source.team,action.elapsed/action.duration);
+    }
+    for(const gust of state.aromatherapyGusts||[])
+      drawAromatherapyGust(gust.team,gust.elapsed/BY_ID.aromatherapy.duration);
     if(action?.card?.id==="doublepick"&&action.stage==="summon"){
       const spell=window.DoublePick,first=getUnit(action.target),second=getUnit(action.secondPickTarget);
       if(spell&&first){
@@ -5222,6 +5228,12 @@
       combat.animation?.stage,combat.selectedCard,combat.selectedHandCopy,combat.selectedTarget,combat.selectedRune,
       Object.values(combat.plans),combat.log,combat.units.map(u=>[u.id,u.hp,u.mana,u.statuses,u.hand,u.drawPile.length])]);
   }
+  function advanceAromatherapyGusts(dt){
+    if(!state.aromatherapyGusts?.length)return;
+    for(const gust of state.aromatherapyGusts)gust.elapsed+=dt;
+    state.aromatherapyGusts=state.aromatherapyGusts.filter(gust=>gust.elapsed<BY_ID.aromatherapy.duration);
+  }
+
   function tick(now){
     if(!state)return;
     if(document.body?.dataset?.screen&&document.body.dataset.screen!=='battle'){frameLast=now;requestAnimationFrame(tick);return;}
@@ -5237,6 +5249,7 @@
         if(!guestPlayback&&a)a.elapsed=Math.min(a.duration,a.elapsed+dt);
         state.animation=guestAnimationAt(now,dt);
         for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);
+        advanceAromatherapyGusts(dt);
         for(const f of state.flashes)f.age+=dt/1000;
         for(const key of ["gunpowderBursts","windDomeBursts","rodBursts","bubbleShieldRipples","waterPrisonBursts"])
           for(const effect of state[key]||[])effect.age+=dt/1000;
@@ -5246,6 +5259,7 @@
       requestAnimationFrame(tick);return;
     }
     updateFacing(dt);
+    advanceAromatherapyGusts(dt);
     advanceRoundAction(dt);
     updateBattleEnding(dt);
     // Each fallen wizard gets its own timeline: play the sequence once,
@@ -5334,7 +5348,7 @@
        if(needsDiscard)discardFromHand(u,p.discardId);
        if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:card.kind==="zen"?p.runeKind:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
-    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
+    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
     drawCardArts,cardInfo,

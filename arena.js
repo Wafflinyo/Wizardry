@@ -918,7 +918,7 @@
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.fieldRounds){
-          if(state.environment?.id===card.id)continue;
+          if(state.environment?.id===card.id||!canReceiveDebuff(u))continue;
           const hasMastery=u=>u.masteries?.includes(card.school);
           score=145+80*(allies.filter(hasMastery).length-opponents.filter(hasMastery).length);
         }else if(card.damage||towerControl(card)){
@@ -1110,7 +1110,7 @@
     const testing=state.mode==="tester";
     a.effectiveAccuracy=testing?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const success=!sealed&&!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
@@ -1123,7 +1123,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=sealed?"healing sealed by Dark Grounds":full?"target has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     tally(c,"casts",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1733,7 +1733,8 @@
   }
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
-  const DEBUFFS=new Set(['water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const ENVIRONMENT_RUNE="environment_rune";
+  const DEBUFFS=new Set([ENVIRONMENT_RUNE,'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1754,6 +1755,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
+    if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     return lost;
   }
@@ -1807,6 +1809,10 @@
     const at=u.statuses.findIndex(s=>s.kind===kind);
     if(at<0)return null;
     const [status]=u.statuses.splice(at,1);
+    if(kind===ENVIRONMENT_RUNE&&state.environment?.ownerId===u.id){
+      recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
+      state.environment=null;
+    }
     if(kind==="water_prison")(state.waterPrisonBursts??=[]).push({targetId:u.id,age:0});
     return status;
   }
@@ -2728,8 +2734,14 @@
       addStatus(t,"trap",null,.35,card.school);flash(t,"TRAP","#e8ba91");
       recordBattleEvent("Trap attached to "+t.name);
     } else if(card.fieldRounds){
-      const previous=BY_ID[state.environment?.id];
-      state.environment={id:card.id,expiresRound:state.round+card.fieldRounds};
+      if(!canReceiveDebuff(c))return;
+      const previous=BY_ID[state.environment?.id],previousOwner=getUnit(state.environment?.ownerId);
+      state.environment=null;
+      if(previousOwner)consumeStatus(previousOwner,ENVIRONMENT_RUNE);
+      const expiresRound=state.round+card.fieldRounds;
+      addStatus(c,ENVIRONMENT_RUNE,null,card.fieldBoost,card.school);
+      Object.assign(c.statuses.find(st=>st.kind===ENVIRONMENT_RUNE),{fieldId:card.id,expiresRound});
+      state.environment={id:card.id,ownerId:c.id,expiresRound};
       recordBattleEvent(c.name+" covers the battlefield with "+card.name+
         (previous&&previous.id!==card.id?", replacing "+previous.name+".":"."));
     } else if(card.kind==="aura"){
@@ -2761,8 +2773,12 @@
       }
     }
     if(state.environment&&state.round>=state.environment.expiresRound){
-      recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
-      state.environment=null;
+      const owner=getUnit(state.environment.ownerId);
+      if(owner)consumeStatus(owner,ENVIRONMENT_RUNE);
+      if(state.environment){
+        recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
+        state.environment=null;
+      }
     }
     state.round++;
     tickBurnsForRound();
@@ -3616,6 +3632,11 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case ENVIRONMENT_RUNE:{
+        const field=BY_ID[st.fieldId];
+        const rounds=Math.max(0,st.expiresRound-state.round);
+        return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
+      }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
       case "fear_turn":return {title:"Fear · This round only",detail:"Creeping Croc frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};

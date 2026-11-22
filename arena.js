@@ -159,6 +159,10 @@
     {"id":"windblast","name":"Wind Blast","school":"wind","cost":1,"accuracy":0.95,"damage":70,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Wind blast deals 70 base damage to one enemy."},
     {"id":"windrazor","name":"Wind Razor","school":"wind","cost":7,"accuracy":0.85,"damage":680,"target":"enemy","kind":"damage","duration":3960,"hit":3370/3960,"description":"A wind sorcerer hurls a ringed orb of wind at one enemy for 680 base damage. Refunds 1 mana on a critical hit (maximum damage roll)."}
   );
+  CARDS.push({id:"waterprison",name:"Water Prison",school:"water",cost:5,target:"enemy",
+    kind:"waterprison",accuracy:1,icon:"≈",rarity:"RARE",duration:1550,hit:.72,
+    water_prisonDamage:150,water_prisonTurns:3,
+    description:"Trap one enemy in a rectangular prison of water. They take 150 Water damage at the start of each of the next 3 turns."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -206,6 +210,7 @@
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
+    waterprison:"150 Water damage per turn for 3 turns.",
     windrazor:"Refunds 1 mana on a critical hit (maximum damage roll)."
   };
   const CARD_TARGETS={enemy:"One enemy",all_enemies:"Each enemy",ally:"Self or ally",team:"Each living ally"};
@@ -221,7 +226,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="windrazor"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="waterprison"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1073,7 +1078,7 @@
     const testing=state.mode==="tester";
     a.effectiveAccuracy=testing?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target);
+    const full=target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
     const success=!full&&(testing||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
     a.runeResult=success?"success":"failed";
@@ -1679,8 +1684,8 @@
     c.restore();return placed;
   }
   const MAX_DEBUFF_RUNES=4;
-  const DEBUFF_SPELLS=new Set(['lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
-  const DEBUFFS=new Set(['lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFFS=new Set(['water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1736,15 +1741,19 @@
       effect=target.statuses.find(st=>st.kind===kind);
     }
     Object.assign(effect,{school:card.statusSchool||card.school,extreme,remaining:turns,appliedRound:state.round,lastTickRound:state.round});
-    const label=(extreme?"EXTREME ":"")+kind.toUpperCase();
-    const message=refresh?kind[0].toUpperCase()+kind.slice(1)+" reset • "+turns+" Rounds":label+" · "+turns+" TURNS";
+    const name=kind==="water_prison"?"Water Prison":kind[0].toUpperCase()+kind.slice(1);
+    const label=(extreme?"EXTREME ":"")+name.toUpperCase();
+    const message=refresh?name+" reset • "+turns+" Rounds":label+" · "+turns+" TURNS";
     flash(target,message,kind==="burn"?"#ffb178":kind==="poison"?"#b9e878":"#b6eeff");
     effect.sourceId=state.animation?.action?.casterId||effect.sourceId;
     return true;
   }
   function consumeStatus(u,kind){
     const at=u.statuses.findIndex(s=>s.kind===kind);
-    return at<0?null:u.statuses.splice(at,1)[0];
+    if(at<0)return null;
+    const [status]=u.statuses.splice(at,1);
+    if(kind==="water_prison")(state.waterPrisonBursts??=[]).push({targetId:u.id,age:0});
+    return status;
   }
   function gainElectricalChargeMana(target,card,spell){
     if(card?.school!=="lightning"||target?.hp<=0)return;
@@ -2320,13 +2329,14 @@
       if(checkBattleEnd())return;
     }
     // Burn and Frostbite tick independently; neither consumes spell-only marks or shields.
-    for(const u of state.units)for(const kind of ["burn","frostbite","poison","curse"]){
+    for(const u of state.units)for(const kind of ["burn","frostbite","poison","curse","water_prison"]){
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,effect.value||50));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
-      flash(u,(effect.extreme?"EXTREME "+kind.toUpperCase()+" −":kind==="burn"?"BURN −":kind==="poison"?"POISON −":kind==="curse"?"CURSE −":"FROSTBITE −")+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
-      recordBattleEvent(u.name+" takes "+amount+" "+(effect.extreme?"Extreme ":"")+kind+" damage ("+effect.remaining+" ticks remaining).");
+      const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
+      flash(u,label.toUpperCase()+" −"+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
+      recordBattleEvent(u.name+" takes "+amount+" "+label+" damage ("+effect.remaining+" ticks remaining).");
       if(u.hp===0){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
       if(!effect.remaining||u.hp===0)consumeStatus(u,kind);
       if(checkBattleEnd())return;
@@ -2427,6 +2437,10 @@
       recordBattleEvent(t.name+(nature?" gains +25% on their next direct Nature heal or damaging cast.":" gains +25% damage on their next damaging Water spell."));
     }else if(card.kind==="drowzyflowers"){
       if(t?.hp>0 && t.team!==c.team)applyFlowerSleep(t);
+    }else if(card.kind==="waterprison"){
+      if(t?.hp>0&&t.team!==c.team&&applyPeriodicStatus(t,"water_prison",card)){
+        t.statuses.find(st=>st.kind==="water_prison").sourceId=c.id;
+      }
     }else if(card.kind==="bubbleshield"){
       if(addStatus(t,"bubble_shield",null,card.shieldHp,card.school)===false)return;
       flash(t,"BUBBLE SHIELD · "+card.shieldHp+" HP","#a6f2ff");
@@ -3516,6 +3530,7 @@
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
+      case "water_prison":return {title:"Water Prison · Water debuff",detail:st.value+" damage at the start of each turn. "+st.remaining+" ticks remain. Recasting refreshes the duration."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks every hit and on-hit effect of the next incoming damaging spell, then disappears. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
@@ -3606,7 +3621,7 @@
   const statusSchools={
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
     burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
-    curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
+    water_prison:"water",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
@@ -3823,6 +3838,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
       else if(card.id==="darksorcerer")window.DarkSorcerer?.portrait(c,width,height);
       else if(card.id==="sticksandstones")window.SticksAndStones?.portrait(c,width,height);
@@ -4235,7 +4251,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||["windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4272,6 +4288,16 @@
           draw:()=>window.ThornyWrap?.draw(g,u,progress,layer)
         });
       }
+      const imprisoned=u.statuses.some(st=>st.kind==="water_prison");
+      const formingPrison=action?.card.id==="waterprison"&&action.stage==="summon"&&
+        action.target===u.id&&canReceiveDebuff(u,"water_prison");
+      if(imprisoned||formingPrison){
+        const growth=imprisoned?1:clamp(action.elapsed/(action.duration*action.card.hit),0,1);
+        for(const layer of ["back","front"])renderables.push({
+          type:"water-prison-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,
+          draw:()=>window.WaterPrison?.draw(g,{target:u,time,growth,layer})
+        });
+      }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");
       const formingBubble=action?.card?.id==="bubbleshield"&&action.stage==="summon"&&action.target===u.id;
       if(u.hp>0&&(bubble||formingBubble)){
@@ -4284,6 +4310,11 @@
         const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
         for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer})});
       }
+    }
+    for(const burst of state.waterPrisonBursts||[]){
+      const target=getUnit(burst.targetId);
+      if(target)renderables.push({type:"water-prison-release",depthY:target.y+.06,priority:2,
+        draw:()=>window.WaterPrison?.draw(g,{target,time,release:Math.max(.001,burst.age/.62),layer:"back"})});
     }
     for(const ripple of state.bubbleShieldRipples||[]){
       const target=getUnit(ripple.targetId);
@@ -4982,7 +5013,7 @@
         state.animation=guestAnimationAt(now,dt);
         for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);
         for(const f of state.flashes)f.age+=dt/1000;
-        for(const key of ["gunpowderBursts","windDomeBursts","rodBursts","bubbleShieldRipples"])
+        for(const key of ["gunpowderBursts","windDomeBursts","rodBursts","bubbleShieldRipples","waterPrisonBursts"])
           for(const effect of state[key]||[])effect.age+=dt/1000;
       }
       updateFacing(dt);render(now);
@@ -5002,6 +5033,8 @@
     }
     for(const burst of state.gunpowderBursts||[])burst.age+=dt/1000;
     if(state.gunpowderBursts)state.gunpowderBursts=state.gunpowderBursts.filter(b=>b.age<.85);
+    for(const burst of state.waterPrisonBursts||[])burst.age+=dt/1000;
+    if(state.waterPrisonBursts)state.waterPrisonBursts=state.waterPrisonBursts.filter(b=>b.age<.62);
     for(const ripple of state.bubbleShieldRipples||[])ripple.age+=dt/1000;
     if(state.bubbleShieldRipples)state.bubbleShieldRipples=state.bubbleShieldRipples.filter(r=>r.age<.62);
     for(const burst of state.windDomeBursts||[])burst.age+=dt/1000;
@@ -5076,7 +5109,7 @@
        if(needsDiscard)discardFromHand(u,p.discardId);
        if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:card.kind==="zen"?p.runeKind:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
-    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
+    advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
     drawCardArts,cardInfo,

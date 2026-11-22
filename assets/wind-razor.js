@@ -1,70 +1,69 @@
 (()=>{
-  const art=new Image(),wind=new Image();
-  art.src="./assets/wind-razor-frames.webp?v=0.285.0";
-  wind.src="./assets/wind-blast-frames.webp?v=0.284.10";
+  const art=new Image();
+  art.src="./assets/wind-razor-frames.webp?v=0.285.3";
 
-  const CENTER=500, GROUND=372, SIZE=230;
-  const CHARGE_START=560, WINDUP_START=2384, RELEASE=2756;
-  const DURATION=3800;
+  const CENTER=500, GROUND=510, CELL=256, FOOT=235;
+  const BODY_SCALE=.88, ORB_SCALE=.63;
+  const DURATION=3960, CHARGE_START=480, WINDUP_START=2580, RELEASE=2930;
   const clamp=n=>Math.min(1,Math.max(0,n));
-  function frame(g,sheet,index,x,y,width,height,dir){
-    if(!sheet.complete||!sheet.naturalWidth)return;
+  const between=(elapsed,start,end)=>clamp((elapsed-start)/(end-start));
+
+  function frame(g,index,x,y,scale,dir,anchorY=CELL/2){
+    if(!art.complete||!art.naturalWidth)return;
     g.save();
-    g.translate(x,y);g.scale(dir,1);
-    g.drawImage(sheet,index%4*192,Math.floor(index/4)*192,192,192,-width/2,-height/2,width,height);
+    g.translate(x,y);
+    g.scale(dir*scale,scale);
+    g.drawImage(art,index%6*CELL,Math.floor(index/6)*CELL,CELL,CELL,-CELL/2,-anchorY,CELL,CELL);
     g.restore();
   }
+
   function caster(g,p,dir){
     const elapsed=p*DURATION;
-    const pose=elapsed<CHARGE_START?Math.floor(elapsed/CHARGE_START*3):
-      elapsed<WINDUP_START?3+Math.floor((elapsed-CHARGE_START)/(WINDUP_START-CHARGE_START)*5):
-      elapsed<RELEASE?8+Math.floor((elapsed-WINDUP_START)/(RELEASE-WINDUP_START)*2):
-      Math.min(14,10+Math.floor((elapsed-RELEASE)/(DURATION-RELEASE)*7));
-    g.save();
-    g.globalAlpha*=Math.min(clamp(p/.055),clamp((1-p)/.14));
-    frame(g,art,pose,CENTER,GROUND-SIZE*.44,SIZE,SIZE,dir);
-    g.restore();
-  }
-  function ring(g,front,rotation){
-    g.save();g.rotate(rotation);
-    for(let i=front?0:12;i<(front?12:24);i++){
-      const a=i*Math.PI/12,b=(i+1)*Math.PI/12;
-      g.beginPath();
-      g.moveTo(Math.cos(a)*49,Math.sin(a)*13);
-      g.lineTo(Math.cos(b)*49,Math.sin(b)*13);
-      g.lineTo(Math.cos(b)*43,Math.sin(b)*9);
-      g.lineTo(Math.cos(a)*43,Math.sin(a)*9);
-      g.closePath();
-      g.fillStyle=front?(i%2?"#d6fff1":"#f1fffa"):(i%2?"#76b9aa":"#acdfcb");
-      g.fill();
+    let pose;
+    if(elapsed<CHARGE_START){
+      pose=Math.floor(between(elapsed,0,CHARGE_START)*5);
+    }else if(elapsed<WINDUP_START){
+      pose=5+Math.floor(between(elapsed,CHARGE_START,WINDUP_START)*9);
+    }else if(elapsed<RELEASE){
+      const windup=[14,15,18,19];
+      pose=windup[Math.floor(between(elapsed,WINDUP_START,RELEASE)*windup.length)];
+    }else{
+      pose=Math.min(23,20+Math.floor((elapsed-RELEASE)/130));
     }
+
+    g.save();
+    const opacity=Math.min(clamp(elapsed/230),clamp((DURATION-elapsed)/290));
+    g.globalAlpha*=opacity;
+    g.beginPath();
+    g.ellipse(CENTER,GROUND,38,8,0,0,Math.PI*2);
+    g.fillStyle="rgba(10, 29, 28, .36)";
+    g.fill();
+    frame(g,pose,CENTER,GROUND,BODY_SCALE,dir,FOOT);
     g.restore();
   }
+
   function projectile(g,p,dir,target,hit){
-    const releaseProgress=RELEASE/DURATION;
-    if(p<releaseProgress)return;
+    const elapsed=p*DURATION;
+    if(elapsed<RELEASE)return;
     const tx=target.x,ty=target.y-62;
     if(p>=hit){
-      const age=clamp((p-hit)/(1-hit));
-      frame(g,wind,Math.min(15,12+Math.floor(age*4)),tx,ty,168,168,dir);
+      const age=between(p,hit,1);
+      frame(g,30+Math.min(5,Math.floor(age*6)),tx,ty,.92,dir);
       return;
     }
-    const travel=clamp((p-releaseProgress)/(hit-releaseProgress));
-    const t=travel**1.5;
-    const x=CENTER+93*dir+(tx-CENTER-93*dir)*t;
-    const palmY=GROUND-SIZE*.65;
-    const y=palmY+(ty-palmY)*t-12*Math.sin(Math.PI*t);
-    g.save();g.translate(x,y);g.scale(dir,1);
-    const tilt=-.29+Math.sin(travel*Math.PI)*.12;
-    ring(g,false,tilt);
-    frame(g,wind,8+Math.min(3,Math.floor(travel*4)),0,0,83,83,1);
-    ring(g,true,tilt);
-    g.restore();
+
+    const travel=between(elapsed,RELEASE,hit*DURATION);
+    const t=travel**1.25;
+    const releaseX=CENTER+78*dir,releaseY=GROUND-133;
+    const x=releaseX+(tx-releaseX)*t;
+    const y=releaseY+(ty-releaseY)*t-15*Math.sin(Math.PI*t);
+    frame(g,24+Math.min(5,Math.floor(travel*6)),x,y,ORB_SCALE,dir);
   }
+
   function portrait(g,width,height){
-    const size=Math.min(width,height)*.93;
-    frame(g,art,7,width/2,height/2,size,size,1);
+    frame(g,11,width/2,height/2,Math.min(width,height)/CELL,1);
   }
+
   window.WindRazor={caster,projectile,portrait,ground:GROUND};
   art.addEventListener("load",()=>window.WIZARDRY_ARENA_TEST?.drawCardArts());
 })();

@@ -163,7 +163,8 @@ for(let i=1;i<route.length;i++)for(let k=0;k<=100;k++){
 }
 api.startCardTester(2);
 const testState=api.getState();
-assert.ok(testState.units[0].hand.includes(lifevine.id));
+assert.ok([...testState.units[0].hand,...testState.units[0].drawPile].includes(lifevine.id));
+if(!testState.units[0].hand.includes(lifevine.id))testState.units[0].hand[0]=lifevine.id;
 api.chooseCard(lifevine.id);
 assert.equal(testState.selectedTarget,testState.units[1].id);
 console.log('Lifevine: ally-only targeting, actual HP sharing, both directions, missing-HP cap, expiration, relinking and obstacle routing passed.');
@@ -350,3 +351,32 @@ for(let i=0;i<30;i++){
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(rip.id));
 console.log('Rip Current: 250 damage, lowest living teammate, delayed 180 HP, misses, shield blocking, Dark Grounds and eight wave poses passed.');
+
+const pressure=card('pressuredrop');
+assert.equal(pressure.damage,310);
+assert.equal(pressure.cost,4);
+assert.equal(pressure.accuracy,.90);
+assert.deepEqual(JSON.parse(JSON.stringify(pressure)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===pressure.id));
+for(const [plan,queueAt,shield,marked] of [
+  ['windfist',0,false,true],['windfist',1,false,false],['calming',0,false,false],
+  ['static',0,false,false],['soul',0,false,false],['windfist',0,true,false],[null,0,false,false]
+]){
+  const caster=unit('wind-caster',0),target=unit('target',1);
+  if(shield)target.statuses.push({kind:'wind_dome',value:1});
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[caster,target],auras:[null,null],log:[],flashes:[],
+    sequence:[{casterId:target.id,cardId:plan,pass:!plan}],queueAt});
+  api.applySpell({card:pressure,source:caster.id,target:target.id,runeResult:'success',damageVariant:1,
+    action:{casterId:caster.id,targetId:target.id}});
+  assert.equal(target.hp,shield?1000:690);
+  assert.equal(has(target,'pressure_drop'),marked);
+  if(marked){
+    const pending=card('windfist'),cast={card:pending};
+    assert.equal(damage(target,caster,100,pending,cast),75);
+    assert.equal(damage(target,caster,100,pending,cast),100);
+    assert.ok(!has(target,'pressure_drop'));
+  }
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(pressure.id));
+console.log('Pressure Drop: damage, pending first-hit-only reduction, support spell exclusion, past turn, shield and opening hand passed.');

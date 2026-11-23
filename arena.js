@@ -246,6 +246,9 @@
   CARDS.push({id:"ripcurrent",name:"Rip Current",school:"water",cost:4,target:"enemy",
     kind:"ripcurrent",damage:250,returnHeal:180,accuracy:.90,icon:"≈",rarity:"RARE",duration:3300,hit:.52,healAt:.85,
     description:"A low wave hits one enemy for 250 base damage, then returns to heal the living teammate with the lowest current HP for up to 180 base HP, including yourself."});
+  CARDS.push({id:"pressuredrop",name:"Pressure Drop",school:"wind",cost:4,target:"enemy",
+    kind:"pressuredrop",damage:310,firstHitReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:2550,hit:.66,
+    description:"Compress air around one enemy and implode for 310 base damage. If they still have a damaging spell pending this round, its first hit deals 25% less damage."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -260,6 +263,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    pressuredrop:"First hit of the target’s pending damage spell deals 25% less damage.",
     ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
     glacierlance:"+120 base damage against Frostbite.",
     coldstorage:"Next round: +2 mana and restore 150 HP.",
@@ -332,7 +336,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1887,7 +1891,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2258,6 +2262,14 @@
     if(!reflected){
       gainElectricalChargeMana(target,card,spell);
       if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));return 0;}
+    }
+    const pressure=source.statuses.find(st=>st.kind==="pressure_drop"&&
+      st.round===state.round&&st.cardId===(spell?.card?.id??card?.id));
+    if(base>0&&source.team!==target.team&&pressure){
+      consumeStatus(source,"pressure_drop");
+      raw*=1-pressure.value;
+      notes.push("PRESSURE DROP −25%");
+      flash(source,"FIRST HIT −25%","#a2f0de");
     }
     if(base>0&&card?.school==="nature"){
       const bonus=growthBonus(source,spell);
@@ -2815,6 +2827,16 @@
       for(const kind of BRIAR_EFFECTS)if(anim.briarRemoved.includes(kind))consumeStatus(t,kind);
       flash(t,"CLEANSED · "+anim.briarRemoved.length,"#d5edab");
       recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
+    }else if(card.kind==="pressuredrop"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      if(t.hp<=0||preventsHitEffects(anim,t)||state.phase!=="resolving")return;
+      const pending=state.sequence?.slice(state.queueAt).find(plan=>plan.casterId===t.id&&!plan.pass);
+      const nextCard=BY_ID[pending?.cardId];
+      if(!nextCard?.damage||["static","souldrain","gunpowder"].includes(nextCard.kind))return;
+      if(addStatus(t,"pressure_drop",null,card.firstHitReduction,card.school)===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="pressure_drop"),{cardId:nextCard.id,round:state.round});
+      flash(t,"PRESSURE DROP · FIRST HIT −25%","#a2f0de");
     }else if(card.kind==="ripcurrent"){
       if(t?.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
@@ -3221,6 +3243,7 @@
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
+    for(const unit of state.units)consumeStatus(unit,"pressure_drop");
     for(const unit of state.units){
       const mark=unit.statuses.find(st=>st.kind==="blood_debt");
       if(mark&&(state.round>=mark.expiresRound||!(getUnit(mark.creditorId)?.hp>0)))consumeStatus(unit,"blood_debt");
@@ -4123,6 +4146,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
+      case "pressure_drop":return {title:"Pressure Drop · Weakened first hit",detail:"The first hit of "+(BY_ID[st.cardId]?.name||"the pending spell")+" deals 25% less damage this round."};
       case "cold_storage":return {title:"Cold Storage · Banked resources",detail:"The crystal breaks at the start of round "+st.releaseRound+" and releases up to 2 mana and 150 HP."};
       case "blood_debt":return {title:"Blood Debt · Healing theft",detail:"The next HP recovery sends half to "+(getUnit(st.creditorId)?.name||"the caster")+", up to 200 HP. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
@@ -4458,6 +4482,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="pressuredrop")window.PressureDrop?.portrait(c,width,height);
       else if(card.id==="ripcurrent")window.RipCurrent?.portrait(c,width,height);
       else if(card.id==="glacierlance")window.GlacierLance?.portrait(c,width,height);
       else if(card.id==="coldstorage")window.ColdStorage?.portrait(c,width,height);
@@ -4626,6 +4651,7 @@
     window.ColdStorage?.onReady(drawCardArts);
     window.GlacierLance?.onReady(drawCardArts);
     window.RipCurrent?.onReady(drawCardArts);
+    window.PressureDrop?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4921,7 +4947,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4939,6 +4965,16 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.stage==="summon"&&action.card.kind==="pressuredrop"&&window.PressureDrop){
+      const target=getUnit(action.target);
+      if(target){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        const scene=window.PressureDrop.scene(target,p,action.card.hit,preventsHitEffects(action,target));
+        for(const layer of ["back","front"])renderables.push({type:"pressure-drop-"+layer,
+          depthY:target.y+(layer==="back"?-.12:.12),priority:2,
+          draw:()=>window.PressureDrop.draw(g,scene,layer)});
+      }
+    }
     if(action?.stage==="summon"&&action.card.kind==="ripcurrent"&&window.RipCurrent){
       const target=getUnit(action.target),source=getUnit(action.source);
       if(target&&source){

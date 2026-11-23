@@ -152,7 +152,7 @@ assert.equal(flashover.accuracy,.85);
 assert.deepEqual(JSON.parse(JSON.stringify(flashover)),
   JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c.id==='flashover'));
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(flashover.id));
+assert.ok([...api.getState().units[0].hand,...api.getState().units[0].drawPile].includes(flashover.id));
 
 for(const scenario of [
   {expected:340},

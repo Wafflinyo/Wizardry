@@ -245,3 +245,38 @@ assert.equal(storageTester.hp,storageTester.maxHp-50);
 assert.match(storageState.log.join('\n'),/opens for 2 mana and 150 HP/);
 assert.ok(!has(storageTester,'cold_storage'));
 console.log('Cold Storage: next-round release, start-of-round integration, cap, cleanse, debuff limit, defeated target and healing suppression passed.');
+
+const lance=card('glacierlance');
+assert.equal(lance.cost,4);
+assert.equal(lance.accuracy,.85);
+assert.deepEqual(JSON.parse(JSON.stringify(lance)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===lance.id));
+for(const [remaining,extreme,blocked,expected] of [
+  [undefined,false,false,390],[2,false,false,510],[3,true,false,510],
+  [0,false,false,390],[2,false,true,0]
+]){
+  const caster=unit('ice-caster',0),target=unit('lance-target',1),other=unit('other',1);
+  if(remaining!==undefined)target.statuses.push({kind:'frostbite',remaining,extreme});
+  if(blocked)target.statuses.push({kind:'wind_dome',value:1});
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[caster,target,other],auras:[null,null],log:[],flashes:[]});
+  const cast={card:lance,source:caster.id,target:target.id,runeResult:'success',damageVariant:1,
+    action:{casterId:caster.id,targetId:target.id}};
+  api.applySpell(cast);
+  api.applySpell(cast);
+  assert.equal(target.hp,1000-expected);
+  assert.equal(other.hp,1000);
+  assert.equal(target.statuses.find(st=>st.kind==='frostbite')?.remaining,remaining);
+}
+vm.runInNewContext(fs.readFileSync('assets/glacier-lance.js','utf8'),ctx);
+const lanceArt=ctx.window.GlacierLance;
+for(const target of [{x:200,y:490},{x:780,y:390}]){
+  const start=lanceArt.scene(target,.4,lance.hit);
+  assert.equal(start.x,500);
+  const contact=lanceArt.scene(target,lance.hit,lance.hit);
+  const exit=lanceArt.scene(target,lance.hit+.16,lance.hit);
+  assert.ok((exit.x-target.x)*(target.x-500)>0);
+  assert.ok((contact.x-target.x)*(target.x-500)<0);
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(lance.id));
+console.log('Glacier Lance: center trajectory, opening hand, single target, Frostbite bonus and retention, Extreme Frostbite, expired rune and Wind Dome passed.');

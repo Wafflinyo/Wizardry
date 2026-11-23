@@ -1,10 +1,11 @@
 (() => {
   "use strict";
-  const atlas=new Image(),listeners=[];
+  const atlas=new Image(),impactAtlas=new Image(),listeners=[];
   const tile=224,origin={x:500,y:395};
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  atlas.src="./assets/glacier-lance-frames.webp?v=0.310.0";
+  atlas.src="./assets/glacier-lance-long-frames.webp?v=0.310.1";
+  impactAtlas.src="./assets/glacier-lance-frames.webp?v=0.310.0";
   const clamp=p=>Math.max(0,Math.min(1,p));
   const smooth=p=>{const n=clamp(p);return n*n*(3-2*n);};
   const lerp=(a,b,p)=>a+(b-a)*p;
@@ -15,21 +16,21 @@
     const angle=Math.atan2(contact.y-origin.y,contact.x-origin.x);
     const ux=Math.cos(angle),uy=Math.sin(angle);
     const length=Math.hypot(contact.x-origin.x,contact.y-origin.y);
-    const leading=Math.min(94,length*.42);
+    const leading=Math.min(133,length*.49);
     const travel=p<release?0:p<hit?(length-leading)*clamp((p-release)/(hit-release))**1.55:
       length-leading+(blocked?0:155*smooth((p-hit)/.15));
     const impact=clamp((p-hit)/.23);
-    const frame=p<release?(p<.12?0:p<.26?1:p<.43?2:3):
-      p<hit?4:5;
+    const frame=p<release?Math.min(9,Math.floor(p/release*10)):
+      p<hit-.045?10:11;
     return {x:origin.x+ux*travel,y:origin.y+uy*travel,angle,contact,ux,uy,p,hit,release,impact,frame,frostbite,blocked,
       size:leading/.48, depthY:lerp(462,target.y,clamp(travel/Math.max(1,length-leading)))+.12};
   }
 
-  function sprite(ctx,frame,x,y,size,angle){
+  function sprite(ctx,frame,x,y,size,angle,image=atlas){
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(angle);
-    ctx.drawImage(atlas,frame%4*tile,Math.floor(frame/4)*tile,tile,tile,-size/2,-size/2,size,size);
+    ctx.drawImage(image,frame%4*tile,Math.floor(frame/4)*tile,tile,tile,-size/2,-size/2,size,size);
     ctx.restore();
   }
 
@@ -63,12 +64,12 @@
 
   function drawImpact(ctx,s){
     const p=s.impact;
-    if(p>=1)return;
+    if(p>=1||!impactAtlas.complete||!impactAtlas.naturalWidth)return;
     ctx.save();
     ctx.globalAlpha*=1-smooth((p-.36)/.64);
     const size=(s.frostbite?172:142)+64*p;
     if(!s.blocked){
-      sprite(ctx,p<.50?6:7,s.contact.x,s.contact.y,size,s.angle);
+      sprite(ctx,p<.50?6:7,s.contact.x,s.contact.y,size,s.angle,impactAtlas);
       const count=s.frostbite?31:17;
       for(let i=0;i<count;i++){
         const fan=(i%13-6)*.16;
@@ -78,7 +79,7 @@
         triangle(ctx,x,y,(3+i%4)*(1-p*.54),["#6cd5fa","#bedfff","#f3fdff"][i%3],angle);
       }
     }else{
-      sprite(ctx,7,s.contact.x,s.contact.y,105+35*p,s.angle);
+      sprite(ctx,7,s.contact.x,s.contact.y,105+35*p,s.angle,impactAtlas);
     }
     ctx.restore();
   }
@@ -97,7 +98,7 @@
 
   function portrait(ctx,w,h){
     if(!ready())return;
-    sprite(ctx,3,w/2,h*.50,Math.min(w*1.3,h*1.68),-.32);
+    sprite(ctx,8,w/2,h*.50,Math.min(w*1.3,h*1.68),-.32);
   }
   function onReady(fn){if(ready())fn();else listeners.push(fn);}
   window.GlacierLance={scene,draw,portrait,onReady};

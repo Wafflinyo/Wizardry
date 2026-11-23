@@ -269,6 +269,12 @@ for(const [remaining,extreme,blocked,expected] of [
 }
 vm.runInNewContext(fs.readFileSync('assets/glacier-lance.js','utf8'),ctx);
 const lanceArt=ctx.window.GlacierLance;
+const formation=new Set(Array.from({length:100},(_,i)=>{
+  const pose=lanceArt.scene({x:780,y:390},i/100*(lance.hit-.145),lance.hit);
+  assert.equal(pose.x,500);
+  return pose.frame;
+}));
+assert.deepEqual([...formation],[0,1,2,3,4,5,6,7,8,9]);
 for(const target of [{x:200,y:490},{x:780,y:390}]){
   const start=lanceArt.scene(target,.4,lance.hit);
   assert.equal(start.x,500);

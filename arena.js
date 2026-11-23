@@ -234,6 +234,9 @@
   CARDS.push({id:"lifevine",name:"Lifevine",school:"nature",cost:5,target:"ally",
     kind:"lifevine",share:.30,rounds:3,accuracy:1,icon:"❧",rarity:"RARE",duration:3100,hit:.68,
     description:"Link yourself to another ally for 3 rounds, including this round. When either wizard regains HP, the other receives 30% of the HP actually restored."});
+  CARDS.push({id:"blooddebt",name:"Blood Debt",school:"dark",cost:4,target:"enemy",
+    kind:"blooddebt",damage:250,steal:.50,stealCap:200,accuracy:.85,icon:"☠",rarity:"RARE",duration:2750,hit:.68,
+    description:"Deal 250 base damage and mark the target through the end of the next round. Divert half of their next HP recovery to yourself, up to 200 HP, then consume the mark."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -248,6 +251,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    blooddebt:"Steal half of the target’s next heal, up to 200 HP. Lasts through next round.",
     lifevine:"Linked allies share 30% of HP actually restored for 3 rounds.",
     briarremedy:"Remove Burn, Poison and Frostbite. Heal 100 HP for each removed.",
     flashover:"+140 base damage against a burning target.",
@@ -316,7 +320,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1861,7 +1865,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set([ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1916,6 +1920,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
+    if(target.hp<=0)consumeStatus(target,"blood_debt");
     if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
@@ -1943,16 +1948,32 @@
       st.partnerId===unit.id&&st.expiresRound===link.expiresRound)?partner:null;
   }
   function restoreHp(source,target,amount,shareLink=true){
+    amount=Math.min(amount,target.maxHp-target.hp);
+    if(target.hp<=0||amount<=0)return 0;
+    const mark=target.statuses.find(st=>st.kind==="blood_debt"&&state.round<st.expiresRound);
+    const creditor=mark?getUnit(mark.creditorId):null;
+    let diverted=0;
+    if(mark&&creditor?.hp>0){
+      consumeStatus(target,"blood_debt");
+      const spell=BY_ID.blooddebt;
+      diverted=Math.min(spell.stealCap,Math.floor(amount*spell.steal));
+      amount-=diverted;
+    }
     target.hp+=amount;
     tally(source,"healing",amount);
-    if(amount<=0)return;
     recordBattleEvent(target.name+" recovers "+amount+" HP.");
+    if(diverted){
+      const stolen=restoreHp(creditor,creditor,diverted);
+      flash(creditor,stolen?"+"+stolen+" HP · BLOOD DEBT":"BLOOD DEBT · HEAL STOLEN","#ffa4ba")
+        .bloodDebt={from:target.id,to:creditor.id};
+      recordBattleEvent(creditor.name+" diverts "+diverted+" HP from "+target.name+"'s healing with Blood Debt.");
+    }
     const partner=shareLink&&!healingSuppressed("nature")?lifevinePartner(target):null;
-    if(!partner)return;
-    const shared=Math.min(partner.maxHp-partner.hp,Math.floor(amount*BY_ID.lifevine.share));
-    if(shared<=0)return;
-    restoreHp(source,partner,shared,false);
-    flash(partner,"+"+shared+" HP · LIFEVINE","#c4ff90").lifevineTarget=partner.id;
+    if(partner){
+      const shared=restoreHp(source,partner,Math.floor(amount*BY_ID.lifevine.share),false);
+      if(shared>0)flash(partner,"+"+shared+" HP · LIFEVINE","#c4ff90").lifevineTarget=partner.id;
+    }
+    return amount;
   }
   function addStatus(u,kind,_icon,value,school){
     if(BARRIER_RUNES.has(kind)&&(!canReceiveDebuff(u,kind)||barrierConflict(u,kind)))return false;
@@ -2052,9 +2073,8 @@
     const healed=[];
     for(const [index,owner] of owners.entries()){
       if(owner.hp<=0)continue;
-      const healing=Math.min(owner.maxHp-owner.hp,share+Number(index<remainder));
+      const healing=restoreHp(owner,owner,share+Number(index<remainder));
       if(healing<=0)continue;
-      restoreHp(owner,owner,healing);
       flash(owner,"LIGHTNING ROD · +"+healing+" HP","#a8f9d4");
       healed.push({x:owner.x,y:owner.y});
     }
@@ -2299,9 +2319,8 @@
     if(cast.soulDelivered)return;
     cast.soulDelivered=true;
     if(!caster||caster.hp<=0||!cast.ghoulDrained)return;
-    const healed=Math.min(caster.maxHp-caster.hp,Math.floor(cast.ghoulDrained*cast.card.leech));
+    const healed=restoreHp(caster,caster,Math.floor(cast.ghoulDrained*cast.card.leech));
     if(healed<=0)return;
-    restoreHp(caster,caster,healed);
     flash(caster,"+"+healed+" HP · SOUL GHOUL","#dbc1ff");
   }
   function applyVampDamage(a){
@@ -2320,8 +2339,8 @@
     const n=c&&c.hp>0?Math.min(Math.max(0,c.maxHp-c.hp),
       Math.max(0,a.vampPotentialHeal||0)):0;
     if(c&&c.hp>0){
-      restoreHp(c,c,n);flash(c,n?"+"+n+" HP":"FULL HP","#ffb6c4");
-      recordBattleEvent(c.name+" receives "+n+" HP from the vampire's orb.");
+      const restored=restoreHp(c,c,n);flash(c,restored?"+"+restored+" HP":"FULL HP","#ffb6c4");
+      recordBattleEvent(c.name+" receives "+restored+" HP from the vampire's orb.");
     }
     a.applied=true;
   }
@@ -2620,9 +2639,8 @@
       if(amount>0&&allies.some(ally=>ally.hp<ally.maxHp))
         (state.aromatherapyGusts??=[]).push({team:caster.team,elapsed:0});
       for(const ally of allies){
-        const healing=Math.min(amount,Math.max(0,ally.maxHp-ally.hp));
+        const healing=restoreHp(caster,ally,amount);
         if(healing>0){
-          restoreHp(caster,ally,healing);
           flash(ally,"AROMATHERAPY · +"+healing+" HP","#ffc6eb");
         }
       }
@@ -2655,7 +2673,7 @@
         if(!effect.remaining)consumeStatus(u,kind);
         continue;
       }
-      const amount=Math.min(Math.floor(effect.value*grovelandMultiplier(effect.school??statusSchool(effect,u))),Math.max(0,u.maxHp-u.hp));restoreHp(getUnit(effect.sourceId)||u,u,amount);
+      const amount=restoreHp(getUnit(effect.sourceId)||u,u,Math.floor(effect.value*grovelandMultiplier(effect.school??statusSchool(effect,u))));
       flash(u,"+"+amount+" HP","#a8f1ee");recordBattleEvent(u.name+" restores "+amount+" HP from "+(kind==="healing_aura"?"Healing Aura":"Calming Waters")+" ("+effect.remaining+" turns remaining).");
       if(!effect.remaining)consumeStatus(u,kind);
     }
@@ -2674,8 +2692,8 @@
       const caster=getUnit(effect.sourceId);
       const drained=loseHp(caster,u,absorbBarrierDamage(u,drain));
       effect.remaining--;
-      const healed=caster?.hp>0?Math.min(drained,Math.max(0,caster.maxHp-caster.hp)):0;
-      if(healed){restoreHp(caster,caster,healed);flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");}
+      const healed=caster?.hp>0?restoreHp(caster,caster,drained):0;
+      if(healed)flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");
       flash(u,name.toUpperCase()+" −"+drained,seed?"#a4f5a8":"#d79ce7");
       recordBattleEvent(u.name+" loses "+drained+" HP to "+name+(healed?"; "+caster.name+" restores "+healed+" HP":"")+" ("+effect.remaining+" turns remaining).");
       if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2721,9 +2739,8 @@
     cast.briarHealed=true;
     const target=getUnit(cast.target);
     if(!target||target.hp<=0||healingSuppressed(cast.card.school))return;
-    const amount=Math.min(target.maxHp-target.hp,cast.briarRemoved.length*cast.card.healPerEffect);
+    const amount=restoreHp(caster,target,cast.briarRemoved.length*cast.card.healPerEffect);
     if(amount<=0)return;
-    restoreHp(caster,target,amount);
     flash(target,"+"+amount+" HP · BRIAR REMEDY","#ccf9a2");
   }
   function applySpell(anim){
@@ -2734,7 +2751,14 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="lifevine"){
+    if(card.kind==="blooddebt"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      if(t.hp<=0||preventsHitEffects(anim,t)||addStatus(t,"blood_debt",null,card.steal,card.school)===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="blood_debt"),
+        {creditorId:c.id,expiresRound:state.round+2});
+      flash(t,"BLOOD DEBT · MARKED","#ff9eb9");
+    }else if(card.kind==="lifevine"){
       if(t===c)return;
       for(const [unit,partner] of [[c,t],[t,c]]){
         consumeStatus(unit,"lifevine");
@@ -3053,8 +3077,8 @@
       }
     } else if(card.kind==="heal"&&t&&t.hp>0&&t.team===c.team){
       // The heal cannot damage an enemy, resurrect a KO, or exceed max HP.
-      const n=Math.min(directHealing(card,c,anim,t.hp<t.maxHp),Math.max(0,t.maxHp-t.hp));
-      restoreHp(c,t,n);flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
+      const n=restoreHp(c,t,directHealing(card,c,anim,t.hp<t.maxHp));
+      flash(t,n>0?"+"+n+" HP":"FULL HP","#bff4a1");
       recordBattleEvent(c.name+"'s Lady Estel blesses "+t.name+" for "+n+" HP");
     } else if(card.kind==="freezing"&&canReceiveDebuff(t,"freezing_temps")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"freezing_temps",null,.5,card.school);flash(t,"FREEZING TEMPS","#b8f3ff");recordBattleEvent(t.name+" is marked: the next Ice spell has a 50% freeze chance.");
@@ -3062,8 +3086,7 @@
       const allies=alive(c.team);
       const healing=directHealing(card,c,anim,allies.some(ally=>ally.hp<ally.maxHp));
       for(const ally of allies){
-        const amount=Math.min(healing,Math.max(0,ally.maxHp-ally.hp));
-        restoreHp(c,ally,amount);
+        const amount=restoreHp(c,ally,healing);
         flash(ally,amount>0?"+"+amount+" HP":"FULL HP","#b6fff3");
       }
       recordBattleEvent(c.name+" casts "+card.name+", restoring up to "+healing+" HP to each living ally.");
@@ -3135,6 +3158,10 @@
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
+    for(const unit of state.units){
+      const mark=unit.statuses.find(st=>st.kind==="blood_debt");
+      if(mark&&(state.round>=mark.expiresRound||!(getUnit(mark.creditorId)?.hp>0)))consumeStatus(unit,"blood_debt");
+    }
     for(const u of state.units)if(u.statuses.some(st=>st.kind==="lifevine")&&!lifevinePartner(u))consumeStatus(u,"lifevine");
     tickBurnsForRound();
     if(checkBattleEnd())return;
@@ -3164,6 +3191,11 @@
     state.log.unshift("Round "+state.round+" · "+message);
     state.log.length=Math.min(state.log.length,160);
   }
+  function bloodDebtTesterTarget(){
+    const creditor=caster();
+    return creditor&&alive(1-creditor.team).find(u=>u.statuses.some(st=>st.kind==="blood_debt"&&
+      st.creditorId===creditor.id&&state.round<st.expiresRound));
+  }
   function paintUI(){
     if(!state)return;
     // A tooltip must never claim an expired/consumed rune still exists.
@@ -3190,6 +3222,8 @@
     $("testerTarget").disabled=!planning;
     $("testerTarget").value=testerTargetType;
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
+    const debtFixture=$("testerDebtFixture");
+    if(debtFixture)debtFixture.hidden=!testing||!planning||!bloodDebtTesterTarget();
     const briarFixture=$("testerBriarFixture");
     if(briarFixture)briarFixture.hidden=!testing||!planning||card?.kind!=="briarremedy";
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
@@ -3380,6 +3414,17 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    const debtFixture=$("testerDebtFixture");
+    if(debtFixture)debtFixture.onclick=()=>{
+      if(state.mode!=="tester"||state.phase!=="planning")return;
+      const target=bloodDebtTesterTarget();
+      if(!target)return;
+      const creditor=caster();
+      creditor.hp=Math.min(creditor.hp,Math.max(1,creditor.maxHp-BY_ID.blooddebt.stealCap));
+      const healed=restoreHp(target,target,target.maxHp-target.hp);
+      if(healed>0)flash(target,"+"+healed+" HP","#c7eba8");
+      paintUI();
+    };
     const briarFixture=$("testerBriarFixture");
     if(briarFixture)briarFixture.onclick=()=>{
       if(state.mode!=="tester"||state.phase!=="planning"||currentCard()?.kind!=="briarremedy")return;
@@ -4014,6 +4059,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
+      case "blood_debt":return {title:"Blood Debt · Healing theft",detail:"The next HP recovery sends half to "+(getUnit(st.creditorId)?.name||"the caster")+", up to 200 HP. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "fear_turn":return {title:"Fear · This round only",detail:(u.fearSource||"Fear")+" frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
@@ -4212,7 +4258,7 @@
     symbols.forEach((st,i)=>{
       const r=statusRuneRect(u,i);
       const school=statusSchool(st,u);
-      drawStatusStone(g,r,school,runeColors[school]);
+      drawStatusStone(g,r,school,st.kind==="blood_debt"?"#ff5476":runeColors[school]);
     });
     g.restore();
   }
@@ -4347,6 +4393,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="blooddebt")window.BloodDebt?.portrait(c,width,height);
       else if(card.id==="lifevine")window.Lifevine?.portrait(c,width,height);
       else if(card.id==="briarremedy")window.BriarRemedy?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
@@ -4507,6 +4554,7 @@
     window.Flashover?.onReady(drawCardArts);
     window.BriarRemedy?.onReady(drawCardArts);
     window.Lifevine?.onReady(drawCardArts);
+    window.BloodDebt?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4802,7 +4850,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4820,6 +4868,20 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(window.BloodDebt){
+      const target=action?.stage==="summon"&&action.card.kind==="blooddebt"?getUnit(action.target):null;
+      if(target){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        renderables.push({type:"blood-debt-mark",depthY:target.y+.14,priority:2,
+          draw:()=>window.BloodDebt.drawMark(g,target,p,preventsHitEffects(action,target))});
+      }
+      for(const f of state.flashes){
+        if(!f.bloodDebt)continue;
+        const from=getUnit(f.bloodDebt.from),to=getUnit(f.bloodDebt.to);
+        if(from&&to)renderables.push({type:"blood-debt-siphon",depthY:Math.max(from.y,to.y)+.17,priority:2,
+          draw:()=>window.BloodDebt.siphon(g,from,to,f.age/.90)});
+      }
+    }
     if(window.Lifevine){
       const casting=action?.stage==="summon"&&action.card.kind==="lifevine"?action:null;
       const castSource=getUnit(casting?.source),castTarget=getUnit(casting?.target);

@@ -167,3 +167,37 @@ assert.ok(testState.units[0].hand.includes(lifevine.id));
 api.chooseCard(lifevine.id);
 assert.equal(testState.selectedTarget,testState.units[1].id);
 console.log('Lifevine: ally-only targeting, actual HP sharing, both directions, missing-HP cap, expiration, relinking and obstacle routing passed.');
+
+const debt=card('blooddebt');
+assert.equal(debt.cost,4);
+assert.equal(debt.accuracy,.85);
+assert.deepEqual(JSON.parse(JSON.stringify(debt)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===debt.id));
+for(const [heal,creditorMissing,round,expected,stolen,blocked=false] of [
+  [100,500,1,50,50],
+  [900,500,2,550,200],
+  [100,10,2,50,10],
+  [100,500,3,100,0],
+  [100,500,1,100,0,true]
+]){
+  const creditor=unit('creditor',0),debtor=unit('debtor',1);
+  creditor.hp-=creditorMissing;
+  debtor.hp=500;
+  if(blocked)debtor.statuses.push({kind:'wind_dome',value:1});
+  const s={phase:'resolving',round:1,units:[creditor,debtor],auras:[null,null],log:[],flashes:[]};
+  ctx.window.setupGrowthTest(s);
+  api.applySpell({card:debt,source:creditor.id,target:debtor.id,runeResult:'success',damageVariant:1,
+    action:{casterId:creditor.id,targetId:debtor.id}});
+  assert.equal(debtor.hp,blocked?500:250);
+  assert.equal(has(debtor,'blood_debt'),!blocked);
+  if(!blocked)assert.equal(debtor.statuses.find(st=>st.kind==='blood_debt').expiresRound,3);
+  s.round=round;
+  assert.equal(ctx.window.healForTest(debtor,debtor,heal),expected);
+  assert.equal(creditor.hp,creditor.maxHp-creditorMissing+stolen);
+  const before=creditor.hp;
+  ctx.window.healForTest(debtor,debtor,100);
+  assert.equal(creditor.hp,before,'the mark can steal only once');
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(debt.id));
+console.log('Blood Debt: damage, mark, effective recovery, theft cap, missing HP cap, expiration, one trigger and Wind Dome passed.');

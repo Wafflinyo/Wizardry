@@ -208,7 +208,7 @@
     kind:"reflectiveice",accuracy:.90,icon:"❄",rarity:"RARE",duration:1750,hit:.72,wardRounds:3,
     description:"Encase yourself or an ally in reflective ice for 3 rounds, including the casting round. Splits the first damaging spell that gets through: the protected wizard takes half and a random living enemy takes the other half. Then the ice breaks."});
   CARDS.push({id:"thornyhug",name:"Thorny Hug",school:"nature",cost:2,target:"enemy",
-    kind:"summon",damage:230,accuracy:.85,icon:"❧",rarity:"RARE",duration:3100,hit:.78,
+    kind:"summon",damage:230,accuracy:.85,icon:"❧",rarity:"RARE",duration:3600,hit:.78,
     description:"A smiling cactus sprouts legs, runs to one enemy, and gives them a prickly hug for 230 base damage."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -4286,6 +4286,7 @@
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
+    window.ThornyHug?.onReady(drawCardArts);
     window.ClarityStrike?.onReady(drawCardArts);
     window.Wynzor?.onReady(drawCardArts);
     window.StormLizard?.onReady(drawCardArts);

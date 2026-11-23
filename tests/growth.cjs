@@ -7,7 +7,7 @@ const ctx = {window: {}, requestAnimationFrame() {}, Image: class {}, document: 
 vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
   '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
-  '  window.setupGrowthTest=s=>state=s;window.damageForTest=damage;paintUI=()=>{};'
+  '  window.setupGrowthTest=s=>state=s;window.damageForTest=damage;window.healForTest=restoreHp;paintUI=()=>{};'
 ), ctx);
 
 const api = ctx.window.WIZARDRY_ARENA_TEST;
@@ -114,3 +114,56 @@ for(const {effects,missing,expected,sealed=false,targetId='ally'} of [
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(briar.id));
 console.log('Briar Remedy: targeted cleanse, capped healing, full three-effect combo, self-cast, enemy rejection and Dark Grounds passed.');
+
+const lifevine=card('lifevine');
+assert.equal(lifevine.cost,5);
+assert.equal(lifevine.accuracy,1);
+assert.deepEqual(JSON.parse(JSON.stringify(lifevine)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===lifevine.id));
+{
+  const a=unit('a',0),b=unit('b',0),d=unit('d',0),foe=unit('foe',1);
+  a.hp=980;
+  b.hp=500;
+  const s={phase:'resolving',round:1,units:[a,b,d,foe],log:[],flashes:[]};
+  ctx.window.setupGrowthTest(s);
+  const castLink=(source,target)=>api.applySpell({card:lifevine,runeResult:'success',
+    action:{casterId:source.id,targetId:target.id}});
+  castLink(a,a);
+  castLink(a,foe);
+  assert.ok(!has(a,'lifevine'));
+  castLink(a,b);
+  assert.equal(a.statuses.at(-1).expiresRound,4);
+  ctx.window.healForTest(b,a,20);
+  assert.equal(a.hp,1000);
+  assert.equal(b.hp,506);
+  a.hp=999;
+  ctx.window.healForTest(a,b,103);
+  assert.equal(a.hp,1000);
+  assert.equal(b.hp,609,'shared healing does not bounce back');
+  castLink(a,d);
+  assert.ok(!has(b,'lifevine'));
+  a.hp=400;d.hp=200;
+  s.round=3;
+  ctx.window.healForTest(a,d,100);
+  assert.equal(a.hp,430);
+  s.round=4;
+  ctx.window.healForTest(a,d,100);
+  assert.equal(a.hp,430,'expires before round four heals');
+  api.consumeStatus(a,'lifevine');
+  assert.ok(!has(d,'lifevine'),'the partner rune is removed with the original');
+}
+vm.runInNewContext(fs.readFileSync('assets/lifevine.js','utf8'),ctx);
+const start={x:100,y:460,hp:100},end={x:500,y:280,hp:100};
+const blocker={x:300,y:380,hp:100};
+const route=ctx.window.Lifevine.route(start,end,[start,blocker,end]);
+assert.ok(route.length>2);
+for(let i=1;i<route.length;i++)for(let k=0;k<=100;k++){
+ const a=route[i-1],b=route[i],t=k/100,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;
+ assert.ok(!(x>blocker.x-62&&x<blocker.x+62&&y>blocker.y-145&&y<blocker.y+18),'vine stays clear of the intervening wizard');
+}
+api.startCardTester(2);
+const testState=api.getState();
+assert.ok(testState.units[0].hand.includes(lifevine.id));
+api.chooseCard(lifevine.id);
+assert.equal(testState.selectedTarget,testState.units[1].id);
+console.log('Lifevine: ally-only targeting, actual HP sharing, both directions, missing-HP cap, expiration, relinking and obstacle routing passed.');

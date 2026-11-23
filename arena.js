@@ -231,6 +231,9 @@
   CARDS.push({id:"briarremedy",name:"Briar Remedy",school:"nature",cost:3,target:"ally",
     kind:"briarremedy",healPerEffect:100,accuracy:1,icon:"❧",rarity:"RARE",duration:4050,hit:.59,healAt:.78,
     description:"A Forest Druid draws all Burn, Poison and Frostbite off yourself or one ally into his staff, then restores 100 HP per effect removed."});
+  CARDS.push({id:"lifevine",name:"Lifevine",school:"nature",cost:5,target:"ally",
+    kind:"lifevine",share:.30,rounds:3,accuracy:1,icon:"❧",rarity:"RARE",duration:3100,hit:.68,
+    description:"Link yourself to another ally for 3 rounds, including this round. When either wizard regains HP, the other receives 30% of the HP actually restored."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -245,6 +248,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    lifevine:"Linked allies share 30% of HP actually restored for 3 rounds.",
     briarremedy:"Remove Burn, Poison and Frostbite. Heal 100 HP for each removed.",
     flashover:"+140 base damage against a burning target.",
     soulghoul:"Heal for 50% of HP drained. 25% Fear: skip pending action.",
@@ -312,7 +316,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -738,6 +742,7 @@
     if(!card||!c)return[];
     if(card.kind==="zen")return alive(c.team).filter(u=>zenRunes(u).length);
     if(card.selfOnly)return c.hp>0?[c]:[];
+    if(card.kind==="lifevine")return alive(c.team).filter(ally=>ally!==c);
     if(card.target==="team")return alive(c.team);
     if(card.target==="all_enemies")return alive(1-c.team);
     return alive(card.target==="ally"?c.team:1-c.team);
@@ -799,6 +804,8 @@
     state.selectedTarget=card.selfOnly||(choosesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
       state.selectedTarget=targetsFor(card,u).find(target=>!targetNotice(target,card))?.id??null;
+    if(card.kind==="lifevine"&&!targetsFor(card,u).length)
+      state.targetingNotice="Lifevine needs another living ally.";
     if(card.kind==="briarremedy"&&!targetsFor(card,u).some(target=>briarEffects(target).length))
       state.targetingNotice="Briar Remedy needs a target with Burn, Poison, or Frostbite.";
     paintUI();
@@ -943,7 +950,7 @@
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
   }
   function towerDeckScore(card,role){
-    if(card.kind==="briarremedy"||towerHealing.has(card.kind))return role==="Support"?10:1;
+    if(card.kind==="lifevine"||card.kind==="briarremedy"||towerHealing.has(card.kind))return role==="Support"?10:1;
     if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
     if(card.fieldRounds)return role==="Support"?7:3;
     if(towerControl(card))return role==="Controller"?10:5;
@@ -987,7 +994,10 @@
       const targets=targetsFor(card,u);
       for(const target of group?[null]:targets){
         let score=0;
-        if(card.kind==="briarremedy"){
+        if(card.kind==="lifevine"){
+          if(!target||lifevinePartner(u)||lifevinePartner(target))continue;
+          score=110+Math.min(220,(u.maxHp-u.hp+target.maxHp-target.hp)*.30);
+        }else if(card.kind==="briarremedy"){
           const effects=briarEffects(target);
           if(!effects.length)continue;
           score=effects.length*110+(healingSuppressed(card.school)?0:
@@ -1044,6 +1054,7 @@
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
       (card.kind!=="briarremedy"||briarTargets.length>0)&&
+      (card.kind!=="lifevine"||allies.length>1)&&
       (!BARRIER_SPELLS[card.kind]||shieldTargets(card).length>0)&&
       (card.kind!=="hightide"||getUnit(state.environment?.ownerId)?.team===1-u.team)&&
       (card.kind!=="cursedhold"||(canReceiveDebuff(u,"cursed_hold")&&!activeCursedHold(u)))&&
@@ -1056,7 +1067,7 @@
       return null;
     }
     const card=choice?.card||affordable[Math.floor(Math.random()*affordable.length)];
-    const eligibleAllies=BARRIER_SPELLS[card.kind]?shieldTargets(card):allies;
+    const eligibleAllies=BARRIER_SPELLS[card.kind]?shieldTargets(card):card.kind==="lifevine"?targetsFor(card,u):allies;
     const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
       (choosesRune(card)||card.kind==="claritystrike")?allies.find(ally=>zenRunes(ally).length):card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
@@ -1851,7 +1862,7 @@
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set([ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
-  const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
+  const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
@@ -1905,7 +1916,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");}
+    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     if(lost>0&&target.hp<=0)retaliateWithCursedHold(source,target,amount);
@@ -1924,10 +1935,24 @@
     const field=BY_ID[state.environment?.id];
     return field?.id!=="groveland"&&field?.school===school&&field?.fieldBoost?1+field.fieldBoost:1;
   }
-  function restoreHp(source,target,amount){
+  function lifevinePartner(unit){
+    const link=unit.statuses.find(st=>st.kind==="lifevine");
+    if(unit.hp<=0||!link||state.round>=link.expiresRound)return null;
+    const partner=getUnit(link.partnerId);
+    return partner?.hp>0&&partner.statuses.some(st=>st.kind==="lifevine"&&
+      st.partnerId===unit.id&&st.expiresRound===link.expiresRound)?partner:null;
+  }
+  function restoreHp(source,target,amount,shareLink=true){
     target.hp+=amount;
     tally(source,"healing",amount);
-    if(amount>0)recordBattleEvent(target.name+" recovers "+amount+" HP.");
+    if(amount<=0)return;
+    recordBattleEvent(target.name+" recovers "+amount+" HP.");
+    const partner=shareLink&&!healingSuppressed("nature")?lifevinePartner(target):null;
+    if(!partner)return;
+    const shared=Math.min(partner.maxHp-partner.hp,Math.floor(amount*BY_ID.lifevine.share));
+    if(shared<=0)return;
+    restoreHp(source,partner,shared,false);
+    flash(partner,"+"+shared+" HP · LIFEVINE","#c4ff90").lifevineTarget=partner.id;
   }
   function addStatus(u,kind,_icon,value,school){
     if(BARRIER_RUNES.has(kind)&&(!canReceiveDebuff(u,kind)||barrierConflict(u,kind)))return false;
@@ -1941,7 +1966,7 @@
       existing.value=value;
       if(school)existing.school=school;
       existing.charges=1;if(sourceId)existing.sourceId=sourceId;return;}
-    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>!BARRIER_RUNES.has(st.kind)&&!DEBUFFS.has(st.kind));if(at>=0)u.statuses.splice(at,1);}
+    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>!BARRIER_RUNES.has(st.kind)&&!DEBUFFS.has(st.kind));if(at>=0)consumeStatus(u,u.statuses[at].kind);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1,...(sourceId?{sourceId}:{})});
   }
   function applyPeriodicStatus(target,kind,card){
@@ -1976,6 +2001,10 @@
     const at=u.statuses.findIndex(s=>s.kind===kind);
     if(at<0)return null;
     const [status]=u.statuses.splice(at,1);
+    if(kind==="lifevine"){
+      const partner=getUnit(status.partnerId);
+      if(partner?.statuses.some(st=>st.kind==="lifevine"&&st.partnerId===u.id))consumeStatus(partner,kind);
+    }
     if(kind===ENVIRONMENT_RUNE&&state.environment?.ownerId===u.id){
       recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
       state.environment=null;
@@ -2705,7 +2734,17 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="briarremedy"){
+    if(card.kind==="lifevine"){
+      if(t===c)return;
+      for(const [unit,partner] of [[c,t],[t,c]]){
+        consumeStatus(unit,"lifevine");
+        addStatus(unit,"lifevine",null,card.share,card.school);
+        Object.assign(unit.statuses.find(st=>st.kind==="lifevine"),
+          {partnerId:partner.id,expiresRound:state.round+card.rounds});
+        flash(unit,"LIFEVINE · "+card.rounds+" ROUNDS","#c4ff90");
+      }
+      recordBattleEvent(c.name+" and "+t.name+" are linked by Lifevine.");
+    }else if(card.kind==="briarremedy"){
       anim.briarRemoved=briarEffects(t).map(status=>status.kind);
       if(!anim.briarRemoved.length){
         flash(t,"NO EFFECTS TO CLEANSE","#cbeaa5");
@@ -3096,6 +3135,7 @@
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
+    for(const u of state.units)if(u.statuses.some(st=>st.kind==="lifevine")&&!lifevinePartner(u))consumeStatus(u,"lifevine");
     tickBurnsForRound();
     if(checkBattleEnd())return;
     if(state.mode==="tester"){
@@ -3974,6 +4014,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
+      case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "fear_turn":return {title:"Fear · This round only",detail:(u.fearSource||"Fear")+" frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
@@ -4306,6 +4347,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="lifevine")window.Lifevine?.portrait(c,width,height);
       else if(card.id==="briarremedy")window.BriarRemedy?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
       else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
@@ -4464,6 +4506,7 @@
     window.FlameWheel?.onReady(drawCardArts);
     window.Flashover?.onReady(drawCardArts);
     window.BriarRemedy?.onReady(drawCardArts);
+    window.Lifevine?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4759,7 +4802,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4777,6 +4820,26 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(window.Lifevine){
+      const casting=action?.stage==="summon"&&action.card.kind==="lifevine"?action:null;
+      const castSource=getUnit(casting?.source),castTarget=getUnit(casting?.target);
+      const pairs=sorted.flatMap(u=>{
+        const partner=lifevinePartner(u);
+        return partner&&u.id<partner.id&&!(casting&&[castSource,castTarget].includes(u)&&[castSource,castTarget].includes(partner))?
+          [{source:u,target:partner,active:true}]:[];
+      });
+      if(castSource?.hp>0&&castTarget?.hp>0)pairs.push({source:castSource,target:castTarget,
+        progress:clamp(casting.elapsed/casting.duration,0,1)});
+      for(const pair of pairs){
+        const pulse=state.flashes.findLast(f=>[pair.source.id,pair.target.id].includes(f.lifevineTarget));
+        const scene=window.Lifevine.scene(pair,sorted,time,pulse);
+        renderables.push({type:"lifevine-route",depthY:Math.min(pair.source.y,pair.target.y)-.2,priority:0,
+          draw:()=>window.Lifevine.drawRoute(g,scene)});
+        for(const unit of [pair.source,pair.target])for(const layer of ["back","front"])
+          renderables.push({type:"lifevine-coil",depthY:unit.y+(layer==="front"?.13:-.13),priority:2,
+            draw:()=>window.Lifevine.drawCoil(g,scene,unit,layer)});
+      }
+    }
     for(const u of sorted){
       if(u.hp<=0)continue;
       if(u.statuses.some(st=>st.kind==="sleep")){

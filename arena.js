@@ -4311,6 +4311,7 @@
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
+    window.FlameWheel?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);

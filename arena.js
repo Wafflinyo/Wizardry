@@ -198,6 +198,9 @@
   CARDS.push({id:"earthquake",name:"Earthquake",school:"earth",cost:5,target:"all_enemies",
     kind:"earthquake",accuracy:.80,damage:300,icon:"◆",rarity:"RARE",duration:2250,hit:.40,
     description:"Shatters the active environmental rune and deals 300 base damage to each living enemy."});
+  CARDS.push({id:"claritystrike",name:"Clarity Strike",school:"lightning",cost:5,target:"ally",
+    kind:"claritystrike",accuracy:.80,icon:"ϟ",rarity:"RARE",duration:1800,hit:.54,
+    description:"Strike a chosen negative rune on yourself or an ally to destroy it. The target gains 1 mana, even if they have no negative rune."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -249,6 +252,7 @@
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
+    claritystrike:"Remove one chosen negative rune. Target gains 1 mana.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
@@ -270,7 +274,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="earthquake"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="claritystrike"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -689,6 +693,13 @@
   // No implicit spell or enemy selection. Each player-controlled wizard
   // must explicitly pick a card and target again for EVERY new round.
   function currentCard(){return state.selectedCard?BY_ID[state.selectedCard]||null:null;}
+  function cleansesRune(card){
+    return card?.kind==="zen"||card?.kind==="claritystrike";
+  }
+  function validCleanseRune(card,target,kind){
+    const runes=zenRunes(target);
+    return runes.some(st=>st.kind===kind)||(card.kind==="claritystrike"&&kind==null&&!runes.length);
+  }
   function targetsFor(card,c){
     if(!card||!c)return[];
     if(card.kind==="zen")return alive(c.team).filter(u=>zenRunes(u).length);
@@ -750,13 +761,13 @@
     if(state.selectedRune)closeStatusInfo();
     state.selectedCard=id;state.selectedRune=null;
     const card=BY_ID[id],u=caster();
-    state.selectedTarget=card.selfOnly||(card.kind==="zen"&&zenRunes(u).length)?u.id:null;
+    state.selectedTarget=card.selfOnly||(cleansesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
       state.selectedTarget=targetsFor(card,u)[0]?.id??null;
     paintUI();
   }
   function selectZenRune(kind){
-    if(state.phase!=="planning"||currentCard()?.kind!=="zen")return;
+    if(state.phase!=="planning"||!cleansesRune(currentCard()))return;
     const target=correctTarget();
     const rune=zenRunes(target).find(st=>st.kind===kind);
     state.selectedRune=rune?.kind??null;
@@ -771,8 +782,8 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    const runeKind=card?.kind==="zen"?state.selectedRune:null;
-    if(card?.kind==="zen"&&!zenRunes(target).some(st=>st.kind===runeKind))return false;
+    const runeKind=cleansesRune(card)?state.selectedRune:null;
+    if(cleansesRune(card)&&!validCleanseRune(card,target,runeKind))return false;
     if(window.WizardrySession?.active){
       if(!c||!card)return false;
       return window.WizardrySession.plan({cardId:card.id,targetId:target?.id||null,runeKind,round:state.round});
@@ -947,7 +958,7 @@
             return sum+Math.min(victim.hp,damage)*(card.accuracy||1)+(damage>=victim.hp?180:0)+
               (towerControl(card)?(role==="Controller"?320:120):0);
           },0);
-        }else if(card.kind==="zen"){
+        }else if(cleansesRune(card)&&zenRunes(target).length){
           score=role==="Support"?360:190;
         }
         if(score>0)choices.push({card,target,score:score-card.cost*16+Math.random()*(state.tower.floor<12?140:55)});
@@ -966,7 +977,7 @@
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
-      (card.kind!=="zen"||targetsFor(card,u).length>0));
+      (!cleansesRune(card)||allies.some(ally=>zenRunes(ally).length)));
     if(!affordable.length)return null;
     const choice=u.towerRole?towerChoice(u,affordable):null;
     if(u.towerRole&&!choice){
@@ -976,14 +987,14 @@
     }
     const card=choice?.card||affordable[Math.floor(Math.random()*affordable.length)];
     const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
-      card.kind==="zen"?targetsFor(card,u)[0]:card.selfOnly?u:card.kind==="heal"?
+      cleansesRune(card)?allies.find(ally=>zenRunes(ally).length):card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
         card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
         card.target==="ally"?allies[Math.floor(Math.random()*allies.length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
     if(!target&&!["team","all_enemies"].includes(card.target))return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
-      runeKind:card.kind==="zen"?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
+      runeKind:cleansesRune(card)?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
   }
   function autoFill(team){
     if(state.phase!=="planning"||state.mode==="tester")return;
@@ -2499,16 +2510,19 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="zen"){
+    if(cleansesRune(card)){
       const rune=zenRunes(t).find(st=>st.kind===action.runeKind);
-      if(!rune||t.team!==c.team)return;
-      const origin=statusRuneRect(t,unitStatuses(t).indexOf(rune));
-      const school=statusSchool(rune,t);
-      anim.zenBurst={...origin,school};
-      consumeStatus(t,rune.kind);
-      if(rune.kind==="stun")t.stunRound=null;
-      if(rune.kind==="fear_turn"){t.fearRound=null;t.fearSource=null;}
-      flash(t,"RUNE CLEANSED","#e1f6a5");
+      if(rune){
+        const origin=statusRuneRect(t,unitStatuses(t).indexOf(rune));
+        const school=statusSchool(rune,t);
+        anim.zenBurst={...origin,school};
+        consumeStatus(t,rune.kind);
+        if(rune.kind==="stun")t.stunRound=null;
+        if(rune.kind==="fear_turn"){t.fearRound=null;t.fearSource=null;}
+      }
+      const bonus=card.kind==="claritystrike"&&t.mana<(t.maxMana||MAX_MANA);
+      if(bonus)t.mana++;
+      if(rune||bonus)flash(t,rune&&bonus?"RUNE CLEANSED · +1 MANA":rune?"RUNE CLEANSED":"+1 MANA","#e1f6a5");
     }else if(card.id==="sentinelfissure"){
       if(t?.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
@@ -2944,13 +2958,13 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":card?.kind==="zen"?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
+    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":cleansesRune(card)?(target?(zenRunes(target).length?"Choose a negative rune on "+target.name:target.name+" · +1 mana"):card.kind==="zen"?"Select an ally with a negative rune":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
     const runePicker=$("zenRunePicker");
-    const runes=card?.kind==="zen"?zenRunes(target):[];
+    const runes=cleansesRune(card)?zenRunes(target):[];
     runePicker.hidden=!planning||!runes.length;
     const options='<option value="">Choose a rune</option>'+runes.map(st=>
       '<option value="'+st.kind+'">'+escapeHtml(describeStatus(target,st).title)+'</option>').join("");
@@ -2958,10 +2972,10 @@
     runePicker.value=state.selectedRune||"";
     const canConfirm=planning&&!!c&&!!card&&
       (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
-      c.mana>=card.cost&&!state.plans[c.id]&&(card.kind!=="zen"||runes.some(st=>st.kind===state.selectedRune));
-    ui.confirm.hidden=!canConfirm&&!(planning&&card?.kind==="zen"&&runes.length);
+      c.mana>=card.cost&&!state.plans[c.id]&&(!cleansesRune(card)||validCleanseRune(card,target,state.selectedRune));
+    ui.confirm.hidden=!canConfirm&&!(planning&&cleansesRune(card)&&runes.length);
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=card?.fieldRounds?"Cast "+card.name:card?.kind==="zen"?"Cast Zen":card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=(card?.fieldRounds||cleansesRune(card))?"Cast "+card.name:card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -3793,7 +3807,7 @@
       }
     }
     if(!closest)return false;
-    if(state.phase==="planning"&&currentCard()?.kind==="zen"&&
+    if(state.phase==="planning"&&cleansesRune(currentCard())&&
        targetsFor(currentCard(),caster()).includes(closest.u)&&zenRunes(closest.u).includes(closest.st)){
       selectTarget(closest.u.id);
       selectZenRune(closest.st.kind);
@@ -4024,6 +4038,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
@@ -4459,7 +4474,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5176,6 +5191,16 @@
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     drawZenCast(state.animation);
+    if(action?.stage==="summon"&&action.card.kind==="claritystrike"){
+      const target=getUnit(action.target);
+      if(target){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        const index=unitStatuses(target).findIndex(st=>st.kind===action.action.runeKind);
+        const rune=action.zenBurst||(index<0?null:statusRuneRect(target,index));
+        window.ClarityStrike?.draw(g,target,rune,p,action.card.hit);
+        if(action.zenBurst)drawZenShards(g,rune.x,rune.y,clamp((p-action.card.hit)/(1-action.card.hit),0,1),rune.school);
+      }
+    }
     if(state.phase==="planning"&&currentCard()&&state.selectedTarget)
       drawTargetArrow(getUnit(state.selectedTarget),time);
     for(const {f,x,y,fontSize} of layoutCombatMessages(g,state.flashes)){
@@ -5370,7 +5395,7 @@
       }
       state.selectedCard=mine?.hand.includes(selectedCard)&&!state.plans[mine.id]?selectedCard:null;
       state.selectedTarget=state.selectedCard?selectedTarget:null;
-      state.selectedRune=state.selectedCard==="zen"?selectedRune:null;
+      state.selectedRune=cleansesRune(currentCard())?selectedRune:null;
       const key=guestSnapshotUiKey(state);
       if(key!==guestUiKey){guestUiKey=key;paintUI();}
     },
@@ -5379,9 +5404,9 @@
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
       if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
-      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(card.kind==="zen"&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
+      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(cleansesRune(card)&&!validCleanseRune(card,t,p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
-       if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:card.kind==="zen"?p.runeKind:null,team:u.team};}
+       if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:cleansesRune(card)?p.runeKind??null:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},

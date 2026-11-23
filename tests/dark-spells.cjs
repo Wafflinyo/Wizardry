@@ -166,3 +166,69 @@ assert.deepEqual(tiles, Array.from({length:16}, (_,i)=>[
   './assets/mana-scourge.webp', (i%4)*256, Math.floor(i/4)*256
 ]));
 console.log('Dark spells: mana denial, Soulless timing, mirrored chain contact, and all sixteen Mana Scourge atlas frames passed.');
+
+const ghoul = api.cards.find(card => card.id === 'soulghoul');
+assert.equal(ghoul.damage, 320);
+assert.equal(ghoul.cost, 4);
+assert.equal(ghoul.accuracy, .8);
+assert.equal(ghoul.school, 'dark');
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(ghoul.id));
+for (const {hp, shield, lost, gain} of [
+  {hp: 2000, lost: 320, gain: 160},
+  {hp: 2000, shield: ['sand_warrior', 250], lost: 70, gain: 35},
+  {hp: 2000, shield: ['wind_dome', 1], lost: 0, gain: 0},
+  {hp: 101, lost: 101, gain: 50},
+  {hp: 2000, lost: 320, gain: 11}
+]) {
+  const {state, caster, target} = battle();
+  target.hp = hp;
+  caster.hp = caster.maxHp - (gain === 11 ? 11 : 500);
+  const startingHp = caster.hp;
+  if (shield) api.addStatus(target, shield[0], null, shield[1]);
+  const spell = cast(ghoul.id, caster, target);
+  assert.equal(target.hp, hp - lost);
+  assert.equal(caster.hp, startingHp, 'life is delivered later');
+  Object.assign(spell, {stage: 'summon', duration: ghoul.duration, elapsed: 0});
+  state.animation = spell;
+  state.phase = 'resolving';
+  api.advanceAction(ghoul.duration * ghoul.healAt - 1);
+  assert.equal(caster.hp, startingHp);
+  api.advanceAction(1);
+  assert.equal(caster.hp, startingHp + gain, 'heals for half the HP lost, capped by missing HP');
+  api.advanceAction(1);
+  assert.equal(caster.hp, startingHp + gain, 'the same soul heals once');
+}
+{
+  const {caster, target} = battle();
+  const spell = cast(ghoul.id, caster, target, 'failed');
+  assert.equal(spell.ghoulDrained, undefined);
+  assert.equal(target.hp, 2000);
+}
+
+vm.runInNewContext(src('assets/soul-ghoul.js'), {
+  window: ctx.window,
+  Image: class { complete = true; naturalWidth = 1024; }
+});
+const ghoulArt = ctx.window.SoulGhoul;
+{
+  const {caster, target} = battle();
+  const frames = new Set();
+  const canvas = new Proxy({}, {get: (_target, key) => key === 'createRadialGradient'
+    ? () => ({addColorStop() {}})
+    : key === 'drawImage' ? (_image, x, y) => frames.add(x / 256 + y / 64)
+    : () => {}});
+  for (let i = 0; i < 100; i++) {
+    const p = i / 100;
+    const scene = ghoulArt.scene(target, caster, p, ghoul, p < ghoul.hit ? undefined : 320);
+    if (scene) ghoulArt.draw(canvas, scene);
+  }
+  assert.equal(frames.size, 8);
+  assert.equal(ghoulArt.scene(target, caster, .56, ghoul, 320), null, 'vanishes between portals');
+  const outward = ghoulArt.scene(target, caster, .27, ghoul, undefined);
+  const returnTrip = ghoulArt.scene(target, caster, .77, ghoul, 320);
+  assert.equal(outward.unit, target);
+  assert.equal(returnTrip.unit, caster);
+  assert.equal(outward.dir, -returnTrip.dir, 'both appearances face the receiving wizard');
+}
+console.log('Soul Ghoul: starter hand, actual HP drained, two-stage timing, barriers, overkill, misses, and all eight mirrored sprite poses passed.');

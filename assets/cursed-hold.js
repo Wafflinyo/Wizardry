@@ -134,18 +134,17 @@
     ctx.restore();
   }
 
+  const cardArt=new Image(),listeners=[];
+  const ready=()=>cardArt.complete&&cardArt.naturalWidth>0;
+  cardArt.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  cardArt.src="./assets/cursed-hold-card.webp?v=0.304.0";
+
   function portrait(ctx,width,height) {
-    ctx.save();
-    ctx.translate(width/2,height*.46);
-    const scale=Math.min(width/180,height/125);
-    ctx.scale(scale,scale);
-    crystal(ctx,0,0,2.5,.25);
-    for(let i=-4;i<=4;i++){
-      chainLink(ctx,i*17,i*5+16,.30,.83,i%2!==0,.5);
-      chainLink(ctx,i*17,-i*5-20,-.30,.83,i%2===0,.5);
-    }
-    ctx.restore();
+    if(!ready())return;
+    const size=Math.max(width,height);
+    ctx.drawImage(cardArt,(width-size)/2,(height-size)*.39,size,size);
   }
 
-  window.CursedHold={bind,rebound,portrait};
+  function onReady(fn){if(ready())fn();else listeners.push(fn);}
+  window.CursedHold={bind,rebound,portrait,onReady};
 })();

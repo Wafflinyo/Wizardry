@@ -222,6 +222,9 @@
   CARDS.push({id:"sandwarrior",name:"Sand Warrior",school:"earth",cost:2,target:"ally",
     kind:"sandwarrior",shieldHp:250,accuracy:1,icon:"◆",rarity:"RARE",duration:1600,hit:.70,
     description:"Summon a sand warrior to guard yourself or an ally. His kite shield absorbs up to 250 damage. Excess damage hits the protected wizard, and the warrior crumbles when the shield breaks."});
+  CARDS.push({id:"soulghoul",name:"Soul Ghoul",school:"dark",cost:4,target:"enemy",
+    kind:"soulghoul",damage:320,leech:.5,accuracy:.80,icon:"☠",rarity:"RARE",duration:3900,hit:.38,healAt:.83,
+    description:"A ghoul rises in front of an enemy and siphons 320 base HP. It sinks away, then rises before the caster to heal them for 50% of the damage actually dealt."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -236,6 +239,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    soulghoul:"Heal the caster for 50% of the HP drained.",
     dragon:"150 adjacent splash. 25% burn: 50 × 3 rounds.",arrows:"10% burn per enemy: 50 × 3 rounds.",
     ronin:"Three hits of 150.",reaper:"Next damaging spell against target deals 20% more.",
     frosty:"30% frostbite: 50 × 3 rounds.",solidity:"Next damaging spell deals 25% less.",
@@ -300,7 +304,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1308,6 +1312,8 @@
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
     if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
+      deliverGhoulSoul(a,caster);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
       a.shatterPending=false;
       const victim=getUnit(a.target);
@@ -2224,6 +2230,15 @@
     triggerGunpowderCoat(target,card,spell);
     return directDamage;
   }
+  function deliverGhoulSoul(cast,caster){
+    if(cast.soulDelivered)return;
+    cast.soulDelivered=true;
+    if(!caster||caster.hp<=0||!cast.ghoulDrained)return;
+    const healed=Math.min(caster.maxHp-caster.hp,Math.floor(cast.ghoulDrained*cast.card.leech));
+    if(healed<=0)return;
+    restoreHp(caster,caster,healed);
+    flash(caster,"+"+healed+" HP · SOUL GHOUL","#dbc1ff");
+  }
   function applyVampDamage(a){
     if(a.vampDamageResolved)return;
     a.vampDamageResolved=true;
@@ -2644,7 +2659,9 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="cursedhold"){
+    if(card.kind==="soulghoul"){
+      if(t?.hp>0&&t.team!==c.team)anim.ghoulDrained=damage(c,t,card.damage,card,anim);
+    }else if(card.kind==="cursedhold"){
       if(t!==c||addStatus(c,"cursed_hold",null,2,card.school)===false)return;
       c.statuses.find(st=>st.kind==="cursed_hold").expiresRound=state.round+card.holdRounds;
       flash(c,"CURSED HOLD · "+card.holdRounds+" ROUNDS","#e2b0ff");
@@ -4202,6 +4219,7 @@
       else if(card.id==="thornyhug")window.ThornyHug?.portrait(c,width,height);
       else if(card.id==="reflectiveice")window.ReflectiveIce?.portrait(c,width,height);
       else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
+      else if(card.id==="soulghoul")window.SoulGhoul?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
       else if(card.id==="flamewheel")window.FlameWheel?.portrait(c,width,height);
       else if(card.id==="whale")window.WhaleSpell?.portrait(c,width,height);
@@ -4360,6 +4378,8 @@
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
     window.SandWarrior?.onReady(drawCardArts);
+    window.SoulGhoul?.onReady(drawCardArts);
+    window.CursedHold?.onReady(drawCardArts);
     window.FlameWheel?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
@@ -4656,7 +4676,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4825,6 +4845,13 @@
         const scene=window.Reikel.scene(target,progress,action.card.hit,!action.windDomeTargets?.[target.id]);
         renderables.push({type:"reikel",depthY:scene.y+.1,priority:2,draw:()=>window.Reikel.draw(g,scene)});
       }
+    }
+    if(action?.stage==="summon"&&action.card.kind==="soulghoul"&&window.SoulGhoul){
+      const target=getUnit(action.target),caster=getUnit(action.source);
+      const progress=clamp(action.elapsed/action.duration,0,1);
+      const scene=window.SoulGhoul.scene(target,caster,progress,action.card,action.ghoulDrained);
+      if(scene)renderables.push({type:"soul-ghoul",depthY:scene.depthY,priority:2,
+        draw:()=>window.SoulGhoul.draw(g,scene)});
     }
     if(action?.stage==="summon"&&window.DarkSpells&&["manascourge","soulharvest"].includes(action.card.id)){
       const target=getUnit(action.target),progress=clamp(action.elapsed/action.duration,0,1);

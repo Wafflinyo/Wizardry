@@ -1,19 +1,21 @@
 (() => {
   "use strict";
-  const atlas=new Image(),listeners=[];
+  const atlas=new Image(),flames=new Image(),listeners=[];
   const tile=256;
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
   atlas.src="./assets/flashover-frames.webp?v=0.305.0";
 
+  const flameTile=128;
+  flames.src="./assets/flashover-flames.webp?v=0.305.2";
+
   const clamp=p=>Math.max(0,Math.min(1,p));
   const smooth=p=>{const t=clamp(p);return t*t*(3-2*t);};
 
   const segments=32;
-  const fireColors=["#812117","#c4381a","#ef541a","#ff8f26","#ffc653","#ffe79b"];
   const ringPoints=Array.from({length:segments},(_,index)=>{
     const a=(index+.5)*2*Math.PI/segments;
-    return {x:Math.cos(a),z:Math.sin(a),phase:index*2.39996};
+    return {x:Math.cos(a),z:Math.sin(a),phase:index*2.39996,offset:index*3%8};
   });
 
   function scene(target,p,hit,burning,blocked){
@@ -32,35 +34,39 @@
       alpha:smooth(p/.09)*(1-smooth((burst-.50)/.50))};
   }
 
-  function facet(ctx,color,ax,ay,bx,by,cx,cy){
-    ctx.fillStyle=color;
-    ctx.beginPath();
-    ctx.moveTo(ax,ay);
-    ctx.lineTo(bx,by);
-    ctx.lineTo(cx,cy);
-    ctx.closePath();
-    ctx.fill();
-  }
-
   function ring(ctx,s,front){
     const visible=s.closing?1:1-smooth(s.burst/.18);
-    if(visible<=0)return;
+    if(visible<=0||!flames.complete||!flames.naturalWidth)return;
     ctx.save();
-    ctx.globalAlpha*=visible*(front?1:.87);
+    ctx.globalAlpha*=visible*(front?1:.88);
     for(const point of ringPoints){
       if((point.z>0)!==front)continue;
       const pulse=.5+.5*Math.sin(s.p*41+point.phase);
       const x=point.x*s.radius,y=point.z*s.depth;
-      const spread=5+s.radius*.062;
-      const height=4+s.rise*(24+27*pulse+39*s.collapse);
-      const tipX=x+point.x*(7-16*s.collapse)+Math.sin(s.p*30+point.phase)*5;
-      const tipY=y-height;
-      const middleX=x+(tipX-x)*.46,middleY=y-height*.46;
-      facet(ctx,fireColors[0],x-spread,y+3,x+spread,y+3,middleX,middleY);
-      facet(ctx,fireColors[1],x-spread,y+2,tipX,tipY,middleX,middleY);
-      facet(ctx,fireColors[2],x+spread,y+2,tipX,tipY,middleX,middleY);
-      facet(ctx,fireColors[3],x-spread*.73,y+2,x+spread*.79,y+2,middleX,middleY);
-      facet(ctx,fireColors[pulse>.55?5:4],x-spread*.33,y+1,x+spread*.40,y+1,middleX,middleY+6);
+      const width=(25+s.radius*.128)*(1+.10*pulse);
+      const height=10+s.rise*(33+18*pulse+31*s.collapse);
+      const pose=(Math.floor(s.p*46)+point.offset)%8;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.scale(point.x<0?-1:1,1);
+      ctx.drawImage(flames,pose%4*flameTile,Math.floor(pose/4)*flameTile,
+        flameTile,flameTile,-width/2,-height*.94,width,height);
+      ctx.restore();
+
+      const drift=(s.p*4.8+point.offset/8)%1;
+      const emberX=x+Math.sin(point.phase+drift*5)*drift*16;
+      const emberY=y-height*.58-drift*39;
+      ctx.save();
+      ctx.globalAlpha*=s.rise*Math.sin(Math.PI*drift);
+      ctx.fillStyle=pulse>.5?"#ffce62":"#ff6b24";
+      ctx.beginPath();
+      ctx.moveTo(emberX,emberY-3);
+      ctx.lineTo(emberX+2,emberY);
+      ctx.lineTo(emberX,emberY+2);
+      ctx.lineTo(emberX-2,emberY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
     ctx.restore();
   }

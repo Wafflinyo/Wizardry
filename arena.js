@@ -4691,7 +4691,7 @@
       if((u.hp>0&&(formingSand||guarding))||sandHit?.sandWarrior.broken){
         const effect=window.SandWarrior;
         const opts={growth:formingSand&&!guarding?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1,
-          age:sandHit?.age,broken:!guarding&&sandHit?.sandWarrior.broken};
+          time,age:sandHit?.age,broken:!guarding&&sandHit?.sandWarrior.broken};
         renderables.push({type:"sand-warrior",depthY:u.y+.15,priority:2,draw:()=>effect?.draw(g,u,opts)});
       }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");

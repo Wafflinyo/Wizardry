@@ -26,18 +26,55 @@
     ctx.restore();
   }
 
-  function draw(ctx,target,{growth,age,broken}){
+  function flow(ctx,time,size,front){
+    const seconds=time/1000;
+    const drift=(seconds*.72)%1;
+    ctx.save();
+    ctx.scale(size/190,size/190);
+    if(!front){
+      // Wind shears sand off the shoulders into two moving ribbons.
+      for(let i=0;i<2;i++){
+        const phase=seconds*5+i*1.6;
+        const wave=Math.sin(phase)*7;
+        ctx.globalAlpha=.22+i*.07;
+        ctx.fillStyle=i?"#d6a45e":"#b58248";
+        ctx.beginPath();
+        ctx.moveTo(-19,-133+i*31);
+        ctx.quadraticCurveTo(-43,-140+i*31+wave,-64,-124+i*31-wave);
+        ctx.quadraticCurveTo(-79,-113+i*31-wave,-91,-119+i*31+wave);
+        ctx.quadraticCurveTo(-72,-112+i*31+wave,-59,-118+i*31-wave);
+        ctx.quadraticCurveTo(-39,-131+i*31+wave,-19,-128+i*31);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    for(let i=0;i<12;i++){
+      const age=(drift+i*.181+(front?.35:0))%1;
+      const x=front?23+(i%4)*5+age*9:-22-age*(44+i%4*7);
+      const y=front?-97+(i%3)*13+age*62:-137+(i%4)*12+age*24+Math.sin(seconds*5+i)*5;
+      ctx.globalAlpha=Math.sin(Math.PI*age)*(front?.46:.61);
+      ctx.fillStyle=["#f2d096","#bb8648","#e4b776"][i%3];
+      ctx.beginPath();ctx.moveTo(x-2,y);ctx.lineTo(x+1,y-2.5);ctx.lineTo(x+4,y+1);
+      ctx.lineTo(x,y+3);ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw(ctx,target,{growth,age,broken,time=0}){
     if(!ready()||(broken&&age>=.94))return;
     const dir=target.team===0?1:-1;
     const size=175+clamp((target.y-400)/200)*20;
     const index=broken?(age<.17?5:age<.44?6:7):
       growth<.90?Math.min(2,Math.floor(growth*3.5)):age!=null&&age<.24?4:3;
     ctx.save();
-    ctx.translate(target.x+dir*55,target.y+6);
-    ctx.scale(dir,1);
+    ctx.translate(target.x+dir*84,target.y+6);
+    const standing=!broken&&growth>=.90;
+    ctx.scale(dir,1.23+(standing?Math.sin(time*.004)*.012:0));
     if(broken)ctx.globalAlpha*=1-clamp((age-.61)/.33);
     else if(growth<.20)ctx.globalAlpha*=clamp(growth/.20);
+    if(standing)flow(ctx,time,size,false);
     sprite(ctx,index,size);
+    if(standing)flow(ctx,time,size,true);
     if(broken)sand(ctx,age);
     ctx.restore();
   }

@@ -6,7 +6,6 @@
   const colors=["#a2e7db","#d8fff0","#67c7be","#418d98","#577caf"];
   const rim=["#f3fff3","#b8ffd4","#e5fff2"];
   const center={x:500,y:315};
-  const bladeSamples=18;
 
   function chest(unit){return {x:unit.x,y:unit.y-85};}
   function cubic(a,b,c,d,t){
@@ -57,63 +56,52 @@
     g.fill();
   }
 
-  function ribbonPoint(outer,inner,t,width){
-    const sample=clamp(t)*bladeSamples;
-    const across=clamp(width);
-    const index=Math.min(bladeSamples-1,Math.floor(sample));
-    const fraction=sample-index;
-    const a=outer[index],b=outer[index+1],c=inner[index],d=inner[index+1];
-    return {x:mix(mix(a.x,b.x,fraction),mix(c.x,d.x,fraction),across),
-      y:mix(mix(a.y,b.y,fraction),mix(c.y,d.y,fraction),across)};
+  function airPoint(t,radius,squash){
+    const angle=(t-.5)*Math.PI*1.64;
+    return {x:Math.cos(angle)*radius-15,y:Math.sin(angle)*radius*squash};
   }
 
-  function bladeCurrents(g,outer,inner,seconds){
-    const opacity=g.globalAlpha;
-    for(let lane=0;lane<3;lane++){
-      for(let gust=0;gust<3;gust++){
-        const cycle=seconds*(1.65+lane*.28)+gust/3+lane*.19;
-        const width=.14+lane*.27;
-        for(let section=0;section<4;section++){
-          const phase=cycle-section*.035;
-          const t=phase-Math.floor(phase);
-          const tail=t-.037;
-          if(t<=0)continue;
-          const sway=.077*Math.sin(t*15-seconds*10+lane);
-          const middle=width+sway;
-          const spread=.19-section*.032;
-          const tipFade=clamp(t*12)*clamp((1-t)*12);
-          g.globalAlpha=opacity*(.78-section*.14)*tipFade;
-          polygon(g,lane===1?"#acfff1":"#f2fff8",[
-            ribbonPoint(outer,inner,tail,middle-spread*.35),
-            ribbonPoint(outer,inner,t,middle-spread*.5),
-            ribbonPoint(outer,inner,t,middle+spread*.5),
-            ribbonPoint(outer,inner,tail,middle+spread*.35)
-          ]);
-        }
-      }
+  function airSlash(g,start,length,radius,thickness,squash,tint){
+    const edge=[],inside=[];
+    const samples=12;
+    for(let i=0;i<=samples;i++){
+      const u=i/samples,t=start+u*length;
+      const taper=Math.sin(Math.PI*u)**.86*(.52+.48*u);
+      edge.push(airPoint(t,radius,squash));
+      inside.push(airPoint(t,radius-thickness*taper,squash));
     }
-    g.globalAlpha=opacity;
+    polygon(g,tint,[...edge,...inside.reverse()]);
   }
 
-  function crescent(g,roll,spin,seconds){
+  function crescent(g,roll,spin,seconds=.37){
     const squash=Math.cos(roll);
-    const outer=[],inner=[],bevel=[];
-    for(let i=0;i<=bladeSamples;i++){
-      const t=i/bladeSamples,a=(t-.5)*Math.PI*1.69;
-      const cuttingEdge={x:Math.cos(a)*52-13,y:Math.sin(a)*50*squash};
-      const thickness=Math.pow(Math.sin(Math.PI*t),.65);
-      const back={x:cuttingEdge.x-28*thickness,y:cuttingEdge.y*(1-.18*thickness)};
-      outer.push(cuttingEdge);inner.push(back);bevel.push({x:mix(cuttingEdge.x,back.x,.28),y:mix(cuttingEdge.y,back.y,.28)+2*thickness*Math.sin(roll)});
-    }
+    const opacity=g.globalAlpha;
+    const streams=[
+      {radius:59,length:.73,width:8,speed:2.05,phase:.07,tint:"#d7ffee"},
+      {radius:53,length:.82,width:10,speed:1.47,phase:.59,tint:"#81e9d7"},
+      {radius:47,length:.68,width:9,speed:1.82,phase:.26,tint:"#baffef"},
+      {radius:41,length:.63,width:8,speed:1.26,phase:.82,tint:"#55c9c6"},
+      {radius:34,length:.51,width:6,speed:1.67,phase:.31,tint:"#95ebda"}
+    ];
     g.save();
     g.rotate(spin);
-    for(let i=0;i<bladeSamples;i++){
-      const a=outer[i],b=outer[i+1],c=bevel[i],d=bevel[i+1];
-      polygon(g,rim[i%rim.length],[a,b,d,c]);
-      polygon(g,colors[i%colors.length],[c,d,inner[i+1]]);
-      polygon(g,colors[(i+2)%colors.length],[c,inner[i+1],inner[i]]);
+    for(const [lane,stream] of streams.entries()){
+      for(let i=0;i<4;i++){
+        const phase=seconds*stream.speed+stream.phase+i/4;
+        const head=phase-Math.floor(phase);
+        // Each gust enters from a horn and tapers off at the opposite horn.
+        const start=mix(-stream.length,.98,head);
+        const from=Math.max(0,start),to=Math.min(1,start+stream.length);
+        if(to-from<.01)continue;
+        const breadth=clamp((to-from)/.26);
+        const drift=Math.sin(head*Math.PI*2+lane)*2.1;
+        g.globalAlpha=opacity*breadth*(lane===0?.72:.44);
+        airSlash(g,from,to-from,stream.radius+drift,stream.width*breadth,squash,stream.tint);
+        const streak=from+(to-from)*.58;
+        g.globalAlpha=opacity*breadth*.78;
+        airSlash(g,streak,to-streak,stream.radius+drift+1,2.3,squash,"#effff7");
+      }
     }
-    if(seconds!==undefined)bladeCurrents(g,outer,inner,seconds);
     g.restore();
   }
 

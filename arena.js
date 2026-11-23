@@ -219,6 +219,9 @@
   CARDS.push({id:"flamewheel",name:"Flame Wheel",school:"fire",cost:2,target:"enemy",
     kind:"summon",damage:200,accuracy:.90,icon:"♨",rarity:"RARE",duration:2050,hit:.79,
     description:"A flaming monster-truck tire bounces across the arena and slams into one enemy for 200 base damage."});
+  CARDS.push({id:"sandwarrior",name:"Sand Warrior",school:"earth",cost:2,target:"ally",
+    kind:"sandwarrior",shieldHp:250,accuracy:1,icon:"◆",rarity:"RARE",duration:1600,hit:.70,
+    description:"Summon a sand warrior to guard yourself or an ally. His kite shield absorbs up to 250 damage. Excess damage hits the protected wizard, and the warrior crumbles when the shield breaks."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -262,6 +265,7 @@
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
     electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
+    sandwarrior:"Guard yourself or an ally. Absorbs up to 250 damage.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
@@ -296,7 +300,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="flamewheel"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -902,7 +906,7 @@
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
-  const towerBarriers=new Set(["reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
+  const towerBarriers=new Set(["sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
@@ -962,7 +966,7 @@
           },0);
           score=healing*(role==="Support"?1.4:.8);
         }else if(towerBarriers.has(card.kind)){
-          if(!target||planned(target)||target.statuses.some(s=>s.kind===({reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
+          if(!target||planned(target)||target.statuses.some(s=>s.kind===({sandwarrior:"sand_warrior",reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.kind==="hightide"){
@@ -1167,7 +1171,7 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":a.card.kind==="sandwarrior"?"sand_warrior":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
     const success=!emptyTide&&!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
@@ -1794,15 +1798,15 @@
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set([ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
-  const BARRIER_SPELLS=new Set(["winddome","bubbleshield","reflectiveice"]);
-  const BARRIER_RUNES=new Set(["wind_dome","bubble_shield","reflective_ice"]);
+  const BARRIER_SPELLS=new Set(["winddome","bubbleshield","reflectiveice","sandwarrior"]);
+  const BARRIER_RUNES=new Set(["wind_dome","bubble_shield","reflective_ice","sand_warrior"]);
   function tally(unit,key,amount){
     if(unit&&amount>0)(unit.matchStats??={})[key]=(unit.matchStats[key]||0)+amount;
   }
@@ -1830,7 +1834,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");}
+    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     if(lost>0&&target.hp<=0)retaliateWithCursedHold(source,target,amount);
@@ -2007,14 +2011,19 @@
   }
   function absorbBarrierDamage(target,amount){
     if(amount<=0)return amount;
-    for(const shield of target.statuses.filter(st=>st.kind==="bubble_shield")){
+    for(const shield of target.statuses.filter(st=>st.kind==="bubble_shield"||st.kind==="sand_warrior")){
       const absorbed=Math.min(amount,shield.value);
       shield.value-=absorbed;
       amount-=absorbed;
       tally(target,"tanked",absorbed);
-      (state.bubbleShieldRipples??=[]).push({kind:shield.kind,targetId:target.id,age:0,popped:shield.value===0});
-      flash(target,"BUBBLE −"+absorbed,"#9cefff");
-      recordBattleEvent(target.name+"’s Bubble Shield absorbs "+absorbed+" damage"+(shield.value?".":" and pops."));
+      if(shield.kind==="sand_warrior"){
+        flash(target,"SAND WARRIOR −"+absorbed,"#f3cb87").sandWarrior={targetId:target.id,broken:shield.value===0};
+        recordBattleEvent(target.name+"’s Sand Warrior absorbs "+absorbed+" damage"+(shield.value?".":" and crumbles."));
+      }else{
+        (state.bubbleShieldRipples??=[]).push({kind:shield.kind,targetId:target.id,age:0,popped:shield.value===0});
+        flash(target,"BUBBLE −"+absorbed,"#9cefff");
+        recordBattleEvent(target.name+"’s Bubble Shield absorbs "+absorbed+" damage"+(shield.value?".":" and pops."));
+      }
       if(!shield.value)consumeStatus(target,shield.kind);
       if(!amount)break;
     }
@@ -2711,6 +2720,9 @@
       if(addStatus(t,"reflective_ice",null,.5,card.school)===false)return;
       t.statuses.find(st=>st.kind==="reflective_ice").expiresRound=state.round+card.wardRounds;
       flash(t,"REFLECTIVE ICE · 3 ROUNDS","#b8f7ff");
+    }else if(card.kind==="sandwarrior"){
+      if(addStatus(t,"sand_warrior",null,card.shieldHp,card.school)===false)return;
+      flash(t,"SAND WARRIOR · "+card.shieldHp+" HP","#f3cb87");
     }else if(card.kind==="bubbleshield"){
       if(addStatus(t,"bubble_shield",null,card.shieldHp,card.school)===false)return;
       flash(t,"BUBBLE SHIELD · "+card.shieldHp+" HP","#a6f2ff");
@@ -3812,7 +3824,7 @@
   }
   function plateAlpha(){return 1;}
   function unitStatuses(u){
-    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice")?4:0;
+    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice"||st.kind==="sand_warrior")?4:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
@@ -3842,6 +3854,8 @@
       case "water_prison":return {title:"Water Prison · Water debuff",detail:st.value+" damage at the start of each turn. "+st.remaining+" ticks remain. Recasting refreshes the duration."};
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
         Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
+      case "sand_warrior":return {title:"Sand Warrior · Earth barrier",detail:
+        st.value+" / "+BY_ID.sandwarrior.shieldHp+" shield HP. Excess damage reaches the protected wizard."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks the next incoming damaging spell, then disappears. Against Double Pick, it blocks the first pick and the second can hit. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
@@ -3935,7 +3949,7 @@
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
-    sleep:"nature",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
+    sleep:"nature",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
     recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
   };
@@ -4166,6 +4180,7 @@
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
+      else if(card.id==="sandwarrior")window.SandWarrior?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
       else if(card.id==="darksorcerer")window.DarkSorcerer?.portrait(c,width,height);
       else if(card.id==="sticksandstones")window.SticksAndStones?.portrait(c,width,height);
@@ -4311,6 +4326,7 @@
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
+    window.SandWarrior?.onReady(drawCardArts);
     window.FlameWheel?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
@@ -4607,7 +4623,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4668,6 +4684,15 @@
         const growth=formingIce&&!iced?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         for(const layer of ["back","front"])renderables.push({type:"reflective-ice-"+layer,
           depthY:u.y+(layer==="back"?-.055:.055),priority:2,draw:()=>window.ReflectiveIce?.shell(g,u,growth,time,layer)});
+      }
+      const formingSand=action?.card?.id==="sandwarrior"&&action.stage==="summon"&&action.target===u.id;
+      const guarding=u.statuses.some(st=>st.kind==="sand_warrior");
+      const sandHit=state.flashes.findLast(f=>f.sandWarrior?.targetId===u.id);
+      if((u.hp>0&&(formingSand||guarding))||sandHit?.sandWarrior.broken){
+        const effect=window.SandWarrior;
+        const opts={growth:formingSand&&!guarding?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1,
+          age:sandHit?.age,broken:!guarding&&sandHit?.sandWarrior.broken};
+        renderables.push({type:"sand-warrior",depthY:u.y+.15,priority:2,draw:()=>effect?.draw(g,u,opts)});
       }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");
       const formingBubble=action?.card?.id==="bubbleshield"&&action.stage==="summon"&&action.target===u.id;

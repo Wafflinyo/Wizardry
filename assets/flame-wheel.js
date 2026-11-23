@@ -6,6 +6,9 @@
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
   atlas.src="./assets/flame-wheel-frames.webp?v=0.302.1";
 
+  const explosion=new Image();
+  explosion.src="./assets/devil-flame-burst-v98.webp";
+
   const hit=.79, tau=Math.PI*2,cell=256;
   const clamp=p=>Math.max(0,Math.min(1,p));
   const mix=(a,b,p)=>a+(b-a)*p;
@@ -89,14 +92,46 @@
     ctx.restore();
   }
 
+  function eruption(ctx,x,y,width,age,alpha){
+    if(age<0||age>=1||!explosion.complete||!explosion.naturalWidth)return;
+    const index=Math.min(7,Math.floor(age*8));
+    const cell=explosion.naturalWidth/4;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.drawImage(explosion,index%4*cell,Math.floor(index/4)*cell,cell,cell,
+      x-width/2,y-width*.94,width,width);
+    ctx.restore();
+  }
+
   function impact(ctx,target,p){
-    if(p<hit||p>hit+.18)return;
-    const q=(p-hit)/.18;
-    ctx.save();ctx.translate(target.x,target.y-53);ctx.globalAlpha*=(1-q)**1.35;
-    for(let i=0;i<17;i++){
-      const a=i*2.39996,r=15+q*(45+i%5*15);
-      poly(ctx,[point(a-.12,r),point(a,r+13+i%4*7),point(a+.12,r),point(a,r*.69)],fire[i%5]);
+    if(p<hit||p>=1)return;
+    const q=(p-hit)/(1-hit);
+    ctx.save();
+    ctx.translate(target.x,target.y-3);
+
+    // A contact flash breaks into a tall fireball and smaller side eruptions.
+    if(q<.32){
+      const radius=19+q*170;
+      ctx.save();
+      ctx.translate(0,-54);
+      ctx.globalAlpha*=.76*(1-q/.32);
+      poly(ctx,Array.from({length:12},(_,i)=>point(i*tau/12,radius*(i%2?.47:1))),"#fff0ab");
+      ctx.restore();
     }
+    eruption(ctx,0,0,204,q,.95);
+    eruption(ctx,-48-q*26,1,132,q-.08,.77);
+    eruption(ctx,52+q*32,4,146,q-.15,.80);
+
+    ctx.save();
+    ctx.translate(0,-42);
+    ctx.globalAlpha*=(1-q)**1.25;
+    for(let i=0;i<24;i++){
+      const angle=i*2.39996,r=13+q*(62+i%6*18);
+      const [x,y]=point(angle,r);
+      const fall=48*q*q;
+      poly(ctx,[[x-3,y+fall],[x+7+q*4,y-7+fall],[x+4,y+3+fall]],fire[(i+2)%5]);
+    }
+    ctx.restore();
     ctx.restore();
   }
 

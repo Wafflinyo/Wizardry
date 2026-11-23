@@ -48,14 +48,12 @@
     const inbound=smooth((p-turn)/(arrival-turn));
     const x=strike?lerp(500,target.x,outbound):returning?lerp(target.x,ally.x,inbound):target.x;
     const y=strike?lerp(468,target.y,outbound):returning?
-      lerp(target.y,ally.y,inbound)+Math.sin(inbound*Math.PI)*27:target.y;
+      lerp(target.y,ally.y,inbound):target.y;
     const frame=strike?p<.18?0:p<.32?1:2:
       returning?arriving?p<arrival+.08?6:7:5:p<impact+.046?3:ally?4:7;
     const dir=returning?backDir:outDir;
     const alpha=smooth(p/.13)*(ally?1-smooth((p-.92)/.08):1-smooth((p-impact-.07)/.18));
-    const rollClock=(p-(returning?turn:.16))*8.4;
-    const rollPose=((rollClock%1)+1)%1*8;
-    return {x,y,p,frame,dir,alpha,impact,arrival,returning,arriving,rollPose,
+    return {x,y,p,frame,dir,alpha,impact,arrival,returning,arriving,
       moving:strike&&p>.16||returning&&!arriving,flow:returning?inbound:outbound};
   }
 
@@ -89,28 +87,23 @@
     ctx.restore();
   }
 
-  function rollingWave(ctx,s,width,height){
-    const index=Math.floor(s.rollPose);
-    const crossfade=smooth((s.rollPose-index-.68)/.32)*.46;
-    const image=rollingSkim;
-    const swell=1+Math.sin(s.rollPose*Math.PI/4)*.05;
-    sprite(ctx,index,s.x,s.y+5,width,height*swell,s.dir,image);
-    if(crossfade>0){
-      ctx.save();
-      ctx.globalAlpha*=crossfade;
-      sprite(ctx,(index+1)%8,s.x,s.y+5,width,height*swell,s.dir,image);
-      ctx.restore();
+  function edgeRipples(ctx,s,width){
+    ctx.save();
+    for(let i=0;i<9;i++){
+      const phase=(s.p*8+i/9)%1;
+      const x=s.x+s.dir*(phase-.48)*width*.93;
+      const y=s.y+3+Math.sin(i*2.39996)*4+phase*5;
+      const span=(12+i%4*6)*(1+phase*.4);
+      ctx.globalAlpha=Math.sin(phase*Math.PI)*.78;
+      ctx.strokeStyle=i%3===0?"#e8ffff":i%3===1?"#88e8e9":"#4cc5d9";
+      ctx.lineWidth=i%3===0?1.7:1.2;
+      ctx.lineCap="round";
+      ctx.beginPath();
+      ctx.moveTo(x-s.dir*span,y+3);
+      ctx.quadraticCurveTo(x-s.dir*span*.22,y-3,x+s.dir*span*.65,y);
+      ctx.stroke();
     }
-    // Surface foam sweeps from the back of the swell over the lip.
-    for(let i=0;i<12;i++){
-      const u=(s.p*15+i*.167)%1;
-      const x=s.x+s.dir*(u-.54)*width*.80;
-      const y=s.y-5-Math.sin(u*Math.PI)*height*.245+Math.sin(i*2.39996)*10;
-      ctx.save();
-      ctx.globalAlpha*=Math.sin(u*Math.PI)*.69;
-      shard(ctx,x,y,3+u*5,1+i%3,["#b7f7ee","#ebffff","#6bd9e2"][i%3]);
-      ctx.restore();
-    }
+    ctx.restore();
   }
 
   function splash(ctx,s){
@@ -155,8 +148,9 @@
     ctx.save();
     ctx.globalAlpha*=s.alpha;
     if(s.moving){groundSkim(ctx,s,width);wake(ctx,s);}
-    if(s.moving&&rollingSkim)rollingWave(ctx,s,width,height);
+    if(s.moving&&rollingSkim)sprite(ctx,2,s.x,s.y+5,width,height,s.dir,rollingSkim);
     else sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir,s.moving?(skimAtlas||atlas):atlas);
+    if(s.moving)edgeRipples(ctx,s,width);
     if(s.arriving||s.p>=s.impact&&s.p<s.impact+.15)splash(ctx,s);
     ctx.restore();
   }

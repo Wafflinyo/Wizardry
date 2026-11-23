@@ -340,13 +340,12 @@ assert.equal(wave.scene(waveCaster,waveTarget,null,rip.hit,rip).x,waveTarget.x);
 assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).x,waveAlly.x);
 assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).y,waveAlly.y);
 assert.equal(new Set(Array.from({length:100},(_,i)=>wave.scene(waveCaster,waveTarget,waveAlly,i/100,rip).frame)).size,8);
-for(const [start,end] of [[.18,rip.hit],[rip.hit+.10,rip.healAt]]){
-  const poses=new Set(Array.from({length:60},(_,i)=>{
-    const pose=wave.scene(waveCaster,waveTarget,waveAlly,start+(end-start)*i/60,rip);
-    assert.ok(pose.moving);
-    return Math.floor(pose.rollPose);
-  }));
-  assert.equal(poses.size,8,'both traveling currents cycle through all eight water frames');
+const levelAlly={x:300,y:waveTarget.y};
+for(let i=0;i<30;i++){
+  const p=rip.hit+.10+(rip.healAt-rip.hit-.10)*i/30;
+  const pose=wave.scene(waveCaster,waveTarget,levelAlly,p,rip);
+  assert.ok(pose.moving);
+  assert.equal(pose.y,waveTarget.y,'the returning wave does not bob above the floor');
 }
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(rip.id));

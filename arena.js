@@ -4191,6 +4191,7 @@
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
+    window.ClarityStrike?.onReady(drawCardArts);
     window.Wynzor?.onReady(drawCardArts);
     window.StormLizard?.onReady(drawCardArts);
     window.DrowzyFlowers?.onReady(drawCardArts);

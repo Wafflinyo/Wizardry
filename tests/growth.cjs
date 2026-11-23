@@ -459,6 +459,22 @@ for(const [failed,hasNeighbor,primaryHp,shield] of [
   assert.equal(nearest.hp,!hasNeighbor?0:failed||shield?1000:860);
   assert.equal(far.hp,hasNeighbor?1000:0);
 }
+for(const [primarySlot,deadSlot,roll,expectedSlot] of [
+  [1,-1,.1,0],[1,-1,.9,2],[2,-1,.1,1],[2,-1,.9,3],
+  [0,-1,.9,1],[3,-1,.1,2],[0,1,.9,0],[3,2,.1,3],[1,0,.1,2]
+]){
+  const caster=unit('formation-caster',0);
+  const enemies=[390,455,530,590].map((y,slot)=>Object.assign(unit('slot'+slot,1),{y,hp:slot===deadSlot?0:1000}));
+  const primary=enemies[primarySlot];
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[caster,...enemies.slice().reverse()],auras:[null,null],log:[],flashes:[]});
+  const flight={card:razorang,runeResult:'success',damageVariant:1,razorangRoll:roll,
+    action:{casterId:caster.id,targetId:primary.id}};
+  api.applySpell(flight);
+  assert.equal(flight.razorangReturnId,enemies[expectedSlot].id);
+  api.applyRazorangReturn(flight,caster);
+  for(const [slot,enemy] of enemies.entries())
+    assert.equal(enemy.hp,slot===deadSlot?0:1000-(slot===primarySlot?260:0)-(slot===expectedSlot?140:0));
+}
 vm.runInNewContext(fs.readFileSync('assets/razorang.js','utf8'),ctx);
 for(const dir of [-1,1]){
   const effect=ctx.window.Razorang;
@@ -480,4 +496,4 @@ for(const dir of [-1,1]){
 }
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(razorang.id));
-console.log('Razorang: separate contacts, nearest living neighbor, lethal first hit, shield, miss, solo target, Card Tester and mirrored return passed.');
+console.log('Razorang: separate contacts, random adjacent target, formation edges, lethal first hit, shield, miss, solo target, Card Tester and mirrored return passed.');

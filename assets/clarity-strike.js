@@ -61,13 +61,10 @@
     const end = rune || {x:target.x, y:target.y - 90};
     const bolts = window.WIZARDRY_ROD_BOLT_V118;
 
-    // The leader reaches the rune on the same frame that combat resolves the cleanse.
-    if (after >= -.055 && after < .18) {
-      const reach = clamp((after + .055) / .055);
-      const tip = {x:origin.x + (end.x - origin.x) * reach, y:origin.y + (end.y - origin.y) * reach};
-      const intensity = after < 0 ? .30 + .55 * reach
-        : after < .04 ? 1 : after < .065 ? .22 : after < .095 ? .78 : clamp((.18 - after) / .085) * .40;
-      bolts?.draw(ctx, origin, tip, clamp((after + .055) / .235), intensity);
+    // Combat picks the rune at impact, then the bolt uses that rune’s position.
+    if (after >= 0 && after < .18) {
+      const intensity = after < .04 ? 1 : after < .065 ? .22 : after < .095 ? .78 : clamp((.18 - after) / .085) * .40;
+      bolts?.draw(ctx, origin, end, clamp((after + .055) / .235), intensity);
     }
     drawCloud(ctx, x, y, width, cloudFrame, fade * clamp(progress / .10));
     if (after >= 0 && after < .25) impact(ctx, end, after / .25);

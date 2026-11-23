@@ -81,3 +81,36 @@ assert.equal(ally.hp,987,'750 direct Nature healing boosted to 937');
 assert.ok(!has(caster,'growth'));
 assert.equal(ally.statuses.find(st=>st.kind==='healing_aura').value,200);
 console.log('Growth: self and ally targeting, one charge, blocked hits preserve it, full next Nature cast boosted.');
+
+const briar=card('briarremedy');
+assert.equal(briar.cost,3);
+assert.equal(briar.accuracy,1);
+assert.deepEqual(JSON.parse(JSON.stringify(briar)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===briar.id));
+for(const {effects,missing,expected,sealed=false,targetId='ally'} of [
+  {effects:['burn','poison','frostbite'],missing:400,expected:300},
+  {effects:['burn','frostbite'],missing:400,expected:200,targetId:'caster'},
+  {effects:['poison'],missing:35,expected:35},
+  {effects:[],missing:400,expected:0},
+  {effects:['burn'],missing:400,expected:0,sealed:true},
+  {effects:['burn'],missing:400,expected:0,targetId:'enemy'}
+]){
+  const target=unit(targetId,targetId==='enemy'?1:0);
+  const druid=targetId==='caster'?target:unit('caster',0);
+  target.hp-=missing;
+  target.statuses=[...effects.map(kind=>({kind,remaining:3,extreme:kind==='burn'})),{kind:'curse',remaining:3}];
+  const action={card:briar,source:druid.id,target:target.id,runeResult:'success',stage:'summon',
+    duration:briar.duration,elapsed:0,action:{casterId:druid.id,targetId:target.id}};
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:target===druid?[druid,enemy]:[druid,target],
+    log:[],flashes:[],animation:action,environment:sealed?{id:'darkgrounds'}:null});
+  api.advanceAction(briar.duration*briar.hit);
+  assert.equal(target.hp,target.maxHp-missing);
+  assert.equal(target.statuses.length,target.team===0?1:effects.length+1);
+  assert.ok(has(target,'curse'));
+  api.advanceAction(briar.duration*(briar.healAt-briar.hit)+1);
+  api.advanceAction(1);
+  assert.equal(target.hp,target.maxHp-missing+expected);
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(briar.id));
+console.log('Briar Remedy: targeted cleanse, capped healing, full three-effect combo, self-cast, enemy rejection and Dark Grounds passed.');

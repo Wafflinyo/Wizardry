@@ -228,6 +228,9 @@
   CARDS.push({id:"flashover",name:"Flashover",school:"fire",cost:4,target:"enemy",
     kind:"flashover",damage:340,burnBonus:140,accuracy:.85,icon:"♨",rarity:"RARE",duration:2650,hit:.72,
     description:"A ring of fire collapses onto one enemy for 340 base damage. If they are already burning, it deals 140 more base damage. Burn remains active."});
+  CARDS.push({id:"briarremedy",name:"Briar Remedy",school:"nature",cost:3,target:"ally",
+    kind:"briarremedy",healPerEffect:100,accuracy:1,icon:"❧",rarity:"RARE",duration:4050,hit:.59,healAt:.78,
+    description:"A Forest Druid draws all Burn, Poison and Frostbite off yourself or one ally into his staff, then restores 100 HP per effect removed."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -242,6 +245,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    briarremedy:"Remove Burn, Poison and Frostbite. Heal 100 HP for each removed.",
     flashover:"+140 base damage against a burning target.",
     soulghoul:"Heal for 50% of HP drained. 25% Fear: skip pending action.",
     dragon:"150 adjacent splash. 25% burn: 50 × 3 rounds.",arrows:"10% burn per enemy: 50 × 3 rounds.",
@@ -308,7 +312,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -921,6 +925,10 @@
     return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||isRecharging(u)||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
+  const BRIAR_EFFECTS=new Set(["burn","poison","frostbite"]);
+  function briarEffects(unit){
+    return unit.statuses.filter(status=>BRIAR_EFFECTS.has(status.kind)&&status.remaining!==0);
+  }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
   const towerBarriers=new Set(["sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
   function towerControl(card){
@@ -928,7 +936,7 @@
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
   }
   function towerDeckScore(card,role){
-    if(towerHealing.has(card.kind))return role==="Support"?10:1;
+    if(card.kind==="briarremedy"||towerHealing.has(card.kind))return role==="Support"?10:1;
     if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
     if(card.fieldRounds)return role==="Support"?7:3;
     if(towerControl(card))return role==="Controller"?10:5;
@@ -972,7 +980,12 @@
       const targets=targetsFor(card,u);
       for(const target of group?[null]:targets){
         let score=0;
-        if(towerHealing.has(card.kind)){
+        if(card.kind==="briarremedy"){
+          const effects=briarEffects(target);
+          if(!effects.length)continue;
+          score=effects.length*110+(healingSuppressed(card.school)?0:
+            Math.min(target.maxHp-target.hp,effects.length*card.healPerEffect));
+        }else if(towerHealing.has(card.kind)){
           if(healingSuppressed(card.school)||(card.kind==="aromatherapy"&&!canReceiveDebuff(u,"aromatherapy")))continue;
           const healing=(target?[target]:allies).reduce((total,ally)=>{
             if(planned(ally)||ally.statuses.some(s=>s.kind===(card.kind==="regen"?"calming_waters":card.kind==="teamregen"?"healing_aura":null)))return total;
@@ -1017,11 +1030,13 @@
     if(!opponents.length)return null;
     const allies=alive(u.team);
     const shieldTargets=card=>allies.filter(ally=>!barrierConflict(ally,BARRIER_SPELLS[card.kind]));
+    const briarTargets=allies.filter(ally=>briarEffects(ally).length);
     const chargeTargets=allies.filter(ally=>canReceiveDebuff(ally,"electrical_charge"));
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
+      (card.kind!=="briarremedy"||briarTargets.length>0)&&
       (!BARRIER_SPELLS[card.kind]||shieldTargets(card).length>0)&&
       (card.kind!=="hightide"||getUnit(state.environment?.ownerId)?.team===1-u.team)&&
       (card.kind!=="cursedhold"||(canReceiveDebuff(u,"cursed_hold")&&!activeCursedHold(u)))&&
@@ -1038,6 +1053,7 @@
     const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
       (choosesRune(card)||card.kind==="claritystrike")?allies.find(ally=>zenRunes(ally).length):card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
+        card.kind==="briarremedy"?briarTargets[Math.floor(Math.random()*briarTargets.length)]:
         card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
         card.target==="ally"?eligibleAllies[Math.floor(Math.random()*eligibleAllies.length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
@@ -1318,6 +1334,7 @@
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
+    if(a.stage==="summon"&&a.card.kind==="briarremedy"&&p>=a.card.healAt)applyBriarHealing(a,caster);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
       a.shatterPending=false;
       const victim=getUnit(a.target);
@@ -2655,6 +2672,16 @@
   function pickWitchBeam(cast){
     return cast.witchElement??=WITCH_ELEMENTS[Math.floor((cast.witchElementRoll??Math.random())*4)];
   }
+  function applyBriarHealing(cast,caster){
+    if(cast.briarHealed||!cast.briarRemoved?.length)return;
+    cast.briarHealed=true;
+    const target=getUnit(cast.target);
+    if(!target||target.hp<=0||healingSuppressed(cast.card.school))return;
+    const amount=Math.min(target.maxHp-target.hp,cast.briarRemoved.length*cast.card.healPerEffect);
+    if(amount<=0)return;
+    restoreHp(caster,target,amount);
+    flash(target,"+"+amount+" HP · BRIAR REMEDY","#ccf9a2");
+  }
   function applySpell(anim){
     if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
     anim.applied=true;
@@ -2663,7 +2690,16 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="flashover"){
+    if(card.kind==="briarremedy"){
+      anim.briarRemoved=briarEffects(t).map(status=>status.kind);
+      if(!anim.briarRemoved.length){
+        flash(t,"NO EFFECTS TO CLEANSE","#cbeaa5");
+        return;
+      }
+      for(const kind of BRIAR_EFFECTS)if(anim.briarRemoved.includes(kind))consumeStatus(t,kind);
+      flash(t,"CLEANSED · "+anim.briarRemoved.length,"#d5edab");
+      recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
+    }else if(card.kind==="flashover"){
       if(t?.hp>0&&t.team!==c.team){
         anim.flashoverBurning=t.statuses.some(status=>status.kind==="burn"&&status.remaining>0);
         const dealt=damage(c,t,card.damage+(anim.flashoverBurning?card.burnBonus:0),card,anim);
@@ -3099,6 +3135,8 @@
     $("testerTarget").disabled=!planning;
     $("testerTarget").value=testerTargetType;
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
+    const briarFixture=$("testerBriarFixture");
+    if(briarFixture)briarFixture.hidden=!testing||!planning||card?.kind!=="briarremedy";
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
     if(planning)ui.hint.textContent=c?
@@ -3287,6 +3325,19 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    const briarFixture=$("testerBriarFixture");
+    if(briarFixture)briarFixture.onclick=()=>{
+      if(state.mode!=="tester"||state.phase!=="planning"||currentCard()?.kind!=="briarremedy")return;
+      const target=correctTarget()??caster();
+      if(!target)return;
+      for(const [kind,school] of [["burn","fire"],["poison","nature"],["frostbite","ice"]]){
+        addStatus(target,kind,null,50,school);
+        const status=target.statuses.find(rune=>rune.kind===kind);
+        if(status)Object.assign(status,{remaining:3,appliedRound:state.round,lastTickRound:state.round});
+      }
+      target.hp=Math.max(1,target.maxHp-300);
+      paintUI();
+    };
     const logButton=$("battleRecap"),logPanel=$("battleLogPanel");
     logButton.onclick=()=>{
       if(logPanel.open)return;
@@ -4240,6 +4291,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="briarremedy")window.BriarRemedy?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
       else if(card.id==="groveland")window.Groveland?.portrait(c,width,height);
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
@@ -4396,6 +4448,7 @@
     window.CursedHold?.onReady(drawCardArts);
     window.FlameWheel?.onReady(drawCardArts);
     window.Flashover?.onReady(drawCardArts);
+    window.BriarRemedy?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4691,7 +4744,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4859,6 +4912,16 @@
       if(target){
         const scene=window.Reikel.scene(target,progress,action.card.hit,!action.windDomeTargets?.[target.id]);
         renderables.push({type:"reikel",depthY:scene.y+.1,priority:2,draw:()=>window.Reikel.draw(g,scene)});
+      }
+    }
+    if(action?.stage==="summon"&&action.card.kind==="briarremedy"&&window.BriarRemedy){
+      const target=getUnit(action.target);
+      if(target){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        const effects=action.briarRemoved??briarEffects(target).map(status=>status.kind);
+        const scene=window.BriarRemedy.scene(target,p,action.card,effects,!healingSuppressed(action.card.school));
+        renderables.push({type:"briar-druid",depthY:scene.y+.14,priority:2,
+          draw:()=>window.BriarRemedy.draw(g,scene)});
       }
     }
     if(action?.stage==="summon"&&action.card.kind==="soulghoul"&&window.SoulGhoul){

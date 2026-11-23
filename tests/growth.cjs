@@ -112,7 +112,7 @@ for(const {effects,missing,expected,sealed=false,targetId='ally'} of [
   assert.equal(target.hp,target.maxHp-missing+expected);
 }
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(briar.id));
+assert.ok([...api.getState().units[0].hand,...api.getState().units[0].drawPile].includes(briar.id));
 console.log('Briar Remedy: targeted cleanse, capped healing, full three-effect combo, self-cast, enemy rejection and Dark Grounds passed.');
 
 const lifevine=card('lifevine');
@@ -303,3 +303,43 @@ for(const target of [{x:200,y:490},{x:780,y:390}]){
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(lance.id));
 console.log('Glacier Lance: center trajectory, opening hand, single target, Frostbite bonus and retention, Extreme Frostbite, expired rune and Wind Dome passed.');
+
+const rip=card('ripcurrent');
+assert.equal(rip.cost,4);
+assert.equal(rip.accuracy,.90);
+assert.deepEqual(JSON.parse(JSON.stringify(rip)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===rip.id));
+for(const mode of ['ally','self','blocked','sealed','miss']){
+  const caster=unit('water-caster',0),target=unit('rip-target',1),ally=unit('wounded',0),knockedOut=unit('out',0);
+  caster.hp=mode==='self'?410:950;
+  ally.hp=470;knockedOut.hp=0;
+  if(mode==='blocked')target.statuses.push({kind:'wind_dome',value:1});
+  const s={phase:'resolving',round:1,units:[caster,target,ally,knockedOut],auras:[null,null],log:[],flashes:[],
+    environment:mode==='sealed'?{id:'darkgrounds'}:null};
+  ctx.window.setupGrowthTest(s);
+  const cast={card:rip,source:caster.id,target:target.id,runeResult:mode==='miss'?'failed':'success',damageVariant:1,
+    action:{casterId:caster.id,targetId:target.id}};
+  api.applySpell(cast);
+  assert.equal(target.hp,mode==='blocked'||mode==='miss'?1000:750);
+  const recipient=mode==='self'?caster:ally;
+  assert.equal(cast.ripAllyId,mode==='blocked'||mode==='miss'?undefined:recipient.id);
+  const before=recipient.hp;
+  Object.assign(cast,{stage:'summon',duration:rip.duration,elapsed:0});
+  s.animation=cast;
+  api.advanceAction(rip.duration*rip.healAt-1);
+  assert.equal(recipient.hp,before);
+  api.advanceAction(1);
+  api.advanceAction(1);
+  assert.equal(recipient.hp,before+(['ally','self'].includes(mode)?180:0));
+  assert.equal(knockedOut.hp,0);
+}
+vm.runInNewContext(fs.readFileSync('assets/rip-current.js','utf8'),ctx);
+const wave=ctx.window.RipCurrent;
+const waveCaster={x:200,y:470},waveTarget={x:740,y:480},waveAlly={x:300,y:390};
+assert.equal(wave.scene(waveCaster,waveTarget,null,rip.hit,rip).x,waveTarget.x);
+assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).x,waveAlly.x);
+assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).y,waveAlly.y);
+assert.equal(new Set(Array.from({length:100},(_,i)=>wave.scene(waveCaster,waveTarget,waveAlly,i/100,rip).frame)).size,8);
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(rip.id));
+console.log('Rip Current: 250 damage, lowest living teammate, delayed 180 HP, misses, shield blocking, Dark Grounds and eight wave poses passed.');

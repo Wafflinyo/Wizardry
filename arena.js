@@ -243,6 +243,9 @@
   CARDS.push({id:"glacierlance",name:"Glacier Lance",school:"ice",cost:4,target:"enemy",
     kind:"glacierlance",damage:390,frostBonus:120,accuracy:.85,icon:"❄",rarity:"RARE",duration:2350,hit:.73,
     description:"A faceted ice spear forms at the center of the arena and pierces one enemy for 390 base damage. Add 120 base damage against Frostbite. Frostbite remains active."});
+  CARDS.push({id:"ripcurrent",name:"Rip Current",school:"water",cost:4,target:"enemy",
+    kind:"ripcurrent",damage:250,returnHeal:180,accuracy:.90,icon:"≈",rarity:"RARE",duration:3300,hit:.52,healAt:.85,
+    description:"A low wave hits one enemy for 250 base damage, then returns to heal the living teammate with the lowest current HP for up to 180 base HP, including yourself."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -257,6 +260,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
     glacierlance:"+120 base damage against Frostbite.",
     coldstorage:"Next round: +2 mana and restore 150 HP.",
     blooddebt:"Steal half of the target’s next heal, up to 200 HP. Lasts through next round.",
@@ -328,7 +332,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1373,6 +1377,7 @@
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
+    if(a.stage==="summon"&&a.card.kind==="ripcurrent"&&p>=a.card.healAt)applyRipCurrentHeal(a,caster);
     if(a.stage==="summon"&&a.card.kind==="briarremedy"&&p>=a.card.healAt)applyBriarHealing(a,caster);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
       a.shatterPending=false;
@@ -2751,6 +2756,17 @@
   function pickWitchBeam(cast){
     return cast.witchElement??=WITCH_ELEMENTS[Math.floor((cast.witchElementRoll??Math.random())*4)];
   }
+  function lowestHpTeammate(team){
+    return alive(team).reduce((lowest,unit)=>!lowest||unit.hp<lowest.hp?unit:lowest,null);
+  }
+  function applyRipCurrentHeal(cast,caster){
+    if(cast.ripHealed||!cast.ripAllyId)return;
+    cast.ripHealed=true;
+    const ally=getUnit(cast.ripAllyId);
+    if(!ally||ally.hp<=0||!caster||healingSuppressed(cast.card.school))return;
+    const healed=restoreHp(caster,ally,Builds.healAmount(cast.card.returnHeal,caster,cast.card.school));
+    if(healed>0)flash(ally,"+"+healed+" HP · RIP CURRENT","#a6fff2");
+  }
   function applyBriarHealing(cast,caster){
     if(cast.briarHealed||!cast.briarRemoved?.length)return;
     cast.briarHealed=true;
@@ -2799,6 +2815,11 @@
       for(const kind of BRIAR_EFFECTS)if(anim.briarRemoved.includes(kind))consumeStatus(t,kind);
       flash(t,"CLEANSED · "+anim.briarRemoved.length,"#d5edab");
       recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
+    }else if(card.kind==="ripcurrent"){
+      if(t?.hp>0&&t.team!==c.team){
+        damage(c,t,card.damage,card,anim);
+        if(!preventsHitEffects(anim,t))anim.ripAllyId=lowestHpTeammate(c.team)?.id;
+      }
     }else if(card.kind==="glacierlance"){
       if(t?.hp>0&&t.team!==c.team){
         anim.glacierFrostbite=t.statuses.some(status=>status.kind==="frostbite"&&status.remaining>0);
@@ -4437,6 +4458,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="ripcurrent")window.RipCurrent?.portrait(c,width,height);
       else if(card.id==="glacierlance")window.GlacierLance?.portrait(c,width,height);
       else if(card.id==="coldstorage")window.ColdStorage?.portrait(c,width,height);
       else if(card.id==="blooddebt")window.BloodDebt?.portrait(c,width,height);
@@ -4603,6 +4625,7 @@
     window.BloodDebt?.onReady(drawCardArts);
     window.ColdStorage?.onReady(drawCardArts);
     window.GlacierLance?.onReady(drawCardArts);
+    window.RipCurrent?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4898,7 +4921,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4916,6 +4939,16 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.stage==="summon"&&action.card.kind==="ripcurrent"&&window.RipCurrent){
+      const target=getUnit(action.target),source=getUnit(action.source);
+      if(target&&source){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        const ally=getUnit(action.ripAllyId);
+        const scene=window.RipCurrent.scene(source,target,ally,p,action.card);
+        renderables.push({type:"rip-current",depthY:scene.y+.14,priority:2,
+          draw:()=>window.RipCurrent.draw(g,scene)});
+      }
+    }
     if(action?.stage==="summon"&&action.card.kind==="glacierlance"&&window.GlacierLance){
       const target=getUnit(action.target);
       if(target){

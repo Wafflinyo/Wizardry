@@ -237,6 +237,9 @@
   CARDS.push({id:"blooddebt",name:"Blood Debt",school:"dark",cost:4,target:"enemy",
     kind:"blooddebt",damage:250,steal:.50,stealCap:200,accuracy:.85,icon:"☠",rarity:"RARE",duration:2750,hit:.68,
     description:"Deal 250 base damage and mark the target through the end of the next round. Divert half of their next HP recovery to yourself, up to 200 HP, then consume the mark."});
+  CARDS.push({id:"coldstorage",name:"Cold Storage",school:"ice",cost:3,target:"ally",
+    kind:"coldstorage",bankedMana:2,bankedHeal:150,accuracy:1,icon:"❄",rarity:"RARE",duration:2250,hit:.72,
+    description:"Bank 2 mana and 150 HP in an ice crystal for yourself or an ally. It appears as a debuff rune and cracks open at the start of the next round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -251,6 +254,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    coldstorage:"Next round: +2 mana and restore 150 HP.",
     blooddebt:"Steal half of the target’s next heal, up to 200 HP. Lasts through next round.",
     lifevine:"Linked allies share 30% of HP actually restored for 3 rounds.",
     briarremedy:"Remove Burn, Poison and Frostbite. Heal 100 HP for each removed.",
@@ -320,7 +324,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -945,6 +949,8 @@
   function targetNotice(target,card){
     if(target&&card?.kind==="briarremedy"&&!briarEffects(target).length)
       return target.name+" has no Burn, Poison, or Frostbite to cleanse.";
+    if(target&&card?.kind==="coldstorage"&&!canReceiveDebuff(target,"cold_storage"))
+      return target.name+" already has four debuff runes.";
     return barrierNotice(target,card);
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
@@ -954,7 +960,7 @@
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
   }
   function towerDeckScore(card,role){
-    if(card.kind==="lifevine"||card.kind==="briarremedy"||towerHealing.has(card.kind))return role==="Support"?10:1;
+    if(card.kind==="coldstorage"||card.kind==="lifevine"||card.kind==="briarremedy"||towerHealing.has(card.kind))return role==="Support"?10:1;
     if(towerBarriers.has(card.kind))return role==="Support"||role==="Guardian"?9:2;
     if(card.fieldRounds)return role==="Support"?7:3;
     if(towerControl(card))return role==="Controller"?10:5;
@@ -998,7 +1004,11 @@
       const targets=targetsFor(card,u);
       for(const target of group?[null]:targets){
         let score=0;
-        if(card.kind==="lifevine"){
+        if(card.kind==="coldstorage"){
+          if(!target||!canReceiveDebuff(target,"cold_storage")||target.statuses.some(st=>st.kind==="cold_storage"))continue;
+          score=Math.min(card.bankedMana,Math.max(0,target.maxMana-target.mana-1))*45+
+            (healingSuppressed(card.school)?0:Math.min(card.bankedHeal,target.maxHp-target.hp));
+        }else if(card.kind==="lifevine"){
           if(!target||lifevinePartner(u)||lifevinePartner(target))continue;
           score=110+Math.min(220,(u.maxHp-u.hp+target.maxHp-target.hp)*.30);
         }else if(card.kind==="briarremedy"){
@@ -1051,6 +1061,7 @@
     if(!opponents.length)return null;
     const allies=alive(u.team);
     const shieldTargets=card=>allies.filter(ally=>!barrierConflict(ally,BARRIER_SPELLS[card.kind]));
+    const storageTargets=allies.filter(ally=>canReceiveDebuff(ally,"cold_storage")&&!ally.statuses.some(st=>st.kind==="cold_storage"));
     const briarTargets=allies.filter(ally=>briarEffects(ally).length);
     const chargeTargets=allies.filter(ally=>canReceiveDebuff(ally,"electrical_charge"));
     // CPU healing prioritizes a real injury and never targets an enemy.
@@ -1058,6 +1069,7 @@
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
       (card.kind!=="briarremedy"||briarTargets.length>0)&&
+      (card.kind!=="coldstorage"||storageTargets.length>0)&&
       (card.kind!=="lifevine"||allies.length>1)&&
       (!BARRIER_SPELLS[card.kind]||shieldTargets(card).length>0)&&
       (card.kind!=="hightide"||getUnit(state.environment?.ownerId)?.team===1-u.team)&&
@@ -1075,6 +1087,7 @@
     const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
       (choosesRune(card)||card.kind==="claritystrike")?allies.find(ally=>zenRunes(ally).length):card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
+        card.kind==="coldstorage"?storageTargets[Math.floor(Math.random()*storageTargets.length)]:
         card.kind==="briarremedy"?briarTargets[Math.floor(Math.random()*briarTargets.length)]:
         card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
         card.target==="ally"?eligibleAllies[Math.floor(Math.random()*eligibleAllies.length)]:
@@ -1228,7 +1241,7 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const conflict=barrierNotice(target,a.card);
+    const conflict=a.card.kind==="coldstorage"?targetNotice(target,a.card):barrierNotice(target,a.card);
     const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":a.card.kind==="sandwarrior"?"sand_warrior":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
@@ -1263,7 +1276,7 @@
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?"SHIELD CONFLICT":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
+      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?(a.card.kind==="coldstorage"?"FOUR DEBUFF RUNES":"SHIELD CONFLICT"):full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -1865,7 +1878,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1920,7 +1933,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0)consumeStatus(target,"blood_debt");
+    if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");}
     if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
@@ -2751,7 +2764,12 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="blooddebt"){
+    if(card.kind==="coldstorage"){
+      if(addStatus(t,"cold_storage",null,card.bankedMana,card.school)===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="cold_storage"),{releaseRound:state.round+1,bankerId:c.id});
+      flash(t,"COLD STORAGE · BANKED","#b7eaff");
+      recordBattleEvent(c.name+" banks 2 mana and 150 HP for "+t.name+" until next round.");
+    }else if(card.kind==="blooddebt"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
       if(t.hp<=0||preventsHitEffects(anim,t)||addStatus(t,"blood_debt",null,card.steal,card.school)===false)return;
@@ -3134,6 +3152,20 @@
     }
     paintUI();
   }
+  function releaseColdStorage(){
+    const card=BY_ID.coldstorage;
+    for(const target of state.units){
+      const storage=target.statuses.find(st=>st.kind==="cold_storage"&&st.releaseRound<=state.round);
+      if(!storage)continue;
+      consumeStatus(target,"cold_storage");
+      if(target.hp<=0)continue;
+      const mana=Math.max(0,Math.min(card.bankedMana,(target.maxMana||MAX_MANA)-target.mana));
+      target.mana+=mana;
+      const restored=healingSuppressed(card.school)?0:restoreHp(getUnit(storage.bankerId),target,card.bankedHeal);
+      flash(target,"COLD STORAGE · +"+mana+" MANA · +"+restored+" HP","#b5efff").coldStorageTarget=target.id;
+      recordBattleEvent(target.name+"'s Cold Storage opens for "+mana+" mana and "+restored+" HP.");
+    }
+  }
   function finishRound(){
     if(checkBattleEnd())return;
     for(const u of state.units)if(Number.isInteger(u.fearRound)&&u.fearRound<=state.round){u.fearRound=null;u.fearSource=null;consumeStatus(u,"fear_turn");}
@@ -3163,6 +3195,7 @@
       if(mark&&(state.round>=mark.expiresRound||!(getUnit(mark.creditorId)?.hp>0)))consumeStatus(unit,"blood_debt");
     }
     for(const u of state.units)if(u.statuses.some(st=>st.kind==="lifevine")&&!lifevinePartner(u))consumeStatus(u,"lifevine");
+    releaseColdStorage();
     tickBurnsForRound();
     if(checkBattleEnd())return;
     if(state.mode==="tester"){
@@ -4059,6 +4092,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
+      case "cold_storage":return {title:"Cold Storage · Banked resources",detail:"The crystal breaks at the start of round "+st.releaseRound+" and releases up to 2 mana and 150 HP."};
       case "blood_debt":return {title:"Blood Debt · Healing theft",detail:"The next HP recovery sends half to "+(getUnit(st.creditorId)?.name||"the caster")+", up to 200 HP. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "fear_turn":return {title:"Fear · This round only",detail:(u.fearSource||"Fear")+" frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
@@ -4393,6 +4427,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="coldstorage")window.ColdStorage?.portrait(c,width,height);
       else if(card.id==="blooddebt")window.BloodDebt?.portrait(c,width,height);
       else if(card.id==="lifevine")window.Lifevine?.portrait(c,width,height);
       else if(card.id==="briarremedy")window.BriarRemedy?.portrait(c,width,height);
@@ -4555,6 +4590,7 @@
     window.BriarRemedy?.onReady(drawCardArts);
     window.Lifevine?.onReady(drawCardArts);
     window.BloodDebt?.onReady(drawCardArts);
+    window.ColdStorage?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
     window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
@@ -4850,7 +4886,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4868,6 +4904,18 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(window.ColdStorage){
+      const making=action?.stage==="summon"&&action.card.kind==="coldstorage"?getUnit(action.target):null;
+      for(const unit of sorted){
+        if(unit.hp<=0)continue;
+        const release=state.flashes.findLast(f=>f.coldStorageTarget===unit.id);
+        const stored=unit.statuses.some(st=>st.kind==="cold_storage");
+        if(unit!==making&&!stored&&!release)continue;
+        const progress=unit===making?clamp(action.elapsed/action.duration,0,1):null;
+        renderables.push({type:"cold-storage",depthY:unit.y+.13,priority:2,
+          draw:()=>window.ColdStorage.draw(g,unit,time,progress,release?.age)});
+      }
+    }
     if(window.BloodDebt){
       const target=action?.stage==="summon"&&action.card.kind==="blooddebt"?getUnit(action.target):null;
       if(target){

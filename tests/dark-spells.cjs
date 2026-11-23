@@ -173,7 +173,7 @@ assert.equal(ghoul.cost, 4);
 assert.equal(ghoul.accuracy, .8);
 assert.equal(ghoul.school, 'dark');
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(ghoul.id));
+assert.ok([...api.getState().units[0].hand,...api.getState().units[0].drawPile].includes(ghoul.id));
 for (const {hp, shield, lost, gain} of [
   {hp: 2000, lost: 320, gain: 160},
   {hp: 2000, shield: ['sand_warrior', 250], lost: 70, gain: 35},
@@ -258,4 +258,4 @@ for (const {roll, pending, blocked, missed, feared} of [
     assert.equal(target.statuses.some(rune => rune.kind === 'fear_turn'), false);
   }
 }
-console.log('Soul Ghoul: starter hand, actual HP drained, two-stage timing, barriers, overkill, misses, and all eight mirrored sprite poses passed.');
+console.log('Soul Ghoul: Card Tester deck, actual HP drained, two-stage timing, barriers, overkill, misses, and all eight mirrored sprite poses passed.');

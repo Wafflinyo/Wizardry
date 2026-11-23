@@ -7,7 +7,7 @@ const ctx = {window: {}, requestAnimationFrame() {}, Image: class {}, document: 
 vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js', 'utf8'), ctx);
 vm.runInNewContext(fs.readFileSync('arena.js', 'utf8').replace(
   '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
-  '  window.setupGrowthTest=s=>state=s;window.damageForTest=damage;window.healForTest=restoreHp;paintUI=()=>{};'
+  '  window.setupGrowthTest=s=>state=s;window.damageForTest=damage;window.healForTest=restoreHp;window.releaseStorageForTest=releaseColdStorage;paintUI=()=>{};'
 ), ctx);
 
 const api = ctx.window.WIZARDRY_ARENA_TEST;
@@ -201,3 +201,47 @@ for(const [heal,creditorMissing,round,expected,stolen,blocked=false] of [
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(debt.id));
 console.log('Blood Debt: damage, mark, effective recovery, theft cap, missing HP cap, expiration, one trigger and Wind Dome passed.');
+
+const storage=card('coldstorage');
+assert.equal(storage.cost,3);
+assert.equal(storage.accuracy,1);
+assert.deepEqual(JSON.parse(JSON.stringify(storage)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===storage.id));
+for(const [mode,expectedHp,expectedMana] of [
+  ['normal',900,9],['cap',1000,10],['cleansed',750,7],
+  ['sealed',750,9],['defeated',0,7],['fullRuneRow',750,7]
+]){
+  const banker=unit('banker',0),recipient=unit('recipient',0);
+  recipient.hp=mode==='cap'?980:750;
+  recipient.mana=mode==='cap'?9:7;
+  recipient.maxMana=10;
+  if(mode==='fullRuneRow')recipient.statuses=['burn','poison','frostbite','curse'].map(kind=>({kind}));
+  const s={phase:'resolving',round:1,units:[banker,recipient],log:[],flashes:[],
+    environment:mode==='sealed'?{id:'darkgrounds'}:null};
+  ctx.window.setupGrowthTest(s);
+  api.applySpell({card:storage,runeResult:'success',action:{casterId:banker.id,targetId:recipient.id}});
+  assert.equal(has(recipient,'cold_storage'),mode!=='fullRuneRow');
+  ctx.window.releaseStorageForTest();
+  assert.equal(recipient.mana,mode==='cap'?9:7);
+  assert.equal(recipient.hp,mode==='cap'?980:750);
+  if(mode==='cleansed')api.consumeStatus(recipient,'cold_storage');
+  if(mode==='defeated')recipient.hp=0;
+  s.round++;
+  ctx.window.releaseStorageForTest();
+  ctx.window.releaseStorageForTest();
+  assert.equal(recipient.hp,expectedHp);
+  assert.equal(recipient.mana,expectedMana);
+  assert.ok(!has(recipient,'cold_storage'));
+}
+api.startCardTester();
+const storageState=api.getState();
+const storageTester=storageState.units[0];
+storageTester.hp=storageTester.maxHp-200;
+storageTester.mana=5;
+api.applySpell({card:storage,runeResult:'success',action:{casterId:storageTester.id,targetId:storageTester.id}});
+assert.ok(storageTester.hand.includes(storage.id));
+api.finishRound();
+assert.equal(storageTester.hp,storageTester.maxHp-50);
+assert.match(storageState.log.join('\n'),/opens for 2 mana and 150 HP/);
+assert.ok(!has(storageTester,'cold_storage'));
+console.log('Cold Storage: next-round release, start-of-round integration, cap, cleanse, debuff limit, defeated target and healing suppression passed.');

@@ -58,40 +58,52 @@
     ctx.restore();
   }
 
+  // Measured from each atlas tile so the crest and floor remain fixed as the water changes shape.
+  const crestRows=[99,88,78,75,86,95,96,90];
+  const baseRow=148;
+
   function flowingWave(ctx,s,width,height){
-    const phase=s.p*32;
+    const phase=s.p*35;
     const edge=u=>{
       const taper=Math.sin(u*Math.PI);
-      return height*(-.066+taper*(.032*Math.sin(u*7*Math.PI-phase)
-        +.018*Math.sin(u*13*Math.PI-phase*1.45)));
+      return height*(.010+taper*(.039*Math.sin(u*7*Math.PI-phase)
+        +.020*Math.sin(u*13*Math.PI-phase*1.45)));
     };
     const hasRolling=rolling.complete&&rolling.naturalWidth>0;
-    const image=hasRolling?rolling:atlas;
-    const frame=hasRolling?2:s.frame;
+    const frame=Math.floor(s.p*52)%8;
     ctx.save();
     ctx.translate(s.x,s.y+5);
     ctx.scale(s.dir,1);
 
-    // Clip the water itself to the swashing edge, rather than drawing lines on the floor.
     ctx.beginPath();
-    ctx.moveTo(-width*.53,-height);
-    ctx.lineTo(-width*.53,edge(0));
-    for(let i=0;i<20;i++){
-      const middle=(i+.5)/20,end=(i+1)/20;
+    ctx.moveTo(-width*.52,-height);
+    ctx.lineTo(-width*.52,edge(0));
+    for(let i=0;i<24;i++){
+      const middle=(i+.5)/24,end=(i+1)/24;
       ctx.quadraticCurveTo((middle-.5)*width,edge(middle),(end-.5)*width,edge(end));
     }
-    ctx.lineTo(width*.53,edge(1));
-    ctx.lineTo(width*.53,-height);
+    ctx.lineTo(width*.52,edge(1));
+    ctx.lineTo(width*.52,-height);
     ctx.closePath();
     ctx.clip();
 
-    // Let facets drift across the crest on a fixed baseline without scaling the wave.
-    const strips=16;
-    for(let i=0;i<strips;i++){
-      const u=i/strips;
-      const shift=width*.020*Math.sin(phase-u*11)*Math.sin(u*Math.PI);
-      ctx.drawImage(image,(frame%4)*tile,Math.floor(frame/4)*tile+u*tile,
-        tile,tile/strips,-width/2+shift,(u-.83)*height,width,height/strips+.32);
+    if(hasRolling){
+      const cropTop=crestRows[frame]-4;
+      ctx.drawImage(rolling,(frame%4)*tile,Math.floor(frame/4)*tile+cropTop,
+        tile,baseRow-cropTop,-width/2,-height*.61,width,height*.70);
+    }else{
+      ctx.drawImage(atlas,(s.frame%4)*tile,Math.floor(s.frame/4)*tile,
+        tile,tile,-width/2,-height*.73,width,height);
+    }
+    // Bright foam travels up and over the lip while the silhouette stays planted.
+    for(let i=0;i<21;i++){
+      const u=(s.p*15+i/21)%1;
+      const lane=i%4;
+      const x=(u-.5)*width*.95;
+      const crest=Math.sin(Math.PI*Math.min(1,u*1.13))**2;
+      const y=-height*(.045+crest*(.39-lane*.092))+lane*3;
+      ctx.globalAlpha=Math.sin(u*Math.PI)*.68*s.alpha;
+      shard(ctx,x,y,3+u*9,1.4+lane*.45,["#e9ffff","#b1faf1","#69d9e4"][i%3]);
     }
     ctx.restore();
   }
@@ -116,8 +128,8 @@
 
   function draw(ctx,s){
     if(!ready()||s.alpha<=0)return;
-    const width=s.arriving?206:s.returning?201:255;
-    const height=s.arriving?169:s.returning?123:151;
+    const width=s.arriving?248:s.returning?248:310;
+    const height=s.arriving?198:s.returning?136:166;
     ctx.save();
     ctx.globalAlpha*=s.alpha;
     if(s.moving){

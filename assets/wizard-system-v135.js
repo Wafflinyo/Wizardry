@@ -23,7 +23,7 @@ const UNLOCK_ORDER=Object.fromEntries(Object.entries({
  water:"waterblast octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon waterprison",
  earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure landray earthquake",
  lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus lightningfield claritystrike",
- nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree groveland",
+ nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree groveland thornyhug",
  wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor windrazor aromatherapy",
  dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper darkgrounds cursedhold",
  fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix sunfire flamingflamingo",

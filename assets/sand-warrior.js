@@ -67,7 +67,7 @@
     const index=broken?(age<.17?5:age<.44?6:7):
       growth<.90?Math.min(2,Math.floor(growth*3.5)):age!=null&&age<.24?4:3;
     ctx.save();
-    ctx.translate(target.x+dir*84,target.y+6);
+    ctx.translate(target.x+dir*106,target.y+6);
     const standing=!broken&&growth>=.90;
     ctx.scale(dir,1.23+(standing?Math.sin(time*.004)*.012:0));
     if(broken)ctx.globalAlpha*=1-clamp((age-.61)/.33);

@@ -3,36 +3,7 @@
   const atlas=new Image(),rolling=new Image(),listeners=[];
   const tile=224;
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
-  let skimAtlas,rollingSkim;
-  function groundBlend(image){
-    const blended=document.createElement("canvas");
-    blended.width=image.naturalWidth;
-    blended.height=image.naturalHeight;
-    const ctx=blended.getContext("2d");
-    ctx.drawImage(image,0,0);
-    const mask=document.createElement("canvas");
-    mask.width=blended.width;mask.height=blended.height;
-    const maskCtx=mask.getContext("2d");
-    for(let row=0;row<2;row++){
-      const y=row*tile;
-      const feather=maskCtx.createLinearGradient(0,y,0,y+tile);
-      feather.addColorStop(0,"#fff");
-      feather.addColorStop(.70,"#fff");
-      feather.addColorStop(.77,"#ffffff87");
-      feather.addColorStop(.82,"#ffffff00");
-      feather.addColorStop(1,"#ffffff00");
-      maskCtx.fillStyle=feather;
-      maskCtx.fillRect(0,y,blended.width,tile);
-    }
-    ctx.globalCompositeOperation="destination-in";
-    ctx.drawImage(mask,0,0);
-    return blended;
-  }
-  atlas.onload=()=>{
-    skimAtlas=groundBlend(atlas);
-    listeners.splice(0).forEach(fn=>fn());
-  };
-  rolling.onload=()=>{rollingSkim=groundBlend(rolling);};
+  atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
   atlas.src="./assets/rip-current-frames.webp?v=0.311.0";
   rolling.src="./assets/rip-current-roll-frames.webp?v=0.311.2";
   const clamp=p=>Math.max(0,Math.min(1,p));
@@ -87,21 +58,40 @@
     ctx.restore();
   }
 
-  function edgeRipples(ctx,s,width){
+  function flowingWave(ctx,s,width,height){
+    const phase=s.p*32;
+    const edge=u=>{
+      const taper=Math.sin(u*Math.PI);
+      return height*(-.066+taper*(.032*Math.sin(u*7*Math.PI-phase)
+        +.018*Math.sin(u*13*Math.PI-phase*1.45)));
+    };
+    const hasRolling=rolling.complete&&rolling.naturalWidth>0;
+    const image=hasRolling?rolling:atlas;
+    const frame=hasRolling?2:s.frame;
     ctx.save();
-    for(let i=0;i<9;i++){
-      const phase=(s.p*8+i/9)%1;
-      const x=s.x+s.dir*(phase-.48)*width*.93;
-      const y=s.y+3+Math.sin(i*2.39996)*4+phase*5;
-      const span=(12+i%4*6)*(1+phase*.4);
-      ctx.globalAlpha=Math.sin(phase*Math.PI)*.78;
-      ctx.strokeStyle=i%3===0?"#e8ffff":i%3===1?"#88e8e9":"#4cc5d9";
-      ctx.lineWidth=i%3===0?1.7:1.2;
-      ctx.lineCap="round";
-      ctx.beginPath();
-      ctx.moveTo(x-s.dir*span,y+3);
-      ctx.quadraticCurveTo(x-s.dir*span*.22,y-3,x+s.dir*span*.65,y);
-      ctx.stroke();
+    ctx.translate(s.x,s.y+5);
+    ctx.scale(s.dir,1);
+
+    // Clip the water itself to the swashing edge, rather than drawing lines on the floor.
+    ctx.beginPath();
+    ctx.moveTo(-width*.53,-height);
+    ctx.lineTo(-width*.53,edge(0));
+    for(let i=0;i<20;i++){
+      const middle=(i+.5)/20,end=(i+1)/20;
+      ctx.quadraticCurveTo((middle-.5)*width,edge(middle),(end-.5)*width,edge(end));
+    }
+    ctx.lineTo(width*.53,edge(1));
+    ctx.lineTo(width*.53,-height);
+    ctx.closePath();
+    ctx.clip();
+
+    // Let facets drift across the crest on a fixed baseline without scaling the wave.
+    const strips=16;
+    for(let i=0;i<strips;i++){
+      const u=i/strips;
+      const shift=width*.020*Math.sin(phase-u*11)*Math.sin(u*Math.PI);
+      ctx.drawImage(image,(frame%4)*tile,Math.floor(frame/4)*tile+u*tile,
+        tile,tile/strips,-width/2+shift,(u-.83)*height,width,height/strips+.32);
     }
     ctx.restore();
   }
@@ -124,33 +114,16 @@
     ctx.restore();
   }
 
-  function groundSkim(ctx,s,width){
-    ctx.save();
-    const dir=s.dir;
-    for(let i=0;i<4;i++){
-      const spread=width*(.34+i*.031);
-      const drift=((s.p*7+i*.23)%1)*24;
-      const x=s.x-dir*(11+drift),y=s.y+2+i*3;
-      ctx.fillStyle=i%2?"#7de8e543":"#238c9d62";
-      ctx.beginPath();
-      ctx.moveTo(x-dir*spread,y+3);
-      ctx.quadraticCurveTo(x,y-9,x+dir*spread*.72,y);
-      ctx.quadraticCurveTo(x,y+6,x-dir*spread,y+3);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
   function draw(ctx,s){
     if(!ready()||s.alpha<=0)return;
     const width=s.arriving?206:s.returning?201:255;
     const height=s.arriving?169:s.returning?123:151;
     ctx.save();
     ctx.globalAlpha*=s.alpha;
-    if(s.moving){groundSkim(ctx,s,width);wake(ctx,s);}
-    if(s.moving&&rollingSkim)sprite(ctx,2,s.x,s.y+5,width,height,s.dir,rollingSkim);
-    else sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir,s.moving?(skimAtlas||atlas):atlas);
-    if(s.moving)edgeRipples(ctx,s,width);
+    if(s.moving){
+      wake(ctx,s);
+      flowingWave(ctx,s,width,height);
+    }else sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir);
     if(s.arriving||s.p>=s.impact&&s.p<s.impact+.15)splash(ctx,s);
     ctx.restore();
   }

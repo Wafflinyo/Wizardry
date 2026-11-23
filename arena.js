@@ -757,7 +757,7 @@
     if(state.selectedRune)closeStatusInfo();
     handSwipe?.reset();
     state.selectedCard=null;state.selectedHandCopy=0;
-    state.selectedTarget=null;state.selectedRune=null;state.barrierNotice=null;
+    state.selectedTarget=null;state.selectedRune=null;state.targetingNotice=null;
   }
   function nearestAvailableCaster(){
     state.selectedCaster=state.humanByTeam[state.planningSide]||null;
@@ -779,8 +779,8 @@
       closeStatusInfo();
       state.selectedRune=null;
     }
-    state.barrierNotice=barrierNotice(u,card);
-    state.selectedTarget=state.barrierNotice?null:id;
+    state.targetingNotice=targetNotice(u,card);
+    state.selectedTarget=state.targetingNotice?null:id;
     paintUI();
   }
   function selectFanCard(id,copy=0){
@@ -794,11 +794,13 @@
     if(!caster().hand.includes(id))return;
     if(state.plans[caster().id])return;
     if(state.selectedRune)closeStatusInfo();
-    state.selectedCard=id;state.selectedRune=null;state.barrierNotice=null;
+    state.selectedCard=id;state.selectedRune=null;state.targetingNotice=null;
     const card=BY_ID[id],u=caster();
     state.selectedTarget=card.selfOnly||(choosesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
-      state.selectedTarget=targetsFor(card,u).find(target=>!barrierNotice(target,card))?.id??null;
+      state.selectedTarget=targetsFor(card,u).find(target=>!targetNotice(target,card))?.id??null;
+    if(card.kind==="briarremedy"&&!targetsFor(card,u).some(target=>briarEffects(target).length))
+      state.targetingNotice="Briar Remedy needs a target with Burn, Poison, or Frostbite.";
     paintUI();
   }
   function selectZenRune(kind){
@@ -817,10 +819,10 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    const notice=barrierNotice(target,card);
+    const notice=targetNotice(target,card);
     if(notice){
       state.selectedTarget=null;
-      state.barrierNotice=notice;
+      state.targetingNotice=notice;
       paintUI();
       return false;
     }
@@ -928,6 +930,11 @@
   const BRIAR_EFFECTS=new Set(["burn","poison","frostbite"]);
   function briarEffects(unit){
     return unit.statuses.filter(status=>BRIAR_EFFECTS.has(status.kind)&&status.remaining!==0);
+  }
+  function targetNotice(target,card){
+    if(target&&card?.kind==="briarremedy"&&!briarEffects(target).length)
+      return target.name+" has no Burn, Poison, or Frostbite to cleanse.";
+    return barrierNotice(target,card);
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
   const towerBarriers=new Set(["sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
@@ -1748,6 +1755,14 @@
           // A locked spell is spent on its original target, never redirected.
           flash(c,"TARGET DEFEATED · FAILED","#ffd5b0");
           recordBattleEvent(c.name+"'s "+card.name+" fails: the locked target is defeated or unavailable.");
+          continue;
+        }
+      }
+      if(card.kind==="briarremedy"){
+        const notice=targetNotice(getUnit(action.targetId),card);
+        if(notice){
+          flash(c,"NO EFFECTS TO CLEANSE","#cbeaa5");
+          recordBattleEvent("Briar Remedy was skipped. "+notice);
           continue;
         }
       }
@@ -3148,7 +3163,7 @@
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
         testing?"Choose any card. Mana refills each round.":"Slide across your cards to browse. Tap one, then choose a target."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
-    if(planning&&state.barrierNotice)ui.hint.textContent=state.barrierNotice;
+    if(planning&&state.targetingNotice)ui.hint.textContent=state.targetingNotice;
     if(planning&&c&&state.plans[c.id]){ui.phase.textContent="WAITING FOR PLAYERS";ui.hint.textContent="Choice locked in. Waiting for the other players…";}
     const deckCount=$("battleDeckCount");
     if(deckCount)deckCount.textContent=(c?.drawPile.length||0)+" / "+(testing?(c?.grimoire?.length||24):24)+" in deck";
@@ -3193,7 +3208,7 @@
     if(runePicker.innerHTML!==options)runePicker.innerHTML=options;
     runePicker.value=state.selectedRune||"";
     const canConfirm=planning&&!!c&&!!card&&
-      !barrierConflict(target,BARRIER_SPELLS[card.kind])&&
+      !targetNotice(target,card)&&
       (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
       c.mana>=card.cost&&!state.plans[c.id]&&(!choosesRune(card)||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&choosesRune(card)&&runes.length);
@@ -3336,7 +3351,7 @@
         if(status)Object.assign(status,{remaining:3,appliedRound:state.round,lastTickRound:state.round});
       }
       target.hp=Math.max(1,target.maxHp-300);
-      paintUI();
+      selectTarget(target.id);
     };
     const logButton=$("battleRecap"),logPanel=$("battleLogPanel");
     logButton.onclick=()=>{
@@ -3384,7 +3399,7 @@
     if(ui.targetPicker)ui.targetPicker.onchange=()=>{
       if(ui.targetPicker.value)selectTarget(ui.targetPicker.value);
       else if(state.phase==="planning"){
-        state.selectedTarget=null;state.barrierNotice=null;
+        state.selectedTarget=null;state.targetingNotice=null;
         paintUI();
       }
     };
@@ -5769,7 +5784,7 @@
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
       if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
-      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(barrierConflict(t,BARRIER_SPELLS[card.kind]))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
+      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(targetNotice(t,card))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
        if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:choosesRune(card)?p.runeKind??null:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},

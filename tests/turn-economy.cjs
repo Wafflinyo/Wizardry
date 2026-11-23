@@ -75,12 +75,12 @@ for(const [first,second,priority] of [
  api.chooseCard(second);
  api.selectTarget(ally.id);
  assert.equal(s.selectedTarget,null);
- assert.ok(s.barrierNotice.includes(existing.name));
- assert.ok(s.barrierNotice.includes(incoming.name));
- assert.ok(s.barrierNotice.includes('priority '+priority));
+ assert.ok(s.targetingNotice.includes(existing.name));
+ assert.ok(s.targetingNotice.includes(incoming.name));
+ assert.ok(s.targetingNotice.includes('priority '+priority));
  api.selectTarget(caster.id);
  assert.equal(s.selectedTarget,caster.id);
- assert.equal(s.barrierNotice,null);
+ assert.equal(s.targetingNotice,null);
  s.phase='resolving';
  s.animation={...cast(incoming),stage:'tracing-auto'};
  assert.equal(api.resolveAutoRune(),false);

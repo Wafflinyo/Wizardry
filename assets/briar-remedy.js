@@ -18,8 +18,8 @@
 
   function scene(target,p,card,effects,canHeal){
     const inward=target.team===0?1:-1;
-    const x=target.x+inward*155,y=target.y+14;
-    const size=216+clamp((target.y-390)/235)*26;
+    const x=target.x+inward*170,y=target.y+14;
+    const size=281+clamp((target.y-390)/235)*34;
     const lift=26*(1-smooth(p/.18));
     const frame=p<.12?0:p<.23?1:p<.33?2:p<.45?3:
       p<card.hit?4:p<.69?5:p<.88?6:7;

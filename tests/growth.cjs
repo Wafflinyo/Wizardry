@@ -200,7 +200,7 @@ for(const [heal,creditorMissing,round,expected,stolen,blocked=false] of [
   assert.equal(creditor.hp,before,'the mark can steal only once');
 }
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(debt.id));
+assert.ok(api.getState().units[0].drawPile.includes(debt.id));
 console.log('Blood Debt: damage, mark, effective recovery, theft cap, missing HP cap, expiration, one trigger and Wind Dome passed.');
 
 const storage=card('coldstorage');
@@ -385,3 +385,47 @@ for(const [plan,queueAt,shield,marked] of [
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(pressure.id));
 console.log('Pressure Drop: damage, whole-spell reduction, support casts, later rounds, shield and opening hand passed.');
+
+const javelin=card('chainedjavelin');
+assert.equal(javelin.damage,320);
+assert.deepEqual(JSON.parse(JSON.stringify(javelin)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===javelin.id));
+for(const [mana,outcome,shield,stolen] of [
+  [5,'success',false,2],[1,'success',false,1],[0,'success',false,0],
+  [5,'failed',false,0],[5,'success',true,0]
+]){
+  const thrower=Object.assign(unit('thrower',0),{mana:10,maxMana:15});
+  const victim=Object.assign(unit('victim',1),{mana});
+  if(shield)victim.statuses.push({kind:'wind_dome',value:1});
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[thrower,victim],auras:[null,null],log:[],flashes:[]});
+  const flight={card:javelin,source:thrower.id,target:victim.id,runeResult:outcome,damageVariant:1,
+    action:{casterId:thrower.id,targetId:victim.id}};
+  api.applySpell(flight);
+  assert.equal(victim.hp,outcome==='success'&&!shield?680:1000);
+  assert.equal(victim.mana,mana,'mana only moves once the chain returns it');
+  api.applyChainedJavelinSiphon(flight,thrower);
+  api.applyChainedJavelinSiphon(flight,thrower);
+  assert.equal(victim.mana,mana-stolen);
+  assert.equal(thrower.mana,10+stolen);
+}
+vm.runInNewContext(fs.readFileSync('assets/chained-javelin.js','utf8'),ctx);
+for(const direction of [-1,1]){
+  const from={x:500-direction*260,y:370},to={x:500+direction*180,y:420};
+  const cast={card:javelin,applied:true,javelinLanded:true,javelinCharge:2};
+  const effect=ctx.window.ChainedJavelin;
+  const contact=effect.scene(from,to,javelin.hit,cast);
+  const embedded=effect.scene(from,to,.7,cast);
+  assert.equal(contact.tip.x,to.x);
+  assert.equal(embedded.depth,to.y);
+  assert.ok(direction*(embedded.tip.x-to.x)>0);
+  assert.equal(embedded.charge,2);
+  const canvas=new Proxy({}, {get:(target,key)=>target[key]??(()=>{} )});
+  for(let frame=0;frame<=222;frame++){
+    const pose=effect.scene(from,to,frame/222,cast);
+    effect.draw(canvas,pose,'back');
+    effect.draw(canvas,pose,'front');
+  }
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(javelin.id));
+console.log('Chained Javelin: hit, delayed mana transfer, depleted targets, misses, Wind Dome, mirrored animation and opening hand passed.');

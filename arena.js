@@ -249,6 +249,7 @@
   CARDS.push({id:"pressuredrop",name:"Pressure Drop",school:"wind",cost:4,target:"enemy",
     kind:"pressuredrop",damage:310,spellDamageReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
+  CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -263,6 +264,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
     pressuredrop:"Decay of Strength: all hits of the next damaging spell deal 25% less damage.",
     ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
     glacierlance:"+120 base damage against Frostbite.",
@@ -336,7 +338,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1381,6 +1383,7 @@
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
+    if(a.stage==="summon"&&a.card.kind==="chainedjavelin"&&p>=a.card.siphonAt)applyChainedJavelinSiphon(a,caster);
     if(a.stage==="summon"&&a.card.kind==="ripcurrent"&&p>=a.card.healAt)applyRipCurrentHeal(a,caster);
     if(a.stage==="summon"&&a.card.kind==="briarremedy"&&p>=a.card.healAt)applyBriarHealing(a,caster);
     if(a.stage==="summon"&&a.card.id==="heizmann"&&a.shatterPending&&p>=a.card.shatterAt){
@@ -2773,6 +2776,20 @@
   function lowestHpTeammate(team){
     return alive(team).reduce((lowest,unit)=>!lowest||unit.hp<lowest.hp?unit:lowest,null);
   }
+  function applyChainedJavelinSiphon(cast,caster){
+    if(!cast.javelinLanded||cast.javelinSiphoned||!caster?.hp)return;
+    const target=getUnit(cast.target??cast.action.targetId);
+    const stolen=Math.min(cast.card.manaSteal,target.mana);
+    cast.javelinSiphoned=true;
+    if(stolen<=0)return;
+    target.mana-=stolen;
+    const gained=Math.min(stolen,Math.max(0,(caster.maxMana||MAX_MANA)-caster.mana));
+    caster.mana+=gained;
+    flash(target,"−"+stolen+" MANA","#b8c8ff");
+    if(gained>0)flash(caster,"+"+gained+" MANA","#eddbff");
+    recordBattleEvent(caster.name+" siphons "+stolen+" mana from "+target.name+" with Chained Javelin.");
+    paintUI();
+  }
   function applyRipCurrentHeal(cast,caster){
     if(cast.ripHealed||!cast.ripAllyId)return;
     cast.ripHealed=true;
@@ -2829,6 +2846,11 @@
       for(const kind of BRIAR_EFFECTS)if(anim.briarRemoved.includes(kind))consumeStatus(t,kind);
       flash(t,"CLEANSED · "+anim.briarRemoved.length,"#d5edab");
       recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
+    }else if(card.kind==="chainedjavelin"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      anim.javelinLanded=!preventsHitEffects(anim,t);
+      anim.javelinCharge=anim.javelinLanded?Math.min(card.manaSteal,t.mana):0;
     }else if(card.kind==="pressuredrop"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
@@ -4479,6 +4501,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
       else if(card.id==="pressuredrop")window.PressureDrop?.portrait(c,width,height);
       else if(card.id==="ripcurrent")window.RipCurrent?.portrait(c,width,height);
       else if(card.id==="glacierlance")window.GlacierLance?.portrait(c,width,height);
@@ -4944,7 +4967,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4962,6 +4985,15 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.stage==="summon"&&action.card.kind==="chainedjavelin"&&window.ChainedJavelin){
+      const source=getUnit(action.source),target=getUnit(action.target);
+      if(source&&target){
+        const scene=window.ChainedJavelin.scene(source,target,clamp(action.elapsed/action.duration,0,1),action);
+        for(const layer of ["back","front"])renderables.push({type:"chained-javelin-"+layer,
+          depthY:scene.depth+(layer==="back"?-.12:.12),priority:2,
+          draw:()=>window.ChainedJavelin.draw(g,scene,layer)});
+      }
+    }
     if(action?.stage==="summon"&&action.card.kind==="pressuredrop"&&window.PressureDrop){
       const target=getUnit(action.target);
       if(target){
@@ -6109,7 +6141,7 @@
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
-    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

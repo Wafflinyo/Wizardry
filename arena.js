@@ -247,7 +247,7 @@
     kind:"ripcurrent",damage:250,returnHeal:180,accuracy:.90,icon:"≈",rarity:"RARE",duration:3300,hit:.52,healAt:.85,
     description:"A low wave hits one enemy for 250 base damage, then returns to heal the living teammate with the lowest current HP for up to 180 base HP, including yourself."});
   CARDS.push({id:"pressuredrop",name:"Pressure Drop",school:"wind",cost:4,target:"enemy",
-    kind:"pressuredrop",damage:310,firstHitReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:2550,hit:.66,
+    kind:"pressuredrop",damage:310,firstHitReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
     description:"Compress air around one enemy and implode for 310 base damage. If they still have a damaging spell pending this round, its first hit deals 25% less damage."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');

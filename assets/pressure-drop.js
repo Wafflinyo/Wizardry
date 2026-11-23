@@ -9,17 +9,18 @@
   const smooth=p=>{const t=clamp(p);return t*t*(3-2*t);};
 
   function scene(target,p,hit,blocked){
-    const pull=smooth((p-.24)/(hit-.24));
+    const pull=smooth((p-.13)/(hit-.13));
     const after=clamp((p-hit)/(1-hit));
     return {x:target.x,y:target.y-83,p,hit,blocked,after,
-      frame:p<hit?Math.min(4,Math.floor(p/hit*5)):Math.min(7,5+Math.floor(after*3)),
+      pose:p<hit?5*clamp(p/hit):5+after*2,
+      angle:p<hit?p*1.8+pull*.75:hit*1.8+.75+after*.22,
       radius:119-95*pull,alpha:smooth(p/.12)*(1-smooth((after-.45)/.55))};
   }
 
   function ribbons(ctx,s,front){
     const strength=s.p<s.hit?1:1-smooth(s.after/.58);
     for(let i=0;i<18;i++){
-      const a=i*2.39996+s.p*10;
+      const a=i*2.39996+s.p*12+s.angle;
       if((Math.sin(a)>0)!==front)continue;
       const radius=s.radius*(.79+i%4*.08);
       const tail=radius+15+i%4*6;
@@ -40,14 +41,24 @@
 
   function draw(ctx,s,layer){
     if(!ready()||s.alpha<=0)return;
-    const front=layer==="front",size=224;
-    const sx=s.frame%4*tile,sy=Math.floor(s.frame/4)*tile;
+    const front=layer==="front";
     ctx.save();
     ctx.translate(s.x,s.y);
     ctx.globalAlpha*=s.alpha;
     ribbons(ctx,s,front);
     if(front){
-      ctx.drawImage(atlas,sx,sy,tile,tile,-size/2,-size/2,size,size);
+      const first=Math.floor(s.pose),next=Math.min(7,first+1),mix=s.pose-first;
+      ctx.save();
+      ctx.rotate(s.angle);
+      const opacity=ctx.globalAlpha;
+      // Blend the neighboring poses so the wind keeps moving between atlas frames.
+      ctx.globalAlpha=opacity*(1-mix);
+      ctx.drawImage(atlas,first%4*tile,Math.floor(first/4)*tile,tile,tile,-112,-112,224,224);
+      if(mix>0){
+        ctx.globalAlpha=opacity*mix;
+        ctx.drawImage(atlas,next%4*tile,Math.floor(next/4)*tile,tile,tile,-112,-112,224,224);
+      }
+      ctx.restore();
       if(!s.blocked&&s.p>=s.hit&&s.after<.18){
         ctx.globalAlpha*=1-s.after/.18;
         ctx.fillStyle="#effff6";

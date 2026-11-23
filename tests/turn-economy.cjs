@@ -62,4 +62,53 @@ ctx.window.WizardrySession=null;
  api.applySpell(spell('scaldingair',u,enemy));
  assert.ok(enemy.hp<hp);assert.ok(!enemy.statuses.some(rune=>rune.kind==='burn'));
 }
+for(const [first,second,priority] of [
+ ['winddome','sandwarrior',1],['sandwarrior','winddome',1],
+ ['bubbleshield','reflectiveice',2],['reflectiveice','bubbleshield',2]
+]){
+ const s=battle(),caster=s.units[0],ally=s.units[1];
+ const existing=api.cards.find(card=>card.id===first);
+ const incoming=api.cards.find(card=>card.id===second);
+ const cast=card=>({card,source:caster.id,target:ally.id,action:{casterId:caster.id,targetId:ally.id},runeResult:'success'});
+ api.applySpell(cast(existing));
+ caster.hand=[second];
+ api.chooseCard(second);
+ api.selectTarget(ally.id);
+ assert.equal(s.selectedTarget,null);
+ assert.ok(s.barrierNotice.includes(existing.name));
+ assert.ok(s.barrierNotice.includes(incoming.name));
+ assert.ok(s.barrierNotice.includes('priority '+priority));
+ api.selectTarget(caster.id);
+ assert.equal(s.selectedTarget,caster.id);
+ assert.equal(s.barrierNotice,null);
+ s.phase='resolving';
+ s.animation={...cast(incoming),stage:'tracing-auto'};
+ assert.equal(api.resolveAutoRune(),false);
+ assert.match(s.log[0],/priority [12] shields/);
+ api.applySpell(cast(incoming));
+ assert.equal(ally.statuses.length,1);
+}
+for(const [first,second] of [['bubbleshield','sandwarrior'],['reflectiveice','sandwarrior'],['reflectiveice','winddome']]){
+ const s=battle(),attacker=s.units[0],defender=s.units[2];
+ const cast=(id,source)=>api.applySpell({
+   card:api.cards.find(card=>card.id===id),source:source.id,target:defender.id,
+   action:{casterId:source.id,targetId:defender.id},runeResult:'success',damageVariant:1
+ });
+ cast(first,defender);
+ cast(second,defender);
+ assert.equal(defender.statuses.length,2);
+ const hp=defender.hp;
+ const shield=defender.statuses[0],value=shield.value;
+ cast('devil',attacker);
+ assert.equal(defender.hp,hp);
+ assert.equal(defender.statuses.length,1);
+ assert.equal(defender.statuses[0],shield);
+ assert.equal(shield.value,value);
+ if(second==='sandwarrior'){
+   cast(second,defender);
+   cast('croc',attacker);
+   assert.equal(defender.hp,hp-(first==='bubbleshield'?190:275));
+   assert.equal(defender.statuses.length,0);
+ }
+}
 console.log('Battle updates: skip timing, fizzle regeneration, immediate deck recycling, four-debuff cap, and stacked barrier priority passed.');

@@ -745,7 +745,7 @@
     if(state.selectedRune)closeStatusInfo();
     handSwipe?.reset();
     state.selectedCard=null;state.selectedHandCopy=0;
-    state.selectedTarget=null;state.selectedRune=null;
+    state.selectedTarget=null;state.selectedRune=null;state.barrierNotice=null;
   }
   function nearestAvailableCaster(){
     state.selectedCaster=state.humanByTeam[state.planningSide]||null;
@@ -767,7 +767,8 @@
       closeStatusInfo();
       state.selectedRune=null;
     }
-    state.selectedTarget=id;
+    state.barrierNotice=barrierNotice(u,card);
+    state.selectedTarget=state.barrierNotice?null:id;
     paintUI();
   }
   function selectFanCard(id,copy=0){
@@ -781,11 +782,11 @@
     if(!caster().hand.includes(id))return;
     if(state.plans[caster().id])return;
     if(state.selectedRune)closeStatusInfo();
-    state.selectedCard=id;state.selectedRune=null;
+    state.selectedCard=id;state.selectedRune=null;state.barrierNotice=null;
     const card=BY_ID[id],u=caster();
     state.selectedTarget=card.selfOnly||(choosesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
-      state.selectedTarget=targetsFor(card,u)[0]?.id??null;
+      state.selectedTarget=targetsFor(card,u).find(target=>!barrierNotice(target,card))?.id??null;
     paintUI();
   }
   function selectZenRune(kind){
@@ -804,6 +805,13 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
+    const notice=barrierNotice(target,card);
+    if(notice){
+      state.selectedTarget=null;
+      state.barrierNotice=notice;
+      paintUI();
+      return false;
+    }
     const runeKind=choosesRune(card)?state.selectedRune:null;
     if(choosesRune(card)&&!zenRunes(target).some(st=>st.kind===runeKind))return false;
     if(window.WizardrySession?.active){
@@ -966,7 +974,7 @@
           },0);
           score=healing*(role==="Support"?1.4:.8);
         }else if(towerBarriers.has(card.kind)){
-          if(!target||planned(target)||target.statuses.some(s=>s.kind===({sandwarrior:"sand_warrior",reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
+          if(!target||planned(target)||barrierConflict(target,BARRIER_SPELLS[card.kind])||target.statuses.some(s=>s.kind===({sandwarrior:"sand_warrior",reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.kind==="hightide"){
@@ -1000,11 +1008,13 @@
     const wounded=alive(u.team).filter(a=>a.hp<a.maxHp);
     if(!opponents.length)return null;
     const allies=alive(u.team);
+    const shieldTargets=card=>allies.filter(ally=>!barrierConflict(ally,BARRIER_SPELLS[card.kind]));
     const chargeTargets=allies.filter(ally=>canReceiveDebuff(ally,"electrical_charge"));
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
+      (!BARRIER_SPELLS[card.kind]||shieldTargets(card).length>0)&&
       (card.kind!=="hightide"||getUnit(state.environment?.ownerId)?.team===1-u.team)&&
       (card.kind!=="cursedhold"||(canReceiveDebuff(u,"cursed_hold")&&!activeCursedHold(u)))&&
       (!(choosesRune(card)||card.kind==="claritystrike")||allies.some(ally=>zenRunes(ally).length)));
@@ -1016,11 +1026,12 @@
       return null;
     }
     const card=choice?.card||affordable[Math.floor(Math.random()*affordable.length)];
+    const eligibleAllies=BARRIER_SPELLS[card.kind]?shieldTargets(card):allies;
     const target=choice?choice.target:["team","all_enemies"].includes(card.target)?null:
       (choosesRune(card)||card.kind==="claritystrike")?allies.find(ally=>zenRunes(ally).length):card.selfOnly?u:card.kind==="heal"?
         [...wounded].sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0]:
         card.kind==="electricalcharge"?chargeTargets[Math.floor(Math.random()*chargeTargets.length)]:
-        card.target==="ally"?allies[Math.floor(Math.random()*allies.length)]:
+        card.target==="ally"?eligibleAllies[Math.floor(Math.random()*eligibleAllies.length)]:
         opponents[Math.floor(Math.random()*opponents.length)];
     if(!target&&!["team","all_enemies"].includes(card.target))return null;
     return {casterId:u.id,cardId:card.id,targetId:target?.id||null,
@@ -1171,10 +1182,11 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":a.card.kind==="sandwarrior"?"sand_warrior":undefined);
+    const conflict=barrierNotice(target,a.card);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":a.card.kind==="sandwarrior"?"sand_warrior":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
-    const success=!emptyTide&&!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
+    const success=!emptyTide&&!sealed&&!full&&!conflict&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
     a.runeResult=success?"success":"failed";
     if(used){
@@ -1185,7 +1197,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=conflict??(emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy");
     tally(c,"casts",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1205,7 +1217,7 @@
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
+      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?"SHIELD CONFLICT":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -1805,8 +1817,25 @@
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
-  const BARRIER_SPELLS=new Set(["winddome","bubbleshield","reflectiveice","sandwarrior"]);
-  const BARRIER_RUNES=new Set(["wind_dome","bubble_shield","reflective_ice","sand_warrior"]);
+  const BARRIER_SPELLS={
+    winddome:"wind_dome",sandwarrior:"sand_warrior",
+    bubbleshield:"bubble_shield",reflectiveice:"reflective_ice"
+  };
+  const BARRIER_PRIORITY={wind_dome:1,sand_warrior:1,bubble_shield:2,reflective_ice:2};
+  const BARRIER_RUNES=new Set(Object.keys(BARRIER_PRIORITY));
+  function barrierConflict(target,kind){
+    const priority=BARRIER_PRIORITY[kind];
+    if(!target||!priority)return null;
+    return target.statuses.find(st=>st.kind!==kind&&BARRIER_PRIORITY[st.kind]===priority&&
+      (st.expiresRound==null||state.round<st.expiresRound));
+  }
+  function barrierNotice(target,card){
+    const kind=BARRIER_SPELLS[card?.kind],conflict=barrierConflict(target,kind);
+    if(!conflict)return null;
+    const existing=BY_ID[conflict.kind.replaceAll("_","")].name;
+    return target.name+" already has "+existing+". "+card.name+
+      " and "+existing+" are both priority "+BARRIER_PRIORITY[kind]+" shields.";
+  }
   function tally(unit,key,amount){
     if(unit&&amount>0)(unit.matchStats??={})[key]=(unit.matchStats[key]||0)+amount;
   }
@@ -1859,7 +1888,7 @@
     if(amount>0)recordBattleEvent(target.name+" recovers "+amount+" HP.");
   }
   function addStatus(u,kind,_icon,value,school){
-    if(BARRIER_RUNES.has(kind)&&!canReceiveDebuff(u,kind))return false;
+    if(BARRIER_RUNES.has(kind)&&(!canReceiveDebuff(u,kind)||barrierConflict(u,kind)))return false;
     if(DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
     const sourceId=state.animation?.action?.casterId;
     let existing=u.statuses.find(s=>s.kind===kind);
@@ -2011,7 +2040,9 @@
   }
   function absorbBarrierDamage(target,amount){
     if(amount<=0)return amount;
-    for(const shield of target.statuses.filter(st=>st.kind==="bubble_shield"||st.kind==="sand_warrior")){
+    for(const kind of ["sand_warrior","bubble_shield"]){
+      const shield=target.statuses.find(st=>st.kind===kind);
+      if(!shield)continue;
       const absorbed=Math.min(amount,shield.value);
       shield.value-=absorbed;
       amount-=absorbed;
@@ -3049,6 +3080,7 @@
          "Tap "+(card.target==="ally"?"an ally":"an enemy")+" to target "+card.name+"."):
         testing?"Choose any card. Mana refills each round.":"Slide across your cards to browse. Tap one, then choose a target."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
+    if(planning&&state.barrierNotice)ui.hint.textContent=state.barrierNotice;
     if(planning&&c&&state.plans[c.id]){ui.phase.textContent="WAITING FOR PLAYERS";ui.hint.textContent="Choice locked in. Waiting for the other players…";}
     const deckCount=$("battleDeckCount");
     if(deckCount)deckCount.textContent=(c?.drawPile.length||0)+" / "+(testing?(c?.grimoire?.length||24):24)+" in deck";
@@ -3093,6 +3125,7 @@
     if(runePicker.innerHTML!==options)runePicker.innerHTML=options;
     runePicker.value=state.selectedRune||"";
     const canConfirm=planning&&!!c&&!!card&&
+      !barrierConflict(target,BARRIER_SPELLS[card.kind])&&
       (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
       c.mana>=card.cost&&!state.plans[c.id]&&(!choosesRune(card)||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&choosesRune(card)&&runes.length);
@@ -3270,7 +3303,7 @@
     if(ui.targetPicker)ui.targetPicker.onchange=()=>{
       if(ui.targetPicker.value)selectTarget(ui.targetPicker.value);
       else if(state.phase==="planning"){
-        state.selectedTarget=null;
+        state.selectedTarget=null;state.barrierNotice=null;
         paintUI();
       }
     };
@@ -5621,7 +5654,7 @@
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
       if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
-      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
+      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(barrierConflict(t,BARRIER_SPELLS[card.kind]))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
        if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:choosesRune(card)?p.runeKind??null:null,team:u.team};}
       clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},

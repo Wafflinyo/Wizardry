@@ -201,6 +201,9 @@
   CARDS.push({id:"claritystrike",name:"Clarity Strike",school:"lightning",cost:5,target:"ally",
     kind:"claritystrike",accuracy:.80,icon:"ϟ",rarity:"RARE",duration:1800,hit:.54,
     description:"Destroy one random negative rune on yourself or an ally. The target gains 1 mana, even if they have no negative rune."});
+  CARDS.push({id:"cursedhold",name:"Cursed Hold",school:"dark",cost:6,target:"ally",selfOnly:true,
+    kind:"cursedhold",accuracy:.80,icon:"☠",rarity:"RARE",duration:1950,hit:.66,holdRounds:3,
+    description:"Bind a negative rune to yourself for 3 rounds, including this round. If a foe defeats you, the rune retaliates against them for twice the damage of the finishing hit."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -252,6 +255,7 @@
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
+    cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
@@ -274,7 +278,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="claritystrike"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="cursedhold"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -943,6 +947,9 @@
           if(!target||planned(target)||target.statuses.some(s=>s.kind===({bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
+        }else if(card.kind==="cursedhold"){
+          if(!canReceiveDebuff(u,"cursed_hold")||activeCursedHold(u))continue;
+          score=95+390*(1-u.hp/u.maxHp);
         }else if(card.fieldRounds){
           if(state.environment?.id===card.id||!canReceiveDebuff(u))continue;
           const hasMastery=u=>u.masteries?.includes(card.school);
@@ -973,6 +980,7 @@
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
+      (card.kind!=="cursedhold"||(canReceiveDebuff(u,"cursed_hold")&&!activeCursedHold(u)))&&
       (!(choosesRune(card)||card.kind==="claritystrike")||allies.some(ally=>zenRunes(ally).length)));
     if(!affordable.length)return null;
     const choice=u.towerRole?towerChoice(u,affordable):null;
@@ -1137,7 +1145,7 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const success=!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
@@ -1761,7 +1769,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set([ENVIRONMENT_RUNE,"aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set([ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
@@ -1779,12 +1787,30 @@
     tally(source===target?null:source,"damage",amount);
     tally(target,"tanked",amount);
   }
+  function activeCursedHold(unit){
+    return unit.statuses.find(st=>st.kind==="cursed_hold"&&state.round<st.expiresRound);
+  }
+  function retaliateWithCursedHold(source,target,amount){
+    const hold=activeCursedHold(target);
+    consumeStatus(target,"cursed_hold");
+    if(!hold||!source||source.hp<=0||source.team===target.team)return;
+
+    const retaliation=absorbBarrierDamage(source,amount*2);
+    loseHp(target,source,retaliation);
+    flash(source,"CURSED HOLD −"+retaliation,"#e2b0ff").cursedHold={x:target.x,y:target.y-72};
+    recordBattleEvent(target.name+"'s Cursed Hold strikes "+source.name+" for "+retaliation+" damage.");
+    if(source.hp<=0){
+      source.defeatElapsedMs=0;
+      flash(source,"DEFEATED","#ffd5b0");
+    }
+  }
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
     if(target.hp<=0)consumeStatus(target,"aromatherapy");
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
+    if(lost>0&&target.hp<=0)retaliateWithCursedHold(source,target,amount);
     return lost;
   }
   function healingSuppressed(school){
@@ -2427,7 +2453,7 @@
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
-    for(const u of state.units)for(const kind of ["static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors"]){
+    for(const u of state.units)for(const kind of ["static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold"]){
       const status=u.statuses.find(st=>st.kind===kind);
       if(status&&(u.hp<=0||state.round>=status.expiresRound))consumeStatus(u,kind);
     }
@@ -2456,9 +2482,9 @@
         continue;
       }
       const drain=Math.floor(effect.value*(seed?grovelandMultiplier(effect.school??"nature"):environmentDamageMultiplier(effect.school??"dark")));
-      const drained=Math.min(u.hp,absorbBarrierDamage(u,drain));
       const caster=getUnit(effect.sourceId);
-      loseHp(caster,u,drained);effect.remaining--;
+      const drained=loseHp(caster,u,absorbBarrierDamage(u,drain));
+      effect.remaining--;
       const healed=caster?.hp>0?Math.min(drained,Math.max(0,caster.maxHp-caster.hp)):0;
       if(healed){restoreHp(caster,caster,healed);flash(caster,"+"+healed+" HP",seed?"#a4f5a8":"#ddafe8");}
       flash(u,name.toUpperCase()+" −"+drained,seed?"#a4f5a8":"#d79ce7");
@@ -2473,8 +2499,7 @@
       if(u.hp<=0){consumeStatus(u,"soulless");continue;}
       if(state.round<curse.expiresRound)continue;
       consumeStatus(u,"soulless");
-      const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor(curse.value*environmentDamageMultiplier("dark"))));
-      loseHp(getUnit(curse.sourceId),u,amount);
+      const amount=loseHp(getUnit(curse.sourceId),u,absorbBarrierDamage(u,Math.floor(curse.value*environmentDamageMultiplier("dark"))));
       flash(u,"SOULLESS −"+amount,"#dfadff");
       recordBattleEvent(u.name+" takes "+amount+" damage from Soulless.");
       if(!u.hp){u.defeatElapsedMs=0;flash(u,"DEFEATED","#ffdb9c");}
@@ -2485,7 +2510,11 @@
       const effect=u.statuses.find(st=>st.kind===kind);if(!effect)continue;
       if(u.hp<=0){consumeStatus(u,kind);continue;}
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
-      effect.lastTickRound=state.round;const amount=Math.min(u.hp,absorbBarrierDamage(u,Math.floor((effect.value||50)*environmentDamageMultiplier(effect.school??statusSchool(effect,u))*grovelandMultiplier(effect.school??statusSchool(effect,u)))));loseHp(getUnit(effect.sourceId),u,amount);effect.remaining=Math.max(0,(effect.remaining||1)-1);
+      effect.lastTickRound=state.round;
+      const school=effect.school??statusSchool(effect,u);
+      const damage=Math.floor((effect.value||50)*environmentDamageMultiplier(school)*grovelandMultiplier(school));
+      const amount=loseHp(getUnit(effect.sourceId),u,absorbBarrierDamage(u,damage));
+      effect.remaining=Math.max(0,(effect.remaining||1)-1);
       const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
       flash(u,label.toUpperCase()+" −"+amount,kind==="burn"?"#ffa56a":kind==="poison"?"#b9e878":"#b6eeff");
       recordBattleEvent(u.name+" takes "+amount+" "+label+" damage ("+effect.remaining+" ticks remaining).");
@@ -2506,7 +2535,11 @@
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(choosesRune(card)||card.kind==="claritystrike"){
+    if(card.kind==="cursedhold"){
+      if(t!==c||addStatus(c,"cursed_hold",null,2,card.school)===false)return;
+      c.statuses.find(st=>st.kind==="cursed_hold").expiresRound=state.round+card.holdRounds;
+      flash(c,"CURSED HOLD · "+card.holdRounds+" ROUNDS","#e2b0ff");
+    }else if(choosesRune(card)||card.kind==="claritystrike"){
       const runes=zenRunes(t);
       const rune=choosesRune(card)?runes.find(st=>st.kind===action.runeKind)
         :runes.length?runes[Math.floor(Math.random()*runes.length)]:null;
@@ -3711,6 +3744,8 @@
   }
   function describeStatus(u,st){
     switch(st.kind){
+      case "cursed_hold":return {title:"Cursed Hold · Dark debuff",detail:
+        Math.max(0,st.expiresRound-state.round)+" rounds left. Your killer takes 2× the finishing hit’s damage. Cleansing the rune removes retaliation."};
       case "aromatherapy":return {title:"Aromatherapy · Wind debuff",detail:
         "Restores up to "+st.healingLeft+" HP per living teammate over "+st.remaining+" remaining rounds. Cleansing this rune ends the healing."};
       case ENVIRONMENT_RUNE:{
@@ -3816,7 +3851,7 @@
   const statusSchools={
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
     burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
-    water_prison:"water",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
+    water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
@@ -4036,6 +4071,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
@@ -4473,7 +4509,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4499,6 +4535,14 @@
       if(u.statuses.some(st=>st.kind==="frozen")){
         const catching=action?.card?.id==="heizmann"&&action.stage==="summon"&&action.target===u.id&&!action.windDomeTargets?.[u.id]&&action.elapsed/action.duration>=action.card.hit;
         if(!catching)renderables.push({type:"frozen-shell",depthY:u.y+.1,priority:2,draw:()=>window.Heizmann?.frozenShell(g,u)});
+      }
+      const binding=action?.card?.id==="cursedhold"&&action.stage==="summon"&&action.source===u.id;
+      if(u.hp>0&&(binding||activeCursedHold(u))){
+        const progress=binding?action.elapsed/action.duration:null;
+        renderables.push({type:"cursed-hold-back",depthY:u.y-.05,priority:2,
+          draw:()=>window.CursedHold?.bind(g,u,progress,time,false)});
+        renderables.push({type:"cursed-hold-front",depthY:u.y+.05,priority:2,
+          draw:()=>window.CursedHold?.bind(g,u,progress,time,true)});
       }
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time})});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
@@ -5187,6 +5231,7 @@
         g.restore();
       }
     }
+    for(const f of state.flashes)if(f.cursedHold)window.CursedHold?.rebound(g,f.cursedHold,{x:f.x,y:f.y+36},f.age);
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     drawZenCast(state.animation);

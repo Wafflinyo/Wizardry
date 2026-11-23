@@ -359,8 +359,8 @@ assert.equal(pressure.accuracy,.90);
 assert.deepEqual(JSON.parse(JSON.stringify(pressure)),
   JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===pressure.id));
 for(const [plan,queueAt,shield,marked] of [
-  ['windfist',0,false,true],['windfist',1,false,false],['calming',0,false,false],
-  ['static',0,false,false],['soul',0,false,false],['windfist',0,true,false],[null,0,false,false]
+  ['windfist',0,false,true],['windfist',1,false,true],['calming',0,false,true],
+  ['static',0,false,true],['soul',0,false,true],['windfist',0,true,false],[null,0,false,true]
 ]){
   const caster=unit('wind-caster',0),target=unit('target',1);
   if(shield)target.statuses.push({kind:'wind_dome',value:1});
@@ -372,11 +372,16 @@ for(const [plan,queueAt,shield,marked] of [
   assert.equal(has(target,'pressure_drop'),marked);
   if(marked){
     const pending=card('windfist'),cast={card:pending};
+    api.getState().round++;
+    api.applySpell({card:card('calming'),source:target.id,target:target.id,runeResult:'success',
+      action:{casterId:target.id,targetId:target.id}});
+    assert.ok(has(target,'pressure_drop'),'a support cast retains the rune');
     assert.equal(damage(target,caster,100,pending,cast),75);
-    assert.equal(damage(target,caster,100,pending,cast),100);
+    assert.equal(damage(target,caster,100,pending,cast),75);
+    assert.equal(damage(target,caster,100,pending,{card:pending}),100);
     assert.ok(!has(target,'pressure_drop'));
   }
 }
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(pressure.id));
-console.log('Pressure Drop: damage, pending first-hit-only reduction, support spell exclusion, past turn, shield and opening hand passed.');
+console.log('Pressure Drop: damage, whole-spell reduction, support casts, later rounds, shield and opening hand passed.');

@@ -247,8 +247,8 @@
     kind:"ripcurrent",damage:250,returnHeal:180,accuracy:.90,icon:"≈",rarity:"RARE",duration:3300,hit:.52,healAt:.85,
     description:"A low wave hits one enemy for 250 base damage, then returns to heal the living teammate with the lowest current HP for up to 180 base HP, including yourself."});
   CARDS.push({id:"pressuredrop",name:"Pressure Drop",school:"wind",cost:4,target:"enemy",
-    kind:"pressuredrop",damage:310,firstHitReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
-    description:"Compress air around one enemy and implode for 310 base damage. If they still have a damaging spell pending this round, its first hit deals 25% less damage."});
+    kind:"pressuredrop",damage:310,spellDamageReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
+    description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -263,7 +263,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
-    pressuredrop:"First hit of the target’s pending damage spell deals 25% less damage.",
+    pressuredrop:"Decay of Strength: all hits of the next damaging spell deal 25% less damage.",
     ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
     glacierlance:"+120 base damage against Frostbite.",
     coldstorage:"Next round: +2 mana and restore 150 HP.",
@@ -2226,6 +2226,16 @@
     const reflected=!!spell?.mirrorTarget;
     if(reflected&&(target.id!==spell.mirrorTarget||source.hp<=0))return 0;
     const recipient=reflected?source:target;
+    let reduction=0;
+    if(base>0&&source.team!==target.team){
+      reduction=spell?.outgoingDecayReduction;
+      if(reduction===undefined){
+        reduction=consumeStatus(source,"pressure_drop")?.value||0;
+        if(spell)spell.outgoingDecayReduction=reduction;
+        if(reduction)flash(source,"DECAY OF STRENGTH · −25% DAMAGE","#bfabeb");
+      }
+    }
+    base*=1-reduction;
     if(base>0&&source.team!==target.team&&card?.school&&card.school!=="fire"&&card.school!=="lightning"){
       if(spell?.frozenTouchTargets?.[recipient.id]){tally(recipient,"tanked",Math.floor(base*(spell?.damageVariant||1)*Builds.multiplier(source,card.school)));return 0;}
       if(consumeStatus(recipient,"frozen_touch")){
@@ -2238,7 +2248,7 @@
     // Estimate the original hit while leaving the intended target’s runes intact.
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
-    let raw=base*spellPower(source,card,spell),notes=[];
+    let raw=base*spellPower(source,card,spell),notes=reduction?["DECAY OF STRENGTH −25%"]:[];
     const fieldBoost=environmentDamageMultiplier(card?.school);
     if(base>0&&fieldBoost>1){
       raw*=fieldBoost;
@@ -2262,14 +2272,6 @@
     if(!reflected){
       gainElectricalChargeMana(target,card,spell);
       if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));return 0;}
-    }
-    const pressure=source.statuses.find(st=>st.kind==="pressure_drop"&&
-      st.round===state.round&&st.cardId===(spell?.card?.id??card?.id));
-    if(base>0&&source.team!==target.team&&pressure){
-      consumeStatus(source,"pressure_drop");
-      raw*=1-pressure.value;
-      notes.push("PRESSURE DROP −25%");
-      flash(source,"FIRST HIT −25%","#a2f0de");
     }
     if(base>0&&card?.school==="nature"){
       const bonus=growthBonus(source,spell);
@@ -2830,13 +2832,9 @@
     }else if(card.kind==="pressuredrop"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
-      if(t.hp<=0||preventsHitEffects(anim,t)||state.phase!=="resolving")return;
-      const pending=state.sequence?.slice(state.queueAt).find(plan=>plan.casterId===t.id&&!plan.pass);
-      const nextCard=BY_ID[pending?.cardId];
-      if(!nextCard?.damage||["static","souldrain","gunpowder"].includes(nextCard.kind))return;
-      if(addStatus(t,"pressure_drop",null,card.firstHitReduction,card.school)===false)return;
-      Object.assign(t.statuses.find(st=>st.kind==="pressure_drop"),{cardId:nextCard.id,round:state.round});
-      flash(t,"PRESSURE DROP · FIRST HIT −25%","#a2f0de");
+      if(t.hp<=0||preventsHitEffects(anim,t))return;
+      if(addStatus(t,"pressure_drop",null,card.spellDamageReduction,"dark")===false)return;
+      flash(t,"DECAY OF STRENGTH · NEXT SPELL −25%","#bfabeb");
     }else if(card.kind==="ripcurrent"){
       if(t?.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
@@ -3243,7 +3241,6 @@
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
-    for(const unit of state.units)consumeStatus(unit,"pressure_drop");
     for(const unit of state.units){
       const mark=unit.statuses.find(st=>st.kind==="blood_debt");
       if(mark&&(state.round>=mark.expiresRound||!(getUnit(mark.creditorId)?.hp>0)))consumeStatus(unit,"blood_debt");
@@ -4146,7 +4143,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
-      case "pressure_drop":return {title:"Pressure Drop · Weakened first hit",detail:"The first hit of "+(BY_ID[st.cardId]?.name||"the pending spell")+" deals 25% less damage this round."};
+      case "pressure_drop":return {title:"Decay of Strength · Outgoing damage",detail:"All hits of this wizard’s next damaging spell deal 25% less damage. Lasts until used or cleansed."};
       case "cold_storage":return {title:"Cold Storage · Banked resources",detail:"The crystal breaks at the start of round "+st.releaseRound+" and releases up to 2 mana and 150 HP."};
       case "blood_debt":return {title:"Blood Debt · Healing theft",detail:"The next HP recovery sends half to "+(getUnit(st.creditorId)?.name||"the caster")+", up to 200 HP. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};

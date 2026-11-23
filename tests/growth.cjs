@@ -340,6 +340,14 @@ assert.equal(wave.scene(waveCaster,waveTarget,null,rip.hit,rip).x,waveTarget.x);
 assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).x,waveAlly.x);
 assert.equal(wave.scene(waveCaster,waveTarget,waveAlly,rip.healAt,rip).y,waveAlly.y);
 assert.equal(new Set(Array.from({length:100},(_,i)=>wave.scene(waveCaster,waveTarget,waveAlly,i/100,rip).frame)).size,8);
+for(const [start,end] of [[.18,rip.hit],[rip.hit+.10,rip.healAt]]){
+  const poses=new Set(Array.from({length:60},(_,i)=>{
+    const pose=wave.scene(waveCaster,waveTarget,waveAlly,start+(end-start)*i/60,rip);
+    assert.ok(pose.moving);
+    return Math.floor(pose.rollPose);
+  }));
+  assert.equal(poses.size,8,'both traveling currents cycle through all eight water frames');
+}
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(rip.id));
 console.log('Rip Current: 250 damage, lowest living teammate, delayed 180 HP, misses, shield blocking, Dark Grounds and eight wave poses passed.');

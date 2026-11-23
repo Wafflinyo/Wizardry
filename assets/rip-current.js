@@ -1,17 +1,17 @@
 (() => {
   "use strict";
-  const atlas=new Image(),listeners=[];
+  const atlas=new Image(),rolling=new Image(),listeners=[];
   const tile=224;
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
-  let skimAtlas;
-  atlas.onload=()=>{
-    skimAtlas=document.createElement("canvas");
-    skimAtlas.width=atlas.naturalWidth;
-    skimAtlas.height=atlas.naturalHeight;
-    const ctx=skimAtlas.getContext("2d");
-    ctx.drawImage(atlas,0,0);
+  let skimAtlas,rollingSkim;
+  function groundBlend(image){
+    const blended=document.createElement("canvas");
+    blended.width=image.naturalWidth;
+    blended.height=image.naturalHeight;
+    const ctx=blended.getContext("2d");
+    ctx.drawImage(image,0,0);
     const mask=document.createElement("canvas");
-    mask.width=skimAtlas.width;mask.height=skimAtlas.height;
+    mask.width=blended.width;mask.height=blended.height;
     const maskCtx=mask.getContext("2d");
     for(let row=0;row<2;row++){
       const y=row*tile;
@@ -22,13 +22,19 @@
       feather.addColorStop(.82,"#ffffff00");
       feather.addColorStop(1,"#ffffff00");
       maskCtx.fillStyle=feather;
-      maskCtx.fillRect(0,y,skimAtlas.width,tile);
+      maskCtx.fillRect(0,y,blended.width,tile);
     }
     ctx.globalCompositeOperation="destination-in";
     ctx.drawImage(mask,0,0);
+    return blended;
+  }
+  atlas.onload=()=>{
+    skimAtlas=groundBlend(atlas);
     listeners.splice(0).forEach(fn=>fn());
   };
+  rolling.onload=()=>{rollingSkim=groundBlend(rolling);};
   atlas.src="./assets/rip-current-frames.webp?v=0.311.0";
+  rolling.src="./assets/rip-current-roll-frames.webp?v=0.311.2";
   const clamp=p=>Math.max(0,Math.min(1,p));
   const smooth=p=>{const t=clamp(p);return t*t*(3-2*t);};
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -47,13 +53,15 @@
       returning?arriving?p<arrival+.08?6:7:5:p<impact+.046?3:ally?4:7;
     const dir=returning?backDir:outDir;
     const alpha=smooth(p/.13)*(ally?1-smooth((p-.92)/.08):1-smooth((p-impact-.07)/.18));
-    return {x,y,p,frame,dir,alpha,impact,arrival,returning,arriving,
+    const rollClock=(p-(returning?turn:.16))*8.4;
+    const rollPose=((rollClock%1)+1)%1*8;
+    return {x,y,p,frame,dir,alpha,impact,arrival,returning,arriving,rollPose,
       moving:strike&&p>.16||returning&&!arriving,flow:returning?inbound:outbound};
   }
 
-  function sprite(ctx,index,x,y,w,h,dir,grounded=false){
+  function sprite(ctx,index,x,y,w,h,dir,image=atlas){
     ctx.save();ctx.translate(x,y);ctx.scale(dir,1);
-    ctx.drawImage((grounded&&skimAtlas)||atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,-w/2,-h*.83,w,h);
+    ctx.drawImage(image,index%4*tile,Math.floor(index/4)*tile,tile,tile,-w/2,-h*.83,w,h);
     ctx.restore();
   }
 
@@ -79,6 +87,30 @@
       shard(ctx,x,y,6+i%5*3,1+i%3,["#177d9c","#58d7d7","#d6ffff"][i%3]);
     }
     ctx.restore();
+  }
+
+  function rollingWave(ctx,s,width,height){
+    const index=Math.floor(s.rollPose);
+    const crossfade=smooth((s.rollPose-index-.68)/.32)*.46;
+    const image=rollingSkim;
+    const swell=1+Math.sin(s.rollPose*Math.PI/4)*.05;
+    sprite(ctx,index,s.x,s.y+5,width,height*swell,s.dir,image);
+    if(crossfade>0){
+      ctx.save();
+      ctx.globalAlpha*=crossfade;
+      sprite(ctx,(index+1)%8,s.x,s.y+5,width,height*swell,s.dir,image);
+      ctx.restore();
+    }
+    // Surface foam sweeps from the back of the swell over the lip.
+    for(let i=0;i<12;i++){
+      const u=(s.p*15+i*.167)%1;
+      const x=s.x+s.dir*(u-.54)*width*.80;
+      const y=s.y-5-Math.sin(u*Math.PI)*height*.245+Math.sin(i*2.39996)*10;
+      ctx.save();
+      ctx.globalAlpha*=Math.sin(u*Math.PI)*.69;
+      shard(ctx,x,y,3+u*5,1+i%3,["#b7f7ee","#ebffff","#6bd9e2"][i%3]);
+      ctx.restore();
+    }
   }
 
   function splash(ctx,s){
@@ -123,7 +155,8 @@
     ctx.save();
     ctx.globalAlpha*=s.alpha;
     if(s.moving){groundSkim(ctx,s,width);wake(ctx,s);}
-    sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir,s.moving);
+    if(s.moving&&rollingSkim)rollingWave(ctx,s,width,height);
+    else sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir,s.moving?(skimAtlas||atlas):atlas);
     if(s.arriving||s.p>=s.impact&&s.p<s.impact+.15)splash(ctx,s);
     ctx.restore();
   }

@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const TAU=Math.PI*2;
+  const formation={x:500,y:323};
   const clamp=n=>Math.min(1,Math.max(0,n));
   const mix=(a,b,t)=>a+(b-a)*t;
   const ease=t=>t*t*(3-2*t);
@@ -39,18 +40,22 @@
     const {hit,siphonAt}=cast.card;
     const hand={x:source.x+(target.x>source.x?24:-24),y:source.y-108};
     const chest={x:target.x,y:target.y-91};
-    const angle=Math.atan2(chest.y-hand.y,chest.x-hand.x);
+    const angle=Math.atan2(chest.y-formation.y,chest.x-formation.x);
     const dx=Math.cos(angle),dy=Math.sin(angle);
     const release=hit-.052;
     const flight=ease(clamp((p-release)/(hit-release)));
     const pierce=cast.javelinLanded?ease(clamp((p-hit)/.045)):0;
-    const form=ease(clamp(p/release));
-    const start={x:hand.x+dx*36*form,y:hand.y+dy*36*form};
+    const forming=clamp(p/release);
+    const chargeShape=ease(forming),widthScale=.28+.72*chargeShape;
+    const distance=Math.hypot(chest.x-formation.x,chest.y-formation.y);
+    const halfLength=(43+126*chargeShape)*widthScale/2;
+    const lead=Math.min(halfLength,distance*.6);
+    const start={x:formation.x+dx*lead,y:formation.y+dy*lead};
     const seat=point(start,chest,flight);
     const tip={x:seat.x+dx*pierce*64,y:seat.y+dy*pierce*64};
-    return {hand,chest,tip,angle,release,hit,siphonAt,p,flight,pierce,
+    return {hand,chest,tip,angle,release,hit,siphonAt,p,flight,pierce,forming,chargeShape,widthScale,
       blocked:cast.applied&&!cast.javelinLanded,charge:cast.javelinCharge??0,
-      depth:p>=hit?target.y:mix(source.y,target.y,flight),frame:Math.floor(p*222)};
+      depth:mix(formation.y+91,target.y,flight),frame:Math.floor(p*222)};
   }
   function drawSpear(g,s,layer){
     if(s.p<s.hit&&layer==="back")return;
@@ -58,6 +63,7 @@
     g.save();
     g.translate(s.tip.x,s.tip.y);
     g.rotate(s.angle);
+    g.scale(s.widthScale,.38+.62*s.forming);
     g.translate(-43,0);
     if(s.p>=s.hit&&!s.blocked){
       const cut=43-s.pierce*64;
@@ -69,15 +75,13 @@
     }
     const opacity=s.blocked?1-clamp((s.p-s.hit)/.08):1-clamp((s.p-.91)/.09);
     g.globalAlpha=opacity*clamp(s.p/.06);
-    const forming=clamp(s.p/s.release);
-    g.scale(.28+.72*ease(forming),.38+.62*forming);
-    spear(g,s.frame,ease(forming));
+    spear(g,s.frame,s.chargeShape);
     g.restore();
   }
   function drawDischarge(g,s){
-    const {p,hit,release,frame,hand,chest,tip}=s;
+    const {p,hit,release,frame,chest,tip}=s;
     if(p<hit){
-      const origin=p<release?hand:tip;
+      const origin=p<release?formation:tip;
       const reach=p<release?24+62*p/release:90;
       for(let i=0;i<5;i++){
         const a=i*TAU/5+frame*.13;

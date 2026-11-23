@@ -413,6 +413,11 @@ for(const direction of [-1,1]){
   const from={x:500-direction*260,y:370},to={x:500+direction*180,y:420};
   const cast={card:javelin,applied:true,javelinLanded:true,javelinCharge:2};
   const effect=ctx.window.ChainedJavelin;
+  const charging=effect.scene(from,to,.14,cast);
+  const otherCaster=effect.scene({...from,x:from.x+60,y:from.y+100},to,.14,cast);
+  assert.deepEqual(charging.tip,otherCaster.tip,'the javelin forms independently of the caster position');
+  assert.notDeepEqual(charging.hand,otherCaster.hand,'the chain still follows the caster');
+  assert.ok(Math.abs(charging.tip.x-500)<85&&Math.abs(charging.tip.y-323)<25);
   const contact=effect.scene(from,to,javelin.hit,cast);
   const embedded=effect.scene(from,to,.7,cast);
   assert.equal(contact.tip.x,to.x);

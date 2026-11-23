@@ -216,6 +216,9 @@
   CARDS.push({id:"whale",name:"Whale!",school:"water",cost:5,target:"all_enemies",
     kind:"whale",damage:320,accuracy:.80,icon:"≈",rarity:"RARE",duration:3300,hit:.70,
     description:"A huge humpback whale breaches and belly-flops onto the enemy team, dealing 320 base damage to each living enemy."});
+  CARDS.push({id:"flamewheel",name:"Flame Wheel",school:"fire",cost:2,target:"enemy",
+    kind:"summon",damage:200,accuracy:.90,icon:"♨",rarity:"RARE",duration:2050,hit:.79,
+    description:"A flaming monster-truck tire bounces across the arena and slams into one enemy for 200 base damage."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -293,7 +296,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="whale"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="flamewheel"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -4153,6 +4156,7 @@
       else if(card.id==="reflectiveice")window.ReflectiveIce?.portrait(c,width,height);
       else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
+      else if(card.id==="flamewheel")window.FlameWheel?.portrait(c,width,height);
       else if(card.id==="whale")window.WhaleSpell?.portrait(c,width,height);
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
@@ -4602,7 +4606,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5306,6 +5310,17 @@
           renderables.push({type:"whale-breach",depthY:Math.max(...targets.map(u=>u.y))+.14,
             priority:2,draw:()=>effect.draw(g,scene)});
         }
+      }
+    }
+    if(action?.stage==="summon"&&action.card.id==="flamewheel"){
+      const target=getUnit(action.target),source=getUnit(action.source),effect=window.FlameWheel;
+      if(target&&source&&effect){
+        const p=clamp(action.elapsed/action.duration,0,1);
+        const wheel=effect.pose(target,source.team,p);
+        renderables.push({type:"flame-wheel",depthY:wheel.floor+.11,priority:2,draw:()=>effect.draw(g,wheel)});
+        if(action.applied&&!preventsHitEffects(action,target))renderables.push({
+          type:"flame-wheel-impact",depthY:target.y+.13,priority:2,draw:()=>effect.impact(g,target,p)
+        });
       }
     }
     renderables.sort((a,b)=>a.depthY-b.depthY||a.priority-b.priority);

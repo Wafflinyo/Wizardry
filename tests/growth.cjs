@@ -270,7 +270,7 @@ for(const [remaining,extreme,blocked,expected] of [
 vm.runInNewContext(fs.readFileSync('assets/glacier-lance.js','utf8'),ctx);
 const lanceArt=ctx.window.GlacierLance;
 const formation=new Set(Array.from({length:100},(_,i)=>{
-  const pose=lanceArt.scene({x:780,y:390},i/100*(lance.hit-.145),lance.hit);
+  const pose=lanceArt.scene({x:780,y:390},i/100*(lance.hit-.068),lance.hit);
   assert.equal(pose.x,500);
   return pose.frame;
 }));
@@ -280,7 +280,18 @@ for(const target of [{x:200,y:490},{x:780,y:390}]){
   assert.equal(start.x,500);
   const contact=lanceArt.scene(target,lance.hit,lance.hit);
   const exit=lanceArt.scene(target,lance.hit+.16,lance.hit);
-  assert.ok((exit.x-target.x)*(target.x-500)>0);
+  assert.ok((exit.ground.x-target.x)*(target.x-500)>0);
+  assert.equal(exit.ground.y,target.y+19);
+  assert.equal(start.y,323);
+  assert.equal(contact.contact.y,target.y-93);
+  assert.equal(start.size,contact.size);
+  assert.equal(contact.size,exit.size);
+  assert.equal(contact.frame,exit.frame);
+  const tip=pose=>({x:pose.x+Math.cos(pose.angle)*pose.size*.48,y:pose.y+Math.sin(pose.angle)*pose.size*.48});
+  for(const [pose,destination] of [[contact,contact.contact],[exit,exit.ground]]){
+    assert.ok(Math.abs(tip(pose).x-destination.x)<1e-6);
+    assert.ok(Math.abs(tip(pose).y-destination.y)<1e-6);
+  }
   assert.ok((contact.x-target.x)*(target.x-500)<0);
 }
 api.startCardTester();

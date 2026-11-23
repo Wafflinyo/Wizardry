@@ -4921,8 +4921,10 @@
       if(target){
         const p=clamp(action.elapsed/action.duration,0,1);
         const scene=window.GlacierLance.scene(target,p,action.card.hit,action.glacierFrostbite,preventsHitEffects(action,target));
-        renderables.push({type:"glacier-lance",depthY:scene.depthY,priority:2,
-          draw:()=>window.GlacierLance.draw(g,scene)});
+        renderables.push({type:"glacier-lance-back",depthY:scene.backDepth,priority:2,
+          draw:()=>window.GlacierLance.draw(g,scene,"back")});
+        renderables.push({type:"glacier-lance-front",depthY:scene.depthY,priority:2,
+          draw:()=>window.GlacierLance.draw(g,scene,"front")});
       }
     }
     if(window.ColdStorage){

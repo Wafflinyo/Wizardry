@@ -270,7 +270,7 @@ for(const [remaining,extreme,blocked,expected] of [
 vm.runInNewContext(fs.readFileSync('assets/glacier-lance.js','utf8'),ctx);
 const lanceArt=ctx.window.GlacierLance;
 const formation=new Set(Array.from({length:100},(_,i)=>{
-  const pose=lanceArt.scene({x:780,y:390},i/100*(lance.hit-.068),lance.hit);
+  const pose=lanceArt.scene({x:780,y:390},i/100*(lance.hit-.034),lance.hit);
   assert.equal(pose.x,500);
   return pose.frame;
 }));
@@ -287,6 +287,12 @@ for(const target of [{x:200,y:490},{x:780,y:390}]){
   assert.equal(start.size,contact.size);
   assert.equal(contact.size,exit.size);
   assert.equal(contact.frame,exit.frame);
+  assert.ok(contact.hit-contact.release<.035);
+  assert.equal(start.split,1);
+  const passing=lanceArt.scene(target,lance.hit+.029,lance.hit);
+  assert.ok(passing.split>0&&passing.split<1);
+  assert.ok(passing.backDepth<target.y&&passing.depthY>target.y);
+  assert.equal(exit.split,0);
   const tip=pose=>({x:pose.x+Math.cos(pose.angle)*pose.size*.48,y:pose.y+Math.sin(pose.angle)*pose.size*.48});
   for(const [pose,destination] of [[contact,contact.contact],[exit,exit.ground]]){
     assert.ok(Math.abs(tip(pose).x-destination.x)<1e-6);

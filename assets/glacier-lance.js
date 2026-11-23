@@ -11,11 +11,11 @@
   const lerp=(a,b,p)=>a+(b-a)*p;
 
   function scene(target,p,hit,frostbite,blocked){
-    const release=hit-.068,plant=hit+.095;
+    const release=hit-.034,plant=hit+.058;
     const contact={x:target.x,y:target.y-93};
     const aim=Math.atan2(contact.y-origin.y,contact.x-origin.x);
     const length=Math.hypot(contact.x-origin.x,contact.y-origin.y);
-    const leading=Math.min(133,length*.49);
+    const leading=Math.min(114,length*.43);
     const direction=target.x<origin.x?-1:1;
     const ground={x:target.x+direction*133,y:target.y+19};
     const control={x:contact.x+Math.cos(aim)*66,y:contact.y+Math.sin(aim)*66};
@@ -36,16 +36,22 @@
       x=tip.x-Math.cos(angle)*leading;
       y=tip.y-Math.sin(angle)*leading;
     }
-    return {x,y,angle,contact,ground,aim,p,hit,release,plant,blocked,frostbite,
+    const size=leading/.48;
+    // Split along the current shaft at the chest plane. The tip crosses first.
+    const chestPlane=(contact.x-x)*Math.cos(angle)+(contact.y-y)*Math.sin(angle);
+    const split=p<hit?1:p>=plant?0:clamp(.5+chestPlane/size);
+    return {x,y,angle,contact,ground,aim,p,hit,release,plant,blocked,frostbite,split,
       impact:clamp((p-hit)/.19),frame:p<release?Math.min(9,Math.floor(p/release*10)):9,
-      size:leading/.48,depthY:lerp(462,target.y,clamp((p-release)/(hit-release)))+.12};
+      size,backDepth:target.y-.12,depthY:lerp(462,target.y,clamp((p-release)/(hit-release)))+.12};
   }
 
-  function sprite(ctx,frame,x,y,size,angle,image=atlas){
+  function sprite(ctx,frame,x,y,size,angle,image=atlas,start=0,end=1){
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(angle);
-    ctx.drawImage(image,frame%4*tile,Math.floor(frame/4)*tile,tile,tile,-size/2,-size/2,size,size);
+    const fraction=end-start;
+    ctx.drawImage(image,(frame%4+start)*tile,Math.floor(frame/4)*tile,fraction*tile,tile,
+      (start-.5)*size,-size/2,fraction*size,size);
     ctx.restore();
   }
 
@@ -62,16 +68,18 @@
     ctx.save();
     ctx.translate(s.x,s.y);
     ctx.rotate(s.angle);
-    const energy=smooth((s.p-s.release)/.023)*(1-smooth((s.p-s.plant+.018)/.018));
-    ctx.globalAlpha*=energy;
-    for(let i=0;i<9;i++){
-      const y=(i-4)*3.6;
-      const span=42+i%3*16+s.impact*65;
-      ctx.fillStyle=["#8aeaff","#3ca8df","#e3fcff"][i%3];
+    const launch=smooth((s.p-s.release)/.009);
+    const remaining=1-smooth((s.p-s.hit)/.075);
+    ctx.globalAlpha*=launch*remaining;
+    for(let i=0;i<15;i++){
+      const drift=((s.p-s.release)*37+i*.271)%1;
+      const y=(i-7)*(3.4+drift*2);
+      const head=s.size*(.46-drift*.62),tail=head-(65+i%4*21+drift*103);
+      ctx.fillStyle=["#8aeaff","#44b8f4","#f0fdff"][i%3];
       ctx.beginPath();
-      ctx.moveTo(-span-s.size*.37,y+(i-4)*2);
-      ctx.lineTo(-s.size*.18,y);
-      ctx.lineTo(-span*.53-s.size*.37,y+1.9);
+      ctx.moveTo(tail,y+(i-7)*1.2);
+      ctx.lineTo(head,y);
+      ctx.lineTo(tail+(head-tail)*.22,y+(i%3+1)*1.3);
       ctx.closePath();ctx.fill();
     }
     ctx.restore();
@@ -116,17 +124,19 @@
     ctx.restore();
   }
 
-  function draw(ctx,s){
+  function draw(ctx,s,layer){
     if(!ready())return;
-    if(s.p>=s.release&&s.p<s.plant&&!s.blocked)drawTrail(ctx,s);
-    if(s.p>=s.hit&&!s.blocked&&s.p>=s.plant)drawGround(ctx,s);
-    if(s.p<s.hit||!s.blocked){
+    const front=layer==="front";
+    const start=front?0:s.split,end=front?s.split:1;
+    if(front&&s.p>=s.release&&s.p<s.hit+.075&&!s.blocked)drawTrail(ctx,s);
+    if(!front&&s.p>=s.plant&&!s.blocked)drawGround(ctx,s);
+    if(end>start&&(s.p<s.hit||!s.blocked)){
       ctx.save();
       ctx.globalAlpha*=smooth(s.p/.12)*(1-smooth((s.p-.94)/.06));
-      sprite(ctx,s.frame,s.x,s.y,s.size,s.angle);
+      sprite(ctx,s.frame,s.x,s.y,s.size,s.angle,atlas,start,end);
       ctx.restore();
     }
-    if(s.p>=s.hit)drawImpact(ctx,s);
+    if(front&&s.p>=s.hit)drawImpact(ctx,s);
   }
 
   function portrait(ctx,w,h){

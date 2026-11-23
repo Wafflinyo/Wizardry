@@ -440,7 +440,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(razorang)),
   JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===razorang.id));
 for(const [failed,hasNeighbor,primaryHp,shield] of [
   [false,true,1000,false],[false,false,1000,false],[true,true,1000,false],
-  [false,true,230,false],[false,true,1000,true]
+  [false,true,230,false],[false,false,230,false],[false,true,1000,true]
 ]){
   const caster=Object.assign(unit('blade-caster',0),{x:240,y:380});
   const primary=Object.assign(unit('primary',1),{x:740,y:380,hp:primaryHp});
@@ -455,6 +455,7 @@ for(const [failed,hasNeighbor,primaryHp,shield] of [
   assert.equal(nearest.hp,hasNeighbor?1000:0);
   api.applyRazorangReturn(flight,caster);
   api.applyRazorangReturn(flight,caster);
+  assert.equal(primary.hp,failed?primaryHp:Math.max(0,primaryHp-260-(hasNeighbor?0:140)));
   assert.equal(nearest.hp,!hasNeighbor?0:failed||shield?1000:860);
   assert.equal(far.hp,hasNeighbor?1000:0);
 }
@@ -466,6 +467,9 @@ for(const dir of [-1,1]){
   const returning=effect.scene(source,first,second,razorang.returnAt,razorang);
   assert.equal(pass.blade.x,first.x);
   assert.equal(returning.blade.x,second.x);
+  const soloReturn=effect.scene(source,first,first,razorang.returnAt,razorang);
+  assert.equal(soloReturn.blade.x,first.x);
+  assert.ok(dir*Math.cos(soloReturn.angle)<-.9);
   assert.ok(dir*Math.cos(pass.angle)>.9&&dir*Math.cos(returning.angle)<-.9);
   const canvas=new Proxy({}, {get:(target,key)=>target[key]??(()=>{})});
   for(let frame=0;frame<=177;frame++){

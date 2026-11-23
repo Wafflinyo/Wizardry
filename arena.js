@@ -250,7 +250,7 @@
     kind:"pressuredrop",damage:310,spellDamageReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
-  CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back from the opposite side to hit their nearest living teammate for 140 base damage."});
+  CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back for 140 base damage on their nearest living teammate or on the same target if alone."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -265,7 +265,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
-    razorang:"Return pass hits the nearest living neighbor for 140 base damage.",
+    razorang:"140 base damage on the return pass. Hits the same target if alone.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
     pressuredrop:"Decay of Strength: all hits of the next damaging spell deal 25% less damage.",
     ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
@@ -2779,16 +2779,16 @@
   function lowestHpTeammate(team){
     return alive(team).reduce((lowest,unit)=>!lowest||unit.hp<lowest.hp?unit:lowest,null);
   }
-  function razorangNeighbor(target){
+  function razorangReturnTarget(target){
     return alive(target.team).filter(unit=>unit.id!==target.id).reduce((nearest,unit)=>{
       const distance=Math.hypot(unit.x-target.x,unit.y-target.y);
       return !nearest||distance<nearest.distance?{unit,distance}:nearest;
-    },null)?.unit;
+    },null)?.unit??target;
   }
   function applyRazorangReturn(cast,caster){
-    if(!cast.razorangNeighbor||cast.razorangReturned||!caster?.hp)return;
+    if(!cast.razorangReturnId||cast.razorangReturned||!caster?.hp)return;
     cast.razorangReturned=true;
-    const neighbor=getUnit(cast.razorangNeighbor);
+    const neighbor=getUnit(cast.razorangReturnId);
     if(neighbor?.hp>0)damage(caster,neighbor,cast.card.returnDamage,cast.card,cast);
   }
   function applyChainedJavelinSiphon(cast,caster){
@@ -2863,7 +2863,7 @@
       recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
     }else if(card.kind==="razorang"){
       if(!t||t.hp<=0||t.team===c.team)return;
-      anim.razorangNeighbor=razorangNeighbor(t)?.id;
+      anim.razorangReturnId=razorangReturnTarget(t).id;
       damage(c,t,card.damage,card,anim);
     }else if(card.kind==="chainedjavelin"){
       if(!t||t.hp<=0||t.team===c.team)return;
@@ -5008,7 +5008,7 @@
     if(action?.stage==="summon"&&action.card.kind==="razorang"&&window.Razorang){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
-        const neighbor=action.applied?getUnit(action.razorangNeighbor):razorangNeighbor(target);
+        const neighbor=action.applied?getUnit(action.razorangReturnId):razorangReturnTarget(target);
         const scene=window.Razorang.scene(source,target,neighbor,clamp(action.elapsed/action.duration,0,1),action.card);
         renderables.push({type:"razorang",depthY:scene.depth,priority:2,
           draw:()=>window.Razorang.draw(g,scene)});

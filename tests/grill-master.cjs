@@ -178,7 +178,15 @@ for(const scenario of [
 vm.runInNewContext(fs.readFileSync('assets/flashover.js','utf8'),ctx);
 const flashArt=ctx.window.Flashover;
 const {target}=setup();
-const flashFrames=new Set(Array.from({length:101},(_,i)=>flashArt.scene(target,i/100,flashover.hit).frame));
-assert.equal(flashFrames.size,8);
-assert.ok(flashArt.scene(target,.71,flashover.hit).width<flashArt.scene(target,.2,flashover.hit).width);
-console.log('Flashover: direct damage, regular and Extreme Burn bonus, Wind Dome, accuracy failure, opening hand and eight VFX poses passed.');
+const closing=Array.from({length:41},(_,i)=>flashArt.scene(target,flashover.hit*(.30+i*.017),flashover.hit));
+assert.ok(closing[0].radius>=150);
+assert.ok(closing.at(-1).radius<=33);
+for(let i=1;i<closing.length;i++){
+  assert.ok(closing[i].radius<closing[i-1].radius,'continuous horizontal closing');
+  assert.ok(closing[i].depth<closing[i-1].depth,'both arcs contract along the floor');
+}
+const impact=flashArt.scene(target,flashover.hit,flashover.hit);
+assert.equal(impact.closing,false);
+assert.equal(impact.radius,32);
+assert.equal(flashArt.scene(target,flashover.hit,flashover.hit,false,true).frame,7);
+console.log('Flashover: direct damage, Burn bonus, opening hand, continuous ring closure and blocked impact passed.');

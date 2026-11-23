@@ -9,15 +9,60 @@
   const clamp=p=>Math.max(0,Math.min(1,p));
   const smooth=p=>{const t=clamp(p);return t*t*(3-2*t);};
 
+  const segments=32;
+  const fireColors=["#812117","#c4381a","#ef541a","#ff8f26","#ffc653","#ffe79b"];
+  const ringPoints=Array.from({length:segments},(_,index)=>{
+    const a=(index+.5)*2*Math.PI/segments;
+    return {x:Math.cos(a),z:Math.sin(a),phase:index*2.39996};
+  });
+
   function scene(target,p,hit,burning,blocked){
-    const windup=clamp(p/hit),collapse=smooth((windup-.42)/.58);
+    const windup=clamp(p/hit),collapse=smooth((windup-.30)/.70);
     const burst=clamp((p-hit)/(1-hit));
-    const frame=windup<1?Math.min(4,Math.floor(windup*5)):blocked||burst>.63?7:burst<.20?5:6;
+    const frame=blocked||burst>.62?7:burst<.20?5:6;
     const size=1+clamp((target.y-390)/235)*.15;
     return {x:target.x,y:target.y,size,frame,burst,p,burning,blocked,
-      width:(232-89*collapse)*(windup<1?1:1+burst*(burning?1.02:.80)),
-      height:126+collapse*29+(windup===1&&burning?20:0),
+      closing:p<hit,
+      radius:151-119*collapse,
+      depth:53-42*collapse,
+      rise:smooth(windup/.42),
+      collapse,
+      width:272+burst*(burning?98:73),
+      height:178+(burning?25:0),
       alpha:smooth(p/.09)*(1-smooth((burst-.50)/.50))};
+  }
+
+  function facet(ctx,color,ax,ay,bx,by,cx,cy){
+    ctx.fillStyle=color;
+    ctx.beginPath();
+    ctx.moveTo(ax,ay);
+    ctx.lineTo(bx,by);
+    ctx.lineTo(cx,cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function ring(ctx,s,front){
+    const visible=s.closing?1:1-smooth(s.burst/.18);
+    if(visible<=0)return;
+    ctx.save();
+    ctx.globalAlpha*=visible*(front?1:.87);
+    for(const point of ringPoints){
+      if((point.z>0)!==front)continue;
+      const pulse=.5+.5*Math.sin(s.p*41+point.phase);
+      const x=point.x*s.radius,y=point.z*s.depth;
+      const spread=5+s.radius*.062;
+      const height=4+s.rise*(24+27*pulse+39*s.collapse);
+      const tipX=x+point.x*(7-16*s.collapse)+Math.sin(s.p*30+point.phase)*5;
+      const tipY=y-height;
+      const middleX=x+(tipX-x)*.46,middleY=y-height*.46;
+      facet(ctx,fireColors[0],x-spread,y+3,x+spread,y+3,middleX,middleY);
+      facet(ctx,fireColors[1],x-spread,y+2,tipX,tipY,middleX,middleY);
+      facet(ctx,fireColors[2],x+spread,y+2,tipX,tipY,middleX,middleY);
+      facet(ctx,fireColors[3],x-spread*.73,y+2,x+spread*.79,y+2,middleX,middleY);
+      facet(ctx,fireColors[pulse>.55?5:4],x-spread*.33,y+1,x+spread*.40,y+1,middleX,middleY+6);
+    }
+    ctx.restore();
   }
 
   function sparks(ctx,s){
@@ -38,18 +83,16 @@
   }
 
   function draw(ctx,s,layer){
-    if(!ready()||s.alpha<=0)return;
+    if(s.alpha<=0)return;
+    const front=layer==="front";
     ctx.save();
-    ctx.translate(s.x,s.y+9);
+    ctx.translate(s.x,s.y+3);
     ctx.scale(s.size,s.size);
     ctx.globalAlpha*=s.alpha;
-    const sx=s.frame%4*tile,sy=Math.floor(s.frame/4)*tile;
-    const top=-s.height*.93,split=Math.round(tile*.72);
-    if(layer==="back"){
-      ctx.drawImage(atlas,sx,sy,tile,split,-s.width/2,top,s.width,s.height*split/tile);
-    }else{
-      ctx.drawImage(atlas,sx,sy+split,tile,tile-split,-s.width/2,
-        top+s.height*split/tile,s.width,s.height*(tile-split)/tile);
+    ring(ctx,s,front);
+    if(front&&!s.closing&&ready()){
+      const sx=s.frame%4*tile,sy=Math.floor(s.frame/4)*tile;
+      ctx.drawImage(atlas,sx,sy,tile,tile,-s.width/2,-s.height*.93,s.width,s.height);
       sparks(ctx,s);
     }
     ctx.restore();

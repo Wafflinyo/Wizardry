@@ -3,7 +3,31 @@
   const atlas=new Image(),listeners=[];
   const tile=224;
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
-  atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  let skimAtlas;
+  atlas.onload=()=>{
+    skimAtlas=document.createElement("canvas");
+    skimAtlas.width=atlas.naturalWidth;
+    skimAtlas.height=atlas.naturalHeight;
+    const ctx=skimAtlas.getContext("2d");
+    ctx.drawImage(atlas,0,0);
+    const mask=document.createElement("canvas");
+    mask.width=skimAtlas.width;mask.height=skimAtlas.height;
+    const maskCtx=mask.getContext("2d");
+    for(let row=0;row<2;row++){
+      const y=row*tile;
+      const feather=maskCtx.createLinearGradient(0,y,0,y+tile);
+      feather.addColorStop(0,"#fff");
+      feather.addColorStop(.70,"#fff");
+      feather.addColorStop(.77,"#ffffff87");
+      feather.addColorStop(.82,"#ffffff00");
+      feather.addColorStop(1,"#ffffff00");
+      maskCtx.fillStyle=feather;
+      maskCtx.fillRect(0,y,skimAtlas.width,tile);
+    }
+    ctx.globalCompositeOperation="destination-in";
+    ctx.drawImage(mask,0,0);
+    listeners.splice(0).forEach(fn=>fn());
+  };
   atlas.src="./assets/rip-current-frames.webp?v=0.311.0";
   const clamp=p=>Math.max(0,Math.min(1,p));
   const smooth=p=>{const t=clamp(p);return t*t*(3-2*t);};
@@ -21,15 +45,15 @@
       lerp(target.y,ally.y,inbound)+Math.sin(inbound*Math.PI)*27:target.y;
     const frame=strike?p<.18?0:p<.32?1:2:
       returning?arriving?p<arrival+.08?6:7:5:p<impact+.046?3:ally?4:7;
-    const dir=frame===5?-backDir:returning?backDir:outDir;
+    const dir=returning?backDir:outDir;
     const alpha=smooth(p/.13)*(ally?1-smooth((p-.92)/.08):1-smooth((p-impact-.07)/.18));
     return {x,y,p,frame,dir,alpha,impact,arrival,returning,arriving,
       moving:strike&&p>.16||returning&&!arriving,flow:returning?inbound:outbound};
   }
 
-  function sprite(ctx,index,x,y,w,h,dir){
+  function sprite(ctx,index,x,y,w,h,dir,grounded=false){
     ctx.save();ctx.translate(x,y);ctx.scale(dir,1);
-    ctx.drawImage(atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,-w/2,-h*.83,w,h);
+    ctx.drawImage((grounded&&skimAtlas)||atlas,index%4*tile,Math.floor(index/4)*tile,tile,tile,-w/2,-h*.83,w,h);
     ctx.restore();
   }
 
@@ -44,10 +68,10 @@
   }
 
   function wake(ctx,s){
-    const dir=s.returning?-s.dir:s.dir;
+    const dir=s.dir;
     const swell=Math.sin(s.flow*Math.PI);
     ctx.save();
-    ctx.globalAlpha*=.58*swell;
+    ctx.globalAlpha*=.64*swell;
     for(let i=0;i<15;i++){
       const drift=(s.p*9+i*.137)%1;
       const x=s.x-dir*(29+drift*(s.returning?89:121));
@@ -75,14 +99,31 @@
     ctx.restore();
   }
 
+  function groundSkim(ctx,s,width){
+    ctx.save();
+    const dir=s.dir;
+    for(let i=0;i<4;i++){
+      const spread=width*(.34+i*.031);
+      const drift=((s.p*7+i*.23)%1)*24;
+      const x=s.x-dir*(11+drift),y=s.y+2+i*3;
+      ctx.fillStyle=i%2?"#7de8e543":"#238c9d62";
+      ctx.beginPath();
+      ctx.moveTo(x-dir*spread,y+3);
+      ctx.quadraticCurveTo(x,y-9,x+dir*spread*.72,y);
+      ctx.quadraticCurveTo(x,y+6,x-dir*spread,y+3);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function draw(ctx,s){
     if(!ready()||s.alpha<=0)return;
-    const width=s.arriving?187:s.returning?179:229;
-    const height=s.arriving?155:s.returning?111:137;
+    const width=s.arriving?206:s.returning?201:255;
+    const height=s.arriving?169:s.returning?123:151;
     ctx.save();
     ctx.globalAlpha*=s.alpha;
-    if(s.moving)wake(ctx,s);
-    sprite(ctx,s.frame,s.x,s.y+6,width,height,s.dir);
+    if(s.moving){groundSkim(ctx,s,width);wake(ctx,s);}
+    sprite(ctx,s.frame,s.x,s.y+5,width,height,s.dir,s.moving);
     if(s.arriving||s.p>=s.impact&&s.p<s.impact+.15)splash(ctx,s);
     ctx.restore();
   }

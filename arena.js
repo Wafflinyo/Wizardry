@@ -210,6 +210,9 @@
   CARDS.push({id:"thornyhug",name:"Thorny Hug",school:"nature",cost:2,target:"enemy",
     kind:"summon",damage:230,accuracy:.85,icon:"❧",rarity:"RARE",duration:3600,hit:.78,
     description:"A smiling cactus sprouts legs, runs to one enemy, and gives them a prickly hug for 230 base damage."});
+  CARDS.push({id:"hightide",name:"High Tide",school:"water",cost:3,target:"all_enemies",
+    kind:"hightide",accuracy:.90,icon:"≈",rarity:"RARE",duration:2600,hit:.44,
+    description:"Floods the arena with rough water and washes away the active environmental rune."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -264,6 +267,7 @@
     reflectiveice:"First damaging spell: take half and reflect half. Lasts 3 rounds.",
     cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
+    hightide:"Washes away the active environmental rune.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
@@ -285,7 +289,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="thornyhug"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="hightide"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -954,6 +958,9 @@
           if(!target||planned(target)||target.statuses.some(s=>s.kind===({reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
+        }else if(card.kind==="hightide"){
+          if(getUnit(state.environment?.ownerId)?.team!==1-u.team)continue;
+          score=300;
         }else if(card.kind==="cursedhold"){
           if(!canReceiveDebuff(u,"cursed_hold")||activeCursedHold(u))continue;
           score=95+390*(1-u.hp/u.maxHp);
@@ -987,6 +994,7 @@
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
       card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
+      (card.kind!=="hightide"||getUnit(state.environment?.ownerId)?.team===1-u.team)&&
       (card.kind!=="cursedhold"||(canReceiveDebuff(u,"cursed_hold")&&!activeCursedHold(u)))&&
       (!(choosesRune(card)||card.kind==="claritystrike")||allies.some(ally=>zenRunes(ally).length)));
     if(!affordable.length)return null;
@@ -2809,6 +2817,10 @@
         gainElectricalChargeMana(c,card,anim);
         applyLightningRod(c);
       }
+    }else if(card.kind==="hightide"){
+      const field=BY_ID[state.environment?.id];
+      if(field)recordBattleEvent("High Tide washes away "+field.name+".");
+      clearEnvironment();
     }else if(card.kind==="earthquake"){
       clearEnvironment();
       for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
@@ -3046,7 +3058,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
+    ui.chosenTarget.textContent=card?.kind==="hightide"?"Entire arena · Clears the environmental rune":card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -3063,7 +3075,7 @@
       c.mana>=card.cost&&!state.plans[c.id]&&(!choosesRune(card)||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&choosesRune(card)&&runes.length);
     ui.confirm.disabled=!canConfirm;
-    ui.confirm.textContent=(card?.fieldRounds||choosesRune(card)||card?.kind==="claritystrike")?"Cast "+card.name:card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    ui.confirm.textContent=(card?.fieldRounds||choosesRune(card)||card?.kind==="claritystrike"||card?.kind==="hightide")?"Cast "+card.name:card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -4134,6 +4146,7 @@
       else if(card.id==="reflectiveice")window.ReflectiveIce?.portrait(c,width,height);
       else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
+      else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="aromatherapy")window.Aromatherapy?.portrait(c,width,height);
@@ -4552,6 +4565,14 @@
       g.restore();
     }
     if(earthquakeProgress!==null)window.Earthquake?.draw(g,earthquakeProgress);
+    const tide=state.animation?.card?.id==="hightide"&&state.animation.stage==="summon"?state.animation:null;
+    const flood=tide?{width:vw,height:vh,floor:camera.y+325*fit,
+      progress:clamp(tide.elapsed/tide.duration,0,1),dir:getUnit(tide.source)?.team===1?-1:1}:null;
+    if(flood){
+      g.save();g.setTransform(ratio,0,0,ratio,0,0);
+      window.HighTide?.draw(g,flood);
+      g.restore();
+    }
     if(state.auras[0])ellipse(g,500,465,388,107,"#3fd5ce0b","#4debdc66",4);
     if(state.auras[1])ellipse(g,500,321,347,96,"#d5c65f0b","#eed88466",4);
     // Render environmental VFX first. Movable summons and airborne
@@ -4571,7 +4592,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5315,6 +5336,11 @@
     for(const f of state.flashes){
       if(f.iceReflection)window.ReflectiveIce?.deflect(g,f.iceReflection,{x:f.x,y:f.y+23},f.age);
       if(f.iceMelt)window.ReflectiveIce?.melt(g,f.x,f.y+108,f.age);
+    }
+    if(flood){
+      g.save();g.setTransform(ratio,0,0,ratio,0,0);
+      window.HighTide?.draw(g,{...flood,layer:"front"});
+      g.restore();
     }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);

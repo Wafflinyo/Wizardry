@@ -213,6 +213,9 @@
   CARDS.push({id:"hightide",name:"High Tide",school:"water",cost:3,target:"all_enemies",
     kind:"hightide",accuracy:.90,icon:"≈",rarity:"RARE",duration:2600,hit:.44,
     description:"Floods the arena with rough water and washes away the active environmental rune. Fails if no environmental rune is active."});
+  CARDS.push({id:"whale",name:"Whale!",school:"water",cost:5,target:"all_enemies",
+    kind:"whale",damage:320,accuracy:.80,icon:"≈",rarity:"RARE",duration:3300,hit:.70,
+    description:"A huge humpback whale breaches and belly-flops onto the enemy team, dealing 320 base damage to each living enemy."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -267,6 +270,7 @@
     reflectiveice:"First damaging spell: take half and reflect half. Lasts 3 rounds.",
     cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
+    whale:"320 damage to each living enemy.",
     hightide:"Washes away the active environmental rune. Fails without one.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
@@ -289,7 +293,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="hightide"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="whale"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -2822,6 +2826,8 @@
       const field=BY_ID[state.environment?.id];
       if(field)recordBattleEvent("High Tide washes away "+field.name+".");
       clearEnvironment();
+    }else if(card.kind==="whale"){
+      for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
     }else if(card.kind==="earthquake"){
       clearEnvironment();
       for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
@@ -3060,7 +3066,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
     ui.chosenTarget.textContent=card?.kind==="hightide"?(state.environment?"Entire arena · Clears the environmental rune":"Fails without an active environmental rune"):card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
-      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
+      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="whale"?"All living enemies · 320 each":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -4147,6 +4153,7 @@
       else if(card.id==="reflectiveice")window.ReflectiveIce?.portrait(c,width,height);
       else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
+      else if(card.id==="whale")window.WhaleSpell?.portrait(c,width,height);
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
@@ -4301,6 +4308,7 @@
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
     window.HighTide?.onReady(drawCardArts);
+    window.WhaleSpell?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
     window.ClarityStrike?.onReady(drawCardArts);
     window.Wynzor?.onReady(drawCardArts);
@@ -4594,7 +4602,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5285,6 +5293,19 @@
         if(action.applied&&!preventsHitEffects(action,target))renderables.push({
           type:"thorny-hug-impact",depthY:target.y+.10,priority:2,draw:()=>effect.burst(g,target,p)
         });
+      }
+    }
+    if(action?.stage==="summon"&&action.card.id==="whale"){
+      const source=getUnit(action.source),effect=window.WhaleSpell;
+      if(source&&effect){
+        const targets=sideUnits(1-source.team),p=clamp(action.elapsed/action.duration,0,1);
+        if(targets.length){
+          const scene=effect.scene(targets,source.team,p);
+          renderables.push({type:"whale-pool",depthY:Math.min(...targets.map(u=>u.y),scene.startY)-.25,
+            priority:2,draw:()=>effect.pool(g,scene)});
+          renderables.push({type:"whale-breach",depthY:Math.max(...targets.map(u=>u.y))+.14,
+            priority:2,draw:()=>effect.draw(g,scene)});
+        }
       }
     }
     renderables.sort((a,b)=>a.depthY-b.depthY||a.priority-b.priority);

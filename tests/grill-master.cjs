@@ -145,3 +145,40 @@ assert.ok(frames.every(([, , , , ,x])=>x===0),'all three tongues start from the 
 assert.ok(frames.at(-1)[8]>=130,'the core reaches full visual width at impact');
 
 console.log('Grill Master: flame contact timing, single 440 base hit, exact Burn roll and ticks, blocked or invalid targets, and mirrored summon animation passed.');
+
+const flashover=api.cards.find(c=>c.id==='flashover');
+assert.equal(flashover.cost,4);
+assert.equal(flashover.accuracy,.85);
+assert.deepEqual(JSON.parse(JSON.stringify(flashover)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c.id==='flashover'));
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(flashover.id));
+
+for(const scenario of [
+  {expected:340},
+  {burn:3,expected:480},
+  {burn:3,extreme:true,expected:480},
+  {burn:0,expected:340},
+  {burn:3,blocked:true,expected:0},
+  {burn:3,missed:true,expected:0}
+]){
+  const {caster,target,neighbor}=setup();
+  if(scenario.burn!==undefined)target.statuses.push({
+    kind:'burn',value:50,remaining:scenario.burn,extreme:!!scenario.extreme
+  });
+  if(scenario.blocked)api.addStatus(target,'wind_dome',null,1);
+  const cast={card:flashover,source:caster.id,target:target.id,
+    action:{casterId:caster.id,targetId:target.id},runeResult:scenario.missed?'failed':'success',damageVariant:1};
+  api.applySpell(cast);
+  api.applySpell(cast);
+  assert.equal(target.hp,target.maxHp-scenario.expected);
+  assert.equal(neighbor.hp,neighbor.maxHp);
+  assert.equal(target.statuses.find(st=>st.kind==='burn')?.remaining,scenario.burn);
+}
+vm.runInNewContext(fs.readFileSync('assets/flashover.js','utf8'),ctx);
+const flashArt=ctx.window.Flashover;
+const {target}=setup();
+const flashFrames=new Set(Array.from({length:101},(_,i)=>flashArt.scene(target,i/100,flashover.hit).frame));
+assert.equal(flashFrames.size,8);
+assert.ok(flashArt.scene(target,.71,flashover.hit).width<flashArt.scene(target,.2,flashover.hit).width);
+console.log('Flashover: direct damage, regular and Extreme Burn bonus, Wind Dome, accuracy failure, opening hand and eight VFX poses passed.');

@@ -250,6 +250,7 @@
     kind:"pressuredrop",damage:310,spellDamageReduction:.25,accuracy:.90,icon:"≋",rarity:"RARE",duration:1750,hit:.66,
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
+  CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back from the opposite side to hit their nearest living teammate for 140 base damage."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -264,6 +265,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    razorang:"Return pass hits the nearest living neighbor for 140 base damage.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
     pressuredrop:"Decay of Strength: all hits of the next damaging spell deal 25% less damage.",
     ripcurrent:"The returning wave heals your lowest-HP teammate for 180 base HP.",
@@ -338,7 +340,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1383,6 +1385,7 @@
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
+    if(a.stage==="summon"&&a.card.kind==="razorang"&&p>=a.card.returnAt)applyRazorangReturn(a,caster);
     if(a.stage==="summon"&&a.card.kind==="chainedjavelin"&&p>=a.card.siphonAt)applyChainedJavelinSiphon(a,caster);
     if(a.stage==="summon"&&a.card.kind==="ripcurrent"&&p>=a.card.healAt)applyRipCurrentHeal(a,caster);
     if(a.stage==="summon"&&a.card.kind==="briarremedy"&&p>=a.card.healAt)applyBriarHealing(a,caster);
@@ -2776,6 +2779,18 @@
   function lowestHpTeammate(team){
     return alive(team).reduce((lowest,unit)=>!lowest||unit.hp<lowest.hp?unit:lowest,null);
   }
+  function razorangNeighbor(target){
+    return alive(target.team).filter(unit=>unit.id!==target.id).reduce((nearest,unit)=>{
+      const distance=Math.hypot(unit.x-target.x,unit.y-target.y);
+      return !nearest||distance<nearest.distance?{unit,distance}:nearest;
+    },null)?.unit;
+  }
+  function applyRazorangReturn(cast,caster){
+    if(!cast.razorangNeighbor||cast.razorangReturned||!caster?.hp)return;
+    cast.razorangReturned=true;
+    const neighbor=getUnit(cast.razorangNeighbor);
+    if(neighbor?.hp>0)damage(caster,neighbor,cast.card.returnDamage,cast.card,cast);
+  }
   function applyChainedJavelinSiphon(cast,caster){
     if(!cast.javelinLanded||cast.javelinSiphoned||!caster?.hp)return;
     const target=getUnit(cast.target??cast.action.targetId);
@@ -2846,6 +2861,10 @@
       for(const kind of BRIAR_EFFECTS)if(anim.briarRemoved.includes(kind))consumeStatus(t,kind);
       flash(t,"CLEANSED · "+anim.briarRemoved.length,"#d5edab");
       recordBattleEvent(c.name+"'s Briar Remedy cleanses "+anim.briarRemoved.join(", ")+" from "+t.name+".");
+    }else if(card.kind==="razorang"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      anim.razorangNeighbor=razorangNeighbor(t)?.id;
+      damage(c,t,card.damage,card,anim);
     }else if(card.kind==="chainedjavelin"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
@@ -4501,6 +4520,7 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
+      else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
       else if(card.id==="pressuredrop")window.PressureDrop?.portrait(c,width,height);
       else if(card.id==="ripcurrent")window.RipCurrent?.portrait(c,width,height);
@@ -4967,7 +4987,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4985,6 +5005,17 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(action?.stage==="summon"&&action.card.kind==="razorang"&&window.Razorang){
+      const source=getUnit(action.source),target=getUnit(action.target);
+      if(source&&target){
+        const neighbor=action.applied?getUnit(action.razorangNeighbor):razorangNeighbor(target);
+        const scene=window.Razorang.scene(source,target,neighbor,clamp(action.elapsed/action.duration,0,1),action.card);
+        renderables.push({type:"razorang",depthY:scene.depth,priority:2,
+          draw:()=>window.Razorang.draw(g,scene)});
+        for(const strike of scene.strikes)renderables.push({type:"razorang-impact",depthY:strike.unit.y+.14,priority:2,
+          draw:()=>window.Razorang.impact(g,strike)});
+      }
+    }
     if(action?.stage==="summon"&&action.card.kind==="chainedjavelin"&&window.ChainedJavelin){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
@@ -6141,7 +6172,7 @@
       return Math.max(0,Math.min(1,card.accuracy+
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
-    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,
+    applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,applyRazorangReturn,
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

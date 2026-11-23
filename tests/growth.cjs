@@ -240,7 +240,7 @@ const storageTester=storageState.units[0];
 storageTester.hp=storageTester.maxHp-200;
 storageTester.mana=5;
 api.applySpell({card:storage,runeResult:'success',action:{casterId:storageTester.id,targetId:storageTester.id}});
-assert.ok(storageTester.hand.includes(storage.id));
+assert.ok(storageTester.drawPile.includes(storage.id));
 api.finishRound();
 assert.equal(storageTester.hp,storageTester.maxHp-50);
 assert.match(storageState.log.join('\n'),/opens for 2 mana and 150 HP/);
@@ -434,3 +434,46 @@ for(const direction of [-1,1]){
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(javelin.id));
 console.log('Chained Javelin: hit, delayed mana transfer, depleted targets, misses, Wind Dome, mirrored animation and opening hand passed.');
+
+const razorang=card('razorang');
+assert.deepEqual(JSON.parse(JSON.stringify(razorang)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===razorang.id));
+for(const [failed,hasNeighbor,primaryHp,shield] of [
+  [false,true,1000,false],[false,false,1000,false],[true,true,1000,false],
+  [false,true,230,false],[false,true,1000,true]
+]){
+  const caster=Object.assign(unit('blade-caster',0),{x:240,y:380});
+  const primary=Object.assign(unit('primary',1),{x:740,y:380,hp:primaryHp});
+  const nearest=Object.assign(unit('nearest',1),{x:730,y:440,hp:hasNeighbor?1000:0});
+  const far=Object.assign(unit('far',1),{x:890,y:510,hp:hasNeighbor?1000:0});
+  if(shield)nearest.statuses.push({kind:'wind_dome',value:1});
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[caster,primary,far,nearest],auras:[null,null],log:[],flashes:[]});
+  const flight={card:razorang,source:caster.id,target:primary.id,runeResult:failed?'failed':'success',damageVariant:1,
+    action:{casterId:caster.id,targetId:primary.id}};
+  api.applySpell(flight);
+  assert.equal(primary.hp,failed?primaryHp:Math.max(0,primaryHp-260));
+  assert.equal(nearest.hp,hasNeighbor?1000:0);
+  api.applyRazorangReturn(flight,caster);
+  api.applyRazorangReturn(flight,caster);
+  assert.equal(nearest.hp,!hasNeighbor?0:failed||shield?1000:860);
+  assert.equal(far.hp,hasNeighbor?1000:0);
+}
+vm.runInNewContext(fs.readFileSync('assets/razorang.js','utf8'),ctx);
+for(const dir of [-1,1]){
+  const effect=ctx.window.Razorang;
+  const source={x:500-dir*230,y:370},first={x:500+dir*240,y:370},second={x:500+dir*170,y:440};
+  const pass=effect.scene(source,first,second,razorang.hit,razorang);
+  const returning=effect.scene(source,first,second,razorang.returnAt,razorang);
+  assert.equal(pass.blade.x,first.x);
+  assert.equal(returning.blade.x,second.x);
+  assert.ok(dir*Math.cos(pass.angle)>.9&&dir*Math.cos(returning.angle)<-.9);
+  const canvas=new Proxy({}, {get:(target,key)=>target[key]??(()=>{})});
+  for(let frame=0;frame<=177;frame++){
+    const pose=effect.scene(source,first,second,frame/177,razorang);
+    effect.draw(canvas,pose);
+    for(const strike of pose.strikes)effect.impact(canvas,strike);
+  }
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(razorang.id));
+console.log('Razorang: separate contacts, nearest living neighbor, lethal first hit, shield, miss, solo target, Card Tester and mirrored return passed.');

@@ -74,32 +74,88 @@
     ctx.restore();
   }
 
-  function deflect(ctx, from, to, age) {
-    if(age>=.74)return;
-    const frame=Math.floor(age*32)/32;
-    const fade=clamp((.74-frame)/.57);
-    const travel=clamp((frame+.045)/.22);
-    const dx=to.x-from.x,dy=to.y-from.y;
-    const x=from.x+dx*travel,y=from.y+dy*travel;
-    const distance=Math.hypot(dx,dy)||1,nx=-dy/distance,ny=dx/distance;
+  function shatter(ctx, origin, time) {
+    if(time>.56)return;
+    const power=1-clamp(time/.56);
     ctx.save();
-    ctx.globalAlpha *= fade;
-    ctx.lineWidth=1.2;
-    polygon(ctx,[[from.x,from.y],[x+nx*10,y+ny*10],[x,y],[x-nx*6,y-ny*6]],"#71d7ff91");
-    for(let i=0;i<9;i++){
-      const angle=i*2.39996;
-      const distance=34+frame*(78+i%4*21);
-      crystal(ctx,from.x+Math.cos(angle)*distance,from.y+Math.sin(angle)*distance+65*frame*frame,5+i%4,angle+frame*5);
+    ctx.translate(origin.x,origin.y);
+    ctx.globalAlpha *= power;
+    if(time<.12){
+      ctx.save();
+      ctx.scale(87,96);
+      ctx.globalAlpha *= 1-clamp((time-.035)/.085);
+      ctx.lineWidth=.014;
+      faces(ctx,1,2,"front");
+      ctx.restore();
+      const cracks=clamp(time/.075);
+      ctx.lineWidth=2;
+      for(let i=0;i<7;i++){
+        const angle=i*tau/7+.18,dx=Math.cos(angle),dy=Math.sin(angle);
+        const r=31+cracks*66;
+        polygon(ctx,[[0,0],[dx*24-dy*10,dy*24+dx*10],[dx*r,dy*r],
+          [dx*30+dy*9,dy*30-dx*9]],i%2?"#dcfbff":"#96e8ff");
+      }
     }
-    crystal(ctx,x,y,14,Math.atan2(dy,dx)+Math.PI/2);
-    if(travel===1){
-      for(let i=0;i<8;i++){
-        const angle=i*tau/8;
-        const radius=9+(frame-.17)*100;
-        crystal(ctx,to.x+Math.cos(angle)*radius,to.y+Math.sin(angle)*radius,4+i%3,angle);
+    const burst=clamp((time-.065)/.35);
+    if(burst>0){
+      const reach=1-(1-burst)**2;
+      for(let i=0;i<16;i++){
+        const angle=i*tau/16+.12,dx=Math.cos(angle),dy=Math.sin(angle);
+        const radius=64+reach*(53+i%4*16);
+        const x=dx*radius,y=dy*radius+60*burst*burst;
+        const size=(i%3===0?23:11+i%4*3)*(1-burst*.45);
+        crystal(ctx,x,y,size,angle+time*(i%2?7:-5));
       }
     }
     ctx.restore();
+  }
+
+  function deflect(ctx, from, to, age) {
+    if(age>=.84)return;
+    const t=Math.floor(Math.max(0,age)*48)/48;
+    const launch=.085,arrival=.25;
+    shatter(ctx,from,t);
+    if(t<launch)return;
+    const travel=clamp((t-launch)/(arrival-launch));
+    const fade=(1-clamp((t-arrival)/.36))**1.3;
+    const dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1;
+    ctx.save();
+    ctx.translate(from.x,from.y);
+    ctx.rotate(Math.atan2(dy,dx));
+    const reach=length*travel;
+    const width=(16+13*Math.sin(travel*Math.PI))*Math.max(.24,fade);
+    ctx.globalAlpha *= fade;
+    polygon(ctx,[[0,-5],[reach*.25,-width*.82],[reach*.63,-width*1.3],
+      [reach+10,0],[reach*.73,width*.92],[reach*.22,width*.64],[0,5]],"#496efe99");
+    polygon(ctx,[[0,-4],[reach*.31,-width*.37],[reach*.68,-width*.82],
+      [reach+10,0],[reach*.54,width*.48],[0,4]],"#79efffdc");
+    polygon(ctx,[[0,-2],[reach*.40,-width*.16],[reach*.75,-width*.35],
+      [reach+11,0],[reach*.55,width*.22],[0,2]],"#e8ffff");
+    for(let i=0;i<5;i++){
+      const x=reach*(.19+i*.145),side=i%2?1:-1;
+      polygon(ctx,[[x,0],[x+reach*.09,side*width*.25],[x+reach*.19,side*width*(.89+i%3*.18)],
+        [x+reach*.07,side*width*.54]],i%2?"#a0faffb8":"#aeb3ffac");
+    }
+    if(travel<1)crystal(ctx,reach,0,13+width*.2,Math.PI/2);
+    ctx.restore();
+
+    if(travel===1){
+      const impact=clamp((t-arrival)/.57);
+      ctx.save();
+      ctx.translate(to.x,to.y);
+      ctx.globalAlpha *= (1-impact)**1.55;
+      const ring=Array.from({length:12},(_,i)=>{
+        const angle=i*tau/12,r=12+impact*76;
+        return [Math.cos(angle)*r,Math.sin(angle)*r*.74];
+      });
+      ctx.lineWidth=2.6*(1-impact);
+      polygon(ctx,ring,"#70d9ff30","#baf5ff");
+      for(let i=0;i<12;i++){
+        const angle=i*2.39996,r=13+impact*(62+i%3*19);
+        crystal(ctx,Math.cos(angle)*r,Math.sin(angle)*r*.78,5+i%4*2,angle+impact*2);
+      }
+      ctx.restore();
+    }
   }
 
   function melt(ctx,x,y,age) {

@@ -204,6 +204,9 @@
   CARDS.push({id:"cursedhold",name:"Cursed Hold",school:"dark",cost:6,target:"ally",selfOnly:true,
     kind:"cursedhold",accuracy:.80,icon:"☠",rarity:"RARE",duration:1950,hit:.66,holdRounds:3,
     description:"Bind a negative rune to yourself for 3 rounds, including this round. If a foe defeats you, the rune retaliates against them for twice the damage of the finishing hit."});
+  CARDS.push({id:"reflectiveice",name:"Reflective Ice",school:"ice",cost:4,target:"ally",
+    kind:"reflectiveice",accuracy:.90,icon:"❄",rarity:"RARE",duration:1750,hit:.72,wardRounds:3,
+    description:"Encase yourself or an ally in reflective ice for 3 rounds, including the casting round. Splits the first damaging spell that gets through: the protected wizard takes half and a random living enemy takes the other half. Then the ice breaks."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -255,6 +258,7 @@
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
     flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
+    reflectiveice:"First damaging spell: take half and reflect half. Lasts 3 rounds.",
     cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
@@ -278,7 +282,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="cursedhold"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="reflectiveice"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -884,7 +888,7 @@
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
-  const towerBarriers=new Set(["winddome","bubbleshield","shield","frozentouch"]);
+  const towerBarriers=new Set(["reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
@@ -944,7 +948,7 @@
           },0);
           score=healing*(role==="Support"?1.4:.8);
         }else if(towerBarriers.has(card.kind)){
-          if(!target||planned(target)||target.statuses.some(s=>s.kind===({bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
+          if(!target||planned(target)||target.statuses.some(s=>s.kind===({reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.kind==="cursedhold"){
@@ -1145,7 +1149,7 @@
     const guaranteed=grovelandGuarantees(a.card);
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const success=!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
@@ -1771,15 +1775,15 @@
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set([ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","wind_dome","bubble_shield","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
-  const BARRIER_SPELLS=new Set(["winddome","bubbleshield"]);
-  const BARRIER_RUNES=new Set(["wind_dome","bubble_shield"]);
+  const BARRIER_SPELLS=new Set(["winddome","bubbleshield","reflectiveice"]);
+  const BARRIER_RUNES=new Set(["wind_dome","bubble_shield","reflective_ice"]);
   function tally(unit,key,amount){
     if(unit&&amount>0)(unit.matchStats??={})[key]=(unit.matchStats[key]||0)+amount;
   }
@@ -1807,7 +1811,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0)consumeStatus(target,"aromatherapy");
+    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     if(lost>0&&target.hp<=0)retaliateWithCursedHold(source,target,amount);
@@ -2012,6 +2016,27 @@
     return Math.floor(Builds.healing(card,caster)*(1+bonus)*grovelandMultiplier(card.school));
   }
 
+  function splitReflectiveIce(target,amount,spell){
+    if(amount<=0||target.hp<=0)return null;
+    let split=spell?.reflectiveIceTargets?.[target.id];
+    if(!split&&!target.statuses.some(st=>st.kind==="reflective_ice"&&state.round<st.expiresRound))return null;
+    let enemy=split&&getUnit(split.enemyId);
+    if(!enemy||enemy.hp<=0){
+      const enemies=alive(1-target.team);
+      if(!enemies.length)return null;
+      enemy=enemies[Math.floor(Math.random()*enemies.length)];
+    }
+    if(!split){
+      consumeStatus(target,"reflective_ice");
+      split={carry:0,enemyId:enemy.id};
+      if(spell)(spell.reflectiveIceTargets??={})[target.id]=split;
+    }
+    split.enemyId=enemy.id;
+    const reflected=Math.floor((amount+split.carry)/2);
+    split.carry=(amount+split.carry)%2;
+    return {enemy,reflected};
+  }
+
   function damage(source,target,base,card,spell=null){
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
@@ -2096,7 +2121,7 @@
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
-    const amount=absorbBarrierDamage(recipient,impact-redirected);
+    let amount=absorbBarrierDamage(recipient,impact-redirected);
     if(reflected){
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
@@ -2105,8 +2130,26 @@
       healFromLightningRod(rodOwners,redirected,recipient);
       return 0;
     }
+    const split=source.team!==target.team?splitReflectiveIce(target,amount,spell):null;
+    if(split){
+      amount-=split.reflected;
+      notes.push("REFLECTIVE ICE");
+    }
     const oldHp=target.hp,wasAlive=target.hp>0;
     loseHp(source,target,amount);
+    if(split){
+      const enemy=split.enemy;
+      const reflected=enemy.hp>0?absorbBarrierDamage(enemy,split.reflected):0;
+      if(reflected>0){
+        loseHp(target,enemy,reflected);
+        recordBattleEvent(target.name+"’s Reflective Ice returns "+reflected+" damage to "+enemy.name+".");
+        if(enemy.hp<=0){
+          enemy.defeatElapsedMs=0;
+          flash(enemy,"DEFEATED","#ffd5b0");
+        }
+      }
+      flash(enemy,"REFLECTIVE ICE −"+reflected,"#b8f7ff").iceReflection={x:target.x,y:target.y-85};
+    }
     if(wasAlive&&target.hp===0){
       // Start the one-shot defeat animation at the exact lethal hit.
       // This remains independent of the attacker's ongoing summon/trace.
@@ -2449,6 +2492,13 @@
   }
 
   function tickBurnsForRound(){
+    for(const u of state.units){
+      const ward=u.statuses.find(st=>st.kind==="reflective_ice");
+      if(ward&&state.round>=ward.expiresRound){
+        consumeStatus(u,ward.kind);
+        if(u.hp>0)flash(u,"REFLECTIVE ICE MELTS","#addef6").iceMelt=true;
+      }
+    }
     expireGunpowderCoats();
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
@@ -2638,6 +2688,10 @@
       if(t?.hp>0&&t.team!==c.team&&applyPeriodicStatus(t,"water_prison",card)){
         t.statuses.find(st=>st.kind==="water_prison").sourceId=c.id;
       }
+    }else if(card.kind==="reflectiveice"){
+      if(addStatus(t,"reflective_ice",null,.5,card.school)===false)return;
+      t.statuses.find(st=>st.kind==="reflective_ice").expiresRound=state.round+card.wardRounds;
+      flash(t,"REFLECTIVE ICE · 3 ROUNDS","#b8f7ff");
     }else if(card.kind==="bubbleshield"){
       if(addStatus(t,"bubble_shield",null,card.shieldHp,card.school)===false)return;
       flash(t,"BUBBLE SHIELD · "+card.shieldHp+" HP","#a6f2ff");
@@ -3733,7 +3787,7 @@
   }
   function plateAlpha(){return 1;}
   function unitStatuses(u){
-    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:st.kind==='wind_dome'?4:0;
+    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice")?4:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
@@ -3761,6 +3815,8 @@
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "water_prison":return {title:"Water Prison · Water debuff",detail:st.value+" damage at the start of each turn. "+st.remaining+" ticks remain. Recasting refreshes the duration."};
+      case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
+        Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks the next incoming damaging spell, then disappears. Against Double Pick, it blocks the first pick and the second can hit. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
@@ -3852,7 +3908,7 @@
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
     burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
-    frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
+    reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
@@ -4071,6 +4127,7 @@
       else if(card.id==="sentinelfissure")window.SentinelFissure?.portrait(c,width,height);
       else if(card.id==="stormlizard")window.StormLizard?.portrait(c,width,height);
       else if(card.id==="drowzyflowers")window.DrowzyFlowers?.portrait(c,width,height);
+      else if(card.id==="reflectiveice")window.ReflectiveIce?.portrait(c,width,height);
       else if(card.id==="cursedhold")window.CursedHold?.portrait(c,width,height);
       else if(card.id==="claritystrike")window.ClarityStrike?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
@@ -4509,7 +4566,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -4563,6 +4620,13 @@
           type:"water-prison-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,
           draw:()=>window.WaterPrison?.draw(g,{target:u,time,growth,layer})
         });
+      }
+      const formingIce=action?.card?.id==="reflectiveice"&&action.stage==="summon"&&action.target===u.id;
+      const iced=u.statuses.some(st=>st.kind==="reflective_ice");
+      if(u.hp>0&&(formingIce||iced)){
+        const growth=formingIce&&!iced?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
+        for(const layer of ["back","front"])renderables.push({type:"reflective-ice-"+layer,
+          depthY:u.y+(layer==="back"?-.055:.055),priority:2,draw:()=>window.ReflectiveIce?.shell(g,u,growth,time,layer)});
       }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");
       const formingBubble=action?.card?.id==="bubbleshield"&&action.stage==="summon"&&action.target===u.id;
@@ -5232,6 +5296,10 @@
       }
     }
     for(const f of state.flashes)if(f.cursedHold)window.CursedHold?.rebound(g,f.cursedHold,{x:f.x,y:f.y+36},f.age);
+    for(const f of state.flashes){
+      if(f.iceReflection)window.ReflectiveIce?.deflect(g,f.iceReflection,{x:f.x,y:f.y+23},f.age);
+      if(f.iceMelt)window.ReflectiveIce?.melt(g,f.x,f.y+108,f.age);
+    }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     drawZenCast(state.animation);

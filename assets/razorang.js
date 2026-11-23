@@ -45,7 +45,7 @@
     if(neighbor)strikes.push({unit:neighbor,age:(p-card.returnAt)/.14,dir:-dir});
     const fade=neighbor?.91:.62;
     const fadeEnd=neighbor?1:.83;
-    return {blade,angle,p,dir,launch,strikes,position,depth:blade.y+85+.13,
+    return {blade,angle,p,dir,launch,strikes,position,seconds:p*card.duration/1000,depth:blade.y+85+.13,
       alpha:clamp(p/.11)*(1-clamp((p-fade)/(fadeEnd-fade)))};
   }
 
@@ -57,7 +57,45 @@
     g.fill();
   }
 
-  function crescent(g,roll,spin){
+  function ribbonPoint(outer,inner,t,width){
+    const sample=clamp(t)*bladeSamples;
+    const across=clamp(width);
+    const index=Math.min(bladeSamples-1,Math.floor(sample));
+    const fraction=sample-index;
+    const a=outer[index],b=outer[index+1],c=inner[index],d=inner[index+1];
+    return {x:mix(mix(a.x,b.x,fraction),mix(c.x,d.x,fraction),across),
+      y:mix(mix(a.y,b.y,fraction),mix(c.y,d.y,fraction),across)};
+  }
+
+  function bladeCurrents(g,outer,inner,seconds){
+    const opacity=g.globalAlpha;
+    for(let lane=0;lane<3;lane++){
+      for(let gust=0;gust<3;gust++){
+        const cycle=seconds*(1.65+lane*.28)+gust/3+lane*.19;
+        const width=.14+lane*.27;
+        for(let section=0;section<4;section++){
+          const phase=cycle-section*.035;
+          const t=phase-Math.floor(phase);
+          const tail=t-.037;
+          if(t<=0)continue;
+          const sway=.077*Math.sin(t*15-seconds*10+lane);
+          const middle=width+sway;
+          const spread=.19-section*.032;
+          const tipFade=clamp(t*12)*clamp((1-t)*12);
+          g.globalAlpha=opacity*(.78-section*.14)*tipFade;
+          polygon(g,lane===1?"#acfff1":"#f2fff8",[
+            ribbonPoint(outer,inner,tail,middle-spread*.35),
+            ribbonPoint(outer,inner,t,middle-spread*.5),
+            ribbonPoint(outer,inner,t,middle+spread*.5),
+            ribbonPoint(outer,inner,tail,middle+spread*.35)
+          ]);
+        }
+      }
+    }
+    g.globalAlpha=opacity;
+  }
+
+  function crescent(g,roll,spin,seconds){
     const squash=Math.cos(roll);
     const outer=[],inner=[],bevel=[];
     for(let i=0;i<=bladeSamples;i++){
@@ -75,6 +113,7 @@
       polygon(g,colors[i%colors.length],[c,d,inner[i+1]]);
       polygon(g,colors[(i+2)%colors.length],[c,inner[i+1],inner[i]]);
     }
+    if(seconds!==undefined)bladeCurrents(g,outer,inner,seconds);
     g.restore();
   }
 
@@ -88,7 +127,8 @@
         const tangent=Math.atan2(next.y-q.y,next.x-q.x);
         const size=(1-i/16)*23;
         const x=Math.sin(tangent)*size,y=-Math.cos(tangent)*size;
-        g.globalAlpha=s.alpha*(1-i/16)*.35;
+        const pulse=.63+.37*Math.sin(i*.83-s.seconds*24);
+        g.globalAlpha=s.alpha*(1-i/16)*.42*pulse;
         polygon(g,i%3?"#aaf7e1":"#e5fff6",[
           offset(q,x,y),offset(next,x*.68,y*.68),offset(next,-x*.13,-y*.13),offset(q,-x*.46,-y*.46)
         ]);
@@ -106,7 +146,7 @@
     g.rotate(s.angle);
     const formed=mix(.42,1,clamp(s.p/s.launch));
     g.scale(formed,formed);
-    crescent(g,.55*Math.sin(s.p*38),.30*Math.sin(s.p*31));
+    crescent(g,.55*Math.sin(s.p*38),.30*Math.sin(s.p*31),s.seconds);
     g.restore();
   }
 

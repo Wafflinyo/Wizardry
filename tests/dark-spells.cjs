@@ -224,11 +224,38 @@ const ghoulArt = ctx.window.SoulGhoul;
     if (scene) ghoulArt.draw(canvas, scene);
   }
   assert.equal(frames.size, 8);
-  assert.equal(ghoulArt.scene(target, caster, .56, ghoul, 320), null, 'vanishes between portals');
+  assert.equal(ghoulArt.scene(target, caster, .63, ghoul, 320), null, 'vanishes between portals');
   const outward = ghoulArt.scene(target, caster, .27, ghoul, undefined);
-  const returnTrip = ghoulArt.scene(target, caster, .77, ghoul, 320);
+  const returnTrip = ghoulArt.scene(target, caster, .85, ghoul, 320);
   assert.equal(outward.unit, target);
   assert.equal(returnTrip.unit, caster);
   assert.equal(outward.dir, -returnTrip.dir, 'both appearances face the receiving wizard');
+}
+for (const {roll, pending, blocked, missed, feared} of [
+  {roll: .249, pending: true, feared: true},
+  {roll: .25, pending: true, feared: false},
+  {roll: 0, pending: false, feared: false},
+  {roll: 0, pending: true, blocked: true, feared: false},
+  {roll: 0, pending: true, missed: true, feared: false}
+]) {
+  const {state, caster, target} = battle();
+  const plan = {casterId: target.id, cardId: 'devil', targetId: caster.id};
+  state.phase = 'resolving';
+  state.sequence = [plan];
+  state.queueAt = pending ? 0 : 1;
+  if (blocked) api.addStatus(target, 'wind_dome', null, 1);
+  api.applySpell({
+    card: ghoul, source: caster.id, target: target.id, fearRoll: roll,
+    action: {casterId: caster.id, targetId: target.id},
+    runeResult: missed ? 'failed' : 'success', damageVariant: 1
+  });
+  assert.equal(target.fearRound === state.round, feared);
+  assert.equal(target.statuses.some(rune => rune.kind === 'fear_turn'), feared);
+  if (feared) {
+    assert.equal(target.fearSource, 'Soul Ghoul');
+    api.startNextAction();
+    assert.ok(state.log.some(line => /loses this round's action to Soul Ghoul/.test(line)));
+    assert.equal(target.statuses.some(rune => rune.kind === 'fear_turn'), false);
+  }
 }
 console.log('Soul Ghoul: starter hand, actual HP drained, two-stage timing, barriers, overkill, misses, and all eight mirrored sprite poses passed.');

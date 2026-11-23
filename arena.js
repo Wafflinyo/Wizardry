@@ -223,8 +223,8 @@
     kind:"sandwarrior",shieldHp:250,accuracy:1,icon:"◆",rarity:"RARE",duration:1600,hit:.70,
     description:"Summon a sand warrior to guard yourself or an ally. His kite shield absorbs up to 250 damage. Excess damage hits the protected wizard, and the warrior crumbles when the shield breaks."});
   CARDS.push({id:"soulghoul",name:"Soul Ghoul",school:"dark",cost:4,target:"enemy",
-    kind:"soulghoul",damage:320,leech:.5,accuracy:.80,icon:"☠",rarity:"RARE",duration:3900,hit:.38,healAt:.83,
-    description:"A ghoul rises in front of an enemy and siphons 320 base HP. It sinks away, then rises before the caster to heal them for 50% of the damage actually dealt."});
+    kind:"soulghoul",damage:320,leech:.5,accuracy:.80,icon:"☠",rarity:"RARE",duration:6600,hit:.44,healAt:.91,fearChance:.25,
+    description:"A ghoul rises in front of an enemy and siphons 320 base HP. It sinks away, then rises before the caster to heal them for 50% of the damage actually dealt. 25% chance to Fear the target and skip their pending action this round."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -239,7 +239,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
-    soulghoul:"Heal the caster for 50% of the HP drained.",
+    soulghoul:"Heal for 50% of HP drained. 25% Fear: skip pending action.",
     dragon:"150 adjacent splash. 25% burn: 50 × 3 rounds.",arrows:"10% burn per enemy: 50 × 3 rounds.",
     ronin:"Three hits of 150.",reaper:"Next damaging spell against target deals 20% more.",
     frosty:"30% frostbite: 50 × 3 rounds.",solidity:"Next damaging spell deals 25% less.",
@@ -1996,7 +1996,7 @@
     if(healed.length)(state.rodBursts??=[]).push({source:{x:target.x,y:target.y},targets:healed,age:0});
   }
   function attemptUndeadFear(source,target,card,roll=Math.random()){
-    if(!["undead","croc"].includes(card?.id)||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
+    if(!["undead","croc","soulghoul"].includes(card?.id)||!source||!target||target.hp<=0||source.team===target.team||roll>=card.fearChance||state.phase!=="resolving")return false;
     if(!(state.sequence||[]).slice(state.queueAt).some(a=>a.casterId===target.id))return false;
     if(!canReceiveDebuff(target,"fear_turn"))return false;
     addStatus(target,"fear_turn","☠",1,card.school);target.statuses.find(st=>st.kind==="fear_turn").round=state.round;
@@ -2660,7 +2660,10 @@
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
     if(card.kind==="soulghoul"){
-      if(t?.hp>0&&t.team!==c.team)anim.ghoulDrained=damage(c,t,card.damage,card,anim);
+      if(t?.hp>0&&t.team!==c.team){
+        anim.ghoulDrained=damage(c,t,card.damage,card,anim);
+        if(!preventsHitEffects(anim,t))attemptUndeadFear(c,t,card,anim.fearRoll??Math.random());
+      }
     }else if(card.kind==="cursedhold"){
       if(t!==c||addStatus(c,"cursed_hold",null,2,card.school)===false)return;
       c.statuses.find(st=>st.kind==="cursed_hold").expiresRound=state.round+card.holdRounds;
@@ -3895,7 +3898,7 @@
         return {title:field.name+" · Environmental debuff",detail:field.description+" "+rounds+" full rounds remain after this one. Cleansing this rune ends the field immediately."};
       }
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
-      case "fear_turn":return {title:"Fear · This round only",detail:"Creeping Croc frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
+      case "fear_turn":return {title:"Fear · This round only",detail:(u.fearSource||"Fear")+" frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};

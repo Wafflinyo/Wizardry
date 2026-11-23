@@ -5,12 +5,13 @@
   const mix = (a,b,t) => a+(b-a)*t;
   const smooth = t => { t=clamp(t); return t*t*(3-2*t); };
   const hit = .78;
+  const runFrames = [7,9,10,11];
   const size = 192;
   const atlas = new Image();
   const listeners=[];
   const ready=()=>atlas.complete&&atlas.naturalWidth>0;
   atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
-  atlas.src="./assets/thorny-hug-frames.webp?v=0.299.1";
+  atlas.src="./assets/thorny-hug-frames.webp?v=0.299.2";
 
   function poly(ctx, points, color) {
     ctx.beginPath();
@@ -40,7 +41,7 @@
     const growth=smooth(p/.22);
     const fade=1-smooth((p-.92)/.08);
     const frame=p<.085?0:p<.155?1:p<.22?2:p<.345?3:p<.394?4:p<.44?5:
-      p<.48?6:p<.72?7+Math.floor(run*15)%5:p<hit?12:p<.82?13:p<.9?14:15;
+      p<.48?6:p<.72?runFrames[Math.floor(run*12)%runFrames.length]:p<hit?12:p<.82?13:p<.9?14:15;
     const scale=.87+.10*clamp((y-400)/200);
     ctx.save();
     ctx.translate(x,y);

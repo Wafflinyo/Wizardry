@@ -212,7 +212,7 @@
     description:"A smiling cactus sprouts legs, runs to one enemy, and gives them a prickly hug for 230 base damage."});
   CARDS.push({id:"hightide",name:"High Tide",school:"water",cost:3,target:"all_enemies",
     kind:"hightide",accuracy:.90,icon:"≈",rarity:"RARE",duration:2600,hit:.44,
-    description:"Floods the arena with rough water and washes away the active environmental rune."});
+    description:"Floods the arena with rough water and washes away the active environmental rune. Fails if no environmental rune is active."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -267,7 +267,7 @@
     reflectiveice:"First damaging spell: take half and reflect half. Lasts 3 rounds.",
     cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
-    hightide:"Washes away the active environmental rune.",
+    hightide:"Washes away the active environmental rune. Fails without one.",
     earthquake:"300 damage per enemy. Clears the active environmental rune.",
     aromatherapy:"100 base HP per teammate over 3 rounds. Rune on caster.",
     groveland:"Nature healing and debuffs +10%. Healing and debuffs cannot miss.",
@@ -1162,7 +1162,8 @@
     const target=getUnit(a.target);
     const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS.has(a.card.kind))&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":undefined);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
-    const success=!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
+    const emptyTide=a.card.kind==="hightide"&&!state.environment;
+    const success=!emptyTide&&!sealed&&!full&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
     if(turbulence){flash(c,"TURBULENCE −50% ACC","#b8efdc");recordBattleEvent(c.name+" uses up Turbulence (−50 accuracy points).");}
     a.runeResult=success?"success":"failed";
     if(used){
@@ -1173,7 +1174,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
+    const label=emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy";
     tally(c,"casts",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1193,7 +1194,7 @@
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,sealed?"HEALING SEALED":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
+      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -3058,7 +3059,7 @@
     }
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
-    ui.chosenTarget.textContent=card?.kind==="hightide"?"Entire arena · Clears the environmental rune":card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
+    ui.chosenTarget.textContent=card?.kind==="hightide"?(state.environment?"Entire arena · Clears the environmental rune":"Fails without an active environmental rune"):card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
       (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
@@ -4299,6 +4300,7 @@
     window.WIZARDRY_CROC_V134?.onReady(drawCardArts);
     window.VolcanicEruption?.onReady(drawCardArts);
     window.FrozenTouch?.onReady(drawCardArts);
+    window.HighTide?.onReady(drawCardArts);
     window.ThornyHug?.onReady(drawCardArts);
     window.ClarityStrike?.onReady(drawCardArts);
     window.Wynzor?.onReady(drawCardArts);

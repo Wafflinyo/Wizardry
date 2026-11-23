@@ -3,8 +3,11 @@
 
   const clamp = t => Math.min(1,Math.max(0,t));
   const smooth = t => { t=clamp(t); return t*t*(3-2*t); };
+  const atlas=new Image(),listeners=[];
+  const ready=()=>atlas.complete&&atlas.naturalWidth>0;
+  atlas.onload=()=>listeners.splice(0).forEach(fn=>fn());
+  atlas.src="./assets/high-tide-frames.webp?v=0.300.1";
   const sea = ["#0b607c","#0c7b91","#18a1ad","#25b4b8","#318fa2","#0b506c"];
-  const foam = ["#e0fcf1","#a6eee9","#70d8db"];
 
   function poly(ctx, points, color) {
     ctx.beginPath();
@@ -31,26 +34,25 @@
     }
   }
 
-  function breakers(ctx,width,height,frame,level,p) {
-    for(let row=0;row<5;row++){
-      const depth=(row+1)/6;
-      const x=((frame*(14+row*1.25)+row*239)%(width+270))-135;
-      const y=level+(height-level)*depth;
-      const span=width*(.22+depth*.19), lift=12+depth*32;
-      const crest=Array.from({length:9},(_,i)=>{
-        const wave=Math.sin(i*.83+frame*.28+row*2.3);
-        return [x+i*span/8,y+wave*lift*.46-Math.sin(i*Math.PI/8)*lift];
-      });
-      for(let i=0;i<8;i++){
-        const a=crest[i],b=crest[i+1];
-        const rise=4+Math.sin(i*1.19+frame*.48+row)*8;
-        poly(ctx,[a,b,[b[0]+12,b[1]+lift*.68],[a[0]-10,a[1]+lift*.88]],i%2?"#10788f":"#239eaa");
-        poly(ctx,[a,[a[0]+5,a[1]-rise],b,[b[0]-6,b[1]+lift*.24],[a[0]+9,a[1]+lift*.15]],foam[(i+row)%3]);
-        if((frame+i+row)%3===0){
-          const sx=a[0]+13,sy=a[1]-rise-5-8*Math.sin(p*Math.PI);
-          poly(ctx,[[sx-3,sy+2],[sx+2,sy-6],[sx+7,sy]],foam[i%3]);
-        }
-      }
+  function wave(ctx,frame,x,y,width,height,alpha){
+    if(!ready()||alpha<=0)return;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.drawImage(atlas,frame%3*384,Math.floor(frame/3)*192,384,192,x,y-height*.86,width,height);
+    ctx.restore();
+  }
+
+  function breakers(ctx,width,height,p,floor,front){
+    const phases=front?[.14,.31]:[.025,.18];
+    for(const offset of phases){
+      const local=clamp((p-offset)/.66);
+      const fade=smooth(local/.12)*(1-smooth((local-.71)/.29));
+      if(fade<=0)continue;
+      const breadth=width*(front?.87:.91),heightPx=Math.min(height*(front?.19:.43),width*(front?.24:.45));
+      const x=(width+breadth*.58)*smooth(local)-breadth*.64;
+      const y=floor+(height-floor)*(front?.76:.37);
+      const frame=local<.15?0:local<.28?1:local<.46?2:local<.61?3:local<.76?4:5;
+      wave(ctx,frame,x,y,breadth,heightPx,fade*(front?.79:.95));
     }
   }
 
@@ -63,9 +65,10 @@
 
     const level=height-(height-floor)*strength;
     const lead=smooth((p-.015)/.43);
-    const edge=-30+(width+60)*lead;
+    const edge=-45+(width+100)*lead;
     ctx.save();
     if(dir<0){ctx.translate(width,0);ctx.scale(-1,1);}
+    ctx.save();
     ctx.beginPath();
     ctx.moveTo(-30,level-12);
     ctx.lineTo(edge-width*.12,level-10);
@@ -74,24 +77,17 @@
     ctx.closePath();
     ctx.clip();
 
-    if(layer==="back"){
-      ctx.globalAlpha *= (.55+.25*strength)*(1-drain);
-      volume(ctx,width,height,frame,level);
-      breakers(ctx,width,height,frame,level,p);
-    }else{
-      // The low foreground wash overlaps boots without hiding the wizards.
-      ctx.globalAlpha *= .42*(1-drain);
-      const front=level+(height-level)*.37;
-      volume(ctx,width,height,frame+3,front);
-      breakers(ctx,width,height,frame+3,front,p);
-    }
+    ctx.globalAlpha *= (layer==="back"?.47:.24)*(1-drain);
+    volume(ctx,width,height,frame,layer==="back"?level:level+(height-level)*.44);
+    ctx.restore();
+    breakers(ctx,width,height,p,floor,layer==="front");
     ctx.restore();
   }
 
   function portrait(ctx,width,height){
-    draw(ctx,{width,height,progress:.49,floor:height*.12});
-    draw(ctx,{width,height,progress:.49,floor:height*.12,layer:"front"});
+    wave(ctx,2,-width*.09,height*.88,width*1.17,height*.91,1);
   }
 
-  window.HighTide={draw,portrait};
+  function onReady(fn){if(ready())fn();else listeners.push(fn);}
+  window.HighTide={draw,portrait,onReady};
 })();

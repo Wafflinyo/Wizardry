@@ -951,8 +951,44 @@
   let hostPlayback=null,guestPlayback=null,battleSerial=0,guestUiKey=null;
   // Floor 21 is a local, read-at-your-own-pace introduction. Combat state
   // remains unchanged, including online snapshots and the initial hands.
-  const weileiArt=new Image();
+  const weileiArt=new Image(),weileiBookArt=new Image();
+  let weileiSharp=null,weileiStaffArt=null;
+  // Sharpen the actual authored sprite pixels once, preserving transparency.
+  // All poses keep their original size, outline and palette.
+  function prepareWeileiArt(){
+    const image=weileiArt,canvas=document.createElement("canvas");
+    canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(image,0,0);
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),p=pixels.data,original=new Uint8ClampedArray(p),w=canvas.width;
+    for(let y=1;y<canvas.height-1;y++)for(let x=1;x<w-1;x++){
+      const k=(y*w+x)*4;if(original[k+3]<200||x%288===0||x%288===287||y%288===0||y%288===287)continue;
+      const neighbors=[k-4,k+4,k-w*4,k+w*4];
+      if(neighbors.some(n=>original[n+3]<200))continue;
+      for(let c=0;c<3;c++){
+        const avg=neighbors.reduce((s,n)=>s+original[n+c],0)/4;
+        const delta=original[k+c]-avg;
+        if(Math.abs(delta)>3)p[k+c]=original[k+c]+Math.max(-24,Math.min(24,delta*.65));
+      }
+    }
+    ctx.putImageData(pixels,0,0);weileiSharp=canvas;
+    // Extract the crystal and the visible shaft directly from catch pose 9.
+    // The hand occludes a small section; join the two visible shaft portions.
+    const staff=document.createElement("canvas");staff.width=152;staff.height=52;
+    const s=staff.getContext("2d");
+    s.translate(76,26);s.rotate(2.57);s.translate(-102,-42);
+    pathPoly(s,[[73,19],[158,75],[157,80],[70,25]],"#4d3a30");
+    pathPoly(s,[[73,19],[158,75],[157,77],[72,22]],"#93704d");
+    s.save();s.beginPath();s.moveTo(40,2);s.lineTo(61,0);s.lineTo(82,15);s.lineTo(85,25);s.lineTo(106,40);s.lineTo(104,49);s.lineTo(77,31);s.lineTo(60,30);s.lineTo(40,23);s.closePath();s.clip();
+    s.drawImage(canvas,288,576,288,288,0,0,288,288);s.restore();
+    s.save();s.beginPath();s.moveTo(121,54);s.lineTo(159,75);s.lineTo(161,81);s.lineTo(153,84);s.lineTo(119,61);s.closePath();s.clip();
+    s.drawImage(canvas,288,576,288,288,0,0,288,288);s.restore();
+    weileiStaffArt=staff;
+  }
+  weileiArt.onload=()=>{try{prepareWeileiArt();}catch(err){console.warn("Weilei sprite preparation:",err);}};
   weileiArt.src="./assets/floor21-weilei-wind.webp?v=0.333.0";
+  // The original cutscene atlas includes the illustrated closed grimoire.
+  weileiBookArt.src="./assets/floor21-weilei.webp?v=0.331.0";
   let floorIntro=null,shownIntroKey=null;
   function floorIntroLines(partySize){
     const multi=partySize>1;
@@ -1016,23 +1052,27 @@
     const travel=p*p;
     return {frame,lift:travel*550,shift:travel*380,finished:ms>=FLOOR21_TOTAL};
   }
-  function floor21Staff(ctx,x,y,angle){
-    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
-    pathPoly(ctx,[[-70,-4],[53,-6],[66,0],[53,6],[-70,5],[-80,0]],"#49332e");
-    pathPoly(ctx,[[-70,-4],[53,-6],[48,-1],[-74,0]],"#937047");
-    for(let k=-55;k<48;k+=23)pathPoly(ctx,[[k,-5],[k+5,-5],[k+10,5],[k+5,5]],"#c5a369");
-    pathPoly(ctx,[[48,-7],[64,-15],[84,-11],[94,0],[80,14],[62,12]],"#1f62b4");
-    pathPoly(ctx,[[64,-15],[84,-11],[74,0],[48,-7]],"#60c9ff");
-    pathPoly(ctx,[[74,0],[94,0],[80,14],[62,12]],"#15408e");
-    pathPoly(ctx,[[64,-15],[74,0],[62,12],[48,-7]],"#2d8ce3");
-    ctx.restore();
+  // World-space contact points are measured on the 288px sprite cells.
+  const WEILEI_CONTACT=[274,269,270,267,272,273,274,276,276,276,278,278,278,278,278,278];
+  const WEILEI_HIP=[[143,180],[158,183],[154,182],[155,179],[153,177],[153,176],[150,174],[150,173],[153,174],[159,178],[151,175],[151,164],[143,152],[139,145],[130,129],[124,110]];
+  function weileiFrameRect(frame,size=245,depth=.86){
+    const k=size/288,anchor=WEILEI_CONTACT[frame],hip=WEILEI_HIP[frame];
+    return {x:-size/2,y:8/depth-anchor*k,size,hipX:(hip[0]-144)*k*depth,hipY:8+(hip[1]-anchor)*k*depth};
   }
-  function floor21Book(ctx,x,y){
-    ctx.save();ctx.translate(x,y);
-    pathPoly(ctx,[[-24,-3],[14,-12],[29,-3],[28,6],[-9,15],[-24,6]],"#302640","#be9652",1.6);
-    pathPoly(ctx,[[-21,2],[-9,9],[26,1],[26,6],[-9,14],[-21,7]],"#b8a384");
-    pathPoly(ctx,[[-24,-3],[14,-12],[29,-3],[-9,7]],"#303754","#c1a264",1.5);
-    ellipse(ctx,1,-3,5,3,"#2baf76","#d9b96c",1.2);ctx.restore();
+  function floor21Staff(ctx,x,y,angle,width=112){
+    if(!weileiStaffArt)return;
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    ctx.drawImage(weileiStaffArt,-width/2,-width*52/304,width,width*52/152);ctx.restore();
+  }
+  function floor21Book(ctx,x,y,angle=0,width=47){
+    if(!weileiBookArt.naturalWidth)return;
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+    // Crop the actual gold-edged grimoire from the prior illustrated atlas.
+    ctx.drawImage(weileiBookArt,384+125,168,63,20,-width/2,-width*20/126,width,width*20/63);ctx.restore();
+  }
+  function floor21BookPosition(ms,pose,x,y){
+    const rect=weileiFrameRect(pose.frame),p=clamp((ms-780)/Math.max(1,FLOOR21_CATCH+220-780),0,1),ease=p*p*(3-2*p);
+    return {x:lerp(462,x+rect.hipX,ease),y:lerp(515,y+rect.hipY,ease)-Math.sin(p*Math.PI)*34,angle:lerp(0,-.66,ease),width:lerp(47,38,ease),attached:p===1};
   }
   // Wind continues to travel every rendered frame, including while each
   // authored pose is held. Back and front arcs pass around the body.
@@ -1064,7 +1104,7 @@
     return true;
   }
   function drawFloorIntro(time){
-    const wX=345,wY=464,bX=695,bY=464,depth=.86;
+    const wX=345,wY=505,bX=695,bY=464,depth=.86;
     const departing=floorIntro.step===6,ms=departing?floorIntro.elapsed:0;
     const pose=departing?floorIntroPose(ms):{frame:0,lift:0,shift:0};
     const x=wX-pose.shift,y=wY-pose.lift;
@@ -1077,20 +1117,24 @@
       g.save();g.translate(bX,bY);g.scale(depth,depth);
       g.drawImage(boss.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);g.restore();
     }
-    floor21Book(g,474,wY+10);
+    const book=floor21BookPosition(ms,pose,x,y);
+    if(!book.attached)floor21Book(g,book.x,book.y,book.angle,book.width);
     // The staff is a world object before the grip frame; the matching
     // authored held-staff poses take over only when the hand catches it.
     if(ms<FLOOR21_CATCH){
       const p=clamp((ms-540)/(FLOOR21_CATCH-540),0,1),smooth=p*p*(3-2*p);
-      const sx=lerp(530,wX-68,smooth),sy=lerp(wY+3,wY-166,smooth)-Math.sin(p*Math.PI)*60;
-      floor21Staff(g,sx,sy,lerp(-.09,-2.56,smooth));
+      const rect=weileiFrameRect(9);
+      const sx=lerp(530,wX+(102-144)*245/288*depth,smooth),sy=lerp(wY+8,wY+8+(42-WEILEI_CONTACT[9])*245/288*depth,smooth)-Math.sin(p*Math.PI)*60;
+      floor21Staff(g,sx,sy,lerp(-.09,-2.57,smooth),112);
     }
     floor21Wind(g,x,y,time,force,false);
     if(weileiArt.naturalWidth){
       const size=245,cell=288;
       g.save();g.translate(x,y);g.scale(depth,depth);g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
-      g.drawImage(weileiArt,(pose.frame%4)*cell,Math.floor(pose.frame/4)*cell,cell,cell,-size/2,8-size,size,size);g.restore();
+      const rect=weileiFrameRect(pose.frame,size,depth);
+      g.drawImage(weileiSharp||weileiArt,(pose.frame%4)*cell,Math.floor(pose.frame/4)*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);g.restore();
     }
+    if(book.attached)floor21Book(g,book.x,book.y,book.angle,book.width);
     floor21Wind(g,x,y,time,force,true);
   }
 
@@ -5479,7 +5523,7 @@
   }
   function render(time){
     window.WizardryRuneAudio?.follow(state.animation,state.round);
-    const bounds=canvas.getBoundingClientRect(),vw=Math.max(1,bounds.width),vh=Math.max(1,bounds.height),ratio=Math.min(window.devicePixelRatio||1,2);
+    const bounds=canvas.getBoundingClientRect(),vw=Math.max(1,bounds.width),vh=Math.max(1,bounds.height),ratio=Math.min(window.devicePixelRatio||1,floorIntro?3:2);
     const pw=Math.round(vw*ratio),ph=Math.round(vh*ratio);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
     g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#06151f';g.fillRect(0,0,vw,vh);
     const fieldHeight=Math.max(1,vh-30),sceneHeight=state.size>1?730:H,fit=Math.min(vw/W,fieldHeight/sceneHeight);
@@ -6636,7 +6680,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,floorIntroLines,floorIntroPose,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));

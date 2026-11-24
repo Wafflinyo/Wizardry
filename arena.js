@@ -704,17 +704,102 @@
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,art,size}];
   }));
-  // Original-detail, pre-cleaned guardian sheets: 288px cells, no runtime
-  // resampling or edge processing. Anchors are expressed in 160px equivalents.
+  // Preserve the original 288px guardian artwork and every authored pose.
+  // Some of the original white matte is fully opaque INSIDE weapon/armor
+  // gaps, so merely eroding the outside alpha boundary cannot remove it.
+  function clearGuardianMatte(data,width,height,id){
+    const cell=288, count=cell*cell;
+    const paleLimit=id==="glacial"?.19:.24, whiteLimit=id==="glacial"?.095:.17;
+    const lum=new Float32Array(count),sat=new Float32Array(count);
+    const matte=new Uint8Array(count),candidate=new Uint8Array(count);
+    const distance=new Uint8Array(count),queue=new Int32Array(count);
+    const source=new Uint8ClampedArray(count*4);
+    const clamp01=v=>Math.max(0,Math.min(1,v));
+    for(let sy=0;sy<height;sy+=cell)for(let sx=0;sx<width;sx+=cell){
+      if(sx+cell>width||sy+cell>height)continue;
+      matte.fill(0);candidate.fill(0);distance.fill(255);
+      let tail=0;
+      for(let y=0;y<cell;y++){
+        const offset=((sy+y)*width+sx)*4;
+        source.set(data.subarray(offset,offset+cell*4),y*cell*4);
+      }
+      for(let p=0;p<count;p++){
+        const k=p*4,r=source[k],g=source[k+1],b=source[k+2],al=source[k+3];
+        const hi=Math.max(r,g,b),lo=Math.min(r,g,b),l=(r+g+b)/3,s=(hi-lo)/Math.max(1,hi);
+        lum[p]=l;sat[p]=s;
+        candidate[p]=+(al<32||(s<paleLimit&&l>145));
+        // Enclosed white and light gray background holes can have alpha=255.
+        if(al<32||(l>165&&s<whiteLimit)||(l>205&&s<.14)){
+          matte[p]=1;queue[tail++]=p;
+        }
+      }
+      // Flood through the remaining neutral matte only; colored armor, ice,
+      // fabric and purple corruption act as barriers.
+      for(let q=0;q<tail;q++){
+        const p=queue[q],x=p%cell;
+        const add=n=>{if(n>=0&&n<count&&!matte[n]&&candidate[n]){matte[n]=1;queue[tail++]=n;}};
+        if(x>0)add(p-1);if(x<cell-1)add(p+1);add(p-cell);add(p+cell);
+      }
+      tail=0;
+      for(let p=0;p<count;p++)if(matte[p]){distance[p]=0;queue[tail++]=p;}
+      for(let q=0;q<tail;q++){
+        const p=queue[q],d=distance[p]+1,x=p%cell;
+        if(d>4)continue;
+        const add=n=>{if(n>=0&&n<count&&distance[n]===255){distance[n]=d;queue[tail++]=n;}};
+        if(x>0)add(p-1);if(x<cell-1)add(p+1);add(p-cell);add(p+cell);
+      }
+      for(let p=0;p<count;p++){
+        const k=p*4,x=p%cell,y=Math.floor(p/cell),dst=((sy+y)*width+sx+x)*4;
+        let al=source[k+3],l=lum[p],s=sat[p];
+        if(matte[p])al=0;
+        else{
+          if(al<220&&s<.30)al*=clamp01((s-.075)/.225)*clamp01((al-30)/160);
+          if(distance[p]<=4&&s<.30&&l>125){
+            const strength=clamp01((l-130)/85)*clamp01((.30-s)/.18);
+            al*=1-strength*.75;
+            // Decontaminate the remaining pale antialiasing from the
+            // neighboring material rather than recoloring the actual model.
+            if(strength>.05){
+              let nearest=-1,best=65;
+              for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++){
+                const xx=x+dx,yy=y+dy,d=dx*dx+dy*dy;
+                if(d>=best||xx<0||xx>=cell||yy<0||yy>=cell)continue;
+                const n=yy*cell+xx;
+                if(!matte[n]&&source[n*4+3]>=220&&(distance[n]>4||sat[n]>=.30||lum[n]<=125)){nearest=n;best=d;}
+              }
+              if(nearest>=0){
+                const mix=clamp01(strength*1.6)*clamp01((12-Math.sqrt(best))/7);
+                for(let ch=0;ch<3;ch++)data[dst+ch]=source[k+ch]*(1-mix)+source[nearest*4+ch]*mix;
+              }
+            }
+          }
+        }
+        data[dst+3]=al<28?0:al;
+        if(!data[dst+3])data[dst]=data[dst+1]=data[dst+2]=0;
+      }
+    }
+    return data;
+  }
+  function prepareGuardianArt(art,id){
+    const canvas=document.createElement("canvas");
+    canvas.width=art.naturalWidth;canvas.height=art.naturalHeight;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    ctx.drawImage(art,0,0);
+    const frame=ctx.getImageData(0,0,canvas.width,canvas.height);
+    clearGuardianMatte(frame.data,canvas.width,canvas.height,id);
+    ctx.putImageData(frame,0,0);
+    return canvas;
+  }
   const guardianModels=Object.fromEntries([
     ["abyssal",310,[[148.33,148.33,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.78,146.67,146.11,147.22,147.22]]],
     ["gale",300,[[148.33,147.78,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.22,145.56,145,145,145]]],
     ["briar",314,[[147.22,147.22,147.78,147.22,147.22,147.22],[147.78,147.78,147.78,147.78,147.78,147.78],[145,143.33,142.22,142.78,143.89,140.56]]],
     ["glacial",326,[[147.22,147.22,147.22,147.22,147.22,147.22],[147.22,147.78,147.78,147.22,147.22,147.78],[146.67,146.11,145.56,145,146.67,146.11]]]
   ].map(([id,size,feet])=>{
-    const art=new Image();
-    art.src="./assets/guardian-"+id+"-hd.webp?v=0.323.0";
-    return [id,{art,size,feet,cell:288}];
+    const art=new Image(),model={art,size,feet,cell:288,cleaned:null};
+    art.onload=()=>{try{model.cleaned=prepareGuardianArt(art,id);}catch(err){console.warn("Guardian matte cleanup failed",id,err);}};
+    art.src="./assets/guardian-"+id+"-hd.webp?v=0.324.0";
+    return [id,model];
   }));
   const guardianVisualHeight=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size*.92:220;
   const unitSlotFactor=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size/205:1;
@@ -4273,7 +4358,7 @@
       const top=-anchor*minion.size/160+(guardian?2:0);
       const cell=minion.cell||160;
       if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
-      g.drawImage(minion.art,frame*cell,row*cell,cell,cell,-minion.size/2,top,minion.size,minion.size);
+      g.drawImage(minion.cleaned||minion.art,frame*cell,row*cell,cell,cell,-minion.size/2,top,minion.size,minion.size);
       if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
           school:u.masteries?.[0]||Builds.elements[0],elapsed,duration:AUTO_TRACE_MS,centerX:guardian?-minion.size*.61:-115,centerY:guardian?-minion.size*.55:-100,scale:3.3

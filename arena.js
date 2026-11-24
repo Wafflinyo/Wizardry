@@ -694,16 +694,26 @@
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
   const minionModels=Object.fromEntries([
-    ["scribe","Ashbound Scribe","fire",194],
-    ["acolyte","Inkbound Acolyte","dark",196],
-    ["pageguard","Cracked Pageguard","earth",189],
-    ["magistrate","Cinder Magistrate","fire",204],
-    ["inkbinder","Inkbinder","dark",205],
-    ["warden","Faultbound Warden","earth",201]
-  ].map(([id,name,school,size])=>{
+    ["scribe","Ashbound Scribe",194],
+    ["acolyte","Inkbound Acolyte",196],
+    ["pageguard","Cracked Pageguard",189],
+    ["magistrate","Cinder Magistrate",204],
+    ["inkbinder","Inkbinder",205],
+    ["warden","Faultbound Warden",201]
+  ].map(([id,name,size])=>{
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
-    return [id,{name,school,art,size}];
+    return [id,{name,art,size}];
   }));
+  const towerBosses={
+    5:{id:"abyssal",name:"Abyssal Knight",school:"water",role:"Guardian",hat:"hood",robeColor:"#128e9e",hatColor:"#44526b",skinColor:"#81b9c8",crystalColor:"#297c80"},
+    10:{id:"gale",name:"Gale Ronin",school:"wind",role:"Striker",hat:"wide",robeColor:"#2c8a64",hatColor:"#44526b",skinColor:"#be906e",crystalColor:"#459366"},
+    15:{id:"storm",name:"Storm Archon",school:"lightning",role:"Controller",hat:"scholar",robeColor:"#6f4ab4",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#d6b06e"},
+    20:{id:"glacial",name:"Glacial Overlord",school:"ice",role:"Guardian",hat:"round",robeColor:"#3269c1",hatColor:"#dfd8c7",skinColor:"#81b9c8",crystalColor:"#84919e"},
+    21:{id:"sovereign",name:"Tower Sovereign",school:"nature",role:"Controller",hat:"pointed",robeColor:"#30293c",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#459366"}
+  };
+  const randomMasteries=(rng=Math.random)=>{const choices=[...Builds.elements];const first=choices.splice(Math.floor(rng()*choices.length),1)[0];return [first,choices[Math.floor(rng()*choices.length)]];};
+  const testerBoss=type=>Object.values(towerBosses).find(b=>b.id===type);
+  const testerModel=type=>Object.hasOwn(minionModels,type)||!!testerBoss(type);
   let testerTargetType="wood",testerOpponentMode="passive";
   function switchTesterOpponentMode(mode){
     if(state?.mode!=="tester"||state.phase!=="planning"||testerTargetType==="wood"||
@@ -723,13 +733,22 @@
     u.wizardDummy=type==="wizard";
     u.minionId=Object.hasOwn(minionModels,type)?type:null;
     delete u.minionPreview;
-    if(u.minionId){u.name=minionModels[type].name;return;}
+    delete u.bossId;
+    if(u.minionId){u.name=minionModels[type].name;u.masteries=randomMasteries();return;}
+    const boss=testerBoss(type);
+    if(boss){
+      u.wizardDummy=true;u.bossId=boss.id;u.name=boss.name;
+      for(const key of ["hat","robeColor","hatColor","skinColor","crystalColor"])u[key]=boss[key];
+      const secondary=Builds.elements.filter(e=>e!==boss.school);
+      u.masteries=[boss.school,secondary[Math.floor(Math.random()*secondary.length)]];
+      return;
+    }
     if(!u.wizardDummy){u.name="Training Dummy";return;}
     const look=createUnit(ENEMIES[0],1,0,true);
     for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair",...Object.keys(Builds.gear)])u[key]=look[key];
   }
   function switchTesterTarget(type){
-    if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||Object.hasOwn(minionModels,type)))return;
+    if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||testerModel(type)))return;
     const needsReset=state.testerBattle;
     testerTargetType=type;
     if(type==="wood")testerOpponentMode="passive";
@@ -761,8 +780,9 @@
         const foe=activeRoster.find(entry=>entry.team===1&&entry.slot===u.index);
         u.towerRole=foe.profile.towerRole;
         u.minionId=foe.profile.minionId;
-        const extra=1+.08*(tower.partySize-1);
-        const split=tower.partySize===1&&size>1?.72:1;
+        u.bossId=foe.profile.bossId;
+        const extra=(1+.08*(tower.partySize-1))*(u.bossId?(tower.floor===21?1.45:1.22):1);
+        const split=tower.partySize===1&&size>1?(u.bossId?1:.72):1;
         u.hp=u.maxHp=Math.round(u.maxHp*extra*split);
         u.maxMana+=Math.floor(tower.partySize/2);
         u.mana=u.maxMana;
@@ -771,11 +791,9 @@
       if(u.team===1){
         fitTesterTarget(u,testerTargetType);
         if(testerBattle){
-          const minion=minionModels[u.minionId];
-          if(minion){
-            u.masteries=[minion.school];
+          if(u.minionId||u.bossId){
             u.skills={};
-            u.grimoire=CARDS.filter(card=>card.school===minion.school).map(card=>card.id);
+            u.grimoire=Builds.makeDeck(CARDS,u.masteries);
           }
           startHand(u);
         }else{
@@ -1041,19 +1059,21 @@
     return (role==="Striker"?7:4)+(card.cost<=5?1:0);
   }
   function towerProfile(floor,slot,rng=Math.random){
-    const profile=Builds.cpu(CARDS,slot,rng,floor);
-    const elite=floor>=5&&slot===0;
+    const level=Math.min(20,floor);
+    const profile=Builds.cpu(CARDS,slot,rng,level);
+    const boss=slot===0?towerBosses[floor]:null;
+    const elite=!boss&&floor>=5&&slot===0;
     const index=elite?(floor-5)%3:(floor-1+slot)%3;
-    const minionId=(elite?["magistrate","inkbinder","warden"]:["scribe","acolyte","pageguard"])[index];
-    const {name,school}=minionModels[minionId];
-    const secondary=Builds.elements.filter(element=>element!==school);
-    const masteries=[school,secondary[Math.floor(rng()*secondary.length)]];
-    const role=["Striker","Controller","Guardian"][index];
+    const minionId=boss?null:(elite?["magistrate","inkbinder","warden"]:["scribe","acolyte","pageguard"])[index];
+    const name=boss?.name||minionModels[minionId].name;
+    const secondary=boss?Builds.elements.filter(element=>element!==boss.school):null;
+    const masteries=boss?[boss.school,secondary[Math.floor(rng()*secondary.length)]]:randomMasteries(rng);
+    const role=boss?.role||["Striker","Controller","Guardian"][index];
     const skills={hp:0,mana:0};
     const allocation=role==="Support"?[masteries[0],"hp","mana",masteries[0],masteries[1]]:
       role==="Guardian"?["hp",masteries[0],"hp","mana",masteries[1]]:
       [masteries[0],"hp",masteries[0],"mana",masteries[1]];
-    for(let i=0;i<floor;i++){
+    for(let i=0;i<level;i++){
       const key=allocation[i%allocation.length];
       skills[key]=(skills[key]||0)+1;
     }
@@ -1065,7 +1085,7 @@
     const core=[...anchors,...remaining.slice(0,6)];
     const flexible=remaining.slice(6,10);
     const deck=[...core.flatMap(c=>[c.id,c.id]),...core.slice(0,8-flexible.length).map(c=>c.id),...flexible.map(c=>c.id)];
-    return {...Builds.normalize({...profile,masteries,skills,deck,name},CARDS),towerRole:role,minionId};
+    return {...Builds.normalize({...profile,...(boss||{}),masteries,skills,deck,name},CARDS),towerRole:role,minionId,bossId:boss?.id||null};
   }
   function towerChoice(u,cards){
     const allies=alive(u.team),opponents=alive(1-u.team),role=u.towerRole;
@@ -4211,7 +4231,7 @@
       g.drawImage(minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
       if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
-          school:minion.school,elapsed,duration:AUTO_TRACE_MS,centerX:-115,centerY:-100,scale:3.3
+          school:u.masteries?.[0]||Builds.elements[0],elapsed,duration:AUTO_TRACE_MS,centerX:-115,centerY:-100,scale:3.3
         });
       }
       g.restore();return;

@@ -14,7 +14,7 @@ const gear={
 };
 function gearLook(p){return Object.fromEntries(Object.entries(gear).map(([key,field])=>[key,Object.hasOwn(field.options,p?.[key])?p[key]:"original"]));}
 const names={water:'Water',earth:'Earth',lightning:'Lightning',nature:'Nature',wind:'Wind',dark:'Dark',fire:'Fire',ice:'Ice'};
-function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+Math.floor(level/5)*100+(level===20?100:0),mana:12+2*Math.floor(level/5),points:level};}
+function baseline(level=20){level=Math.max(1,Math.min(20,Math.floor(level)));return {level,hp:1500+50*level,mana:12+level,points:level};}
 function orderedSpells(cards,school){
  return cards.filter(c=>c.school===school).sort((a,b)=>a.cost-b.cost||(a.id<b.id?-1:a.id>b.id?1:0));
 }
@@ -71,7 +71,7 @@ function normalize(input,cards,progression=false){
  if(deck.length!==required||(progression&&deck.length!==p.deck?.length))throw Error('Your grimoire must contain exactly '+required+' unlocked cards from your selected mastery elements.');
  const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>MAX_COPIES)throw Error('A grimoire can hold up to '+MAX_COPIES+' copies of each spell.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
- return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,towerCleared:p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
+ return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,finalBossUnlocked:level===20&&(p.finalBossUnlocked===true||p.towerCleared===true),towerCleared:level===20&&p.finalBossUnlocked===true&&p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 const masteryPercentPerPoint=1.5;

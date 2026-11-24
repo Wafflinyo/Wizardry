@@ -118,7 +118,7 @@ begin
   elsif action_name='towerStart' then
    if not tower or not host or r.phase<>'lobby' then raise exception 'Only the Tower host can start a floor.';end if;
    if exists(select 1 from jsonb_array_elements(r.players) x where x->>'ready'<>'true') then raise exception 'Every wizard must ready up first.';end if;
-   select min((x->'profile'->>'level')::int) into floor_no from jsonb_array_elements(r.players) x;
+   select min((case when (x->'profile'->>'level')::int=20 and coalesce((x->'profile'->>'finalBossUnlocked')::boolean,(x->'profile'->>'towerCleared')::boolean,false) then 21 else (x->'profile'->>'level')::int end)) into floor_no from jsonb_array_elements(r.players) x;
    if (payload->'state'->'tower'->>'floor')::int is distinct from floor_no or payload->'state'->>'phase' is distinct from 'planning' then
     raise exception 'The party must start on the lowest-level wizard’s floor.';
    end if;
@@ -129,11 +129,12 @@ begin
    end if;
    select jsonb_agg(
     jsonb_set(
-     case when r.battle_state->>'winner'='0' and (x->'profile'->>'level')::int=(r.battle_state->'tower'->>'floor')::int
+     case when r.battle_state->>'winner'='0' and (case when (x->'profile'->>'level')::int=20 and coalesce((x->'profile'->>'finalBossUnlocked')::boolean,(x->'profile'->>'towerCleared')::boolean,false) then 21 else (x->'profile'->>'level')::int end)=(r.battle_state->'tower'->>'floor')::int
       then jsonb_set(x,'{profile}',(x->'profile')||jsonb_build_object(
        'level',least(20,(x->'profile'->>'level')::int+1),
        'lastTowerWin',r.battle_state->'tower'->>'id',
-       'towerCleared',coalesce((x->'profile'->>'towerCleared')::boolean,false) or (r.battle_state->'tower'->>'floor')::int=20))
+       'finalBossUnlocked',coalesce((x->'profile'->>'finalBossUnlocked')::boolean,false) or (r.battle_state->'tower'->>'floor')::int>=20,
+       'towerCleared',(coalesce((x->'profile'->>'finalBossUnlocked')::boolean,false) and coalesce((x->'profile'->>'towerCleared')::boolean,false)) or (r.battle_state->'tower'->>'floor')::int=21))
       else x end,'{ready}','false'::jsonb)
     order by ord
    ) into r.players from jsonb_array_elements(r.players) with ordinality as members(x,ord);

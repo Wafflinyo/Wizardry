@@ -198,7 +198,8 @@ const assert = require('node:assert/strict');
       assert.equal(foe.minionId,kind);
       assert.equal(foe.dummy,undefined);
       assert.equal(foe.hand.length,5);
-      assert.ok([...foe.hand,...foe.drawPile].every(id=>api.cards.find(c=>c.id===id).school===school));
+      assert.equal(new Set(foe.masteries).size,2);
+      assert.ok([...foe.hand,...foe.drawPile].every(id=>foe.masteries.includes(api.cards.find(c=>c.id===id).school)));
       foe.hand=[attack];
     }
     const hero=battle.units[0],hp=hero.hp;
@@ -236,13 +237,15 @@ const assert = require('node:assert/strict');
 
   const towerPlayer={profile:ctx.window.WizardryBuilds.cpu(api.cards,0,math.random,10)};
   for(const [floor,first,primary] of [
-    [1,'scribe','fire'],[2,'acolyte','dark'],[3,'pageguard','earth'],
-    [5,'magistrate','fire'],[6,'inkbinder','dark'],[7,'warden','earth']
+    [1,'scribe',null],[2,'acolyte',null],[3,'pageguard',null],
+    [5,'abyssal','water'],[6,'inkbinder',null],[7,'warden',null],
+    [10,'gale','wind'],[15,'storm','lightning'],[20,'glacial','ice'],[21,'sovereign','nature']
   ]){
     api.startTower([towerPlayer,towerPlayer],floor);
     const foes=api.getState().units.filter(u=>u.team===1);
-    assert.equal(foes[0].minionId,first);
-    assert.equal(foes[0].masteries[0],primary);
+    assert.equal(foes[0].bossId||foes[0].minionId,first);
+    if(primary)assert.equal(foes[0].masteries[0],primary);
+    assert.ok(foes.filter(u=>u.bossId).length<=1);
     for(const foe of foes){
       assert.equal(new Set(foe.masteries).size,2);
       assert.equal(new Set([...foe.hand,...foe.drawPile].map(id=>api.cards.find(c=>c.id===id).school)).size,2);

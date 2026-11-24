@@ -152,23 +152,24 @@ function buildOnline(){
 function renderOnline(){
  shell(`<section class="portal-hero"><h1>Online Battles</h1><p>Level 20 · ${escape(onlineProfile?.name||active.name)}</p><div class="portal-actions">${btn('Build Online Wizard','buildOnline')}${ownBuildReady()?btn('Use Saved Wizard','useOwn'):''}${btn('Create Online Lobby','host','primary')}${joinCode&&!incomingTower?btn('Join Invited Lobby','join'):''}</div><label class="field"><span>Lobby link or code</span><input id="joinInput" autocomplete="off"></label>${btn('Join Lobby','joinInput')}${btn('Back','hub','subtle')}</section>`);
 }
-const partyFloor=players=>Math.min(20,...players.filter(p=>!p.isCpu).map(p=>p.profile.level));
+const wizardFloor=p=>p.level===20&&p.finalBossUnlocked?21:p.level;
+const partyFloor=players=>Math.min(21,...players.filter(p=>!p.isCpu).map(p=>wizardFloor(p.profile)));
 function renderTower(){
- shell(`<section class="portal-hero"><h1>Caglimot Tower</h1><p>Floor ${active.level} of 20${active.towerCleared?' · Tower cleared':''}</p>${towerMessage?`<p class="network-notice">${escape(towerMessage)}</p>`:''}<div class="menu-stack">${btn('Fight Floor '+active.level,'soloTower','primary')}${btn('Host Co-op Tower','hostTower')}${joinCode&&incomingTower?btn('Join Tower Invite','joinTowerInvite'):''}${btn('Back','hub','subtle')}</div><label class="field"><span>Tower lobby link or code</span><input id="towerJoin" autocomplete="off"></label>${btn('Join Co-op Tower','joinTowerInput')}</section>`);
+ shell(`<section class="portal-hero"><h1>Caglimot Tower</h1><p>Floor ${wizardFloor(active)} of 21${active.towerCleared?' · Tower cleared':''}</p>${towerMessage?`<p class="network-notice">${escape(towerMessage)}</p>`:''}<div class="menu-stack">${btn('Fight Floor '+wizardFloor(active),'soloTower','primary')}${btn('Host Co-op Tower','hostTower')}${joinCode&&incomingTower?btn('Join Tower Invite','joinTowerInvite'):''}${btn('Back','hub','subtle')}</div><label class="field"><span>Tower lobby link or code</span><input id="towerJoin" autocomplete="off"></label>${btn('Join Co-op Tower','joinTowerInput')}</section>`);
 }
 function recordTowerResult(state){
  const tower=state.tower;
  if(!tower||!active||state.phase!=='finished'||state.winner!==0||active.lastTowerWin===tower.id)return;
  if(tower.online&&!state.units.some(u=>u.peerId===session.peerId&&u.team===0))return;
- if(active.level!==tower.floor){
-   towerMessage='Floor '+tower.floor+' cleared. Your next progression floor is '+active.level+'.';
+ if(wizardFloor(active)!==tower.floor){
+   towerMessage='Floor '+tower.floor+' cleared. Your next progression floor is '+wizardFloor(active)+'.';
    return;
  }
  const level=Math.min(20,active.level+1);
  try{
-   persistProfile(withLegalDeck({...active,level,towerCleared:active.towerCleared||tower.floor===20,lastTowerWin:tower.id}));
+   persistProfile(withLegalDeck({...active,level,finalBossUnlocked:active.finalBossUnlocked||tower.floor>=20,towerCleared:active.towerCleared||tower.floor===21,lastTowerWin:tower.id}));
    onlineProfile=null;
-   towerMessage=tower.floor===20?'Caglimot Tower cleared.':level===20?'Level 20 reached. You earned a skill point.':'Level '+level+' reached. You earned a skill point.';
+   towerMessage=tower.floor===21?'Caglimot Tower cleared.':tower.floor===20?'Final boss unlocked — Floor 21.':level===20?'Level 20 reached. You earned a skill point.':'Level '+level+' reached. You earned a skill point.';
  }catch(err){error(err.message);}
 }
 const resultsDialog=el('matchResults');
@@ -200,16 +201,16 @@ function renderProgression(){
  const ready=party.find(p=>p.peerId===session.peerId)?.ready;
  const waiting=coOp&&session.lobby?.phase!=='lobby';
  const cleared=coOp?(party.length>0&&party.every(p=>p.profile.towerCleared)):active.towerCleared;
- const floor=coOp?(party.length?partyFloor(party):tower.floor):active.level;
+ const floor=coOp?(party.length?partyFloor(party):tower.floor):wizardFloor(active);
  const leveledUp=winner===0&&active.lastTowerWin===tower.id&&active.level===tower.floor+1;
  const newCards=leveledUp?active.masteries.flatMap(school=>
    B.unlockOrder(cards,school).filter((_,i)=>B.unlockLevel(i,active.masteries.length)===active.level)):[];
  const rewards=newCards.length?`<section class="tower-unlocks" aria-labelledby="unlockedSpells"><h2 id="unlockedSpells">New spells unlocked</h2><div class="binder-grid">${newCards.map(card=>`<button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button>`).join('')}</div></section>`:'';
- const stats=B.stats(active),completed=active.towerCleared?20:active.level-1;
+ const stats=B.stats(active),completed=active.towerCleared?21:wizardFloor(active)-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
  const canEdit=!ready&&!submittingReady;
  const status=winner===0?towerMessage:winner==='draw'?'Floor ended in a draw.':'Floor attempt ended in defeat.';
- shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 20 floors cleared</label><progress id="towerProgress" max="20" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span><div class="skill-controls">${canEdit&&(active.skills[key]||0)>0?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="-1" aria-label="Remove skill point from ${label}">−</button>`:''}${stats.remaining&&canEdit&&(active.skills[key]||0)<20?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="1" aria-label="Add skill point to ${label}">+</button>`:''}</div></div>`).join('')}${canEdit&&entries.some(([key])=>active.skills[key]>0)?btn('Reset skill points','resetProgressPoints','small subtle'):''}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+ shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 21 floors cleared</label><progress id="towerProgress" max="21" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span><div class="skill-controls">${canEdit&&(active.skills[key]||0)>0?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="-1" aria-label="Remove skill point from ${label}">−</button>`:''}${stats.remaining&&canEdit&&(active.skills[key]||0)<20?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="1" aria-label="Add skill point to ${label}">+</button>`:''}</div></div>`).join('')}${canEdit&&entries.some(([key])=>active.skills[key]>0)?btn('Reset skill points','resetProgressPoints','small subtle'):''}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
  if(newCards.length)requestAnimationFrame(()=>api.drawCardArts());
 }
 function changeProgressPoints(key,delta){
@@ -238,7 +239,7 @@ async function nextFloor(){
 }
 function startSoloTower(){
  towerLobby=false;towerMessage='';
- api.startTower([{profile:active}],active.level);showBattle();
+ api.startTower([{profile:active}],wizardFloor(active));showBattle();
 }
 function showBattle(){
  lastResult=null;view='battle';resultsDialog.close();
@@ -272,7 +273,7 @@ function acceptRoom(data){if(data.roomId===session.roomId&&data.version<session.
    if(towerLobby){
      const profile=data.lobby.players.find(p=>p.peerId===session.peerId)?.profile;
      if(profile?.lastTowerWin&&active?.lastTowerWin!==profile.lastTowerWin){
-       try{persistProfile(withLegalDeck({...active,level:Math.max(active.level,profile.level),towerCleared:profile.towerCleared,lastTowerWin:profile.lastTowerWin}));onlineProfile=null;}catch(err){error(err.message);}
+       try{persistProfile(withLegalDeck({...active,level:Math.max(active.level,profile.level),finalBossUnlocked:profile.finalBossUnlocked,towerCleared:profile.towerCleared,lastTowerWin:profile.lastTowerWin}));onlineProfile=null;}catch(err){error(err.message);}
      }
    }
    session.active=false;if(!towerLobby||!lastResult)screen('lobby');

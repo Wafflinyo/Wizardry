@@ -123,7 +123,7 @@
   CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":2,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Mark one enemy until the rune blocks a round-end mana gain. Full mana preserves the rune."});
   CARDS.push({"id":"soulharvest","name":"Soul Harvest","school":"dark","cost":7,"target":"enemy","kind":"soulharvest","damage":540,"soullessDamage":250,"soullessRounds":3,"accuracy":0.85,"icon":"☠","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"Hook one enemy for 540 base damage and trap their soul in a lantern. Soulless deals 250 damage after 3 rounds."});
   CARDS.push({"id":"sirensmelody","name":"Sirens Melody","school":"water","cost":5,"target":"team","kind":"teamheal","heal":350,"accuracy":0.95,"icon":"≈","rarity":"EPIC","duration":3400,"hit":0.62,"short":"95% ACCURACY","description":"A siren rises on a rock and sings. Restores up to 350 base HP to each living ally, including you."});
-  CARDS.push({"id":"quicksand","name":"Quick Sand","school":"earth","cost":4,"target":"enemy","kind":"quicksand","accuracy":1,"icon":"◆","rarity":"RARE","duration":1750,"hit":0.65,"short":"100% ACCURACY","sinkDamage":530,"turns":5,"description":"Lasts 5 rounds. The target sinks on each cast attempt, even on a miss. On the third attempt, they take 530 damage and the curse ends."});
+  CARDS.push({"id":"quicksand","name":"Quick Sand","school":"earth","cost":4,"target":"enemy","kind":"quicksand","accuracy":1,"icon":"◆","rarity":"RARE","duration":1750,"hit":0.65,"short":"100% ACCURACY","sinkDamage":350,"drain":150,"turns":3,"description":"Lasts 3 rounds. Each cast attempt sinks the target and drains up to 150 HP to heal your living teammate with the lowest current HP, including yourself. The third attempt closes the sand for 350 additional damage."});
   CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":7,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
   CARDS.push({"id":"crystalicemirrors","name":"Crystal Ice Mirrors","school":"ice","cost":3,"target":"enemy","kind":"crystalicemirrors","accuracy":1,"icon":"❄","rarity":"EPIC","duration":2250,"hit":0.67,"short":"100% ACCURACY","reflectChance":0.4,"turns":3,"description":"Mark one enemy for 3 rounds. Each damaging cast has a 40% chance to turn its damage back on the caster instead. Multi-hit spells roll once. Team attacks reflect one target’s share."});
   CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to Stun, skipping their pending action this round."});
@@ -304,7 +304,7 @@
     wickedwitch:"Random beam. 30% chance of the matching status.",
     ragingwaters:"Next damaging Water spell gains 25%.",meteorshower:"25% damage vulnerability per enemy.",
     manascourge:"Blocks the target’s next round-end mana gain.",soulharvest:"250 extra damage after 3 rounds.",
-    quicksand:"530 damage on the third cast attempt within 5 rounds.",
+    quicksand:"Drain 150 HP per cast attempt for 3 rounds. The third deals 350 extra damage.",
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
     electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
@@ -2583,15 +2583,22 @@
     if(!curse||state.round>=curse.expiresRound)return unit.hp>0;
     curse.sinks++;
     const final=curse.sinks===3;
-    const amount=final?absorbBarrierDamage(unit,curse.value):0;
-    const message=flash(unit,final?"QUICK SAND −"+amount:"SINK "+curse.sinks+" / 3","#f3cb87");
+    const caster=getUnit(curse.sourceId);
+    const drained=loseHp(caster,unit,absorbBarrierDamage(unit,curse.drain??BY_ID.quicksand.drain));
+    const message=flash(unit,"SINK "+curse.sinks+" / 3 · −"+drained+" HP","#f3cb87");
     message.quickSandUnit=unit.id;
     message.quickSandDepth=curse.sinks;
-    if(final){
-      consumeStatus(unit,"quick_sand");
-      loseHp(getUnit(curse.sourceId),unit,amount);
-      if(!unit.hp){unit.defeatElapsedMs=0;flash(unit,"DEFEATED","#ffdb9c");}
+    const ally=caster&&lowestHpTeammate(caster.team);
+    if(ally&&drained>0&&!healingSuppressed("earth")){
+      const healed=restoreHp(caster,ally,drained);
+      if(healed>0)flash(ally,"QUICK SAND · +"+healed+" HP","#cde89e");
     }
+    if(final&&unit.hp>0){
+      const closing=loseHp(caster,unit,absorbBarrierDamage(unit,curse.value));
+      flash(unit,"QUICK SAND CLOSES · −"+closing+" HP","#f3cb87");
+    }
+    if(final||!unit.hp)consumeStatus(unit,"quick_sand");
+    if(!unit.hp){unit.defeatElapsedMs=0;flash(unit,"DEFEATED","#ffdb9c");}
     return unit.hp>0;
   }
 
@@ -3138,9 +3145,9 @@
       if(t?.team!==c.team&&canReceiveDebuff(t,"quick_sand")){
         addStatus(t,"quick_sand",null,card.sinkDamage,card.school);
         Object.assign(t.statuses.find(st=>st.kind==="quick_sand"),{
-          sinks:0,expiresRound:state.round+card.turns
+          sinks:0,drain:card.drain,sourceId:c.id,expiresRound:state.round+card.turns
         });
-        flash(t,"QUICK SAND · 5 ROUNDS","#f3cb87");
+        flash(t,"QUICK SAND · "+card.turns+" ROUNDS","#f3cb87");
       }
     }else if(card.kind==="thornwrap"){
       if(canReceiveDebuff(t,"thorny_wrap")&&t&&t.hp>0&&t.team!==c.team){
@@ -4293,7 +4300,7 @@
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};
       case "frozen_touch":return {title:"Frozen Touch",detail:"Blocks all hits from the next incoming damaging spell. Fire and Lightning bypass the shield."};
       case "crystal_ice_mirrors":return {title:"Crystal Ice Mirrors",detail:"40% chance per damaging cast to reflect its damage back at the caster. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
-      case "quick_sand":return {title:"Quick Sand",detail:st.sinks+" / 3 sinks · "+Math.max(0,st.expiresRound-state.round)+" rounds left. Every cast attempt counts. The third deals "+st.value+" damage."};
+      case "quick_sand":return {title:"Quick Sand",detail:st.sinks+" / 3 sinks · "+Math.max(0,st.expiresRound-state.round)+" rounds left. Each attempt drains "+(st.drain??BY_ID.quicksand.drain)+" HP to the lowest-HP teammate on the caster’s side. The third adds "+st.value+" damage."};
       case "thorny_wrap":return {title:"Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};
       case "static_shock":return {title:"ϟ Static Shock · Lightning curse",detail:"−30 percentage points of spell accuracy for "+Math.max(0,st.expiresRound-state.round)+" more turns. The first missed spell triggers 100 damage and removes this curse. Successful spells do not consume it. Does not stack."};
       case "calming_waters":return {title:"Calming Waters · Healing",detail:"Restores "+st.value+" HP at the start of each turn for "+st.remaining+" more turns. "+(st.value*st.remaining)+" HP remaining. Refreshes without stacking; cannot revive or exceed maximum HP."};

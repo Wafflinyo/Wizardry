@@ -589,3 +589,26 @@ console.log('Live Wire: allied charge, misses, other elements, Wind Dome, chain-
   assert.ok(!api.requiresRest(caster));
 }
 console.log('Zeus’s Might: recharge after successful cast, fizzle preserves next turn, exactly one round skipped.');
+
+{
+  const sand=card('quicksand');
+  const caster=unit('sand-caster',0),ally=unit('sand-ally',0),enemy=unit('sand-enemy',1);
+  caster.hp=550;ally.hp=400;
+  const battle={phase:'resolving',round:1,units:[caster,ally,enemy],auras:[null,null],log:[],flashes:[]};
+  ctx.window.setupGrowthTest(battle);
+  api.applySpell({card:sand,runeResult:'success',action:{casterId:caster.id,targetId:enemy.id}});
+  assert.equal(enemy.statuses.find(st=>st.kind==='quick_sand').expiresRound,4);
+  assert.ok(api.triggerQuickSand(enemy));
+  assert.equal(ally.hp,550);
+  battle.round++;
+  assert.ok(api.triggerQuickSand(enemy));
+  battle.round++;
+  assert.ok(api.triggerQuickSand(enemy));
+  assert.equal(enemy.hp,200);
+  assert.equal(caster.hp+ally.hp,1400);
+  assert.ok(!has(enemy,'quick_sand'));
+  api.applySpell({card:sand,runeResult:'success',action:{casterId:caster.id,targetId:enemy.id}});
+  battle.round+=3;
+  assert.ok(api.triggerQuickSand(enemy));
+  assert.equal(enemy.hp,200);
+}

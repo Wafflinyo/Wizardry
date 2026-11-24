@@ -1,18 +1,16 @@
 (() => {
   "use strict";
   const clamp=t=>Math.max(0,Math.min(1,t));
+  // Coordinates follow the ground plane, with the apex toward the opposing team.
   const slabs=[
-    {x:-49,y:8,w:39,h:108,lean:-12},
-    {x:4,y:1,w:48,h:137,lean:4},
-    {x:51,y:-10,w:34,h:103,lean:14}
+    {a:[39,-61],b:[69,-38],h:94,delay:.34},
+    {a:[66,-40],b:[96,-16],h:119,delay:.17},
+    {a:[93,-19],b:[111,0],h:139,delay:0},
+    {a:[111,0],b:[92,21],h:135,delay:.05},
+    {a:[95,18],b:[67,42],h:114,delay:.23},
+    {a:[70,39],b:[39,66],h:94,delay:.40}
   ];
-  const tones=["#694c47","#8d6650","#bc9166","#d5af7f","#a67a56"];
-  const cracks=[
-    [[-16,-128],[-7,-103],[-22,-84],[-12,-62],[-25,-33]],
-    [[-12,-62],[11,-57],[34,-77],[56,-70],[65,-47]],
-    [[-22,-84],[-39,-75],[-59,-51],[-61,-20]],
-    [[11,-57],[17,-31],[2,-15]]
-  ];
+  const tones=["#483638","#74534a","#a0775c","#e0b582","#b68a66"];
   function poly(g,color,points){
     g.beginPath();
     points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
@@ -20,22 +18,32 @@
     g.fillStyle=color;
     g.fill();
   }
-  function slab(g,{x,y,w,h,lean},lift){
-    g.save();
-    g.translate(x,y);
-    g.beginPath();
-    g.rect(-110,-165,220,165);
-    g.clip();
-    g.translate(0,h*(1-lift));
-    const a=[-w*.5,0],b=[w*.48,0],c=[w*.42+lean,-h*.76];
-    const d=[w*.03+lean,-h],e=[-w*.33+lean,-h*.87],f=[-w*.53,-h*.32];
-    const seam=[-w*.06+lean*.48,-h*.49];
-    poly(g,tones[0],[a,b,c,d,e,f]);
-    poly(g,tones[3],[e,d,c,seam]);
-    poly(g,tones[2],[f,e,seam,a]);
-    poly(g,tones[1],[a,seam,c,b]);
-    poly(g,tones[4],[seam,[w*.07,-h*.33],b]);
-    g.restore();
+  function slab(g,{a,b,h,delay},growth,impact){
+    const lift=clamp((growth-delay)/.55);
+    if(!lift)return;
+    const height=h*(1-(1-lift)**3);
+    const tip=[a[0]-5,a[1]-height*.94],peak=[b[0]-5,b[1]-height];
+    const shoulders=[tip[0]+12,tip[1]-7],cap=[peak[0]+13,peak[1]-6];
+    const foot=[b[0]+13,b[1]-6];
+    const seam=[(a[0]+b[0])/2-4,(a[1]+b[1])/2-height*.49];
+    const lower=[(a[0]+b[0])/2+3,(a[1]+b[1])/2-height*.16];
+    poly(g,tones[1],[a,tip,peak,b]);
+    poly(g,tones[2],[a,tip,seam,lower]);
+    poly(g,"#c2966d",[tip,peak,seam]);
+    poly(g,tones[0],[b,peak,cap,foot]);
+    poly(g,tones[3],[tip,shoulders,cap,peak]);
+    poly(g,tones[4],[seam,peak,b,lower]);
+    if(impact){
+      const growth=clamp((impact.age-delay*.09)/.12)*(impact.broken?1:impact.stress);
+      fissure(g,[peak,[seam[0]+4,seam[1]-17],seam,[lower[0]-4,lower[1]-5],lower],growth);
+    }
+    if(lift<1){
+      g.save();
+      g.translate((a[0]+b[0])/2,(a[1]+b[1])/2);
+      g.scale(.50,.56);
+      dust(g,lift);
+      g.restore();
+    }
   }
   function fissure(g,points,progress){
     const extent=clamp(progress)*(points.length-1);
@@ -84,39 +92,36 @@
   function wall(g,growth,impact){
     const age=impact?.age??0;
     if(!impact?.broken||age<.17){
-      slabs.forEach((piece,i)=>{
-        const t=clamp((growth-i*.17)/.65);
-        slab(g,piece,1-(1-t)**3);
-      });
-      if(growth<1)dust(g,clamp((growth-.06)/.94));
-      if(impact){
-        for(const [i,points] of cracks.entries()){
-          const reach=impact.broken?1:impact.stress;
-          fissure(g,points,clamp((age-i*.014)/.11)*reach);
-        }
-      }
+      g.save();
+      g.globalAlpha*=clamp(growth*4)*.46;
+      poly(g,"#241d25",[[29,-58],[110,-8],[130,2],[48,74],[25,74],[98,1],[22,-59]]);
+      g.restore();
+      slabs.forEach(piece=>slab(g,piece,growth,impact));
     }else{
+      g.save();
+      g.translate(84,0);
       dust(g,clamp((age-.17)/.61));
+      g.restore();
     }
   }
   function draw(g,target,growth,impact){
     const dir=target.team?-1:1;
-    const x=target.x+dir*67,y=target.y+3;
     g.save();
-    g.translate(x,y);g.scale(dir,1);
+    g.translate(target.x,target.y+3);g.scale(dir,1);
     wall(g,growth,impact);
     g.restore();
-    if(impact?.broken)debris(g,x,y,dir,impact);
+    if(impact?.broken)debris(g,target.x+dir*91,target.y+3,dir,impact);
   }
   function portrait(g,w,h){
     const bg=g.createLinearGradient(0,0,0,h);
     bg.addColorStop(0,"#352e3a");bg.addColorStop(1,"#966448");
     g.fillStyle=bg;g.fillRect(0,0,w,h);
     g.save();
-    g.translate(w*.5,h*.85);
-    g.scale(w/190,w/190);
+    g.translate(w*.09,h*.75);
+    const scale=Math.min(w/148,h/215);
+    g.scale(scale,scale);
     for(let i=0;i<7;i++)poly(g,i%2?"#bf8e69":"#785247",
-      [[-110+i*32,5],[-85+i*31,-92+i*4],[-64+i*30,5]]);
+      [[i*24,50],[i*23+9,-135+i*4],[i*24+34,50]]);
     wall(g,1,{age:.12,stress:.83});
     g.restore();
   }

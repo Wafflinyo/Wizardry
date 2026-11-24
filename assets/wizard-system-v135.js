@@ -59,19 +59,98 @@ function progressionDeck(cards,masteries,level,current=[]){
  for(let pass=1;pass<=MAX_COPIES;pass++)for(const card of choices)if((counts.get(card.id)||0)<pass)add(card.id);
  return deck;
 }
+function rogueSchedule(cards,masteries,seen,start=1){
+ const width=masteries.length===1?3:2;
+ const rounds=Math.max(0,...masteries.map(e=>Math.ceil(unlockOrder(cards,e).filter(c=>!seen.includes(c.id)).length/width)));
+ const first=Math.min(20,Math.max(3,start+1)),n=Math.min(rounds,21-first);
+ return Array.from({length:n},(_,i)=>Math.round(first+(20-first)*(i+1)/n));
+}
+function rogueStarter(cards,masteries){
+ const single=masteries.length===1,owned={},deck=[];
+ for(const school of masteries)for(const card of unlockOrder(cards,school).slice(0,single?6:4)){
+  owned[card.id]=single?4:3;for(let i=0;i<owned[card.id];i++)deck.push(card.id);
+ }
+ return {deck,rogue:{owned,seen:Object.keys(owned),schedule:rogueSchedule(cards,masteries,Object.keys(owned)),pending:null,gold:0,replayFloor:1}};
+}
+function cleanRogue(raw,cards,masteries){
+ const legal=new Set(cards.filter(c=>masteries.includes(c.school)).map(c=>c.id)),owned={};
+ for(const [id,n] of Object.entries(raw?.owned||{}))if(legal.has(id)&&Number.isInteger(n)&&n>0)owned[id]=Math.min(4,n);
+ const seen=[...new Set([...Object.keys(owned),...(Array.isArray(raw?.seen)?raw.seen.filter(id=>legal.has(id)):[])])];
+ const schedule=[...new Set((Array.isArray(raw?.schedule)?raw.schedule:[]).filter(n=>Number.isInteger(n)&&n>=2&&n<=20))].sort((a,b)=>a-b);
+ let pending=null;
+ if(raw?.pending&&Array.isArray(raw.pending.groups)){
+  const groups=raw.pending.groups.filter(g=>masteries.includes(g.school)&&Array.isArray(g.ids)).map(g=>({school:g.school,ids:[...new Set(g.ids.filter(id=>legal.has(id)&&!owned[id]&&cards.find(c=>c.id===id)?.school===g.school))].slice(0,masteries.length===1?3:2)})).filter(g=>g.ids.length);
+  if(groups.length)pending={level:Math.max(2,Math.min(20,Number(raw.pending.level)||2)),groups};
+ }
+ return {owned,seen,schedule,pending,gold:Math.max(0,Math.min(100000000,Math.floor(Number(raw?.gold)||0))),replayFloor:Math.max(1,Math.min(21,Math.floor(Number(raw?.replayFloor)||1)))};
+}
+function availableSpells(cards,p){return p.rogue?cards.filter(c=>p.masteries.includes(c.school)&&p.rogue.owned[c.id]>0):unlockedSpells(cards,p.masteries,p.level);}
+function copyLimit(p,id){return p.rogue?(p.rogue.owned[id]||0):MAX_COPIES;}
+function fillOwned(cards,p){
+ if(!p.rogue)return progressionDeck(cards,p.masteries,p.level,p.deck);
+ const deck=[],counts={},available=availableSpells(cards,p);
+ const add=id=>{if(deck.length<24&&(counts[id]||0)<copyLimit(p,id)){deck.push(id);counts[id]=(counts[id]||0)+1;}};
+ (p.deck||[]).forEach(add);for(let i=0;i<4;i++)for(const c of available)add(c.id);return deck;
+}
+function migrateRogue(cards,p){
+ if(p.rogue)return {...p,rogue:cleanRogue(p.rogue,cards,p.masteries)};
+ if(p.level===1&&!p.finalBossUnlocked&&!p.towerCleared)return {...p,...rogueStarter(cards,p.masteries)};
+ const owned={};for(const id of p.deck||[])if(cards.some(c=>c.id===id&&p.masteries.includes(c.school)))owned[id]=Math.min(4,(owned[id]||0)+1);
+ for(const [id,n] of Object.entries(rogueStarter(cards,p.masteries).rogue.owned))if(!owned[id])owned[id]=n;
+ return {...p,rogue:{owned,seen:Object.keys(owned),schedule:p.towerCleared?[]:rogueSchedule(cards,p.masteries,Object.keys(owned),p.level),pending:null,gold:0,replayFloor:1}};
+}
+function rogueFloor(p){return p.towerCleared?(p.rogue?.replayFloor||1):p.level===20&&p.finalBossUnlocked?21:p.level;}
+function goldReward(floor){return 50+10*floor;}
+function libraryPrice(card){return 100+40*card.cost;}
+function makeOffer(cards,p,level,rng=Math.random){
+ const r=p.rogue,width=p.masteries.length===1?3:2,groups=[];
+ for(const school of p.masteries){
+  const missing=unlockOrder(cards,school).filter(c=>!r.owned[c.id]);
+  const ids=missing.filter(c=>!r.seen.includes(c.id)).slice(0,width).map(c=>c.id);
+  if(ids.length<width)ids.push(...shuffle(missing.filter(c=>!ids.includes(c.id)&&r.seen.includes(c.id)),rng).slice(0,width-ids.length).map(c=>c.id));
+  if(ids.length)groups.push({school,ids});
+ }
+ return groups.length?{level,groups}:null;
+}
+function awardFloor(cards,profile,floor,winId,rng=Math.random){
+ if(profile.lastTowerWin===winId||rogueFloor(profile)!==floor)return profile;
+ const p={...profile,rogue:cleanRogue(profile.rogue,cards,profile.masteries),lastTowerWin:winId};p.rogue.gold+=goldReward(floor);
+ if(p.towerCleared){p.rogue.replayFloor=floor===21?1:floor+1;return p;}
+ p.level=Math.min(20,p.level+1);p.finalBossUnlocked=!!p.finalBossUnlocked||floor>=20;p.towerCleared=floor===21;
+ if(p.towerCleared){p.rogue.replayFloor=1;p.rogue.pending=null;return p;}
+ if(p.rogue.schedule.includes(p.level)&&!p.rogue.pending){
+  p.rogue.pending=makeOffer(cards,p,p.level,rng);
+  if(p.rogue.pending)p.rogue.seen=[...new Set([...p.rogue.seen,...p.rogue.pending.groups.flatMap(g=>g.ids)])];
+  p.rogue.schedule=p.rogue.schedule.filter(n=>n!==p.level);
+ }
+ return p;
+}
+function chooseOffer(cards,p,choices){
+ const r=cleanRogue(p.rogue,cards,p.masteries),pending=r.pending;
+ if(!pending||pending.groups.some(g=>!g.ids.includes(choices[g.school])))throw Error('Choose one spell from each offered element.');
+ for(const g of pending.groups)r.owned[choices[g.school]]=3;
+ r.pending=null;return {...p,rogue:r};
+}
+function buySpell(cards,p,id){
+ const card=cards.find(c=>c.id===id);
+ if(!p.towerCleared||!card||!p.masteries.includes(card.school)||p.rogue.owned[id])throw Error('This spell is not available for purchase.');
+ const price=libraryPrice(card);if(p.rogue.gold<price)throw Error('Not enough gold.');
+ return {...p,rogue:{...p.rogue,gold:p.rogue.gold-price,owned:{...p.rogue.owned,[id]:3},seen:[...new Set([...p.rogue.seen,id])]}};
+}
 function normalize(input,cards,progression=false){
  const p=input||{},masteries=[...new Set((Array.isArray(p.masteries)?p.masteries:[]).filter(e=>elements.includes(e)))];
  if(masteries.length<1||masteries.length>2)throw Error('Choose one or two mastery elements.');
  const level=Math.max(1,Math.min(20,Math.floor(Number(p.level)||20))),skills=Object.fromEntries(['hp','mana',...elements].map(k=>[k,Math.max(0,Math.floor(Number(p.skills?.[k])||0))]));
  for(const e of elements)if(!masteries.includes(e))skills[e]=0;
  if(Object.values(skills).reduce((a,b)=>a+b,0)>level)throw Error('You have allocated more skill points than your level allows.');
- const available=progression?unlockedSpells(cards,masteries,level):cards.filter(c=>masteries.includes(c.school));
+ const rogue=p.rogue?cleanRogue(p.rogue,cards,masteries):null;
+ const available=rogue?cards.filter(c=>masteries.includes(c.school)&&rogue.owned[c.id]):progression?unlockedSpells(cards,masteries,level):cards.filter(c=>masteries.includes(c.school));
  const legal=available.map(c=>c.id),deck=(Array.isArray(p.deck)?p.deck:[]).filter(id=>legal.includes(id));
- const required=progression?deckSize(available):24;
+ const required=rogue?24:progression?deckSize(available):24;
  if(deck.length!==required||(progression&&deck.length!==p.deck?.length))throw Error('Your grimoire must contain exactly '+required+' unlocked cards from your selected mastery elements.');
- const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>MAX_COPIES)throw Error('A grimoire can hold up to '+MAX_COPIES+' copies of each spell.');}
+ const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>(rogue?rogue.owned[id]:MAX_COPIES))throw Error('Your grimoire contains more copies than are owned.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
- return {...gearLook(p),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,finalBossUnlocked:level===20&&(p.finalBossUnlocked===true||p.towerCleared===true),towerCleared:level===20&&p.finalBossUnlocked===true&&p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
+ return {...gearLook(p),...(rogue?{rogue}:{}),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,finalBossUnlocked:level===20&&(p.finalBossUnlocked===true||p.towerCleared===true),towerCleared:level===20&&p.finalBossUnlocked===true&&p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 const masteryPercentPerPoint=1.5;
@@ -95,5 +174,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random,level=20){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<level;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockOrder,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu};
+root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockOrder,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu,rogueStarter,rogueSchedule,migrateRogue,availableSpells,copyLimit,fillOwned,rogueFloor,goldReward,libraryPrice,awardFloor,chooseOffer,buySpell,shuffle};
 })(typeof window!=='undefined'?window:globalThis);

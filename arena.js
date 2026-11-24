@@ -1094,7 +1094,7 @@
   }
   function tickFloorIntro(dt){
     if(floorIntro&&floorIntro.preview&&state.mode!=="tester"){endFloorIntro();}
-    const key=state.tower?.floor===21&&state.round===1&&state.phase==="planning"?state.tower.id:null;
+    const key=state.tower?.floor===21&&!state.tower.skipIntro&&state.round===1&&state.phase==="planning"?state.tower.id:null;
     if(key&&key!==shownIntroKey){shownIntroKey=key;beginFloorIntro(state.tower.partySize||1);}
     if(!floorIntro)return false;
     if(!floorIntro.preview&&(!key||key!==shownIntroKey)){endFloorIntro();return false;}
@@ -1172,7 +1172,7 @@
         if(testerBattle){
           if(u.minionId||u.bossId){
             u.skills={};
-            u.grimoire=Builds.progressionDeck(CARDS,u.masteries,u.level);
+            u.grimoire=u.bossId==='grelus'?grelusDeck():Builds.progressionDeck(CARDS,u.masteries,u.level);
           }
           startHand(u);
         }else{
@@ -1325,7 +1325,7 @@
   }
   function isRecharging(u){
     return !!u&&u.hp>0&&Number.isInteger(u.rechargeRound)&&
-      state.round===u.rechargeRound;
+      state.round===u.rechargeRound&&u.statuses.some(st=>st.kind==='recharge');
   }
   function isStunned(u){
     return !!u&&u.hp>0&&Number.isInteger(u.stunRound)&&
@@ -1412,7 +1412,7 @@
     recordBattleEvent(target.name+" is haunted by Jack the Lantern: 30% chance to skip each of 3 turns.");
   }
   function requiresRest(u){
-    return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||isRecharging(u)||
+    return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||(isRecharging(u)&&!alive(u.team).some(ally=>ally.id!==u.id&&turnOrder().findIndex(v=>v.id===ally.id)<turnOrder().findIndex(v=>v.id===u.id)))||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   const BRIAR_EFFECTS=new Set(["burn","poison","frostbite"]);
@@ -1439,6 +1439,16 @@
     if(towerControl(card))return role==="Controller"?10:5;
     if(!card.damage)return 1;
     return (role==="Striker"?7:4)+(card.cost<=5?1:0);
+  }
+  function grelusDeck(rng=Math.random){
+    const deck=[];
+    for(const [school,signature] of [["dark","reaper"],["lightning","zeus"]]){
+      deck.push(signature,signature);
+      const ranked=CARDS.filter(c=>c.school===school&&c.id!==signature).map(c=>({c,score:towerDeckScore(c,"Controller")+rng()*6})).sort((a,b)=>b.score-a.score).map(v=>v.c);
+      const cheap=ranked.filter(c=>c.damage&&c.cost<=4).slice(0,2);
+      for(const card of [...cheap,...ranked.filter(c=>!cheap.includes(c))].slice(0,5))deck.push(card.id,card.id);
+    }
+    return Builds.shuffle(deck,rng);
   }
   function towerProfile(floor,slot,rng=Math.random){
     const level=Math.min(20,floor);
@@ -1469,7 +1479,7 @@
     for(let copy=0;copy<Builds.MAX_COPIES&&seed.length<desired;copy++){
       for(const card of core){if(seed.length===desired)break;seed.push(card.id);}
     }
-    const deck=Builds.progressionDeck(CARDS,masteries,level,seed);
+    const deck=boss?.id==='grelus'?grelusDeck(rng):Builds.progressionDeck(CARDS,masteries,level,seed);
     return {...Builds.normalize({...profile,...(boss||{}),masteries,skills,deck,name},CARDS,true),towerRole:role,minionId,bossId:boss?.id||null};
   }
   function towerChoice(u,cards){
@@ -2253,7 +2263,7 @@
         recordBattleEvent(c.name+" loses their action while stunned.");
         continue;
       }
-      if(c.mana<card.cost||isRecharging(c))continue;
+      if(c.mana<card.cost||isRecharging(c)){if(isRecharging(c))recordBattleEvent(c.name+' loses this action to Recharge.');continue;}
       // Cast-attempt curses strike before staff raising or rune tracing.
       // Ineligible/skipped turns above never count as an attempt.
       const attempt={card};
@@ -2362,7 +2372,7 @@
   const MAX_DEBUFF_RUNES=4;
   const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2519,6 +2529,7 @@
     const at=u.statuses.findIndex(s=>s.kind===kind);
     if(at<0)return null;
     const [status]=u.statuses.splice(at,1);
+    if(kind==='recharge')u.rechargeRound=null;
     if(kind==="lifevine"){
       const partner=getUnit(status.partnerId);
       if(partner?.statuses.some(st=>st.kind==="lifevine"&&st.partnerId===u.id))consumeStatus(partner,kind);
@@ -2970,10 +2981,14 @@
     a.zeusImpactResolved=true;a.applied=true;
     const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
-    caster.rechargeRound=state.round+1;
-    addStatus(caster,"recharge",null,1,a.card.school);
-    flash(caster,"RECHARGE · NEXT ROUND","#e0d5ff");
-    recordBattleEvent(caster.name+" must recharge next round after casting Zeus’s Might.");
+    if(caster.bossId!=="grelus"){
+      addStatus(caster,"recharge",null,1,a.card.school);
+      if(caster.statuses.some(st=>st.kind==="recharge")){
+        caster.rechargeRound=state.round+1;
+        flash(caster,"RECHARGE · NEXT ROUND","#e0d5ff");
+        recordBattleEvent(caster.name+" must recharge next round after casting Zeus’s Might.");
+      }
+    }
     // Snapshot formation neighbors before the primary strike can defeat its target.
     a.zeusChainTargets=dragonSplashTargets(target,caster).map((u,i)=>({id:u.id,x:u.x,y:u.y,hit:false,hitAt:.645+i*.02}));
     damage(caster,target,a.card.damage,a.card,a);
@@ -3808,7 +3823,7 @@
     recordBattleEvent("Choose a spell and target.");
     ui.status.textContent="Round "+state.round+": "+
       (sleepingThisRound(caster())?"Asleep — your wizard skips this round.":isFrozen(caster())?"Frozen — your wizard skips this turn.":isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
-       isRecharging(caster())?"Recharge round — your wizard skips this turn; CPU continues.":
+       isRecharging(caster())?"Recharge — an earlier ally can remove it before your action.":
        "Choose a card in hand, tap a target, and confirm.");
     paintUI();
     // If the controlled wizard was knocked out, teammates remain autonomous.
@@ -3886,7 +3901,7 @@
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
     if(planning)ui.hint.textContent=c?
       (sleepingThisRound(c)?"Asleep · skips this round.":isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
-       isRecharging(c)?"RECHARGING: "+c.name+" must skip this round. Tidal Echo remains active.":
+       isRecharging(c)?"RECHARGING: "+c.name+" can act if an earlier ally destroys Recharge.":
        card?(card.fieldRounds?"Confirm "+card.name+" across the entire battlefield.":card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
          target?"Confirm "+card.name+" on "+target.name+".":
@@ -4814,7 +4829,7 @@
       case "recharge":
         return {title:"Recharge · Debuff",
           detail:u.name+" must skip Round "+u.rechargeRound+
-          " after using Poseidon's Wrath. The status expires once that round has passed."};
+          " unless an ally destroys this rune before their action. The status expires once that round has passed."};
       case "stun":
         return {title:"Stunned · 1 action",
           detail:u.name+" is stunned and will lose their next eligible action"+
@@ -6680,7 +6695,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,grelusDeck,towerProfile,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));
@@ -6691,7 +6706,7 @@
         team:1,slot,isCpu:true,profile:towerProfile(floor,slot)
       }));
       activeRoster=[...humans,...enemies];
-      setBattle(online?'online':'story',enemyCount,{id:crypto.randomUUID(),floor,online,partySize});
+      setBattle(online?'online':'story',enemyCount,{id:crypto.randomUUID(),floor,online,partySize,skipIntro:humans.every(p=>p.profile.towerCleared)});
       if(online)state.humanByTeam[0]=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.id||null;
       paintUI();
     },

@@ -13,6 +13,7 @@ try{
  for(const profile of profiles){try{saved.push(withLegalDeck(profile));}catch{}}
 }catch{}
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
+let libraryTestProfile=null;
 let binderElement='',deckDraft=null,deckReturn='progression',draftReturn='tower',offerChoices={};
 let lastResult=null,startingFloor=false,submittingReady=false;
 const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
@@ -24,7 +25,7 @@ function screen(next){deleteId=null;view=next;document.body.dataset.portalView=n
 function summary(p){const s=B.stats(p);return `<div class="stats-strip"><span><b>${s.hp.toLocaleString()}</b>HP</span><span><b>${s.mana}</b>Mana</span><span><b>${p.level}</b>Level</span></div>`;}
 function render(){
  if(view==='home')shell(`<section class="portal-hero game-menu"><h1>Wizardry : <span>The Fall of Lupen’s Kingdom</span></h1><nav class="menu-stack" aria-label="Main menu">${btn('New Wizard','create','primary')}${btn('Load Wizard','load')}${saved.some(p=>p.towerCleared)?btn('Weilei’s Library of Spells','librarySelect'):''}${btn('Test Mode','tests')}</nav>${joinCode?'<p class="network-notice">Load or create a wizard to use your lobby invite.</p>':''}</section>`);
- if(view==='tests')shell(`<section class="portal-hero game-menu"><h1>Test Mode</h1><nav class="menu-stack" aria-label="Test Mode">${btn('New Card Tester','cardTester','primary')}${btn('Wizard Creation Tester','wizardTester')}${btn('Back to Main Menu','home','subtle')}</nav></section>`);
+ if(view==='tests')shell(`<section class="portal-hero game-menu"><h1>Test Mode</h1><nav class="menu-stack" aria-label="Test Mode">${btn('New Card Tester','cardTester','primary')}${btn('Wizard Creation Tester','wizardTester')}${btn('Library Tester','libraryTester')}${btn('Back to Main Menu','home','subtle')}</nav></section>`);
  if(view==='load'){shell(`<div class="portal-heading"><div><p class="portal-eyebrow">YOUR WIZARDS</p><h1>Load a wizard</h1></div>${btn('Back','home','subtle')}</div><div class="saved-list">${saved.length?saved.map(p=>`<article class="portal-panel saved-card"><p class="portal-eyebrow">${p.masteries.map(title).join(' + ')} MASTER</p><h2>${escape(p.name)}</h2>${summary(p)}<p class="portal-note">${p.deck.length} cards · ${p.level-B.stats(p).remaining} skill points allocated</p><div class="portal-actions"><button class="portal-btn primary" data-load="${escape(p.id)}">Load</button><button class="portal-btn subtle" data-edit="${escape(p.id)}">Edit build</button><button class="portal-btn subtle" data-delete-wizard="${escape(p.id)}">Delete</button></div>${deleteId===p.id?`<div class="network-notice"><p>Delete ${escape(p.name)} from this browser?</p><div class="portal-actions"><button class="portal-btn" data-confirm-wizard="${escape(p.id)}">Delete wizard</button><button class="portal-btn subtle" data-cancel-delete>Cancel</button></div></div>`:''}</article>`).join(''):'<p>No saved wizards yet. Create your first wizard to begin.</p>'}</div>`);}
  if(view==='create'||view==='wizardTester')renderCreator();
  if(view==='hub'&&active){
@@ -34,10 +35,11 @@ function render(){
  if(view==='cpu')shell(`<section class="portal-hero"><h1>CPU Battles</h1><div class="practice-sizes">${[1,2,3,4].map(n=>`<button class="portal-btn" data-practice="${n}">${n}v${n}</button>`).join('')}</div>${btn('Back','hub','subtle')}</section>`);
  if(view==='tower'&&active)renderTower();
  if(view==='progression'&&active)renderProgression();
- if(view==='towerDeck'&&active)renderTowerDeck();
+ if(view==='towerDeck'&&deckDraft)renderTowerDeck();
  if(view==='spellDraft'&&active)renderSpellDraft();
  if(view==='librarySelect')renderLibrarySelect();
  if(view==='library'&&active)renderLibrary();
+ if(view==='libraryTester'&&libraryTestProfile)renderLibrary(libraryTestProfile,true);
  if(view==='online'&&active)renderOnline();
  if(view==='lobby')renderLobby();
 }
@@ -103,7 +105,7 @@ const cardDialog=el('binderCardDetail');
 function inspectBinderCard(id){
  const card=cards.find(c=>c.id===id);
  if(!card)return;
- const profile=['progression','library','spellDraft'].includes(view)?active:view==='towerDeck'?deckDraft:draft;
+ const profile=view==='libraryTester'?libraryTestProfile:['progression','library','spellDraft'].includes(view)?active:view==='towerDeck'?deckDraft:draft;
  cardDialog.innerHTML=`<button type="button" class="portal-btn small" data-close-binder autofocus>Close</button><div class="binder-card school-${card.school}">${binderFace(card,profile,true)}</div>`;
  if(!cardDialog.open)cardDialog.showModal();
  requestAnimationFrame(()=>api.drawCardArts());
@@ -118,8 +120,8 @@ function editTowerDeck(destination='progression'){
  deckReturn=destination;deckDraft=structuredClone(active);binderElement=active.masteries[0];screen('towerDeck');
 }
 function saveTowerDeck(){
- const profile=B.normalize({...active,deck:deckDraft.deck},cards,true);
- persistProfile(profile);onlineProfile=null;deckDraft=null;screen(deckReturn);
+ const profile=B.normalize({... (deckReturn==='libraryTester'?libraryTestProfile:active),deck:deckDraft.deck},cards,true);
+ if(deckReturn==='libraryTester')libraryTestProfile=profile;else{persistProfile(profile);onlineProfile=null;}deckDraft=null;screen(deckReturn);
 }
 function openSpellDraft(destination){draftReturn=destination;offerChoices={};screen('spellDraft');}
 function renderSpellDraft(){
@@ -131,12 +133,20 @@ function renderLibrarySelect(){
  const eligible=saved.filter(p=>p.towerCleared);
  shell(`<section class="portal-panel"><h1>Weilei’s Library of Spells</h1><p>Choose a wizard who has defeated Grelus.</p><div class="menu-stack">${eligible.map(p=>`<button class="portal-btn" data-library-wizard="${escape(p.id)}">${escape(p.name)} · ${p.rogue.gold} gold</button>`).join('')}${btn('Back','home','subtle')}</div></section>`);
 }
-function renderLibrary(){
- if(!active.towerCleared){screen('hub');return;}
- if(!B.elements.includes(binderElement))binderElement=active.masteries[0];
- const missing=B.orderedSpells(cards,binderElement).filter(c=>active.masteries.includes(c.school)&&!active.rogue.owned[c.id]);
+function startLibraryTester(masteries=['water','wind']){
+ let profile={id:'library-test-only',name:'Library Tester',level:1,masteries,skills:{},...B.rogueStarter(cards,masteries)};
+ for(let floor=1;floor<=21;floor++){
+  profile=B.awardFloor(cards,profile,floor,'library-test-floor-'+floor,()=>.5);
+  if(profile.rogue.pending)profile=B.chooseOffer(cards,profile,Object.fromEntries(profile.rogue.pending.groups.map(g=>[g.school,g.ids[0]])));
+ }
+ libraryTestProfile=B.normalize(profile,cards,true);binderElement=masteries[0];screen('libraryTester');
+}
+function renderLibrary(profile=active,testing=false){
+ if(!profile?.towerCleared){screen('hub');return;}
+ if(!B.elements.includes(binderElement))binderElement=profile.masteries[0];
+ const missing=B.orderedSpells(cards,binderElement).filter(c=>profile.masteries.includes(c.school)&&!profile.rogue.owned[c.id]);
  const tabs=B.elements.map(e=>`<button class="portal-btn small" data-binder-element="${e}" aria-pressed="${e===binderElement}">${title(e)}</button>`).join('');
- shell(`<section class="portal-panel library"><div class="library-heading"><div class="library-portrait"><img src="./assets/weilei-library-portrait.webp?v=0.335.0" alt="Weilei wearing his spell-bound eyepatch"></div><div><p class="portal-eyebrow">CAGLIMOT TOWER · SPELL ARCHIVE</p><h1>Weilei’s Library of Spells</h1><strong class="library-gold">${active.rogue.gold.toLocaleString()} gold</strong></div></div><nav class="binder-tabs" aria-label="Library elements">${tabs}</nav><p class="portal-note">Only unowned spells from your mastered elements are sold. Each purchase grants three copies.</p><div class="binder-grid">${missing.map(card=>`<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button><button class="portal-btn small" data-buy-spell="${card.id}" ${active.rogue.gold<B.libraryPrice(card)?'disabled':''}>Buy ×3 · ${B.libraryPrice(card)} gold</button></article>`).join('')||'<p>No unowned spells in this element.</p>'}</div><div class="portal-actions">${btn('Edit deck','libraryDeck','primary')}${btn('Back to Main Menu','home','subtle')}</div></section>`);requestAnimationFrame(()=>api.drawCardArts());
+ shell(`<section class="portal-panel library">${testing?`<div class="network-notice"><strong>Library Tester · temporary collection</strong><p>Test purchases and deck editing without changing your saved wizards.</p><div class="portal-actions">${btn("Reset test library","resetLibraryTester","small subtle")}</div><div class="binder-tabs" aria-label="Test masteries">${B.elements.map(e=>`<button class="portal-btn small" data-test-mastery="${e}" aria-pressed="${profile.masteries.includes(e)}">${title(e)}</button>`).join("")}</div><p class="portal-note">Select one or two masteries to simulate a cleared Tower run.</p></div>`:""}<div class="library-heading"><div class="library-portrait"><img src="./assets/weilei-library-portrait.webp?v=0.335.0" alt="Weilei wearing his spell-bound eyepatch"></div><div><p class="portal-eyebrow">CAGLIMOT TOWER · SPELL ARCHIVE</p><h1>Weilei’s Library of Spells</h1><strong class="library-gold">${profile.rogue.gold.toLocaleString()} gold</strong></div></div><nav class="binder-tabs" aria-label="Library elements">${tabs}</nav><p class="portal-note">Only unowned spells from your mastered elements are sold. Each purchase grants three copies.</p><div class="binder-grid">${missing.map(card=>`<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,profile)}</button><button class="portal-btn small" data-buy-spell="${card.id}" ${profile.rogue.gold<B.libraryPrice(card)?'disabled':''}>Buy ×3 · ${B.libraryPrice(card)} gold</button></article>`).join('')||'<p>No unowned spells in this element.</p>'}</div><div class="portal-actions">${btn('Edit deck','libraryDeck','primary')}${testing?btn('Back to Test Mode','tests','subtle'):btn('Back to Main Menu','home','subtle')}</div></section>`);requestAnimationFrame(()=>api.drawCardArts());
 }
 function animatePreview(p){cancelAnimationFrame(previewFrame);let last=0;function frame(now){const canvas=el('wizardPreview');if(!canvas)return;if(now-last>50){api.drawWizardPreview(canvas,p,el('previewPose')?.value);last=now;}previewFrame=requestAnimationFrame(frame);}previewFrame=requestAnimationFrame(frame);}
 function readDraft(){if(el('createRobe')){draft.robeColor=el('createRobe').value;draft.hatColor=el('createHat').value;draft.headHair=el('createHeadHair').value;draft.facialHair=el('createFacialHair').value;draft.skinColor=el('createSkin').value;}}
@@ -341,7 +351,8 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.binderCard){inspectBinderCard(button.dataset.binderCard);return;}
  if(button.dataset.draftCard&&view==='spellDraft'){const card=cards.find(c=>c.id===button.dataset.draftCard);if(card){offerChoices[card.school]=card.id;render();}return;}
  if(button.dataset.libraryWizard){active=saved.find(p=>p.id===button.dataset.libraryWizard&&p.towerCleared);if(active){binderElement=active.masteries[0];screen('library');}return;}
- if(button.dataset.buySpell&&view==='library'){persistProfile(B.normalize(B.buySpell(cards,active,button.dataset.buySpell),cards,true));render();return;}
+ if(button.dataset.testMastery&&view==='libraryTester'){const e=button.dataset.testMastery,m=[...libraryTestProfile.masteries];if(!B.elements.includes(e))return;if(m.includes(e)){if(m.length===1)return;m.splice(m.indexOf(e),1);}else if(m.length<2)m.push(e);else{m.shift();m.push(e);}startLibraryTester(m);return;}
+ if(button.dataset.buySpell&&['library','libraryTester'].includes(view)){const testing=view==='libraryTester',profile=testing?libraryTestProfile:active;const next=B.normalize(B.buySpell(cards,profile,button.dataset.buySpell),cards,true);if(testing)libraryTestProfile=next;else persistProfile(next);render();return;}
  if(button.dataset.progressSkill){changeProgressPoints(button.dataset.progressSkill,Number(button.dataset.delta));return;}
  if(button.dataset.action==='resetProgressPoints'){changeProgressPoints(null);return;}
  if(button.dataset.hatStyle){draft.hat=button.dataset.hatStyle;for(const choice of portal.querySelectorAll('[data-hat-style]'))choice.setAttribute('aria-pressed',String(choice===button));return;}
@@ -374,7 +385,9 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.seat){const [team,slot]=button.dataset.seat.split(',').map(Number);hostSeat(session.peerId,team,slot);return;}
  const action=button.dataset.action;
  if(action==='editTowerDeck'){editTowerDeck();return;}
- if(action==='libraryDeck'){editTowerDeck('library');return;}
+ if(action==='libraryTester'){startLibraryTester();return;}
+ if(action==='resetLibraryTester'){startLibraryTester(libraryTestProfile.masteries);return;}
+ if(action==='libraryDeck'){if(view==='libraryTester'){deckReturn='libraryTester';deckDraft=structuredClone(libraryTestProfile);binderElement=deckDraft.masteries[0];screen('towerDeck');}else editTowerDeck('library');return;}
  if(action==='librarySelect'){screen('librarySelect');return;}
  if(action==='library'){binderElement=active.masteries[0];screen('library');return;}
  if(action==='claimDraft'){persistProfile(B.normalize(B.chooseOffer(cards,active,offerChoices),cards,true));offerChoices={};editTowerDeck(draftReturn);return;}

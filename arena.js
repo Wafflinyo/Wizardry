@@ -952,14 +952,16 @@
   // Floor 21 is a local, read-at-your-own-pace introduction. Combat state
   // remains unchanged, including online snapshots and the initial hands.
   const weileiArt=new Image();
-  weileiArt.src="./assets/floor21-weilei.webp?v=0.331.0";
+  weileiArt.src="./assets/floor21-weilei-wind.webp?v=0.333.0";
   let floorIntro=null,shownIntroKey=null;
   function floorIntroLines(partySize){
     const multi=partySize>1;
     return [
       ["Weilei",multi?"You guys shouldn’t be up here, it’s dangerous!":"You shouldn’t be up here, it’s dangerous!"],
+      ["Weilei","…."],
       ["Weilei","You’re going to defeat Grelus?! Are you out of your mind?!"],
       ["Grelus",multi?"Ha-Ha, is this a joke?! You all look like you got your grimoires yesterday!":"Ha-Ha, is this a joke?! You look like you got your grimoire yesterday!"],
+      ["Weilei","…."],
       ["Weilei",multi?"It doesn’t look like you all are going to walk away… Be careful.":"It doesn’t look like you’re going to walk away… Be careful."]
     ];
   }
@@ -968,6 +970,8 @@
     if(box)box.hidden=!visible;
     const hand=document.querySelector?.("section.hand");
     if(hand)hand.inert=visible;
+    const game=$("game");game?.classList?.toggle("floor-intro-active",visible);
+    const log=$("battleLogPanel");if(visible&&log?.open)log.close();
     if(state)syncTesterTools();
   }
   function floorIntroDialogue(){
@@ -976,7 +980,7 @@
     const active=!!floorIntro;
     floorIntroOverlay(active);
     if(!active)return;
-    const dialogue=floorIntro.step>=0&&floorIntro.step<4;
+    const dialogue=floorIntro.step>=0&&floorIntro.step<6;
     box.classList.toggle("no-dialogue",!dialogue);
     button.disabled=!dialogue;
     if(!dialogue)return;
@@ -986,7 +990,7 @@
       portrait.alt=speaker;portrait.classList.remove("portrait-enter");void portrait.offsetWidth;portrait.classList.add("portrait-enter");
     }
     line.textContent=text;
-    button.textContent=floorIntro.step===3?"Continue ›":"Next ›";
+    button.textContent=floorIntro.step===5?"Continue ›":"Next ›";
   }
   function beginFloorIntro(partySize,preview=false){
     floorIntro={partySize,preview,step:-1,elapsed:0};
@@ -997,18 +1001,56 @@
     floorIntro=null;floorIntroOverlay(false);paintUI();
   }
   function nextFloorIntro(){
-    if(!floorIntro||floorIntro.step<0||floorIntro.step>=4)return;
+    if(!floorIntro||floorIntro.step<0||floorIntro.step>=6)return;
     floorIntro.step++;floorIntro.elapsed=0;floorIntroDialogue();
   }
-  const FLOOR21_POSE_MS=[210,180,180,180,230,180,220,200,200,160,150,180];
+  // Authored poses progress from kneeling to reaching, gripping the staff,
+  // then trailing behind it. No frozen final sprite is translated off-screen.
+  const FLOOR21_POSE_MS=[170,155,155,155,135,135,135,135,140,155,160,170,170,180,180,190];
+  const FLOOR21_CATCH=FLOOR21_POSE_MS.slice(0,9).reduce((a,b)=>a+b,0);
+  const FLOOR21_TOTAL=FLOOR21_POSE_MS.reduce((a,b)=>a+b,0);
   function floorIntroPose(ms){
-    let t=Math.max(0,ms);
-    for(let frame=0;frame<FLOOR21_POSE_MS.length;frame++){
-      if(t<FLOOR21_POSE_MS[frame])return {frame,lift:0,finished:false};
-      t-=FLOOR21_POSE_MS[frame];
+    let t=Math.max(0,ms),frame=0;
+    for(;frame<15&&t>=FLOOR21_POSE_MS[frame];frame++)t-=FLOOR21_POSE_MS[frame];
+    const p=clamp((ms-FLOOR21_CATCH)/(FLOOR21_TOTAL-FLOOR21_CATCH),0,1);
+    const travel=p*p;
+    return {frame,lift:travel*440,shift:travel*320,finished:ms>=FLOOR21_TOTAL};
+  }
+  function floor21Staff(ctx,x,y,angle){
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+    pathPoly(ctx,[[-70,-4],[53,-6],[66,0],[53,6],[-70,5],[-80,0]],"#49332e");
+    pathPoly(ctx,[[-70,-4],[53,-6],[48,-1],[-74,0]],"#937047");
+    for(let k=-55;k<48;k+=23)pathPoly(ctx,[[k,-5],[k+5,-5],[k+10,5],[k+5,5]],"#c5a369");
+    pathPoly(ctx,[[48,-7],[64,-15],[84,-11],[94,0],[80,14],[62,12]],"#1f62b4");
+    pathPoly(ctx,[[64,-15],[84,-11],[74,0],[48,-7]],"#60c9ff");
+    pathPoly(ctx,[[74,0],[94,0],[80,14],[62,12]],"#15408e");
+    pathPoly(ctx,[[64,-15],[74,0],[62,12],[48,-7]],"#2d8ce3");
+    ctx.restore();
+  }
+  function floor21Book(ctx,x,y){
+    ctx.save();ctx.translate(x,y);
+    pathPoly(ctx,[[-24,-3],[14,-12],[29,-3],[28,6],[-9,15],[-24,6]],"#302640","#be9652",1.6);
+    pathPoly(ctx,[[-21,2],[-9,9],[26,1],[26,6],[-9,14],[-21,7]],"#b8a384");
+    pathPoly(ctx,[[-24,-3],[14,-12],[29,-3],[-9,7]],"#303754","#c1a264",1.5);
+    ellipse(ctx,1,-3,5,3,"#2baf76","#d9b96c",1.2);ctx.restore();
+  }
+  // Wind continues to travel every rendered frame, including while each
+  // authored pose is held. Back and front arcs pass around the body.
+  function floor21Wind(ctx,x,y,time,force,front){
+    if(force<=0)return;
+    ctx.save();ctx.globalAlpha=.72*force;ctx.lineCap="round";
+    for(let k=0;k<4;k++){
+      const angle=time*.005+k*1.7;const cy=y-25-k*33;
+      ctx.beginPath();
+      for(let j=0;j<=32;j++){
+        const v=j/32,t=angle+v*2.5;
+        const px=x+Math.cos(t)*(66+k*8),py=cy+Math.sin(t)*19-v*20;
+        if(j===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+      }
+      if((Math.sin(angle)>0)!==front)continue;
+      ctx.strokeStyle=k%2?"#68bcf2aa":"#bdeaffb0";ctx.lineWidth=2.5+k*.5;ctx.stroke();
     }
-    // Staff leads the last pose upward and out of the actual battlefield.
-    return {frame:11,lift:Math.pow(Math.min(1,t/650),1.5)*650,finished:t>=650};
+    ctx.restore();
   }
   function tickFloorIntro(dt){
     if(floorIntro&&floorIntro.preview&&state.mode!=="tester"){endFloorIntro();}
@@ -1018,27 +1060,38 @@
     if(!floorIntro.preview&&(!key||key!==shownIntroKey)){endFloorIntro();return false;}
     floorIntro.elapsed+=dt;
     if(floorIntro.step===-1&&floorIntro.elapsed>=650){floorIntro.step=0;floorIntro.elapsed=0;floorIntroDialogue();}
-    if(floorIntro.step===4&&floorIntroPose(floorIntro.elapsed).finished){endFloorIntro();return false;}
+    if(floorIntro.step===6&&floorIntroPose(floorIntro.elapsed).finished){endFloorIntro();return false;}
     return true;
   }
   function drawFloorIntro(time){
-    const wX=302,wY=505,bX=695,bY=505,depth=.86;
-    ellipse(g,wX,wY+8,76,17,"#07111c80");
+    const wX=345,wY=464,bX=695,bY=464,depth=.86;
+    const departing=floorIntro.step===6,ms=departing?floorIntro.elapsed:0;
+    const pose=departing?floorIntroPose(ms):{frame:0,lift:0,shift:0};
+    const x=wX-pose.shift,y=wY-pose.lift;
+    const force=departing?Math.min(1,.12+ms/650):0;
+    ellipse(g,wX,wY+8,65,15,departing?"#07111c48":"#07111c80");
     ellipse(g,bX,bY+8,65,15,"#07111c80");
-    // Reuse the exact live Grelus idle atlas; no alternate boss artwork.
     const boss=guardianModels.grelus,cell=boss.cell;
     if(boss.art.naturalWidth){
       const frame=grelusFrame(0,Math.floor(time/GUARDIAN_IDLE_FRAME_MS)%8),rect=grelusDrawRect(boss,0);
       g.save();g.translate(bX,bY);g.scale(depth,depth);
       g.drawImage(boss.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);g.restore();
     }
+    floor21Book(g,474,wY+10);
+    // The staff is a world object before the grip frame; the matching
+    // authored held-staff poses take over only when the hand catches it.
+    if(ms<FLOOR21_CATCH){
+      const p=clamp((ms-540)/(FLOOR21_CATCH-540),0,1),smooth=p*p*(3-2*p);
+      const sx=lerp(530,wX-68,smooth),sy=lerp(wY+3,wY-166,smooth)-Math.sin(p*Math.PI)*60;
+      floor21Staff(g,sx,sy,lerp(-.09,2.56,smooth));
+    }
+    floor21Wind(g,x,y,time,force,false);
     if(weileiArt.naturalWidth){
-      const pose=floorIntro.step===4?floorIntroPose(floorIntro.elapsed):{frame:0,lift:0};
-      const size=282,cell=192;
-      const x=wX-pose.lift*.34,y=wY-pose.lift;
+      const size=245,cell=288;
       g.save();g.translate(x,y);g.scale(depth,depth);g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
       g.drawImage(weileiArt,(pose.frame%4)*cell,Math.floor(pose.frame/4)*cell,cell,cell,-size/2,8-size,size,size);g.restore();
     }
+    floor21Wind(g,x,y,time,force,true);
   }
 
   function setBattle(mode="story",size=4,tower=null){
@@ -4001,7 +4054,7 @@
     };
     const logButton=$("battleRecap"),logPanel=$("battleLogPanel");
     logButton.onclick=()=>{
-      if(logPanel.open)return;
+      if(floorIntro||logPanel.open)return;
       const anchor=logButton.getBoundingClientRect();
       const viewport=document.documentElement.clientHeight;
       const availableBelow=viewport-anchor.bottom;

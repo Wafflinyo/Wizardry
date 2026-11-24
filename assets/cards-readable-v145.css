@@ -125,3 +125,33 @@
  #game #zenRunePicker{grid-area:runes}
 }
 @media(max-width:355px){#game .hand-head .hand-resources{gap:3px}#game .hand-head #selectedMana{padding:3px 4px;font-size:9px;letter-spacing:0}#game .hand-head #battleDeckCount{font-size:9px}}
+
+/* Reserve the battle/hand boundary instead of letting either HUD cross it. */
+#game .battle{min-height:0;overflow:hidden}
+#game .battle .arena{flex:1 1 0;height:auto!important;min-height:0;position:relative;overflow:hidden}
+#game .battle #battleCanvas{min-height:0}
+#game .battle .turnbar{position:relative;inset:auto;flex:0 0 auto;min-height:30px;height:30px;max-height:30px;margin:3px 0 0;padding:3px 6px;z-index:3;overflow:hidden;pointer-events:auto}
+#game .hand{grid-template-rows:36px minmax(0,1fr);min-width:0}
+#game .hand-head{height:36px;min-height:36px;max-height:36px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:2px 5px;gap:6px;z-index:40;overflow:hidden}
+#game .hand:has(.browsed) .hand-head{z-index:40}
+#game .hand-head .hand-resources{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:7px;min-width:0}
+#game .hand-head #battleDeckCount,#game .hand-head #selectedMana{position:static;inset:auto;transform:none;flex:none;white-space:nowrap;line-height:1;margin:0}
+#game .hand-head #selectedMana{min-height:23px;max-height:23px;padding:3px 6px}
+#game #cardHand.cards{min-height:0;overflow:hidden!important;isolation:isolate;z-index:10}
+#game #cardHand.cards>button.spell.card-ornate.browsed{max-height:calc(100% - 12px)!important;bottom:6px}
+#game.floor-intro-active .battle .turnbar,#game.floor-intro-active .battle-top,#game.floor-intro-active #battleRecap,#game.floor-intro-active .arena-bug{display:none!important}
+#game.floor-intro-active .hand{visibility:hidden;pointer-events:none}
+#game.floor-intro-active #floor21Intro{z-index:35}
+@media(max-width:700px) and (orientation:portrait){
+ #game .hand{grid-template-rows:36px minmax(0,1fr) 110px}
+ #game .hand-head .hand-resources{gap:5px}
+ #game .hand-head #selectedMana{font-size:10px;letter-spacing:0}
+ #game .hand-head #battleDeckCount{font-size:10px}
+}
+@media(orientation:landscape) and (max-height:620px){
+ #game .hand{grid-template-rows:32px minmax(0,1fr) 105px}
+ #game .hand-head{height:32px;min-height:32px;max-height:32px}
+ #game .hand-head .hand-resources{gap:3px}
+ #game .hand-head #selectedMana,#game .hand-head #battleDeckCount{font-size:9px}
+}
+@media(max-width:355px){#game .hand-head{gap:3px;padding-inline:2px}#game .hand-head .hand-resources{gap:3px}#game .hand-head #selectedMana{font-size:9px;padding:3px}#game .hand-head #battleDeckCount{font-size:9px}}

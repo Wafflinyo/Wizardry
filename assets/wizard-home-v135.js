@@ -392,8 +392,8 @@ document.getElementById('testerSize').onchange=e=>{
  const state=api.getState(),size=Number(e.target.value);
  if(state.mode==='tester'&&state.phase==='planning'&&[1,2,3,4].includes(size)&&size!==state.size)startCardTester(size);
 };
-document.getElementById('testerMinionPreview').onclick=()=>api.previewTesterMinion();
-document.getElementById('testerDefeatPreview').onclick=()=>api.previewTesterDefeat();
+document.getElementById('testerMinionPreview').onclick=()=>{if(api.previewTesterMinion())el('testerTools').open=false;};
+document.getElementById('testerDefeatPreview').onclick=()=>{if(api.previewTesterDefeat())el('testerTools').open=false;};
 document.getElementById('testerOpponentMode').onchange=e=>api.switchTesterOpponentMode(e.target.value);
 document.getElementById('testerTarget').onchange=e=>api.switchTesterTarget(e.target.value);
 document.getElementById('resetTester').onclick=()=>startCardTester(api.getState().size);

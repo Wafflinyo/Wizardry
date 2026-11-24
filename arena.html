@@ -69,7 +69,7 @@
 @media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
 </style>
 <link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.317.3">
-<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.317.7">
+<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.332.0">
 <style>
 #floor21Intro{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;padding:clamp(6px,1.5vw,18px);pointer-events:auto;background:transparent;}
 #floor21Intro[hidden]{display:none!important}
@@ -101,7 +101,7 @@
     <select id="testerOpponentMode" aria-label="Opponent behavior"><option value="passive">Passive</option><option value="battle">Battle</option></select>
     <details class="tester-tools" id="testerTools">
       <summary>Test tools</summary>
-      <div class="tester-tools-menu">
+      <div class="tester-tools-menu"><p id="testerToolsStatus" role="status"></p>
         <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
         <button id="testerDefeatPreview" type="button" hidden>Preview defeat</button>
         <button id="testerFloor21Preview" type="button">Preview Floor 21 cutscene</button>
@@ -158,7 +158,7 @@
   <section class="hand" aria-label="Your wizard's five-card hand">
     <div class="hand-head">
       <div><span class="eyebrow">YOUR GRIMOIRE</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
-      <div class="hand-resources"><span class="mana" id="selectedMana">10 / 10 MANA</span><span id="battleDeckCount">0 / 24 in deck</span></div>
+      <div class="hand-resources"><span id="battleDeckCount">0 / 24 in deck</span><span class="mana" id="selectedMana">10 / 10 MANA</span></div>
     </div>
     <div class="cards" id="cardHand" role="group" aria-label="Five-card fan. Swipe to browse, tap to select, or double-tap to fold."></div>
     <div class="fan-caption">SWIPE TO BROWSE <span>◆</span> TAP TO SELECT <span>◆</span> DOUBLE-TAP TO FOLD</div>
@@ -385,7 +385,7 @@
 <script src="./assets/whale-spell.js?v=0.301.1" defer></script>
 <script src="./assets/flame-wheel.js?v=0.302.2" defer></script>
 <script src="./assets/sand-warrior.js?v=0.303.2" defer></script>
-<script src="./assets/soul-ghoul.js?v=0.331.0" defer></script>
+<script src="./assets/soul-ghoul.js?v=0.332.0" defer></script>
 <script src="./assets/flashover.js?v=0.305.2" defer></script>
 <script src="./assets/briar-remedy.js?v=0.306.2" defer></script>
 <script src="./assets/lifevine.js?v=0.307.0" defer></script>
@@ -396,11 +396,11 @@
 <script src="./assets/pressure-drop.js?v=0.312.1" defer></script>
 <script src="./assets/chained-javelin.js?v=0.313.1" defer></script>
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
-<script src="./assets/faultline-bulwark.js?v=0.331.0" defer></script>
+<script src="./assets/faultline-bulwark.js?v=0.332.0" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.331.0" defer></script>
+<script src="./arena.js?v=0.332.0" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.331.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.332.0" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">
   <header><strong id="battleLogTitle">Battle Log</strong><form method="dialog"><button type="submit" autofocus>Close</button></form></header>
   <ol id="battleHistory"><li>No actions yet.</li></ol>

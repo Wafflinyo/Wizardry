@@ -968,6 +968,7 @@
     if(box)box.hidden=!visible;
     const hand=document.querySelector?.("section.hand");
     if(hand)hand.inert=visible;
+    if(state)syncTesterTools();
   }
   function floorIntroDialogue(){
     const box=$("floor21Intro"),name=$("floor21Speaker"),line=$("floor21Line"),portrait=$("floor21Portrait"),button=$("floor21Next");
@@ -3726,6 +3727,32 @@
     return creditor&&alive(1-creditor.team).find(u=>u.statuses.some(st=>st.kind==="blood_debt"&&
       st.creditorId===creditor.id&&state.round<st.expiresRound));
   }
+  // Keep the tools visible and explain unavailable actions instead of presenting
+  // a blank dropdown. Reset/Home stay available even during a cutscene.
+  function syncTesterTools(){
+    if(!state)return;
+    const testing=state.mode==="tester",ready=state.phase==="planning"&&!floorIntro;
+    const target=alive(1).find(u=>unitSprite(u));
+    const boss=target&&Object.hasOwn(guardianModels,target.bossId);
+    const config=[
+      ["testerMinionPreview",!!target,"Select a living minion or boss to preview its cast."],
+      ["testerDefeatPreview",!!boss,"Select a living guardian or Grelus to preview defeat."],
+      ["testerFloor21Preview",true,"Preview the floor 21 introduction."],
+      ["testerDebtFixture",!!bloodDebtTesterTarget(),"Requires a target marked by Blood Debt."],
+      ["testerBriarFixture",currentCard()?.kind==="briarremedy","Select Briar Remedy to apply test effects."]
+    ];
+    for(const [id,available,reason] of config){
+      const button=$(id);if(!button)continue;
+      button.hidden=!testing;
+      button.disabled=!testing||!ready||!available;
+      button.title=!ready?"Available during your turn, after the current animation.":reason;
+    }
+    const status=$("testerToolsStatus");
+    if(status)status.textContent=!ready?"Available when the current animation finishes.":!target?"Select a minion or boss for animation previews.":"Choose an animation or test fixture.";
+    for(const id of ["testerSize","testerTarget","testerOpponentMode"]){
+      const input=$(id);if(input)input.disabled=!ready||(id==="testerOpponentMode"&&testerTargetType==="wood");
+    }
+  }
   function paintUI(){
     if(!state)return;
     // A tooltip must never claim an expired/consumed rune still exists.
@@ -3756,16 +3783,8 @@
       opponentMode.value=testerOpponentMode;
       opponentMode.disabled=!planning||testerTargetType==="wood";
     }
-    if(!planning){const tools=$("testerTools");if(tools)tools.open=false;}
-    const preview=$("testerMinionPreview");
-    if(preview)preview.hidden=!testing||!planning||!(Object.hasOwn(minionModels,testerTargetType)||Object.hasOwn(guardianModels,testerTargetType));
-    const defeatPreview=$("testerDefeatPreview");
-    if(defeatPreview)defeatPreview.hidden=!testing||!planning||!Object.hasOwn(guardianModels,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
-    const debtFixture=$("testerDebtFixture");
-    if(debtFixture)debtFixture.hidden=!testing||!planning||!bloodDebtTesterTarget();
-    const briarFixture=$("testerBriarFixture");
-    if(briarFixture)briarFixture.hidden=!testing||!planning||card?.kind!=="briarremedy";
+    syncTesterTools();
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
     if(planning)ui.hint.textContent=c?
@@ -3954,8 +3973,8 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
-    const introNext=$("floor21Next");if(introNext)introNext.onclick=nextFloorIntro;
-    const introPreview=$("testerFloor21Preview");if(introPreview)introPreview.onclick=()=>{if(state.mode==="tester"&&state.phase==="planning"){const tools=$("testerTools");if(tools)tools.open=false;beginFloorIntro(state.size,true);}};
+    const introNext=$("floor21Next");if(introNext)introNext.onclick=event=>{event?.stopPropagation();nextFloorIntro();};
+    const introPreview=$("testerFloor21Preview");if(introPreview)introPreview.onclick=()=>{if(state.mode==="tester"&&state.phase==="planning"&&!floorIntro){const tools=$("testerTools");if(tools)tools.open=false;beginFloorIntro(state.size,true);}};
     const debtFixture=$("testerDebtFixture");
     if(debtFixture)debtFixture.onclick=()=>{
       if(state.mode!=="tester"||state.phase!=="planning")return;
@@ -6564,7 +6583,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,floorIntroLines,floorIntroPose,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,floorIntroLines,floorIntroPose,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));

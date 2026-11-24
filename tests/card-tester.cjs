@@ -208,6 +208,13 @@ const assert = require('node:assert/strict');
     assert.equal(battle.sequence.filter(plan=>plan.team===1&&plan.cardId===attack).length,2);
     assert.equal(Array.from(battle.sequence,p=>p.casterId).join(','),'a0,e0,a1,e1');
     assert.equal(Array.from(api.turnOrder(2),u=>u.id).join(','),'e0,a1,e1,a0');
+    for(let step=0;step<400;step++){
+      if(battle.animation?.source===foes[0].id&&battle.animation.stage==='tracing-auto')break;
+      api.advanceBackground(40);
+    }
+    assert.equal(battle.animation.source,foes[0].id);
+    assert.equal(battle.animation.stage,'tracing-auto');
+    assert.equal(battle.animation.duration,1100,'minion rune tracing takes half the wizard tracing time');
     api.advanceBackground(28000);
     assert.equal(battle.phase,'planning');
     assert.ok(battle.units.slice(0,2).some((u,i)=>u.hp<(i===0?hp:u.maxHp)));

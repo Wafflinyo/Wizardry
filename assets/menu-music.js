@@ -8,7 +8,8 @@
     menu:{url:"./assets/wizardry-menu-theme.m4a",volume:.56,offset:0},
     battle:{url:"./assets/wizardry-battle-theme-v3.m4a",volume:.47,offset:0}
   };
-  let muted=false,context,playing,unlocked=false;
+  let muted=false,context,playing,unlocked=false,volume=.8;
+  try{const v=localStorage.getItem("wizardry.audio.music");if(v!==null&&Number.isFinite(Number(v)))volume=Math.max(0,Math.min(1,Number(v)));}catch{}
   try{muted=localStorage.getItem(storageKey)==="1";}catch{}
   const selectedTrack=()=>document.body.dataset.screen==="battle"?tracks.battle:tracks.menu;
 
@@ -47,7 +48,7 @@
     const source=context.createBufferSource(),gain=context.createGain();
     source.buffer=track.buffer;source.loop=true;source.loopEnd=Math.min(period,track.buffer.duration);
     gain.gain.setValueAtTime(0,context.currentTime);
-    gain.gain.setTargetAtTime(track.volume,context.currentTime,.071);
+    gain.gain.setTargetAtTime(track.volume*volume,context.currentTime,.071);
     source.connect(gain).connect(context.destination);
     playing={track,source,gain,started:context.currentTime};
     source.start(0,track.offset%source.loopEnd);
@@ -74,5 +75,5 @@
   },{capture:true});
   document.addEventListener("visibilitychange",sync);
   new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:["data-screen"]});
-  window.WizardryMenuMusic={sync};
+  window.WizardryMenuMusic={sync,setVolume(v){volume=Math.max(0,Math.min(1,v));if(playing)playing.gain.gain.setTargetAtTime(playing.track.volume*volume,context.currentTime,.025);},getVolume:()=>volume};
 })();

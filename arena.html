@@ -114,6 +114,7 @@
       <button id="battleHome" type="button">Home</button>
       <button id="resetTester" type="button" hidden>Reset Tester</button>
       <button id="battleFullscreen" type="button">Full screen</button>
+      <button type="button" data-audio-settings>Audio</button>
     </div>
   </header>
 
@@ -364,7 +365,7 @@
 <script src="./assets/frozen-touch.js?v=0.276.3" defer></script>
 <script src="./assets/wynzor.js?v=0.277.8" defer></script>
 <script src="./assets/wizard-hats.js?v=0.280.15" defer></script>
-<script src="./assets/rune-audio.js?v=0.280.42" defer></script>
+<script src="./assets/rune-audio.js?v=0.341.0" defer></script>
 <script src="./assets/roggin-bowler.js?v=0.280.49" defer></script>
 <script src="./assets/wind-razor.js?v=0.285.3" defer></script>
 <script src="./assets/water-prison.js?v=0.286.1" defer></script>
@@ -398,14 +399,16 @@
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
 <script src="./assets/faultline-bulwark.js?v=0.335.0" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.339.3" defer></script>
-<script src="./assets/menu-music.js?v=0.282.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.340.0" defer></script>
+<script src="./arena.js?v=0.341.0" defer></script>
+<script src="./assets/menu-music.js?v=0.341.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.341.0" defer></script>
+<script src="./assets/audio-settings.js?v=0.341.0" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">
   <header><strong id="battleLogTitle">Battle Log</strong><form method="dialog"><button type="submit" autofocus>Close</button></form></header>
   <ol id="battleHistory"><li>No actions yet.</li></ol>
 </dialog>
 <dialog id="matchResults" class="match-results" aria-labelledby="matchResultsTitle"></dialog>
 <dialog id="binderCardDetail" class="match-results binder-detail" aria-labelledby="binderCardTitle"></dialog>
+<dialog id="audioSettings" aria-labelledby="audioSettingsTitle" style="width:min(340px,90vw);background:#18202d;color:#fff;border:1px solid #64748b;border-radius:12px;padding:20px;z-index:9999"><h2 id="audioSettingsTitle">Audio Settings</h2><label style="display:block;margin:16px 0">Music <output id="musicVolumeValue"></output><input id="musicVolume" type="range" min="0" max="100" step="1" style="display:block;width:100%"></label><label style="display:block;margin:16px 0">Sound Effects <output id="effectsVolumeValue"></output><input id="effectsVolume" type="range" min="0" max="100" step="1" style="display:block;width:100%"></label><button type="button" class="portal-btn" id="audioSettingsClose">Done</button></dialog>
 </body>
 </html>

@@ -1,0 +1,5 @@
+(()=>{const dialog=document.getElementById("audioSettings");if(!dialog)return;
+const channels=[["music",()=>window.WizardryMenuMusic,.8],["effects",()=>window.WizardryRuneAudio,.85]];
+for(const [name,get,fallback] of channels){const slider=document.getElementById(name+"Volume"),out=document.getElementById(name+"VolumeValue");let v=get()?.getVolume()??fallback;try{const raw=localStorage.getItem("wizardry.audio."+name);if(raw!==null&&Number.isFinite(Number(raw)))v=Math.max(0,Math.min(1,Number(raw)));}catch{}slider.value=String(Math.round(v*100));out.textContent=slider.value+"%";slider.addEventListener("input",()=>{const value=Number(slider.value)/100;out.textContent=slider.value+"%";get()?.setVolume(value);try{localStorage.setItem("wizardry.audio."+name,String(value));}catch{}});}
+document.addEventListener("click",e=>{if(e.target.closest("[data-audio-settings]")&&!dialog.open)dialog.showModal();});document.getElementById("audioSettingsClose").addEventListener("click",()=>dialog.close());
+})();

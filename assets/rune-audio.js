@@ -2,10 +2,11 @@
 (()=>{
   const Audio=window.AudioContext||window.webkitAudioContext;
   if(!Audio)return;
-  let audio,flow,lastStage,lastCast;
+  let audio,flow,lastStage,lastCast,master,volume=.85;
+  try{const v=localStorage.getItem("wizardry.audio.effects");if(v!==null&&Number.isFinite(Number(v)))volume=Math.max(0,Math.min(1,Number(v)));}catch{}
   function unlock(){
     try{
-      audio??=new Audio();
+      if(!audio){audio=new Audio();master=audio.createGain();master.gain.value=volume;master.connect(audio.destination);}
       if(audio.state!=="running")audio.resume().catch(()=>{});
     }catch{
       // Audio is optional on browsers that cannot open a context.
@@ -79,8 +80,8 @@
     const elapsed=Math.max(0,cast.elapsed)/1000,duration=cast.duration/1000;
     const start=audio.currentTime+.006,end=start+duration-elapsed;
     const gain=audio.createGain();
-    gain.gain.value=.66;
-    gain.connect(audio.destination);
+    gain.gain.value=1;
+    gain.connect(master);
     const theme=themeFor(cast.card?.school);
     for(const [offset,length,note,volume] of theme.notes){
       const on=Math.max(0,offset*duration-elapsed);
@@ -93,7 +94,7 @@
   function completeRune(school){
     const theme=themeFor(school),start=audio.currentTime+.006;
     for(const [i,note] of theme.finish.entries()){
-      voice(audio.destination,theme,note,start+i*.022,.32+i*.035,.072/(1+i*.35));
+      voice(master,theme,note,start+i*.022,.32+i*.035,.09/(1+i*.35));
     }
   }
 
@@ -122,5 +123,5 @@
     const remaining=(cast.duration-cast.elapsed)/1000;
     if(remaining>.12)flow=begin(cast);
   }
-  window.WizardryRuneAudio={follow};
+  window.WizardryRuneAudio={follow,setVolume(v){volume=Math.max(0,Math.min(1,v));if(master)master.gain.setTargetAtTime(volume,audio.currentTime,.025);},getVolume:()=>volume};
 })();

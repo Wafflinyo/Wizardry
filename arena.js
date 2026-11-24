@@ -1143,20 +1143,20 @@
   // of two full-strength wizards. Scale at encounter creation, not when a
   // minion dies, so no combatant suddenly changes strength mid-battle.
   function enemyRankHpMultiplier(bossId,minionId){
-    if(bossId==="grelus")return 2.5;
-    if(bossId)return 2;
-    if(Object.hasOwn(eliteSchools,minionId))return 1.5;
+    if(bossId==="grelus")return 2;
+    if(bossId)return 1.65;
+    if(Object.hasOwn(eliteSchools,minionId))return 1.4;
     return 1;
   }
   function towerEnemyBalance(tower,enemyCount,bossId,minionId){
-    // All tower foes gain durability; larger parties need progressively more HP per foe.
-    // Rank, party size and the solo reinforcement reduction remain independent.
-    const extra=(1.20+.15*(tower.partySize-1))*enemyRankHpMultiplier(bossId,minionId);
+    // Extra players already add extra enemies. Avoid multiplying both HP and headcount aggressively.
+    const partyHp=tower.partySize===1?1.05:.93+.03*(tower.partySize-2);
+    const extra=partyHp*enemyRankHpMultiplier(bossId,minionId);
     if(tower.partySize!==1||enemyCount!==2)return {hp:extra,mana:1,damage:1};
     if(bossId==="grelus")return {hp:extra*.90,mana:.90,damage:.95};
     if(bossId)return {hp:extra*.82,mana:.85,damage:.90};
-    // Solo minions/elites retain 55% of the new scaled HP; damage and mana are unchanged.
-    return {hp:extra*.55,mana:.55,damage:.70};
+    // Solo reinforcements share the encounter HP budget; damage/mana remain unchanged.
+    return {hp:extra*.60,mana:.55,damage:.70};
   }
   function setBattle(mode="story",size=4,tower=null){
     floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;

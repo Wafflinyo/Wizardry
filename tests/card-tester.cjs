@@ -293,9 +293,9 @@ const assert = require('node:assert/strict');
     const foes=api.getState().units.filter(u=>u.team===1);
     const B=ctx.window.WizardryBuilds;
     for(const foe of foes){
-      const rank=foe.bossId==='grelus'?2.5:foe.bossId?2:['magistrate','inkbinder','warden'].includes(foe.minionId)?1.5:1;
-      const solo=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.82:.55):1;
-      const expected=Math.round(B.stats(foe).hp*((1.20+.15*(partySize-1))*rank*solo));
+      const rank=foe.bossId==='grelus'?2:foe.bossId?1.65:['magistrate','inkbinder','warden'].includes(foe.minionId)?1.4:1;
+      const solo=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.82:.60):1;
+      const expected=Math.round(B.stats(foe).hp*((partySize===1?1.05:.93+.03*(partySize-2))*rank*solo));
       assert.equal(foe.maxHp,expected,`floor ${floor}, party ${partySize}, ${foe.name} rank HP`);
       assert.equal(foe.hp,expected,'starts at full rank-scaled HP');
       const damageScale=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.95:foe.bossId?.90:.70):1;

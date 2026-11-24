@@ -839,7 +839,16 @@
   // eight casting and eight defeat poses, already aligned to one floor baseline.
   const grelusArt=new Image();
   grelusArt.src="./assets/grelus-animations.webp?v=0.329.0";
-  guardianModels.grelus={art:grelusArt,size:350,cell:384,feet:true,grelus:true};
+  guardianModels.grelus={art:grelusArt,size:245,cell:384,feet:true,grelus:true};
+  // Measured from the actual 384px atlas: all 24 poses end at row 371.
+  // Center the boot stance, not the wider cape/grimoire silhouette, and
+  // plant the soles slightly forward of the engraved slot's center.
+  function grelusDrawRect(model,row){
+    const size=model.size,k=size/model.cell;
+    const center=row===1?185.5:row===2?179:177.5;
+    const ground=8*(size/205)+3;
+    return {x:-center*k,y:ground-372*k,size,ground};
+  }
   function grelusPose(stage,elapsed,duration,recovery=0){
     if(stage==="raising")return Math.round(2*guardianSmooth(elapsed/Math.max(1,duration)));
     if(stage==="tracing-auto"){
@@ -4426,7 +4435,8 @@
         }else pose=grelusPose(current.stage,current.elapsed,current.duration,current.visualRecoveryMs||0);
         const frame=grelusFrame(row,pose),cell=minion.cell,size=minion.size;
         g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
-        g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,-size/2,2-(cell-12)*size/cell,size,size);
+        const rect=grelusDrawRect(minion,row);
+        g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
         const runeElapsed=elapsed-ARM_RAISE_MS;
         if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
           window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{school:u.masteries?.[0]||"dark",elapsed:runeElapsed,duration:AUTO_TRACE_MS,centerX:-size*.52,centerY:-size*.57,scale:3.3});
@@ -6574,7 +6584,7 @@
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,applyRazorangReturn,
-    grelusPose,grelusFrame,guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,guardianCastRect:(id,pose)=>guardianCastRect(guardianModels[id],pose),
+    grelusPose,grelusFrame,grelusDrawRect:row=>grelusDrawRect(guardianModels.grelus,row),guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,guardianCastRect:(id,pose)=>guardianCastRect(guardianModels[id],pose),
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

@@ -693,12 +693,15 @@
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
-  const testerMinions=Object.fromEntries([
+  const minionModels=Object.fromEntries([
     ["scribe","Ashbound Scribe","fire",194],
     ["acolyte","Inkbound Acolyte","dark",196],
-    ["pageguard","Cracked Pageguard","earth",189]
+    ["pageguard","Cracked Pageguard","earth",189],
+    ["magistrate","Cinder Magistrate","fire",204],
+    ["inkbinder","Inkbinder","dark",205],
+    ["warden","Faultbound Warden","earth",201]
   ].map(([id,name,school,size])=>{
-    const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.317.6";
+    const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,school,art,size}];
   }));
   let testerTargetType="wood",testerOpponentMode="passive";
@@ -711,22 +714,22 @@
   }
   function previewTesterMinion(){
     if(state?.mode!=="tester"||state.phase!=="planning")return false;
-    const target=alive(1).find(u=>u.testerMinion);
+    const target=alive(1).find(u=>u.minionId);
     if(!target)return false;
     target.minionPreview=performance.now();
     return true;
   }
   function fitTesterTarget(u,type){
     u.wizardDummy=type==="wizard";
-    u.testerMinion=Object.hasOwn(testerMinions,type)?type:null;
+    u.minionId=Object.hasOwn(minionModels,type)?type:null;
     delete u.minionPreview;
-    if(u.testerMinion){u.name=testerMinions[type].name;return;}
+    if(u.minionId){u.name=minionModels[type].name;return;}
     if(!u.wizardDummy){u.name="Training Dummy";return;}
     const look=createUnit(ENEMIES[0],1,0,true);
     for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair",...Object.keys(Builds.gear)])u[key]=look[key];
   }
   function switchTesterTarget(type){
-    if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||Object.hasOwn(testerMinions,type)))return;
+    if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||Object.hasOwn(minionModels,type)))return;
     const needsReset=state.testerBattle;
     testerTargetType=type;
     if(type==="wood")testerOpponentMode="passive";
@@ -757,6 +760,7 @@
       if(tower&&u.team===1){
         const foe=activeRoster.find(entry=>entry.team===1&&entry.slot===u.index);
         u.towerRole=foe.profile.towerRole;
+        u.minionId=foe.profile.minionId;
         const extra=1+.08*(tower.partySize-1);
         const split=tower.partySize===1&&size>1?.72:1;
         u.hp=u.maxHp=Math.round(u.maxHp*extra*split);
@@ -767,7 +771,7 @@
       if(u.team===1){
         fitTesterTarget(u,testerTargetType);
         if(testerBattle){
-          const minion=testerMinions[u.testerMinion];
+          const minion=minionModels[u.minionId];
           if(minion){
             u.masteries=[minion.school];
             u.skills={};
@@ -1038,15 +1042,13 @@
   }
   function towerProfile(floor,slot,rng=Math.random){
     const profile=Builds.cpu(CARDS,slot,rng,floor);
-    if(floor<5)return {...profile,name:`Caglimot Scout ${slot+1}`};
-    const role=["Striker","Support","Controller","Guardian"][slot];
-    const pairs={
-      Striker:[["fire","earth"],["dark","fire"],["lightning","ice"]],
-      Support:[["nature","wind"],["nature","water"],["nature","earth"],["water","wind"]],
-      Controller:[["lightning","wind"],["ice","dark"],["earth","lightning"]],
-      Guardian:[["earth","water"],["wind","ice"],["water","earth"]]
-    }[role];
-    const masteries=pairs[Math.floor(rng()*pairs.length)];
+    const elite=floor>=5&&slot===0;
+    const index=elite?(floor-5)%3:(floor-1+slot)%3;
+    const minionId=(elite?["magistrate","inkbinder","warden"]:["scribe","acolyte","pageguard"])[index];
+    const {name,school}=minionModels[minionId];
+    const secondary=Builds.elements.filter(element=>element!==school);
+    const masteries=[school,secondary[Math.floor(rng()*secondary.length)]];
+    const role=["Striker","Controller","Guardian"][index];
     const skills={hp:0,mana:0};
     const allocation=role==="Support"?[masteries[0],"hp","mana",masteries[0],masteries[1]]:
       role==="Guardian"?["hp",masteries[0],"hp","mana",masteries[1]]:
@@ -1058,10 +1060,12 @@
     const ranked=CARDS.filter(c=>masteries.includes(c.school)).map(card=>({
       card,score:towerDeckScore(card,role)+rng()*(floor>=12?3:7)
     })).sort((a,b)=>b.score-a.score).map(entry=>entry.card);
-    const core=ranked.slice(0,8);
-    const flexible=ranked.slice(8,12);
+    const anchors=masteries.map(school=>ranked.find(card=>card.school===school));
+    const remaining=ranked.filter(card=>!anchors.includes(card));
+    const core=[...anchors,...remaining.slice(0,6)];
+    const flexible=remaining.slice(6,10);
     const deck=[...core.flatMap(c=>[c.id,c.id]),...core.slice(0,8-flexible.length).map(c=>c.id),...flexible.map(c=>c.id)];
-    return {...Builds.normalize({...profile,masteries,skills,deck,name:`Caglimot ${role} ${slot+1}`},CARDS),towerRole:role};
+    return {...Builds.normalize({...profile,masteries,skills,deck,name},CARDS),towerRole:role,minionId};
   }
   function towerChoice(u,cards){
     const allies=alive(u.team),opponents=alive(1-u.team),role=u.towerRole;
@@ -3445,7 +3449,7 @@
     }
     if(!planning){const tools=$("testerTools");if(tools)tools.open=false;}
     const preview=$("testerMinionPreview");
-    if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(testerMinions,testerTargetType);
+    if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(minionModels,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
     const debtFixture=$("testerDebtFixture");
     if(debtFixture)debtFixture.hidden=!testing||!planning||!bloodDebtTesterTarget();
@@ -4190,7 +4194,7 @@
       g.translate(0,depth*45*scale);
     }
     g.scale(scale,scale);
-    const minion=testerMinions[u.testerMinion];
+    const minion=minionModels[u.minionId];
     if(minion?.art.naturalWidth){
       const elapsed=time-(u.minionPreview??-Infinity);
       const current=state.animation?.source===u.id?state.animation:null;

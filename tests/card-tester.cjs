@@ -13,7 +13,7 @@ const assert = require('node:assert/strict');
   const math = Object.create(Math);
   math.random = () => .99;
   const ctx = {
-    window:{}, Math:math, Image:class{}, document:{body:{dataset:{}},getElementById:element},
+    window:{}, Math:math, crypto:require("node:crypto").webcrypto, Image:class{}, document:{body:{dataset:{}},getElementById:element},
     requestAnimationFrame:()=>1, cancelAnimationFrame(){}, URLSearchParams, location:{search:''},
     performance:{now:()=>0}, localStorage:{getItem:()=>null,setItem(){throw Error('tester should never save a wizard');}}
   };
@@ -185,7 +185,8 @@ const assert = require('node:assert/strict');
   teamTest=api.getState();
   assert.equal(teamTest.size,4,'4v4 reset preserves the formation');
   for(const [kind,school,attack] of [
-    ['scribe','fire','blazingembers'],['acolyte','dark','darkblast'],['pageguard','earth','rockblast']
+    ['scribe','fire','blazingembers'],['acolyte','dark','darkblast'],['pageguard','earth','rockblast'],
+    ['magistrate','fire','blazingembers'],['inkbinder','dark','darkblast'],['warden','earth','rockblast']
   ]){
     api.startCardTester(2);
     api.switchTesterTarget(kind);
@@ -194,7 +195,7 @@ const assert = require('node:assert/strict');
     const foes=battle.units.filter(u=>u.team===1);
     assert.ok(battle.testerBattle);
     for(const foe of foes){
-      assert.equal(foe.testerMinion,kind);
+      assert.equal(foe.minionId,kind);
       assert.equal(foe.dummy,undefined);
       assert.equal(foe.hand.length,5);
       assert.ok([...foe.hand,...foe.drawPile].every(id=>api.cards.find(c=>c.id===id).school===school));
@@ -233,5 +234,20 @@ const assert = require('node:assert/strict');
   assert.ok(practice.units[0].hand.every(id=>masteries.includes(api.cards.find(card=>card.id===id).school)));
   assert.equal(practice.units[1].dummy,undefined);
 
+  const towerPlayer={profile:ctx.window.WizardryBuilds.cpu(api.cards,0,math.random,10)};
+  for(const [floor,first,primary] of [
+    [1,'scribe','fire'],[2,'acolyte','dark'],[3,'pageguard','earth'],
+    [5,'magistrate','fire'],[6,'inkbinder','dark'],[7,'warden','earth']
+  ]){
+    api.startTower([towerPlayer,towerPlayer],floor);
+    const foes=api.getState().units.filter(u=>u.team===1);
+    assert.equal(foes[0].minionId,first);
+    assert.equal(foes[0].masteries[0],primary);
+    for(const foe of foes){
+      assert.equal(new Set(foe.masteries).size,2);
+      assert.equal(new Set([...foe.hand,...foe.drawPile].map(id=>api.cards.find(c=>c.id===id).school)).size,2);
+      assert.ok([...foe.hand,...foe.drawPile].every(id=>foe.masteries.includes(api.cards.find(c=>c.id===id).school)));
+    }
+  }
   console.log('Card Tester: home entry without a saved wizard, Electro Disc cast, ordered full catalog and recycling, passive dummy with knockout recovery, reset and practice isolation passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

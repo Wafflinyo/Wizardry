@@ -20,8 +20,9 @@
       smooth(p/.22)*(1-smooth((p-.50)/.11));
     const frame=returning?(p<.715?0:p<.76?4:p<.845?6:p<.956?7:5):
       p<.075?0:p<.16?1:p<.255?2:p<card.hit?3:p<.50&&drained?4:5;
-    const scale=1.08+clamp((unit.y-390)/235)*.20;
-    const x=unit.x+inward*(123-(!returning?9*smooth((p-.16)/.12):0));
+    const fit=window.WizardryUnitVisual?.factor(unit)??1;
+    const scale=(1.08+clamp((unit.y-390)/235)*.20)*Math.sqrt(fit);
+    const x=unit.x+inward*(123-(!returning?9*smooth((p-.16)/.12):0))*fit;
     const floor=unit.y+11;
     const y=floor+160*(1-growth)-Math.sin(p*26)*5*growth;
     return {unit,dir:-inward,x,y,floor,depthY:unit.y+.13,frame,scale,growth,p,
@@ -57,7 +58,7 @@
   function transfer(ctx,s){
     const {dir,p,unit,x,scale}=s;
     const hand={x:x+dir*50*scale,y:s.y-95*scale};
-    const chest={x:unit.x,y:unit.y-80};
+    const chest={x:unit.x,y:window.WizardryUnitVisual?.impactY(unit,80)??unit.y-80};
     const [from,to]=s.returning?[hand,chest]:[chest,hand];
     const start=s.returning?.825:.20;
     const impact=s.returning?s.delivery:s.impact;
@@ -114,7 +115,7 @@
     ctx.restore();
 
     ctx.save();
-    ctx.beginPath();ctx.rect(s.x-190,s.floor-315,380,318);ctx.clip();
+    ctx.beginPath();ctx.rect(s.x-190*s.scale,s.floor-315*s.scale,380*s.scale,315*s.scale+3);ctx.clip();
     ctx.globalAlpha*=clamp(s.growth*2.5);
     ctx.translate(s.x,s.y);
     ctx.scale(s.dir*s.scale,s.scale);

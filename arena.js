@@ -697,9 +697,9 @@
     ["scribe","Ashbound Scribe",194],
     ["acolyte","Inkbound Acolyte",196],
     ["pageguard","Cracked Pageguard",189],
-    ["magistrate","Cinder Magistrate",204],
-    ["inkbinder","Inkbinder",205],
-    ["warden","Faultbound Warden",201]
+    ["magistrate","Cinder Magistrate",224],
+    ["inkbinder","Inkbinder",225],
+    ["warden","Faultbound Warden",221]
   ].map(([id,name,size])=>{
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,art,size}];
@@ -801,9 +801,21 @@
     art.src="./assets/guardian-"+id+"-hd.webp?v=0.324.0";
     return [id,model];
   }));
-  const guardianVisualHeight=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size*.92:220;
-  const unitSlotFactor=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size/205:1;
-  const unitSprite=u=>guardianModels[u.bossId]||minionModels[u.minionId];
+  const unitSprite=u=>guardianModels[u?.bossId]||minionModels[u?.minionId];
+  const unitSlotFactor=u=>guardianModels[u?.bossId]?guardianModels[u.bossId].size/205:
+    ["magistrate","inkbinder","warden"].includes(u?.minionId)?unitSprite(u).size/205:1;
+  const guardianVisualHeight=u=>guardianModels[u?.bossId]?guardianModels[u.bossId].size*.92:220*unitSlotFactor(u);
+  const unitEffectFactor=u=>unitSlotFactor(u);
+  const unitEffectY=(u,offset)=>u.y-offset*unitEffectFactor(u);
+  // Attached effects are enlarged in world space about the unit's feet,
+  // never around the canvas origin. Unit coordinates and battle rules are unchanged.
+  function fitUnitEffect(ctx,u,draw){
+    const factor=unitEffectFactor(u);
+    if(factor===1||!u)return draw();
+    ctx.save();ctx.translate(u.x,u.y);ctx.scale(factor,factor);ctx.translate(-u.x,-u.y);
+    try{return draw();}finally{ctx.restore();}
+  }
+  window.WizardryUnitVisual={factor:unitEffectFactor,impactY:unitEffectY};
   const eliteSchools={magistrate:"fire",inkbinder:"nature",warden:"earth"};
   // The four corrupted tower guardians serve Grelus. Death uses the existing Dark spell school.
   const towerBosses={
@@ -3877,9 +3889,9 @@
           const plate=unitPlateRect(u);
           const onPlate=x>=plate.x-3&&x<=plate.x+plate.w+3&&
             y>=plate.y-5&&y<=plate.y+plate.h+5;
-          const dx=Math.abs(x-u.x),dy=Math.abs(y-(u.y-88));
-          return {u,onPlate,dx,dy,
-            d:onPlate?-1:Math.hypot(dx*.92,dy*.83)};
+          const factor=unitSlotFactor(u),dx=Math.abs(x-u.x),dy=Math.abs(y-unitEffectY(u,88));
+          return {u,onPlate,dx:dx/factor,dy:dy/factor,
+            d:onPlate?-1:Math.hypot(dx*.92/factor,dy*.83/factor)};
         }).sort((a,b)=>a.d-b.d);
       if(!candidates[0]||(!candidates[0].onPlate&&
           (candidates[0].dx>90||candidates[0].dy>135)))return;
@@ -4333,8 +4345,8 @@
       const settle=sinking?clamp(sinking.age/.28,0,1):1;
       const rise=sinking?.quickSandDepth===3?1-clamp((sinking.age-.34)/.48,0,1):1;
       const depth=sinking?((sinking.quickSandDepth-1)+settle*(sinking.quickSandDepth===3?3:1))*rise:sand?.sinks||0;
-      window.QuickSand?.draw(g,0,0,scale,sandTime,sand?1:forming?clamp(state.animation.elapsed/(state.animation.duration*.5),0,1):rise);
-      g.beginPath();g.rect(-220,-320,440,322);g.clip();
+      window.QuickSand?.draw(g,0,0,slotScale,sandTime,sand?1:forming?clamp(state.animation.elapsed/(state.animation.duration*.5),0,1):rise);
+      g.beginPath();g.rect(-220*unitSlotFactor(u),-320*unitSlotFactor(u),440*unitSlotFactor(u),320*unitSlotFactor(u)+2);g.clip();
       g.translate(0,depth*45*scale);
     }
     g.scale(scale,scale);
@@ -4672,7 +4684,7 @@
   function drawTargetArrow(u,time){
     if(!u||u.hp<=0)return;
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
-    const modelHeight=guardianModels[u.bossId]?guardianVisualHeight(u):218;
+    const modelHeight=unitSlotFactor(u)>1?guardianVisualHeight(u):218;
     const tipY=clamp(u.y-modelHeight*scale-12,45,H-55)+
       Math.sin(time*.006)*3;
     g.save();g.translate(u.x,tipY);
@@ -5084,17 +5096,17 @@
       g.restore();return;
     }
     if(card.id==="scorpion"){window.WIZARDRY_SCORPION_V94?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="freezing"){window.WIZARDRY_FREEZING_TEMPS_V93?.draw(g,{progress:p,target});g.restore();return;}
+    if(card.id==="freezing"){fitUnitEffect(g,target,()=>window.WIZARDRY_FREEZING_TEMPS_V93?.draw(g,{progress:p,target}));g.restore();return;}
     if(card.id==="quicksand"){g.restore();return;}
     if(card.id==="sirensmelody"){window.SirensMelody?.draw(g,p,caster,alive(caster.team),card.hit);g.restore();return;}
     if(card.id==="healingaura"){window.WIZARDRY_HEALING_AURA_V92?.draw(g,{progress:p,targets:alive(caster.team)});g.restore();return;}
     if(card.id==="soul"){window.WIZARDRY_SOUL_DRAIN_V91?.draw(g,{progress:p,target,caster});g.restore();return;}
-    if(card.id==="turbulence"){window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="rage"){window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="static"){window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="electricalcharge"){window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target,time});g.restore();return;}
-    if(card.id==="calming"){window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target});g.restore();return;}
-    if(card.id==="solidity"){window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target});g.restore();return;}
+    if(card.id==="turbulence"){fitUnitEffect(g,target,()=>window.WIZARDRY_TURBULENCE_V90?.draw(g,{progress:p,target}));g.restore();return;}
+    if(card.id==="rage"){fitUnitEffect(g,target,()=>window.WIZARDRY_BLAZING_RAGE_V89?.draw(g,{progress:p,target}));g.restore();return;}
+    if(card.id==="static"){fitUnitEffect(g,target,()=>window.WIZARDRY_STATIC_SHOCK_V88?.draw(g,{progress:p,target}));g.restore();return;}
+    if(card.id==="electricalcharge"){fitUnitEffect(g,target,()=>window.WIZARDRY_ELECTRICAL_CHARGE?.draw(g,{progress:p,target,time}));g.restore();return;}
+    if(card.id==="calming"){fitUnitEffect(g,target,()=>window.WIZARDRY_CALMING_WATERS_V87?.draw(g,{progress:p,target}));g.restore();return;}
+    if(card.id==="solidity"){fitUnitEffect(g,target,()=>window.WIZARDRY_SOLIDITY_V86?.draw(g,{progress:p,target}));g.restore();return;}
     if(card.kind==="summon"){
       const idx=card.id==="poseidon"?approvedPoseidonIndex(p):clamp(Math.floor(p*16),0,15);
       const done=renderSprite(card.id,idx,500,510,310,target,p);
@@ -5107,13 +5119,13 @@
       // Poseidon's flying trident is now a separate depth-sorted object.
     }else{
       if(target&&card.target!=="team"){
-        const x=lerp(500,target.x,ease(p)),y=lerp(340,target.y-100,ease(p));
+        const x=lerp(500,target.x,ease(p)),y=lerp(340,unitEffectY(target,100),ease(p));
         if(card.kind==="damage"){
           line(g,500,340,x,y,"#66e2f1",9);
           ellipse(g,x,y,15,26,"#9bebff","#efffff",2);
         }else{
           const ring=ease(p);
-          ellipse(g,target.x,target.y-18,20+ring*70,8+ring*27,
+          ellipse(g,target.x,unitEffectY(target,18),(20+ring*70)*unitEffectFactor(target),(8+ring*27)*unitEffectFactor(target),
             null,card.school==="earth"?"#dbbd7c":"#80eacb",4-ring*2);
         }
       }else if(card.kind==="aura"){
@@ -5122,7 +5134,7 @@
     }
     if(anim.applied&&p<.86&&target){
       const pp=(p-card.hit)/(.86-card.hit),radius=20+pp*105;
-      ellipse(g,target.x,target.y-112,radius,radius*.42,null,
+      ellipse(g,target.x,unitEffectY(target,112),radius*unitEffectFactor(target),radius*.42*unitEffectFactor(target),null,
         card.school==="earth"?"#caff9f":"#b9f9ff",Math.max(.5,4*(1-pp)));
     }
     g.restore();
@@ -5139,8 +5151,8 @@
     const direction=target.x>=500?1:-1;
     return {
       x:lerp(originX,target.x,t),
-      y:lerp(originY,target.y-105,t)-38*Math.sin(Math.PI*t),
-      angle:Math.atan2(target.y-105-originY,target.x-originX),
+      y:lerp(originY,unitEffectY(target,105),t)-38*Math.sin(Math.PI*t),
+      angle:Math.atan2(unitEffectY(target,105)-originY,target.x-originX),
       direction,
       // Follow the projectile's projected arena floor depth, not a
       // permanent background layer or its elevated screen Y coordinate.
@@ -5342,7 +5354,7 @@
         if(unit!==making&&!stored&&!release)continue;
         const progress=unit===making?clamp(action.elapsed/action.duration,0,1):null;
         renderables.push({type:"cold-storage",depthY:unit.y+.13,priority:2,
-          draw:()=>window.ColdStorage.draw(g,unit,time,progress,release?.age)});
+          draw:()=>fitUnitEffect(g,unit,()=>window.ColdStorage.draw(g,unit,time,progress,release?.age))});
       }
     }
     if(window.BloodDebt){
@@ -5350,7 +5362,7 @@
       if(target){
         const p=clamp(action.elapsed/action.duration,0,1);
         renderables.push({type:"blood-debt-mark",depthY:target.y+.14,priority:2,
-          draw:()=>window.BloodDebt.drawMark(g,target,p,preventsHitEffects(action,target))});
+          draw:()=>fitUnitEffect(g,target,()=>window.BloodDebt.drawMark(g,target,p,preventsHitEffects(action,target)))});
       }
       for(const f of state.flashes){
         if(!f.bloodDebt)continue;
@@ -5376,7 +5388,7 @@
           draw:()=>window.Lifevine.drawRoute(g,scene)});
         for(const unit of [pair.source,pair.target])for(const layer of ["back","front"])
           renderables.push({type:"lifevine-coil",depthY:unit.y+(layer==="front"?.13:-.13),priority:2,
-            draw:()=>window.Lifevine.drawCoil(g,scene,unit,layer)});
+            draw:()=>fitUnitEffect(g,unit,()=>window.Lifevine.drawCoil(g,scene,unit,layer))});
       }
     }
     for(const u of sorted){
@@ -5386,35 +5398,35 @@
       if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
         const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         const impact=hit&&{...hit.faultline,age:hit.age};
-        renderables.push({type:"faultline-bulwark",depthY:u.y+.145,priority:2,
-          draw:()=>window.FaultlineBulwark?.draw(g,u,growth,impact)});
+        for(const layer of ["back","front"])renderables.push({type:"faultline-bulwark-"+layer,depthY:u.y+(layer==="back"?-.145:.145),priority:2,
+          draw:()=>window.FaultlineBulwark?.draw(g,u,growth,impact,layer,unitEffectFactor(u))});
       }
     }
     for(const u of sorted){
       if(u.hp<=0)continue;
       if(u.statuses.some(st=>st.kind==="sleep")){
-        renderables.push({type:"sleep-letters",depthY:u.y+.14,priority:2,draw:()=>window.DrowzyFlowers?.letters(g,u,time)});
+        renderables.push({type:"sleep-letters",depthY:u.y+.14,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.DrowzyFlowers?.letters(g,u,time))});
       }
       if(u.statuses.some(st=>st.kind==="frozen")){
         const catching=action?.card?.id==="heizmann"&&action.stage==="summon"&&action.target===u.id&&!action.windDomeTargets?.[u.id]&&action.elapsed/action.duration>=action.card.hit;
-        if(!catching)renderables.push({type:"frozen-shell",depthY:u.y+.1,priority:2,draw:()=>window.Heizmann?.frozenShell(g,u)});
+        if(!catching)renderables.push({type:"frozen-shell",depthY:u.y+.1,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.Heizmann?.frozenShell(g,u))});
       }
       const binding=action?.card?.id==="cursedhold"&&action.stage==="summon"&&action.source===u.id;
       if(u.hp>0&&(binding||activeCursedHold(u))){
         const progress=binding?action.elapsed/action.duration:null;
         renderables.push({type:"cursed-hold-back",depthY:u.y-.05,priority:2,
-          draw:()=>window.CursedHold?.bind(g,u,progress,time,false)});
+          draw:()=>fitUnitEffect(g,u,()=>window.CursedHold?.bind(g,u,progress,time,false))});
         renderables.push({type:"cursed-hold-front",depthY:u.y+.05,priority:2,
-          draw:()=>window.CursedHold?.bind(g,u,progress,time,true)});
+          draw:()=>fitUnitEffect(g,u,()=>window.CursedHold?.bind(g,u,progress,time,true))});
       }
-      if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time})});
+      if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time}))});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
       if(growing||wrapped){
         const progress=growing?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         for(const layer of ["back","front"])renderables.push({
           type:"thornwrap-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,
-          draw:()=>window.ThornyWrap?.draw(g,u,progress,layer)
+          draw:()=>fitUnitEffect(g,u,()=>window.ThornyWrap?.draw(g,u,progress,layer))
         });
       }
       const imprisoned=u.statuses.some(st=>st.kind==="water_prison");
@@ -5424,7 +5436,7 @@
         const growth=imprisoned?1:clamp(action.elapsed/(action.duration*action.card.hit),0,1);
         for(const layer of ["back","front"])renderables.push({
           type:"water-prison-"+layer,depthY:u.y+(layer==="back"?-.06:.06),priority:2,
-          draw:()=>window.WaterPrison?.draw(g,{target:u,time,growth,layer})
+          draw:()=>fitUnitEffect(g,u,()=>window.WaterPrison?.draw(g,{target:u,time,growth,layer}))
         });
       }
       const formingIce=action?.card?.id==="reflectiveice"&&action.stage==="summon"&&action.target===u.id;
@@ -5432,7 +5444,7 @@
       if(u.hp>0&&(formingIce||iced)){
         const growth=formingIce&&!iced?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         for(const layer of ["back","front"])renderables.push({type:"reflective-ice-"+layer,
-          depthY:u.y+(layer==="back"?-.055:.055),priority:2,draw:()=>window.ReflectiveIce?.shell(g,u,growth,time,layer)});
+          depthY:u.y+(layer==="back"?-.055:.055),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.ReflectiveIce?.shell(g,u,growth,time,layer))});
       }
       const formingSand=action?.card?.id==="sandwarrior"&&action.stage==="summon"&&action.target===u.id;
       const guarding=u.statuses.some(st=>st.kind==="sand_warrior");
@@ -5441,72 +5453,72 @@
         const effect=window.SandWarrior;
         const opts={growth:formingSand&&!guarding?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1,
           time,age:sandHit?.age,broken:!guarding&&sandHit?.sandWarrior.broken};
-        renderables.push({type:"sand-warrior",depthY:u.y+.15,priority:2,draw:()=>effect?.draw(g,u,opts)});
+        renderables.push({type:"sand-warrior",depthY:u.y+.15,priority:2,draw:()=>fitUnitEffect(g,u,()=>effect?.draw(g,u,opts))});
       }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");
       const formingBubble=action?.card?.id==="bubbleshield"&&action.stage==="summon"&&action.target===u.id;
       if(u.hp>0&&(bubble||formingBubble)){
         const growth=formingBubble&&!bubble?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         const opts={target:u,time,growth,hp:bubble?.value??BY_ID.bubbleshield.shieldHp,maxHp:BY_ID.bubbleshield.shieldHp};
-        for(const layer of ["back","front"])renderables.push({type:"bubble-shield-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.BubbleShield?.draw(g,opts,layer)});
+        for(const layer of ["back","front"])renderables.push({type:"bubble-shield-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.BubbleShield?.draw(g,opts,layer))});
       }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.target===u.id;
       if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
         const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
-        for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer})});
+        for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer}))});
       }
     }
     for(const burst of state.waterPrisonBursts||[]){
       const target=getUnit(burst.targetId);
       if(target)renderables.push({type:"water-prison-release",depthY:target.y+.06,priority:2,
-        draw:()=>window.WaterPrison?.draw(g,{target,time,release:Math.max(.001,burst.age/.62),layer:"back"})});
+        draw:()=>fitUnitEffect(g,target,()=>window.WaterPrison?.draw(g,{target,time,release:Math.max(.001,burst.age/.62),layer:"back"}))});
     }
     if(state.skipCue?.reason==="lightning_field"){
       const target=getUnit(state.skipCue.source);
       if(target)renderables.push({type:"lightning-field-shock",depthY:target.y+.14,priority:2,
-        draw:()=>window.LightningField?.shock(g,target,time)});
+        draw:()=>fitUnitEffect(g,target,()=>window.LightningField?.shock(g,target,time))});
     }
     for(const ripple of state.bubbleShieldRipples||[]){
       const target=getUnit(ripple.targetId);
       if(target)renderables.push({type:"bubble-ripple",depthY:target.y+.09,priority:2,
-        draw:()=>window.BubbleShield?.ripple(g,target,ripple)});
+        draw:()=>fitUnitEffect(g,target,()=>window.BubbleShield?.ripple(g,target,ripple))});
     }
     for(const burst of state.windDomeBursts||[]){const u=getUnit(burst.targetId);if(!u||u.hp<=0)continue;
-      for(const layer of ["back","front"])renderables.push({type:"wind-dome-block-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{target:u,time,mode:"block",age:burst.age,layer})});
+      for(const layer of ["back","front"])renderables.push({type:"wind-dome-block-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{target:u,time,mode:"block",age:burst.age,layer}))});
     }
     if(action?.stage==="summon"&&action.card.id==="ragingwaters"){
       const target=getUnit(action.target);
       if(target){
         const progress=clamp(action.elapsed/action.duration,0,1);
         renderables.push({type:"raging-waters",depthY:target.y-.01,priority:2,
-          draw:()=>window.RagingWaters?.draw(g,{progress,target})});
+          draw:()=>fitUnitEffect(g,target,()=>window.RagingWaters?.draw(g,{progress,target}))});
       }
     }
     if(action?.stage==="summon"&&action.card.id==="flowstate"){
       const target=getUnit(action.target)||getUnit(action.source);
       if(target)for(const layer of ["back","front"])renderables.push({
         type:"flow-state-"+layer,depthY:target.y+(layer==="back"?-.06:.06),priority:2,
-        draw:()=>window.WIZARDRY_FLOW_STATE_V121?.draw(g,{
+        draw:()=>fitUnitEffect(g,target,()=>window.WIZARDRY_FLOW_STATE_V121?.draw(g,{
           progress:clamp(action.elapsed/action.duration,0,1),target,layer
-        })
+        }))
       });
     }
     if(action?.stage==="summon"&&action.card.id==="livewire"){
       const target=getUnit(action.target);
       if(target)renderables.push({type:"live-wire-charge",depthY:target.y+.15,priority:2,
-        draw:()=>window.LiveWire?.charge(g,target,clamp(action.elapsed/action.duration,0,1))});
+        draw:()=>fitUnitEffect(g,target,()=>window.LiveWire?.charge(g,target,clamp(action.elapsed/action.duration,0,1)))});
     }
     for(const message of state.flashes){
       if(!message.liveWire)continue;
       const target=getUnit(message.liveWire.targetId);
       if(target)renderables.push({type:"live-wire-surge",depthY:target.y+.17,priority:2,
-        draw:()=>window.LiveWire?.surge(g,target,message.age)});
+        draw:()=>fitUnitEffect(g,target,()=>window.LiveWire?.surge(g,target,message.age))});
     }
     if(action?.stage==="summon" && action.card.id==="growth"){
       const target=getUnit(action.target);
       const progress=clamp(action.elapsed/action.duration,0,1);
       if(target)renderables.push({type:"growth-saplings",depthY:target.y+.08,priority:2,
-        draw:()=>window.GrowthArt?.draw(g,target,progress,action.card.hit)});
+        draw:()=>fitUnitEffect(g,target,()=>window.GrowthArt?.draw(g,target,progress,action.card.hit))});
     }
     if(action?.stage==="summon"&&["electricalcharge","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(action.card.kind)){
       const caster=getUnit(action.source),target=getUnit(action.target),targets=action.card.target==="team"?alive(caster.team):[target].filter(Boolean);
@@ -5520,20 +5532,20 @@
       if(!forming&&!poisoned)continue;
       const progress=forming?clamp(action.elapsed/action.duration,0,1):1;
       const opacity=forming&&!poisoned?Math.min(1,(1-progress)*5):1;
-      renderables.push({type:"acid-air",depthY:target.y+.1,priority:2,draw:()=>window.AcidAir?.draw(g,target,progress,time,opacity)});
+      renderables.push({type:"acid-air",depthY:target.y+.1,priority:2,draw:()=>fitUnitEffect(g,target,()=>window.AcidAir?.draw(g,target,progress,time,opacity))});
     }
     for(const u of sorted){
       const touching=action?.card?.id==="frozentouch"&&action.stage==="summon"&&action.target===u.id;
       const suppressed=state.flashes.findLast(f=>f.frozenTouchRecipient===u.id);
       if(touching||suppressed)renderables.push({
         type:"frozen-touch",depthY:u.y+.08,priority:2,
-        draw:()=>window.FrozenTouch?.draw(g,u,touching?action.elapsed/action.duration:suppressed.age/.68,!touching)
+        draw:()=>fitUnitEffect(g,u,()=>window.FrozenTouch?.draw(g,u,touching?action.elapsed/action.duration:suppressed.age/.68,!touching))
       });
       const forming=action?.card?.id==="crystalicemirrors"&&action.stage==="summon"&&action.target===u.id;
       const reflected=state.flashes.findLast(f=>f.mirrorCaster===u.id);
       if(forming||reflected)renderables.push({
         type:"ice-mirrors",depthY:u.y-.08,priority:2,
-        draw:()=>window.CrystalIceMirrors?.draw(g,u,reflected?reflected.age/.75:action.elapsed/action.duration,!!reflected)
+        draw:()=>fitUnitEffect(g,u,()=>window.CrystalIceMirrors?.draw(g,u,reflected?reflected.age/.75:action.elapsed/action.duration,!!reflected))
       });
     }
     if(action?.stage==="summon"&&action.card.id==="electriceel"&&window.ElectricEel){
@@ -5575,7 +5587,7 @@
       if(target&&action.card.id==="manascourge"){
         renderables.push({
           type:"mana-scourge",depthY:target.y+.1,priority:2,
-          draw:()=>window.DarkSpells.drawScourge(g,target,progress)
+          draw:()=>fitUnitEffect(g,target,()=>window.DarkSpells.drawScourge(g,target,progress))
         });
       }else if(target){
         const scene=window.DarkSpells.harvestScene(target,progress,action.soulHooked);
@@ -5585,7 +5597,7 @@
     }
     if(action?.card?.id==="decaystrength"&&action.stage==="summon"){
       const t=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1);
-      if(t)renderables.push({type:"decay-mark",depthY:t.y+.1,priority:2,draw:()=>window.DecayStrength?.draw(g,t,p)});
+      if(t)renderables.push({type:"decay-mark",depthY:t.y+.1,priority:2,draw:()=>fitUnitEffect(g,t,()=>window.DecayStrength?.draw(g,t,p))});
     }
     if(action?.card?.id==="burningpheonix"&&action.stage==="summon"){
       const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1);
@@ -5679,7 +5691,7 @@
         renderables.push({type:"storm-lizard",depthY:scene.y+.05,priority:2,draw:()=>fx.draw(g,scene)});
         if(!preventsHitEffects(action,target))for(const layer of ["back","front"]){
           renderables.push({type:"storm-lizard-impact-"+layer,depthY:target.y+(layer==="back"?-.12:.12),priority:2,
-            draw:()=>fx.impact(g,scene,target,layer)});
+            draw:()=>fitUnitEffect(g,target,()=>fx.impact(g,scene,target,layer))});
         }
       }
     }
@@ -5701,7 +5713,7 @@
         renderables.push({type:"dark-sorcerer",depthY:510,priority:2,draw:()=>fx.actor(g,p,dir)});
         const targets=action.sorcererTargets||alive(1-caster.team);
         for(const target of targets)renderables.push({type:"dark-slashes",depthY:target.y+.13,priority:2,
-          draw:()=>fx.slashes(g,p,target,action.card.hit)});
+          draw:()=>fitUnitEffect(g,target,()=>fx.slashes(g,p,target,action.card.hit))});
       }
     }
     if(action?.card?.kind==="sticksandstones"&&action.stage==="summon"){
@@ -5827,7 +5839,7 @@
     if(action?.card?.starterBlast&&action.stage==="summon"){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
-        const from={x:500,y:372},to={x:target.x,y:target.y-61};
+        const from={x:500,y:372},to={x:target.x,y:unitEffectY(target,61)};
         renderables.push({type:"starter-blast",depthY:target.y+.1,priority:2,draw:()=>{
           drawStarterBlast(g,action.card.school,from,to,action.elapsed/action.duration,action.card.hit);
         }});
@@ -5838,7 +5850,7 @@
       if(spell&&target){
         const opts={target,progress:clamp(action.elapsed/action.duration,0,1),hit:action.card.hit};
         renderables.push({type:"crab-giant",depthY:target.y+.08,priority:2,draw:()=>spell.draw(g,opts)});
-        renderables.push({type:"crab-giant-snap",depthY:target.y+.16,priority:2,draw:()=>spell.impact(g,opts)});
+        renderables.push({type:"crab-giant-snap",depthY:target.y+.16,priority:2,draw:()=>fitUnitEffect(g,target,()=>spell.impact(g,opts))});
       }
     }
     if(action?.card?.id==="yeti"&&action.stage==="summon"){
@@ -5848,7 +5860,7 @@
         const opts={target,progress,hit:action.card.hit};
         spell.ground(g,opts);
         renderables.push({type:"ice-yeti",depthY:spell.depth(opts),priority:2,draw:()=>spell.draw(g,opts)});
-        renderables.push({type:"ice-yeti-impact",depthY:target.y+.16,priority:2,draw:()=>spell.impact(g,opts)});
+        renderables.push({type:"ice-yeti-impact",depthY:target.y+.16,priority:2,draw:()=>fitUnitEffect(g,target,()=>spell.impact(g,opts))});
       }
     }
     if(action?.card?.id==="bulletseed"&&action.stage==="summon"){

@@ -89,28 +89,30 @@
     }
     g.restore();
   }
-  function wall(g,growth,impact){
+  function wall(g,growth,impact,layer="all"){
     const age=impact?.age??0;
     if(!impact?.broken||age<.17){
-      g.save();
-      g.globalAlpha*=clamp(growth*4)*.46;
-      poly(g,"#241d25",[[29,-58],[110,-8],[130,2],[48,74],[25,74],[98,1],[22,-59]]);
-      g.restore();
-      slabs.forEach(piece=>slab(g,piece,growth,impact));
-    }else{
+      if(layer!=="front"){
+        g.save();
+        g.globalAlpha*=clamp(growth*4)*.46;
+        poly(g,"#241d25",[[29,-58],[110,-8],[130,2],[48,74],[25,74],[98,1],[22,-59]]);
+        g.restore();
+      }
+      slabs.forEach((piece,index)=>{if(layer==="all"||(layer==="back"?index<3:index>=3))slab(g,piece,growth,impact);});
+    }else if(layer!=="back"){
       g.save();
       g.translate(84,0);
       dust(g,clamp((age-.17)/.61));
       g.restore();
     }
   }
-  function draw(g,target,growth,impact){
+  function draw(g,target,growth,impact,layer="all",factor=1){
     const dir=target.team?-1:1;
     g.save();
-    g.translate(target.x,target.y+3);g.scale(dir,1);
-    wall(g,growth,impact);
+    g.translate(target.x,target.y+3);g.scale(dir*factor,factor);
+    wall(g,growth,impact,layer);
     g.restore();
-    if(impact?.broken)debris(g,target.x+dir*91,target.y+3,dir,impact);
+    if(impact?.broken&&layer!=="back")debris(g,target.x+dir*91*factor,target.y+3,dir,impact);
   }
   function portrait(g,w,h){
     const bg=g.createLinearGradient(0,0,0,h);

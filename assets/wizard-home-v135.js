@@ -12,6 +12,90 @@ try{
  const profiles=JSON.parse(localStorage.getItem(KEY)||'[]');
  for(const profile of profiles){try{saved.push(withLegalDeck(profile));}catch{}}
 }catch{}
+
+const ACCOUNT_KEY='wizardry.account.v1',CACHE_KEY='wizardry.cloud.v1.',ACCOUNT_ENDPOINT='https://vocaddalptoghysgdkvh.supabase.co/functions/v1/wizardry-account';
+let account=null,flight=null,conflict=null,expired=false,busyAccount=false,cloudMessage='';
+function stored(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch{return fallback;}}
+function legalCollection(rows){if(!Array.isArray(rows))throw Error('Invalid wizard collection.');return rows.map(withLegalDeck);}
+function guestCollection(){return stored(KEY,[]).flatMap(p=>{try{return [withLegalDeck(p)];}catch{return [];}});}
+function cloudStatus(message){cloudMessage=message;const n=el('cloudStatus');if(n)n.textContent=message;}
+function cacheAccount(a=account,rows=saved){localStorage.setItem(CACHE_KEY+a.username,JSON.stringify({revision:a.revision,dirty:a.dirty,wizards:rows}));}
+async function cloudRequest(action,body={}){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{const r=await fetch(ACCOUNT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body}),signal:controller.signal});const d=await r.json();if(!r.ok){const e=Error(d.error||'Account request failed.');e.status=r.status;e.data=d;throw e;}return d;}finally{clearTimeout(timer);}
+}
+function adoptCloud(d,token){
+ const remote=legalCollection(d.wizards),cache=stored(CACHE_KEY+d.username,null);
+ const next={username:d.username,token,revision:d.revision,dirty:false};let rows=remote;conflict=null;expired=false;
+ if(cache?.dirty){rows=legalCollection(cache.wizards);next.dirty=true;next.revision=cache.revision;if(cache.revision!==d.revision)conflict={revision:d.revision,wizards:remote};}
+ cacheAccount(next,rows);localStorage.setItem(ACCOUNT_KEY,JSON.stringify({username:next.username,token}));
+ account=next;saved=rows;active=null;draft=null;onlineProfile=null;
+ cloudStatus(conflict?'Cloud conflict · resolve in Account':next.dirty?'Changes pending sync':'Cloud saves up to date');
+}
+function saveCollection(next){
+ if(!account){localStorage.setItem(KEY,JSON.stringify(next));saved=next;return;}
+ if(next.length>100)throw Error('An account can hold up to 100 wizards.');
+ const previous=account.dirty;account.dirty=true;try{cacheAccount(account,next);}catch(e){account.dirty=previous;throw e;}
+ saved=next;cloudStatus(conflict?'Cloud conflict · changes saved on this device':'Saving to cloud…');void flushCloud();
+}
+function flushCloud(){
+ if(flight)return flight;
+ if(!account||!account.dirty)return Promise.resolve(true);
+ if(conflict||expired)return Promise.resolve(false);
+ const owner=account;
+ flight=(async()=>{try{
+  while(owner===account&&owner.dirty){
+   const snapshot=JSON.stringify(saved),d=await cloudRequest('save',{token:owner.token,revision:owner.revision,wizards:JSON.parse(snapshot)});
+   if(owner!==account)return false;
+   owner.revision=d.revision;owner.dirty=JSON.stringify(saved)!==snapshot;
+   try{cacheAccount(owner);}catch(e){owner.dirty=true;throw e;}
+  }
+  cloudStatus('Cloud saves up to date');return true;
+ }catch(e){if(owner!==account)return false;
+  if(e.status===409){conflict={revision:e.data.revision,wizards:legalCollection(e.data.wizards)};cloudStatus('Cloud conflict · resolve in Account');}
+  else if(e.status===401){expired=true;cloudStatus('Session expired · sign in again');}
+  else cloudStatus('Cloud unavailable · changes saved on this device');
+  if(view==='account')render();return false;
+ }finally{flight=null;}})();return flight;
+}
+async function accountLogin(mode,username,password){
+ if(busyAccount)return;busyAccount=true;
+ try{if(account&&username.trim().toLowerCase()!==account.username)throw Error('Sign back into the same account to recover pending changes.');
+ if(flight)await flight;const d=await cloudRequest(mode,{username,password});adoptCloud(d,d.token);screen('account');void flushCloud();}
+ finally{busyAccount=false;}
+}
+async function restoreAccount(){
+ const session=stored(ACCOUNT_KEY,null);if(!session?.username||!session?.token)return;
+ screen('accountLoading');
+ try{const d=await cloudRequest('get',{token:session.token});adoptCloud(d,session.token);screen('home');void flushCloud();}
+ catch(e){const cache=stored(CACHE_KEY+session.username,null);
+  if(cache&&Array.isArray(cache.wizards)){account={username:session.username,token:session.token,revision:cache.revision,dirty:!!cache.dirty};saved=legalCollection(cache.wizards);expired=e.status===401;cloudStatus(expired?'Session expired · sign in again':'Offline · using account saves on this device');screen('home');}
+  else{localStorage.removeItem(ACCOUNT_KEY);screen('home');error('Could not load your account. Sign in again. Guest saves are separate.');}}
+}
+async function signOutAccount(){
+ if(!account||busyAccount)return;busyAccount=true;
+ try{if(account.dirty&&!await flushCloud())throw Error('Your changes are still on this device. Resolve the sync issue before signing out.');
+ try{await cloudRequest('logout',{token:account.token});}catch(e){if(e.status!==401)throw Error('Unable to sign out safely. Try again when connected.');}
+ localStorage.removeItem(ACCOUNT_KEY);localStorage.removeItem(CACHE_KEY+account.username);account=null;conflict=null;expired=false;cloudMessage='';saved=guestCollection();active=null;draft=null;onlineProfile=null;screen('home');}finally{busyAccount=false;}
+}
+function importGuest(){
+ const additions=guestCollection().filter(p=>!saved.some(q=>q.id===p.id));if(!additions.length)throw Error('No new browser wizards to import.');saveCollection([...saved,...additions]);render();
+}
+function resolveCloud(keepDevice){
+ if(!account||!conflict)return;
+ if(!window.confirm(keepDevice?'Replace cloud saves with this device’s collection? Other-device progress may be overwritten.':'Use cloud saves instead? This device’s unsynced progress will be backed up locally.'))return;
+ const other=conflict;localStorage.setItem(CACHE_KEY+account.username+'.conflictBackup',JSON.stringify({device:saved,cloud:other.wizards,date:Date.now()}));
+ const next=keepDevice?saved:other.wizards,updated={...account,revision:other.revision,dirty:keepDevice};cacheAccount(updated,next);
+ account=updated;saved=next;active=null;draft=null;onlineProfile=null;conflict=null;cloudStatus(keepDevice?'Changes pending sync':'Cloud saves up to date');render();void flushCloud();
+}
+function renderAccount(){
+ const additions=guestCollection().filter(p=>!saved.some(q=>q.id===p.id)).length;
+ shell('<section class="portal-hero"><h1>Wizardry Account</h1><p>Signed in as <strong>'+escape(account.username)+'</strong> · '+saved.length+' saved wizard(s)</p>'+(conflict?'<div class="network-notice"><p>Another device updated your collection. Choose which copy to keep. Both copies will be backed up locally.</p><div class="portal-actions">'+btn('Use cloud saves','cloudUseRemote')+btn('Keep this device’s saves','cloudUseLocal')+'</div></div>':'')+(additions?'<p>'+additions+' browser wizard(s) available to import. Original guest saves stay on this device.</p>':'')+'<div class="menu-stack">'+(additions?btn('Import browser wizards','cloudImport','primary'):'')+btn(expired?'Sign in again':'Retry cloud sync',expired?'cloudLogin':'cloudRetry')+btn('Sign Out','cloudLogout')+btn('Back to Main Menu','home','subtle')+'</div></section>');
+}
+function renderAccountLogin(signup){
+ shell('<section class="portal-hero"><h1>'+(signup?'Create Account':'Log In')+'</h1><p>Save your wizards across devices.</p><form id="cloudForm" class="menu-stack"><label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" required value="'+escape(account?.username||'')+'" '+(account?'readonly':'')+'></label><label class="field"><span>Password</span><input name="password" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="10" maxlength="72" required></label>'+(signup?'<label class="field"><span>Confirm password</span><input name="confirm" type="password" autocomplete="new-password" required></label><p class="portal-note">Username: 3–24 letters, numbers or underscores. Password: at least 10 characters. No password recovery is available yet.</p>':'')+'<button type="submit" class="portal-btn primary">'+(signup?'Create Account':'Log In')+'</button></form><div class="portal-actions">'+(!account?btn(signup?'Already have an account? Log in':'Create Account',signup?'cloudLogin':'cloudSignup','subtle'):'')+btn('Back',account?'cloudAccount':'home','subtle')+'</div></section>');
+}
+
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
 let libraryTestProfile=null;
 let binderElement='',deckDraft=null,deckReturn='progression',draftReturn='tower',offerChoices={};
@@ -20,13 +104,16 @@ const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=id=>document.getElementById(id),title=e=>B.names[e],btn=(text,action,cls='')=>`<button class="portal-btn ${cls}" data-action="${action}">${text}</button>`;
 function error(message){let n=el('portalError');if(!n){n=document.createElement('div');n.id='portalError';n.className='portal-error';n.setAttribute('role','alert');portal.prepend(n);}n.textContent=String(message);}
-function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark studio-credit"><span aria-hidden="true">✦</span> Wafflinyo Studio Presents</div><button type="button" class="portal-btn small menu-music" data-menu-music aria-label="Menu music" aria-pressed="true">Music On</button></header>${content}</div>`;window.WizardryMenuMusic?.sync();}
+function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark studio-credit"><span aria-hidden="true">✦</span> Wafflinyo Studio Presents</div><button type="button" class="portal-btn small menu-music" data-menu-music aria-label="Menu music" aria-pressed="true">Music On</button></header>${account?`<p id="cloudStatus" class="portal-note" role="status">${escape(cloudMessage)}</p>`:''}${content}</div>`;window.WizardryMenuMusic?.sync();}
 function screen(next){deleteId=null;view=next;document.body.dataset.portalView=next;document.body.dataset.screen='home';cancelAnimationFrame(previewFrame);render();}
 function summary(p){const s=B.stats(p);return `<div class="stats-strip"><span><b>${s.hp.toLocaleString()}</b>HP</span><span><b>${s.mana}</b>Mana</span><span><b>${p.level}</b>Level</span></div>`;}
 function render(){
- if(view==='home')shell(`<section class="portal-hero game-menu"><h1>Wizardry : <span>The Fall of Lupen’s Kingdom</span></h1><nav class="menu-stack" aria-label="Main menu">${btn('New Wizard','create','primary')}${btn('Load Wizard','load')}${saved.some(p=>p.towerCleared)?btn('Weilei’s Library of Spells','librarySelect'):''}${btn('Test Mode','tests')}</nav>${joinCode?'<p class="network-notice">Load or create a wizard to use your lobby invite.</p>':''}</section>`);
+ if(view==='home')shell(`<section class="portal-hero game-menu"><h1>Wizardry : <span>The Fall of Lupen’s Kingdom</span></h1><nav class="menu-stack" aria-label="Main menu">${account?btn('Account · '+escape(account.username),'cloudAccount'):btn('Log In','cloudLogin','primary')+btn('Create Account','cloudSignup')}${btn('New Wizard','create',account?'primary':'')}${btn('Load Wizard','load')}${saved.some(p=>p.towerCleared)?btn('Weilei’s Library of Spells','librarySelect'):''}${btn('Test Mode','tests')}</nav>${!account?'<p class="portal-note">Guest mode · progress stays in this browser until imported into an account.</p>':''}${joinCode?'<p class="network-notice">Load or create a wizard to use your lobby invite.</p>':''}</section>`);
+ if(view==='accountLoading')shell('<section class="portal-hero"><h1>Loading account…</h1></section>');
+ if(view==='account'&&account)renderAccount();
+ if(view==='login'||view==='signup')renderAccountLogin(view==='signup');
  if(view==='tests')shell(`<section class="portal-hero game-menu"><h1>Test Mode</h1><nav class="menu-stack" aria-label="Test Mode">${btn('New Card Tester','cardTester','primary')}${btn('Wizard Creation Tester','wizardTester')}${btn('Library Tester','libraryTester')}${btn('Back to Main Menu','home','subtle')}</nav></section>`);
- if(view==='load'){shell(`<div class="portal-heading"><div><p class="portal-eyebrow">YOUR WIZARDS</p><h1>Load a wizard</h1></div>${btn('Back','home','subtle')}</div><div class="saved-list">${saved.length?saved.map(p=>`<article class="portal-panel saved-card"><p class="portal-eyebrow">${p.masteries.map(title).join(' + ')} MASTER</p><h2>${escape(p.name)}</h2>${summary(p)}<p class="portal-note">${p.deck.length} cards · ${p.level-B.stats(p).remaining} skill points allocated</p><div class="portal-actions"><button class="portal-btn primary" data-load="${escape(p.id)}">Load</button><button class="portal-btn subtle" data-edit="${escape(p.id)}">Edit build</button><button class="portal-btn subtle" data-delete-wizard="${escape(p.id)}">Delete</button></div>${deleteId===p.id?`<div class="network-notice"><p>Delete ${escape(p.name)} from this browser?</p><div class="portal-actions"><button class="portal-btn" data-confirm-wizard="${escape(p.id)}">Delete wizard</button><button class="portal-btn subtle" data-cancel-delete>Cancel</button></div></div>`:''}</article>`).join(''):'<p>No saved wizards yet. Create your first wizard to begin.</p>'}</div>`);}
+ if(view==='load'){shell(`<div class="portal-heading"><div><p class="portal-eyebrow">YOUR WIZARDS</p><h1>Load a wizard</h1></div>${btn('Back','home','subtle')}</div><div class="saved-list">${saved.length?saved.map(p=>`<article class="portal-panel saved-card"><p class="portal-eyebrow">${p.masteries.map(title).join(' + ')} MASTER</p><h2>${escape(p.name)}</h2>${summary(p)}<p class="portal-note">${p.deck.length} cards · ${p.level-B.stats(p).remaining} skill points allocated</p><div class="portal-actions"><button class="portal-btn primary" data-load="${escape(p.id)}">Load</button><button class="portal-btn subtle" data-edit="${escape(p.id)}">Edit build</button><button class="portal-btn subtle" data-delete-wizard="${escape(p.id)}">Delete</button></div>${deleteId===p.id?`<div class="network-notice"><p>Delete ${escape(p.name)} ${account?'from your account on all devices':'from this browser'}?</p><div class="portal-actions"><button class="portal-btn" data-confirm-wizard="${escape(p.id)}">Delete wizard</button><button class="portal-btn subtle" data-cancel-delete>Cancel</button></div></div>`:''}</article>`).join(''):'<p>No saved wizards yet. Create your first wizard to begin.</p>'}</div>`);}
  if(view==='create'||view==='wizardTester')renderCreator();
  if(view==='hub'&&active){
    shell(`<div class="portal-heading"><h1>${escape(active.name)}</h1></div><div class="create-grid"><aside class="portal-panel wizard-display"><canvas id="wizardPreview" width="360" height="340"></canvas>${summary(active)}${btn('Edit Wizard & Grimoire','edit','subtle')}</aside><nav class="portal-panel menu-stack" aria-label="Wizard menu">${btn('CPU Battles','cpu','primary')}${btn('Caglimot Tower','tower')}${active.towerCleared?btn('Weilei’s Library of Spells','library'):''}${btn('Online Battles','online')}${joinCode?btn('Join Invited Lobby','invited'):''}${btn('Back to Main Menu','home','subtle')}</nav></div>`);
@@ -163,7 +250,7 @@ function animatePreview(p){cancelAnimationFrame(previewFrame);let last=0;functio
 function readDraft(){if(el('createRobe')){draft.robeColor=el('createRobe').value;draft.hatColor=el('createHat').value;draft.headHair=el('createHeadHair').value;draft.facialHair=el('createFacialHair').value;draft.skinColor=el('createSkin').value;}}
 function persistProfile(profile){
  const next=saved.some(p=>p.id===profile.id)?saved.map(p=>p.id===profile.id?profile:p):[...saved,profile];
- localStorage.setItem(KEY,JSON.stringify(next));saved=next;active=profile;
+ saveCollection(next);active=profile;
 }
 function save(){
  readDraft();requireName();
@@ -356,7 +443,15 @@ portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefi
  syncNamePreview();
  return;
  }if(e.target.dataset.gear&&Object.hasOwn(B.gear,e.target.dataset.gear))draft[e.target.dataset.gear]=e.target.value;if(['createRobe','createHat','createSkin','createFacialHair','createHeadHair'].includes(e.target.id)){readDraft();}if(e.target.id==='lobbySize'&&session.isHost){const size=Number(e.target.value);if(session.lobby.players.some(p=>p.slot>=size)){error('Move players out of the higher seats before reducing match size.');e.target.value=session.lobby.size;return;}try{await command('size',{size});}catch(e){error(e.message);}}});
-portal.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;try{
+portal.addEventListener('submit',async e=>{
+ if(e.target.id!=='cloudForm')return;e.preventDefault();if(busyAccount)return;
+ const form=e.target,mode=view==='signup'?'signup':'login',fields=new FormData(form),username=String(fields.get('username')||''),password=String(fields.get('password')||'');
+ if(mode==='signup'&&password!==fields.get('confirm')){error('Passwords do not match.');return;}
+ if(new TextEncoder().encode(password).length>72){error('Password is too long.');return;}
+ const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
+ try{await accountLogin(mode,username,password);}catch(err){error(err.message);}finally{submit.disabled=false;}
+});
+portal.addEventListener('click',async e=>{if(busyAccount)return;const button=e.target.closest('button');if(!button||button.disabled)return;try{
  if(button.dataset.randomNamePart!==undefined){if((view==='create'||view==='wizardTester')&&step===0)randomizeNamePart(Number(button.dataset.randomNamePart));return;}
  if(button.dataset.binderElement){binderElement=button.dataset.binderElement;render();portal.querySelector(`[data-binder-element="${binderElement}"]`)?.focus();return;}
  if(button.dataset.binderCard){inspectBinderCard(button.dataset.binderCard);return;}
@@ -384,8 +479,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.hasAttribute('data-cancel-delete')){deleteId=null;render();return;}
  if(button.dataset.confirmWizard&&button.dataset.confirmWizard===deleteId){
    const next=saved.filter(p=>p.id!==deleteId);
-   localStorage.setItem(KEY,JSON.stringify(next));
-   saved=next;
+   saveCollection(next);
    if(active?.id===deleteId)active=null;
    deleteId=null;render();return;
  }
@@ -395,6 +489,13 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(button.dataset.addCpu||button.dataset.removeCpu){const add=!!button.dataset.addCpu,[team,slot]=(button.dataset.addCpu||button.dataset.removeCpu).split(',').map(Number);await command(add?'cpuAdd':'cpuRemove',{team,slot,...(add?{profile:B.cpu(cards,team*4+slot)}:{})});return;}
  if(button.dataset.seat){const [team,slot]=button.dataset.seat.split(',').map(Number);hostSeat(session.peerId,team,slot);return;}
  const action=button.dataset.action;
+ if(action==='cloudAccount'){screen('account');return;}
+ if(action==='cloudLogin'){screen('login');return;}
+ if(action==='cloudSignup'){screen('signup');return;}
+ if(action==='cloudLogout'){await signOutAccount();return;}
+ if(action==='cloudImport'){importGuest();return;}
+ if(action==='cloudRetry'){if(account.dirty)await flushCloud();else{try{const d=await cloudRequest('get',{token:account.token});adoptCloud(d,account.token);render();}catch(e){if(e.status===401){expired=true;cloudStatus('Session expired · sign in again');render();}else error(e.message);}}return;}
+ if(action==='cloudUseRemote'||action==='cloudUseLocal'){resolveCloud(action==='cloudUseLocal');return;}
  if(action==='editTowerDeck'){editTowerDeck();return;}
  if(action==='libraryTester'){startLibraryTester();return;}
  if(action==='resetLibraryTester'){startLibraryTester(libraryTestProfile.masteries);return;}
@@ -441,6 +542,9 @@ document.getElementById('testerOpponentMode').onchange=e=>api.switchTesterOppone
 document.getElementById('testerTarget').onchange=e=>api.switchTesterTarget(e.target.value);
 document.getElementById('resetTester').onclick=()=>startCardTester(api.getState().size);
 document.getElementById('resetButton').onclick=()=>{if(!session.active){if(api.getState().mode==='tester')startCardTester(api.getState().size);else if(api.getState().tower)screen('tower');else startBattle(api.getState().size);}};
-if(new URLSearchParams(location.search).get('tester')==='wizard')create(true);
-else screen('home');
+window.addEventListener?.('online',()=>{if(account?.dirty)void flushCloud();});
+ document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible'&&account?.dirty)void flushCloud();});
+ if(stored(ACCOUNT_KEY,null)?.token)void restoreAccount();
+ else if(new URLSearchParams(location.search).get('tester')==='wizard')create(true);
+ else screen('home');
 })();

@@ -185,8 +185,8 @@ const assert = require('node:assert/strict');
   teamTest=api.getState();
   assert.equal(teamTest.size,4,'4v4 reset preserves the formation');
   for(const [kind,school,attack] of [
-    ['scribe','fire','blazingembers'],['acolyte','dark','darkblast'],['pageguard','earth','rockblast'],
-    ['magistrate','fire','blazingembers'],['inkbinder','dark','darkblast'],['warden','earth','rockblast']
+    ['scribe',null,'iceblast'],['acolyte',null,'iceblast'],['pageguard',null,'iceblast'],
+    ['magistrate','fire','blazingembers'],['inkbinder','nature','solarblast'],['warden','earth','rockblast']
   ]){
     api.startCardTester(2);
     api.switchTesterTarget(kind);
@@ -199,6 +199,7 @@ const assert = require('node:assert/strict');
       assert.equal(foe.dummy,undefined);
       assert.equal(foe.hand.length,5);
       assert.equal(new Set(foe.masteries).size,2);
+      if(school)assert.equal(foe.masteries[0],school);
       assert.ok([...foe.hand,...foe.drawPile].every(id=>foe.masteries.includes(api.cards.find(c=>c.id===id).school)));
       foe.hand=[attack];
     }
@@ -238,17 +239,24 @@ const assert = require('node:assert/strict');
   const towerPlayer={profile:ctx.window.WizardryBuilds.cpu(api.cards,0,math.random,10)};
   for(const [floor,first,primary] of [
     [1,'scribe',null],[2,'acolyte',null],[3,'pageguard',null],
-    [5,'abyssal','water'],[6,'inkbinder',null],[7,'warden',null],
-    [10,'gale','wind'],[15,'storm','lightning'],[20,'glacial','ice'],[21,'sovereign','nature']
+    [5,'abyssal','water'],[6,'inkbinder','nature'],[7,'warden','earth'],[8,'magistrate','fire'],
+    [10,'gale','wind'],[15,'briar','nature'],[20,'glacial','ice'],[21,'grelus','dark']
   ]){
     api.startTower([towerPlayer,towerPlayer],floor);
     const foes=api.getState().units.filter(u=>u.team===1);
     assert.equal(foes[0].bossId||foes[0].minionId,first);
     if(primary)assert.equal(foes[0].masteries[0],primary);
+    if(floor===21)assert.deepEqual(Array.from(foes[0].masteries),['dark','lightning']);
     assert.ok(foes.filter(u=>u.bossId).length<=1);
     for(const foe of foes){
       assert.equal(new Set(foe.masteries).size,2);
-      assert.equal(new Set([...foe.hand,...foe.drawPile].map(id=>api.cards.find(c=>c.id===id).school)).size,2);
+      const B=ctx.window.WizardryBuilds;
+      const unlocked=B.unlockedSpells(api.cards,foe.masteries,foe.level);
+      const deck=[...foe.hand,...foe.drawPile];
+      assert.equal(deck.length,B.deckSize(unlocked));
+      assert.ok(deck.every(id=>unlocked.some(c=>c.id===id)));
+      assert.ok(deck.every(id=>deck.filter(other=>id===other).length<=B.MAX_COPIES));
+      assert.equal(new Set(deck.map(id=>api.cards.find(c=>c.id===id).school)).size,2);
       assert.ok([...foe.hand,...foe.drawPile].every(id=>foe.masteries.includes(api.cards.find(c=>c.id===id).school)));
     }
   }

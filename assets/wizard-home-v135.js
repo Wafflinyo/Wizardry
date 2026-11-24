@@ -155,7 +155,7 @@ function renderOnline(){
 const wizardFloor=p=>p.level===20&&p.finalBossUnlocked?21:p.level;
 const partyFloor=players=>Math.min(21,...players.filter(p=>!p.isCpu).map(p=>wizardFloor(p.profile)));
 function renderTower(){
- shell(`<section class="portal-hero"><h1>Caglimot Tower</h1><p>Floor ${wizardFloor(active)} of 21${active.towerCleared?' · Tower cleared':''}</p>${towerMessage?`<p class="network-notice">${escape(towerMessage)}</p>`:''}<div class="menu-stack">${btn('Fight Floor '+wizardFloor(active),'soloTower','primary')}${btn('Host Co-op Tower','hostTower')}${joinCode&&incomingTower?btn('Join Tower Invite','joinTowerInvite'):''}${btn('Back','hub','subtle')}</div><label class="field"><span>Tower lobby link or code</span><input id="towerJoin" autocomplete="off"></label>${btn('Join Co-op Tower','joinTowerInput')}</section>`);
+ shell(`<section class="portal-hero"><h1>Caglimot Tower</h1><p>Floor ${wizardFloor(active)} of 21${active.towerCleared?' · Tower cleared':''}</p><p>Four corrupted guardians stand between you and Grelus, master of Death and Lightning.</p>${towerMessage?`<p class="network-notice">${escape(towerMessage)}</p>`:''}<div class="menu-stack">${btn('Fight Floor '+wizardFloor(active),'soloTower','primary')}${btn('Host Co-op Tower','hostTower')}${joinCode&&incomingTower?btn('Join Tower Invite','joinTowerInvite'):''}${btn('Back','hub','subtle')}</div><label class="field"><span>Tower lobby link or code</span><input id="towerJoin" autocomplete="off"></label>${btn('Join Co-op Tower','joinTowerInput')}</section>`);
 }
 function recordTowerResult(state){
  const tower=state.tower;

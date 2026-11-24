@@ -704,14 +704,22 @@
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,art,size}];
   }));
+  const eliteSchools={magistrate:"fire",inkbinder:"nature",warden:"earth"};
+  // The four corrupted tower guardians serve Grelus. Death uses the existing Dark spell school.
   const towerBosses={
     5:{id:"abyssal",name:"Abyssal Knight",school:"water",role:"Guardian",hat:"hood",robeColor:"#128e9e",hatColor:"#44526b",skinColor:"#81b9c8",crystalColor:"#297c80"},
     10:{id:"gale",name:"Gale Ronin",school:"wind",role:"Striker",hat:"wide",robeColor:"#2c8a64",hatColor:"#44526b",skinColor:"#be906e",crystalColor:"#459366"},
-    15:{id:"storm",name:"Storm Archon",school:"lightning",role:"Controller",hat:"scholar",robeColor:"#6f4ab4",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#d6b06e"},
+    15:{id:"briar",name:"Briar Archon",school:"nature",role:"Controller",hat:"scholar",robeColor:"#2c8a64",hatColor:"#30293c",skinColor:"#899e81",crystalColor:"#459366"},
     20:{id:"glacial",name:"Glacial Overlord",school:"ice",role:"Guardian",hat:"round",robeColor:"#3269c1",hatColor:"#dfd8c7",skinColor:"#81b9c8",crystalColor:"#84919e"},
-    21:{id:"sovereign",name:"Tower Sovereign",school:"nature",role:"Controller",hat:"pointed",robeColor:"#30293c",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#459366"}
+    21:{id:"grelus",name:"Grelus",school:"dark",secondary:"lightning",role:"Controller",hat:"pointed",robeColor:"#30293c",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#d6b06e"}
   };
   const randomMasteries=(rng=Math.random)=>{const choices=[...Builds.elements];const first=choices.splice(Math.floor(rng()*choices.length),1)[0];return [first,choices[Math.floor(rng()*choices.length)]];};
+  const enemyMasteries=(primary,secondary,rng=Math.random)=>{
+    if(!primary)return randomMasteries(rng);
+    if(secondary)return [primary,secondary];
+    const choices=Builds.elements.filter(e=>e!==primary);
+    return [primary,choices[Math.floor(rng()*choices.length)]];
+  };
   const testerBoss=type=>Object.values(towerBosses).find(b=>b.id===type);
   const testerModel=type=>Object.hasOwn(minionModels,type)||!!testerBoss(type);
   let testerTargetType="wood",testerOpponentMode="passive";
@@ -734,13 +742,12 @@
     u.minionId=Object.hasOwn(minionModels,type)?type:null;
     delete u.minionPreview;
     delete u.bossId;
-    if(u.minionId){u.name=minionModels[type].name;u.masteries=randomMasteries();return;}
+    if(u.minionId){u.name=minionModels[type].name;u.masteries=enemyMasteries(eliteSchools[type]);return;}
     const boss=testerBoss(type);
     if(boss){
       u.wizardDummy=true;u.bossId=boss.id;u.name=boss.name;
       for(const key of ["hat","robeColor","hatColor","skinColor","crystalColor"])u[key]=boss[key];
-      const secondary=Builds.elements.filter(e=>e!==boss.school);
-      u.masteries=[boss.school,secondary[Math.floor(Math.random()*secondary.length)]];
+      u.masteries=enemyMasteries(boss.school,boss.secondary);
       return;
     }
     if(!u.wizardDummy){u.name="Training Dummy";return;}
@@ -793,7 +800,7 @@
         if(testerBattle){
           if(u.minionId||u.bossId){
             u.skills={};
-            u.grimoire=Builds.makeDeck(CARDS,u.masteries);
+            u.grimoire=Builds.progressionDeck(CARDS,u.masteries,u.level);
           }
           startHand(u);
         }else{
@@ -1066,8 +1073,7 @@
     const index=elite?(floor-5)%3:(floor-1+slot)%3;
     const minionId=boss?null:(elite?["magistrate","inkbinder","warden"]:["scribe","acolyte","pageguard"])[index];
     const name=boss?.name||minionModels[minionId].name;
-    const secondary=boss?Builds.elements.filter(element=>element!==boss.school):null;
-    const masteries=boss?[boss.school,secondary[Math.floor(rng()*secondary.length)]]:randomMasteries(rng);
+    const masteries=enemyMasteries(boss?.school||eliteSchools[minionId],boss?.secondary,rng);
     const role=boss?.role||["Striker","Controller","Guardian"][index];
     const skills={hp:0,mana:0};
     const allocation=role==="Support"?[masteries[0],"hp","mana",masteries[0],masteries[1]]:
@@ -1077,15 +1083,19 @@
       const key=allocation[i%allocation.length];
       skills[key]=(skills[key]||0)+1;
     }
-    const ranked=CARDS.filter(c=>masteries.includes(c.school)).map(card=>({
+    const unlocked=Builds.unlockedSpells(CARDS,masteries,level);
+    const ranked=unlocked.map(card=>({
       card,score:towerDeckScore(card,role)+rng()*(floor>=12?3:7)
     })).sort((a,b)=>b.score-a.score).map(entry=>entry.card);
-    const anchors=masteries.map(school=>ranked.find(card=>card.school===school));
-    const remaining=ranked.filter(card=>!anchors.includes(card));
-    const core=[...anchors,...remaining.slice(0,6)];
-    const flexible=remaining.slice(6,10);
-    const deck=[...core.flatMap(c=>[c.id,c.id]),...core.slice(0,8-flexible.length).map(c=>c.id),...flexible.map(c=>c.id)];
-    return {...Builds.normalize({...profile,...(boss||{}),masteries,skills,deck,name},CARDS),towerRole:role,minionId,bossId:boss?.id||null};
+    const anchors=masteries.map(school=>ranked.find(card=>card.school===school)).filter(Boolean);
+    const core=[...anchors,...ranked.filter(card=>!anchors.includes(card))].slice(0,10);
+    const desired=Builds.deckSize(unlocked);
+    const seed=[];
+    for(let copy=0;copy<Builds.MAX_COPIES&&seed.length<desired;copy++){
+      for(const card of core){if(seed.length===desired)break;seed.push(card.id);}
+    }
+    const deck=Builds.progressionDeck(CARDS,masteries,level,seed);
+    return {...Builds.normalize({...profile,...(boss||{}),masteries,skills,deck,name},CARDS,true),towerRole:role,minionId,bossId:boss?.id||null};
   }
   function towerChoice(u,cards){
     const allies=alive(u.team),opponents=alive(1-u.team),role=u.towerRole;

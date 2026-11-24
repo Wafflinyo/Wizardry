@@ -692,12 +692,21 @@
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
   const testerMinions=Object.fromEntries([
-    ["scribe","Ashbound Scribe","fire"],["acolyte","Inkbound Acolyte","dark"],["pageguard","Cracked Pageguard","earth"]
-  ].map(([id,name,school])=>{
+    ["scribe","Ashbound Scribe","fire",193,[153,153,153,153,153,153,153,153,152,150,151,151]],
+    ["acolyte","Inkbound Acolyte","dark",195,[148,148,148,148,155,155,155,155,147,147,147,147]],
+    ["pageguard","Cracked Pageguard","earth",178,[141,141,141,141,144,144,144,144,141,141,144,144]]
+  ].map(([id,name,school,size,feet])=>{
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.317.1";
-    return [id,{name,school,art}];
+    return [id,{name,school,art,size,feet}];
   }));
-  let testerTargetType="wood";
+  let testerTargetType="wood",testerOpponentMode="passive";
+  function switchTesterOpponentMode(mode){
+    if(state?.mode!=="tester"||state.phase!=="planning"||testerTargetType==="wood"||
+       !["passive","battle"].includes(mode)||mode===testerOpponentMode)return false;
+    testerOpponentMode=mode;
+    setBattle("tester",state.size);
+    return true;
+  }
   function previewTesterMinion(){
     if(state?.mode!=="tester"||state.phase!=="planning")return false;
     const target=alive(1).find(u=>u.testerMinion);
@@ -716,7 +725,10 @@
   }
   function switchTesterTarget(type){
     if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||Object.hasOwn(testerMinions,type)))return;
+    const needsReset=state.testerBattle;
     testerTargetType=type;
+    if(type==="wood")testerOpponentMode="passive";
+    if(needsReset){setBattle("tester",state.size);return;}
     for(const dummy of sideUnits(1))fitTesterTarget(dummy,type);
     paintUI();
   }
@@ -728,6 +740,7 @@
     hostPlayback={id:Date.now()+"-"+(++battleSerial),time:0,clips:[]};
     guestPlayback=null;guestUiKey=null;
     const testing=mode==="tester";
+    const testerBattle=testing&&testerOpponentMode==="battle";
     if(![1,2,3,4].includes(size))size=4;
     const units=[...ALLIES.slice(0,size).map((d,i)=>createUnit(d,0,i,testing)),
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>!(tower||mode==="online")||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
@@ -750,14 +763,24 @@
       }
       if(!testing){startHand(u,u.isHuman||(!activeRoster&&u.id==="a0"));continue;}
       if(u.team===1){
-        Object.assign(u,{name:"Training Dummy",dummy:true,hp:12000,maxHp:12000,mana:0,hand:[],drawPile:[],discardPile:[]});
         fitTesterTarget(u,testerTargetType);
+        if(testerBattle){
+          const minion=testerMinions[u.testerMinion];
+          if(minion){
+            u.masteries=[minion.school];
+            u.skills={};
+            u.grimoire=CARDS.filter(card=>card.school===minion.school).map(card=>card.id);
+          }
+          startHand(u);
+        }else{
+          Object.assign(u,{dummy:true,hp:12000,maxHp:12000,mana:0,hand:[],drawPile:[],discardPile:[]});
+        }
       }else{
-        Object.assign(u,{testerDeck:true,hp:Math.round(u.maxHp*.55),hand:[],drawPile:[...TEST_CARD_ORDER],discardPile:[]});
+        Object.assign(u,{testerDeck:true,hp:testerBattle?u.maxHp:Math.round(u.maxHp*.55),hand:[],drawPile:[...TEST_CARD_ORDER],discardPile:[]});
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
-    state={mode,size,units,desktopArena,tower,round:1,phase:"planning",planningSide:0,
+    state={mode,size,units,desktopArena,tower,testerBattle,round:1,phase:"planning",planningSide:0,
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
       humanByTeam:{0:"a0",1:mode==="pvp"?"e0":null},
@@ -766,7 +789,7 @@
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
     handSwipe?.reset();
     ui.statusPopup.hidden=true;
-    ui.status.textContent=testing?"Test any spell with passive allies and opponents. Casts succeed and mana refills between rounds.":mode==="story"?
+    ui.status.textContent=testing?(testerBattle?"Battle testing: opponents play from shuffled decks.":"Test any spell with passive allies and opponents. Casts succeed and mana refills between rounds."):mode==="story"?
       "You control "+units[0].name+". All other wizards are CPU-controlled.":
       "PvP local hot-seat simulation only. No real matchmaking or connected friends yet.";
     paintUI();
@@ -1141,12 +1164,13 @@
       runeKind:choosesRune(card)?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
   }
   function autoFill(team){
-    if(state.phase!=="planning"||state.mode==="tester")return;
+    if(state.phase!=="planning"||(state.mode==="tester"&&(!state.testerBattle||team===0)))return;
     for(const u of alive(team)){
       if(u.dummy||(window.WizardrySession?.active?u.isHuman:u.id===state.humanByTeam[team])||state.plans[u.id])continue;
       const p=autoPlan(u);
       if(p&&playHandCard(u,p.cardId))state.plans[u.id]=p;
-      else if(!requiresRest(u)){
+      else if(!requiresRest(u)||state.testerBattle){
+        if(state.testerBattle&&u.hand.length===MAX_HAND_SIZE)discardFromHand(u,u.hand[0]);
         u.passedRound=state.round;
         state.plans[u.id]={casterId:u.id,team:u.team,pass:true};
       }
@@ -1223,7 +1247,7 @@
   function checkBattleEnd(){
     if(!state)return false;
     if(state.phase==="ending"||state.phase==="finished")return true;
-    const a=alive(0).length,b=alive(1).length;if(a&&(b||state.mode==="tester"))return false;
+    const a=alive(0).length,b=alive(1).length;if(a&&(b||(state.mode==="tester"&&!state.testerBattle)))return false;
     // Lethal damage must not erase the active spell. Its remaining hits,
     // exit and recovery finish normally; startNextAction checks again once
     // the animation clears, before another queued action can begin.
@@ -3356,7 +3380,7 @@
     releaseColdStorage();
     tickBurnsForRound();
     if(checkBattleEnd())return;
-    if(state.mode==="tester"){
+    if(state.mode==="tester"&&!state.testerBattle){
       for(const dummy of sideUnits(1))if(dummy.hp<=0)Object.assign(dummy,{hp:dummy.maxHp,statuses:[],defeatElapsedMs:null,stunRound:null,fearRound:null,flinchRound:null});
     }
     grantTurnMana();
@@ -3412,6 +3436,11 @@
     $("testerSize").value=String(state.size);
     $("testerTarget").disabled=!planning;
     $("testerTarget").value=testerTargetType;
+    const opponentMode=$("testerOpponentMode");
+    if(opponentMode){
+      opponentMode.value=testerOpponentMode;
+      opponentMode.disabled=!planning||testerTargetType==="wood";
+    }
     const preview=$("testerMinionPreview");
     if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(testerMinions,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
@@ -4159,16 +4188,21 @@
     }
     g.scale(scale,scale);
     const minion=testerMinions[u.testerMinion];
-    if(u.dummy&&minion?.art.naturalWidth){
+    if(minion?.art.naturalWidth){
       const elapsed=time-(u.minionPreview??-Infinity);
-      const casting=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<1050;
+      const current=state.animation?.source===u.id?state.animation:null;
+      const preview=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<1050;
+      const tracing=current?.stage==="tracing-auto";
+      const casting=preview||tracing||current?.stage==="raising"||current?.stage==="lowering";
       const row=u.hp<=0?2:casting?1:0;
+      const phase=preview?elapsed/1050:tracing?(current.elapsed/current.duration):current?.stage==="lowering"?1:0;
       const frame=row===2?Math.min(3,Math.floor((u.defeatElapsedMs||0)/135)):
-        casting?Math.floor(elapsed/263):Math.floor((time+u.index*160)/210)%4;
-      g.drawImage(minion.art,frame*160,row*160,160,160,-115,-223,230,230);
-      if(casting){
+        casting?Math.min(3,Math.floor(phase*4)):Math.floor((time+u.index*160)/210)%4;
+      const top=-(minion.feet[row*4+frame]+1)*minion.size/160;
+      g.drawImage(minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
+      if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
-          school:minion.school,elapsed,duration:1050,centerX:-139,centerY:-111,scale:3.3
+          school:minion.school,elapsed,duration:1050,centerX:-115,centerY:-100,scale:3.3
         });
       }
       g.restore();return;
@@ -6179,7 +6213,7 @@
       paintUI();
     },
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
-    switchTesterTarget,previewTesterMinion,
+    switchTesterTarget,previewTesterMinion,switchTesterOpponentMode,
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     onlineSnapshot,

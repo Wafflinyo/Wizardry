@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 <style>
-.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.6rem;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget,#testerSize{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
+.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.35rem;flex-wrap:wrap;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget,#testerSize,#testerOpponentMode{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
 #initiative{display:none!important}
 #resetTester{margin-left:6px;background:#102b37;border:1px solid var(--line);color:var(--ink);padding:5px 7px;border-radius:6px;font-size:10px;white-space:nowrap}
 .hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
@@ -44,6 +44,7 @@
     <label><span class="tester-target-label">Target</span>
     <select id="testerTarget"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option><option value="scribe">Ashbound Scribe</option><option value="acolyte">Inkbound Acolyte</option><option value="pageguard">Cracked Pageguard</option></select>
     </label>
+    <select id="testerOpponentMode" aria-label="Opponent behavior"><option value="passive">Passive</option><option value="battle">Battle</option></select>
     <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
     <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
     <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
@@ -331,9 +332,9 @@
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
 <script src="./assets/faultline-bulwark.js?v=0.315.1" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.317.1" defer></script>
+<script src="./arena.js?v=0.317.2" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.317.1" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.317.2" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">
   <header><strong id="battleLogTitle">Battle Log</strong><form method="dialog"><button type="submit" autofocus>Close</button></form></header>
   <ol id="battleHistory"><li>No actions yet.</li></ol>

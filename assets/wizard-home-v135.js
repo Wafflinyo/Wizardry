@@ -392,6 +392,7 @@ document.getElementById('testerSize').onchange=e=>{
  if(state.mode==='tester'&&state.phase==='planning'&&[1,2,3,4].includes(size)&&size!==state.size)startCardTester(size);
 };
 document.getElementById('testerMinionPreview').onclick=()=>api.previewTesterMinion();
+document.getElementById('testerOpponentMode').onchange=e=>api.switchTesterOpponentMode(e.target.value);
 document.getElementById('testerTarget').onchange=e=>api.switchTesterTarget(e.target.value);
 document.getElementById('resetTester').onclick=()=>startCardTester(api.getState().size);
 document.getElementById('resetButton').onclick=()=>{if(!session.active){if(api.getState().mode==='tester')startCardTester(api.getState().size);else if(api.getState().tower)screen('tower');else startBattle(api.getState().size);}};

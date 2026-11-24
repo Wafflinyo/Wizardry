@@ -184,6 +184,34 @@ const assert = require('node:assert/strict');
   element('resetTester').onclick();
   teamTest=api.getState();
   assert.equal(teamTest.size,4,'4v4 reset preserves the formation');
+  for(const [kind,school,attack] of [
+    ['scribe','fire','blazingembers'],['acolyte','dark','darkblast'],['pageguard','earth','rockblast']
+  ]){
+    api.startCardTester(2);
+    api.switchTesterTarget(kind);
+    assert.ok(api.switchTesterOpponentMode('battle'));
+    const battle=api.getState();
+    const foes=battle.units.filter(u=>u.team===1);
+    assert.ok(battle.testerBattle);
+    for(const foe of foes){
+      assert.equal(foe.testerMinion,kind);
+      assert.equal(foe.dummy,undefined);
+      assert.equal(foe.hand.length,5);
+      assert.ok([...foe.hand,...foe.drawPile].every(id=>api.cards.find(c=>c.id===id).school===school));
+      foe.hand=[attack];
+    }
+    const hero=battle.units[0],hp=hero.hp;
+    hero.hand=['waterblast'];
+    api.chooseCard('waterblast');
+    api.confirmTarget();
+    assert.equal(battle.sequence.filter(plan=>plan.team===1&&plan.cardId===attack).length,2);
+    api.advanceBackground(28000);
+    assert.equal(battle.phase,'planning');
+    assert.ok(battle.units.slice(0,2).some((u,i)=>u.hp<(i===0?hp:u.maxHp)));
+    assert.ok(foes.every(u=>u.hand.length>0));
+    assert.ok(api.switchTesterOpponentMode('passive'));
+    assert.ok(api.getState().units.filter(u=>u.team===1).every(u=>u.dummy&&u.hand.length===0));
+  }
   element('battleHome').onclick();
   const masteries=['water','wind'];
   api.configureProfile({name:'Saved Wizard',level:20,masteries,skills:{},deck:ctx.window.WizardryBuilds.makeDeck(api.cards,masteries)});

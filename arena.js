@@ -693,7 +693,7 @@
     const build=profile?Builds.stats(profile):{hp:2000,mana:16};
     return {id,team,index,name:profile?.name||d.name,style:'tide',color:d.color,
       hp:build.hp,maxHp:build.hp,mana:build.mana,maxMana:build.mana,level:profile?.level||20,skills:profile?.skills||{},masteries:profile?.masteries,grimoire:profile?.deck,peerId:entry?.isCpu?null:entry?.peerId||null,isHuman:!!entry?.peerId&&!entry?.isCpu,
-      speed:d.speed,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
+      speed:d.speed,towerReplay:profile?.towerCleared===true,statuses:[],rechargeRound:null,stunRound:null,x:0,y:0,
       hat:(!entry&&!savedProfile?custom.hat:profile?.hat)||"pointed",
       robe:"classic",
       robeColor:profile?.robeColor||pick(custom.robeColor,colors?.robeColors,preset.robeColor),
@@ -1094,7 +1094,8 @@
   }
   function tickFloorIntro(dt){
     if(floorIntro&&floorIntro.preview&&state.mode!=="tester"){endFloorIntro();}
-    const key=state.tower?.floor===21&&!state.tower.skipIntro&&state.round===1&&state.phase==="planning"?state.tower.id:null;
+    const local=state.units.find(u=>window.WizardrySession?.active?u.peerId===window.WizardrySession.peerId:u.id==="a0");
+    const key=state.tower?.floor===21&&!state.tower.skipIntro&&!local?.towerReplay&&state.round===1&&state.phase==="planning"?state.tower.id:null;
     if(key&&key!==shownIntroKey){shownIntroKey=key;beginFloorIntro(state.tower.partySize||1);}
     if(!floorIntro)return false;
     if(!floorIntro.preview&&(!key||key!==shownIntroKey)){endFloorIntro();return false;}
@@ -2263,7 +2264,7 @@
         recordBattleEvent(c.name+" loses their action while stunned.");
         continue;
       }
-      if(c.mana<card.cost||isRecharging(c)){if(isRecharging(c))recordBattleEvent(c.name+' loses this action to Recharge.');continue;}
+      if(c.mana<card.cost||isRecharging(c)){if(isRecharging(c)){recordBattleEvent(c.name+' loses this action to Recharge.');flash(c,'RECHARGING · SKIPPED','#e0d5ff');}continue;}
       // Cast-attempt curses strike before staff raising or rune tracing.
       // Ineligible/skipped turns above never count as an attempt.
       const attempt={card};
@@ -2484,7 +2485,7 @@
   }
   function addStatus(u,kind,_icon,value,school){
     if(BARRIER_RUNES.has(kind)&&(!canReceiveDebuff(u,kind)||barrierConflict(u,kind)))return false;
-    if(DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
+    if(kind!=="recharge"&&DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
     const sourceId=state.animation?.action?.casterId;
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){

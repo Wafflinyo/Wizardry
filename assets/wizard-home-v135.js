@@ -13,7 +13,7 @@ try{
  for(const profile of profiles){try{saved.push(withLegalDeck(profile));}catch{}}
 }catch{}
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
-let binderElement='',deckDraft=null,deckReturn='progression',offerChoices={};
+let binderElement='',deckDraft=null,deckReturn='progression',draftReturn='tower',offerChoices={};
 let lastResult=null,startingFloor=false,submittingReady=false;
 const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -121,8 +121,9 @@ function saveTowerDeck(){
  const profile=B.normalize({...active,deck:deckDraft.deck},cards,true);
  persistProfile(profile);onlineProfile=null;deckDraft=null;screen(deckReturn);
 }
+function openSpellDraft(destination){draftReturn=destination;offerChoices={};screen('spellDraft');}
 function renderSpellDraft(){
- const pending=active.rogue?.pending;if(!pending){screen(lastResult?'progression':'tower');return;}
+ const pending=active.rogue?.pending;if(!pending){screen(draftReturn);return;}
  const groups=pending.groups;
  shell(`<section class="portal-panel tower-draft"><p class="portal-eyebrow">LEVEL ${pending.level} · SPELL REWARD</p><h1>Choose your new spells</h1><p>Choose one spell from each offered element. Each grants three copies. Your deck stays at 24 cards.</p>${groups.map(g=>`<h2>${title(g.school)}</h2><div class="binder-grid draft-options">${g.ids.map(id=>{const card=cards.find(c=>c.id===id);return `<button type="button" class="binder-card school-${card.school} ${offerChoices[g.school]===id?'draft-picked':''}" data-draft-card="${id}" aria-pressed="${offerChoices[g.school]===id}">${binderFace(card,active)}<span class="draft-pick-label">${offerChoices[g.school]===id?'Selected':'Choose spell'}</span></button>`;}).join('')}</div>`).join('')}<div class="portal-actions"><button class="portal-btn primary" data-action="claimDraft" ${groups.every(g=>g.ids.includes(offerChoices[g.school]))?'':'disabled'}>Claim spells & edit deck</button></div></section>`);requestAnimationFrame(()=>api.drawCardArts());
 }
@@ -135,7 +136,7 @@ function renderLibrary(){
  if(!B.elements.includes(binderElement))binderElement=active.masteries[0];
  const missing=B.orderedSpells(cards,binderElement).filter(c=>active.masteries.includes(c.school)&&!active.rogue.owned[c.id]);
  const tabs=B.elements.map(e=>`<button class="portal-btn small" data-binder-element="${e}" aria-pressed="${e===binderElement}">${title(e)}</button>`).join('');
- shell(`<section class="portal-panel library"><div class="library-heading"><div class="library-portrait"><img src="./assets/floor21-weilei-portrait.webp" alt="Weilei"></div><div><p class="portal-eyebrow">CAGLIMOT TOWER · SPELL ARCHIVE</p><h1>Weilei’s Library of Spells</h1><strong class="library-gold">${active.rogue.gold.toLocaleString()} gold</strong></div></div><nav class="binder-tabs" aria-label="Library elements">${tabs}</nav><p class="portal-note">Only unowned spells from your mastered elements are sold. Each purchase grants three copies.</p><div class="binder-grid">${missing.map(card=>`<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button><button class="portal-btn small" data-buy-spell="${card.id}" ${active.rogue.gold<B.libraryPrice(card)?'disabled':''}>Buy ×3 · ${B.libraryPrice(card)} gold</button></article>`).join('')||'<p>No unowned spells in this element.</p>'}</div><div class="portal-actions">${btn('Edit deck','libraryDeck','primary')}${btn('Back to Main Menu','home','subtle')}</div></section>`);requestAnimationFrame(()=>api.drawCardArts());
+ shell(`<section class="portal-panel library"><div class="library-heading"><div class="library-portrait"><img src="./assets/weilei-library-portrait.webp?v=0.335.0" alt="Weilei wearing his spell-bound eyepatch"></div><div><p class="portal-eyebrow">CAGLIMOT TOWER · SPELL ARCHIVE</p><h1>Weilei’s Library of Spells</h1><strong class="library-gold">${active.rogue.gold.toLocaleString()} gold</strong></div></div><nav class="binder-tabs" aria-label="Library elements">${tabs}</nav><p class="portal-note">Only unowned spells from your mastered elements are sold. Each purchase grants three copies.</p><div class="binder-grid">${missing.map(card=>`<article class="binder-slot"><button type="button" class="binder-card school-${card.school}" data-binder-card="${card.id}">${binderFace(card,active)}</button><button class="portal-btn small" data-buy-spell="${card.id}" ${active.rogue.gold<B.libraryPrice(card)?'disabled':''}>Buy ×3 · ${B.libraryPrice(card)} gold</button></article>`).join('')||'<p>No unowned spells in this element.</p>'}</div><div class="portal-actions">${btn('Edit deck','libraryDeck','primary')}${btn('Back to Main Menu','home','subtle')}</div></section>`);requestAnimationFrame(()=>api.drawCardArts());
 }
 function animatePreview(p){cancelAnimationFrame(previewFrame);let last=0;function frame(now){const canvas=el('wizardPreview');if(!canvas)return;if(now-last>50){api.drawWizardPreview(canvas,p,el('previewPose')?.value);last=now;}previewFrame=requestAnimationFrame(frame);}previewFrame=requestAnimationFrame(frame);}
 function readDraft(){if(el('createRobe')){draft.robeColor=el('createRobe').value;draft.hatColor=el('createHat').value;draft.headHair=el('createHeadHair').value;draft.facialHair=el('createFacialHair').value;draft.skinColor=el('createSkin').value;}}
@@ -173,17 +174,14 @@ function renderOnline(){
 const wizardFloor=B.rogueFloor;
 const partyFloor=players=>Math.min(21,...players.filter(p=>!p.isCpu).map(p=>wizardFloor(p.profile)));
 function renderTower(){
- if(active.rogue?.pending){offerChoices={};screen('spellDraft');return;}
+ if(active.rogue?.pending){openSpellDraft('tower');return;}
  shell(`<section class="portal-hero"><h1>Caglimot Tower</h1><p>Floor ${wizardFloor(active)} of 21${active.towerCleared?' · Tower cleared · Replay':''}</p><p class="library-gold">${active.rogue.gold.toLocaleString()} gold</p><p>Four corrupted guardians stand between you and Grelus, master of Death and Lightning.</p>${towerMessage?`<p class="network-notice">${escape(towerMessage)}</p>`:''}<div class="menu-stack">${btn('Fight Floor '+wizardFloor(active),'soloTower','primary')}${btn('Host Co-op Tower','hostTower')}${joinCode&&incomingTower?btn('Join Tower Invite','joinTowerInvite'):''}${btn('Back','hub','subtle')}</div><label class="field"><span>Tower lobby link or code</span><input id="towerJoin" autocomplete="off"></label>${btn('Join Co-op Tower','joinTowerInput')}</section>`);
 }
 function recordTowerResult(state){
  const tower=state.tower;
  if(!tower||!active||state.phase!=='finished'||state.winner!==0||active.lastTowerWin===tower.id)return;
  if(tower.online&&!state.units.some(u=>u.peerId===session.peerId&&u.team===0))return;
- if(wizardFloor(active)!==tower.floor){
-   towerMessage='Floor '+tower.floor+' cleared. Your next progression floor is '+wizardFloor(active)+'.';
-   return;
- }
+
  const wasCleared=active.towerCleared;
  try{persistProfile(B.normalize(B.awardFloor(cards,active,tower.floor,tower.id),cards,true));onlineProfile=null;
  towerMessage='Floor '+tower.floor+' cleared · +'+B.goldReward(tower.floor)+' gold'+(!wasCleared&&active.towerCleared?' · Weilei’s Library is now open.':active.rogue.pending?' · Choose your new spells.':'');
@@ -211,7 +209,7 @@ resultsDialog.addEventListener('click',e=>{
  if(!e.target.closest('button'))return;
  resultsDialog.close();
  if(lastResult?.tower){
-  if(active?.rogue?.pending){offerChoices={};screen('spellDraft');}
+  if(active?.rogue?.pending){openSpellDraft('progression');}
   else if(lastResult.winner===0&&lastResult.tower.floor===21&&active.towerCleared){if(session.roomId)closeSession();screen('home');}
   else screen('progression');
  }else leaveMatch();
@@ -225,11 +223,11 @@ function renderProgression(){
  const cleared=winner===0&&tower.floor===21;
  const floor=coOp?(party.length?partyFloor(party):tower.floor):wizardFloor(active);
  const newCards=[],rewards='';
- const stats=B.stats(active),completed=active.towerCleared?21:wizardFloor(active)-1;
+ const stats=B.stats(active),completed=winner===0&&tower.floor===21?21:wizardFloor(active)-1;
  const entries=[['hp','HP',stats.hp],['mana','Mana',stats.mana],...active.masteries.map(e=>[e,title(e),B.masteryBonusPercent(active,e)+'%'])];
  const canEdit=!ready&&!submittingReady;
  const status=winner===0?towerMessage:winner==='draw'?'Floor ended in a draw.':'Floor attempt ended in defeat.';
- shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 21 floors cleared</label><progress id="towerProgress" max="21" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span><div class="skill-controls">${canEdit&&(active.skills[key]||0)>0?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="-1" aria-label="Remove skill point from ${label}">−</button>`:''}${stats.remaining&&canEdit&&(active.skills[key]||0)<20?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="1" aria-label="Add skill point to ${label}">+</button>`:''}</div></div>`).join('')}${canEdit&&entries.some(([key])=>active.skills[key]>0)?btn('Reset skill points','resetProgressPoints','small subtle'):''}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
+ shell(`<section class="portal-panel tower-progress">${rewards}<h1>Tower progression</h1><p>${escape(active.name)} · Level ${active.level}</p><label for="towerProgress">${completed} / 21 floors cleared</label><progress id="towerProgress" max="21" value="${completed}"></progress>${status?`<p class="network-notice">${escape(status)}</p>`:''}<h2>Stats & Masteries</h2><p>${stats.remaining} skill point${stats.remaining===1?'':'s'} available</p>${entries.map(([key,label,value])=>`<div class="skill-row"><span>${label} · ${value} · ${active.skills[key]||0}/20 SP</span><div class="skill-controls">${canEdit&&(active.skills[key]||0)>0?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="-1" aria-label="Remove skill point from ${label}">−</button>`:''}${stats.remaining&&canEdit&&(active.skills[key]||0)<20?`<button class="portal-btn small" data-progress-skill="${key}" data-delta="1" aria-label="Add skill point to ${label}">+</button>`:''}</div></div>`).join('')}${canEdit&&entries.some(([key])=>active.skills[key]>0)?btn('Reset skill points','resetProgressPoints','small subtle'):''}${coOp?`<h2>Party readiness</h2>${party.map(p=>`<div class="skill-row"><span>${escape(p.profile.name)}</span><span>${!waiting&&p.ready?'Ready':'Waiting'}</span></div>`).join('')}`:''}<div class="portal-actions"><button class="portal-btn primary" data-action="nextFloor" ${waiting||ready||submittingReady||active.rogue?.pending?'disabled':''}>${cleared?'Finish':ready?'Waiting for party':'Next'}</button>${btn('Leave Tower','leaveProgress','subtle')}</div>${!ready&&!submittingReady?btn('Edit Deck','editTowerDeck','subtle'):''}${cleared?'':`<p class="portal-note">${winner===0?'Next encounter':'Retry'} · Floor ${floor}</p>`}</section>`);
  if(newCards.length)requestAnimationFrame(()=>api.drawCardArts());
 }
 function changeProgressPoints(key,delta){
@@ -247,17 +245,17 @@ function changeProgressPoints(key,delta){
 }
 async function nextFloor(){
  if(!lastResult?.tower.online){
-   if(active.rogue?.pending){offerChoices={};screen('spellDraft');}else if(lastResult?.winner===0&&lastResult.tower.floor===21){screen('home');}else startSoloTower();
+   if(active.rogue?.pending){openSpellDraft('progression');}else if(lastResult?.winner===0&&lastResult.tower.floor===21){screen('home');}else startSoloTower();
    return;
  }
  if(submittingReady||session.lobby?.phase!=='lobby')return;
- if(active.rogue?.pending){offerChoices={};screen('spellDraft');return;}if(lastResult?.winner===0&&lastResult.tower.floor===21){closeSession();screen('home');return;}
+ if(active.rogue?.pending){openSpellDraft(lastResult?.tower?'progression':'tower');return;}if(lastResult?.winner===0&&lastResult.tower.floor===21){closeSession();screen('home');return;}
  submittingReady=true;render();
  try{await command('ready',{ready:true,towerSkills:active.skills,towerDeck:active.deck,towerRogue:active.rogue});}
  finally{submittingReady=false;if(view==='progression')render();}
 }
 function startSoloTower(){
- if(active.rogue?.pending){offerChoices={};screen('spellDraft');return;}
+ if(active.rogue?.pending){openSpellDraft(lastResult?.tower?'progression':'tower');return;}
  towerLobby=false;towerMessage='';
  api.startTower([{profile:active}],wizardFloor(active));showBattle();
 }
@@ -302,7 +300,7 @@ function acceptRoom(data){if(data.roomId===session.roomId&&data.version<session.
    lastLobby=signature;if(view==='lobby'||view==='progression')render();
  }
  if(view==='progression'&&lastResult?.tower.online&&data.lobby.phase==='lobby'&&session.isHost&&
-   data.lobby.players.every(p=>p.ready)&&lastResult?.tower.floor!==21)void startTowerLobby();
+   data.lobby.players.every(p=>p.ready)&&!(lastResult?.tower.floor===21&&lastResult.winner===0))void startTowerLobby();
 }
 async function command(action,payload={}){const g=generation,data=await request(action,payload);if(g===generation)acceptRoom(data);return data;}
 async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version};if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.onlineSnapshot()):'';if(serialized&&serialized!==lastState){payload.state=JSON.parse(serialized);lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload);if(g===generation){failures=0;acceptRoom(data);
@@ -310,8 +308,8 @@ async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=t
    const result=await request('towerNext');if(g===generation)acceptRoom(result);
  }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
 function startPolling(){clearInterval(broadcastTimer);clearInterval(battleTimer);lastClock=performance.now();session.clockAt=lastClock;broadcastTimer=setInterval(syncRoom,400);battleTimer=setInterval(()=>{const now=performance.now();if(session.active&&session.isHost)api.advanceBackground(now-lastClock);lastClock=now;session.clockAt=now;},40);}
-async function host(tower=false){const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
-async function join(code,tower=false){const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
+async function host(tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
+async function join(code,tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
 function hostSeat(peerId,team,slot){command('seat',{team,slot}).catch(e=>error(e.message));}
 function renderLobby(){if(towerLobby&&session.lobby){renderTowerLobby();return;}const l=session.lobby;if(!l){shell(`<h1>Connecting to the colosseum…</h1>${btn('Back','hub')}`);return;}const mine=l.players.find(p=>p.peerId===session.peerId),link=new URL('arena.html',location.href);link.searchParams.set('lobby',l.hostId);link.searchParams.set('v','0.135.0');const ready=l.players.every(p=>p.isCpu||p.ready)&&[0,1].every(t=>l.players.some(p=>p.team===t));
  shell(`<div class="portal-heading"><div><p class="portal-eyebrow">ONLINE TEST · ${l.players.filter(p=>!p.isCpu).length} PLAYERS · ${l.players.filter(p=>p.isCpu).length} CPUs</p><h1>The gathering</h1></div>${btn('Leave lobby','leave','subtle')}</div><div class="network-notice">Choose your team and seat, then ready up. The host can add randomized CPUs to any open seat. Both teams need at least one wizard. Empty seats stay empty. The host must keep the match open.</div><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${session.isHost?`<label class="field"><span>SEATS PER TEAM</span><select id="lobbySize">${[1,2,3,4].map(n=>`<option value="${n}" ${n===l.size?'selected':''}>${n} per team</option>`).join('')}</select></label>`:`<p>Up to ${l.size} per team</p>`}<div class="lobby-grid">${[0,1].map(team=>`<div class="portal-panel lobby-team"><h2>Team ${team?'Moon':'Sun'}</h2>${Array.from({length:l.size},(_,slot)=>{const p=l.players.find(p=>p.team===team&&p.slot===slot);return `<div class="lobby-seat ${p?.ready?'ready':''}"><div><strong>${p?escape(p.profile.name):'Open seat '+(slot+1)}</strong><small>${p?p.profile.masteries.map(title).join(' + ')+' · '+(p.isCpu?'CPU':p.ready?'Ready':'Not ready'):'Empty'}</small></div><div class="seat-actions">${p?.peerId===session.peerId?'<span>You</span>':p?.isCpu?(session.isHost?`<button class="portal-btn small" data-remove-cpu="${team},${slot}">Remove CPU</button>`:''):!p?`<button class="portal-btn small" data-seat="${team},${slot}">Sit here</button>${session.isHost?`<button class="portal-btn small" data-add-cpu="${team},${slot}">Add CPU</button>`:''}`:''}</div></div>`;}).join('')}</div>`).join('')}</div><div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready',mine?.ready?'':'primary')}${session.isHost?`<button class="portal-btn primary" data-action="startOnline" ${!ready?'disabled':''}>Start match</button>`:''}</div>`);}
@@ -379,7 +377,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(action==='libraryDeck'){editTowerDeck('library');return;}
  if(action==='librarySelect'){screen('librarySelect');return;}
  if(action==='library'){binderElement=active.masteries[0];screen('library');return;}
- if(action==='claimDraft'){persistProfile(B.normalize(B.chooseOffer(cards,active,offerChoices),cards,true));offerChoices={};editTowerDeck(lastResult?'progression':'tower');return;}
+ if(action==='claimDraft'){persistProfile(B.normalize(B.chooseOffer(cards,active,offerChoices),cards,true));offerChoices={};editTowerDeck(draftReturn);return;}
  if(action==='saveTowerDeck'){saveTowerDeck();return;}
  if(action==='cancelTowerDeck'){deckDraft=null;screen(deckReturn);return;}
  if(view==='towerDeck'&&action==='allCards'){deckDraft.deck=B.fillOwned(cards,deckDraft);render();return;}

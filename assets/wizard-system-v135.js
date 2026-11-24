@@ -62,8 +62,9 @@ function progressionDeck(cards,masteries,level,current=[]){
 function rogueSchedule(cards,masteries,seen,start=1){
  const width=masteries.length===1?3:2;
  const rounds=Math.max(0,...masteries.map(e=>Math.ceil(unlockOrder(cards,e).filter(c=>!seen.includes(c.id)).length/width)));
- const first=Math.min(20,Math.max(3,start+1)),n=Math.min(rounds,21-first);
- return Array.from({length:n},(_,i)=>Math.round(first+(20-first)*(i+1)/n));
+ const first=Math.min(20,Math.max(5,start+1)),n=Math.min(rounds,21-first);
+ if(start===1&&masteries.length===1&&rounds===3)return [5,10,15];
+ return Array.from({length:n},(_,i)=>n===1?20:Math.round(first+(20-first)*i/(n-1)));
 }
 function rogueStarter(cards,masteries){
  const single=masteries.length===1,owned={},deck=[];
@@ -106,15 +107,17 @@ function makeOffer(cards,p,level,rng=Math.random){
  const r=p.rogue,width=p.masteries.length===1?3:2,groups=[];
  for(const school of p.masteries){
   const missing=unlockOrder(cards,school).filter(c=>!r.owned[c.id]);
-  const ids=missing.filter(c=>!r.seen.includes(c.id)).slice(0,width).map(c=>c.id);
+  const fresh=missing.filter(c=>!r.seen.includes(c.id));
+  const ids=shuffle(fresh.slice(0,width*2),rng).slice(0,width).map(c=>c.id);
   if(ids.length<width)ids.push(...shuffle(missing.filter(c=>!ids.includes(c.id)&&r.seen.includes(c.id)),rng).slice(0,width-ids.length).map(c=>c.id));
   if(ids.length)groups.push({school,ids});
  }
  return groups.length?{level,groups}:null;
 }
 function awardFloor(cards,profile,floor,winId,rng=Math.random){
- if(profile.lastTowerWin===winId||rogueFloor(profile)!==floor)return profile;
+ if(profile.lastTowerWin===winId)return profile;
  const p={...profile,rogue:cleanRogue(profile.rogue,cards,profile.masteries),lastTowerWin:winId};p.rogue.gold+=goldReward(floor);
+ if(rogueFloor(profile)!==floor)return p;
  if(p.towerCleared){p.rogue.replayFloor=floor===21?1:floor+1;return p;}
  p.level=Math.min(20,p.level+1);p.finalBossUnlocked=!!p.finalBossUnlocked||floor>=20;p.towerCleared=floor===21;
  if(p.towerCleared){p.rogue.replayFloor=1;p.rogue.pending=null;return p;}

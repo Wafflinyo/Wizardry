@@ -1014,7 +1014,7 @@
     for(;frame<15&&t>=FLOOR21_POSE_MS[frame];frame++)t-=FLOOR21_POSE_MS[frame];
     const p=clamp((ms-FLOOR21_CATCH)/(FLOOR21_TOTAL-FLOOR21_CATCH),0,1);
     const travel=p*p;
-    return {frame,lift:travel*440,shift:travel*320,finished:ms>=FLOOR21_TOTAL};
+    return {frame,lift:travel*550,shift:travel*380,finished:ms>=FLOOR21_TOTAL};
   }
   function floor21Staff(ctx,x,y,angle){
     ctx.save();ctx.translate(x,y);ctx.rotate(angle);
@@ -1083,7 +1083,7 @@
     if(ms<FLOOR21_CATCH){
       const p=clamp((ms-540)/(FLOOR21_CATCH-540),0,1),smooth=p*p*(3-2*p);
       const sx=lerp(530,wX-68,smooth),sy=lerp(wY+3,wY-166,smooth)-Math.sin(p*Math.PI)*60;
-      floor21Staff(g,sx,sy,lerp(-.09,2.56,smooth));
+      floor21Staff(g,sx,sy,lerp(-.09,-2.56,smooth));
     }
     floor21Wind(g,x,y,time,force,false);
     if(weileiArt.naturalWidth){

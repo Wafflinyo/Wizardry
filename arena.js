@@ -835,6 +835,24 @@
     castAtlas.src="./assets/guardian-"+id+"-cast20.webp?v=0.327.0";
     return [id,model];
   }));
+  // Grelus uses his own authored 4-column, 6-row atlas: eight idle,
+  // eight casting and eight defeat poses, already aligned to one floor baseline.
+  const grelusArt=new Image();
+  grelusArt.src="./assets/grelus-animations.webp?v=0.329.0";
+  guardianModels.grelus={art:grelusArt,size:350,cell:384,feet:true,grelus:true};
+  function grelusPose(stage,elapsed,duration,recovery=0){
+    if(stage==="raising")return Math.round(2*guardianSmooth(elapsed/Math.max(1,duration)));
+    if(stage==="tracing-auto"){
+      const p=clamp(elapsed/Math.max(1,duration),0,1);
+      // The raised hand traces a slow arc without dropping to idle.
+      return p<.18?2+Math.floor(p/.18*2):[4,5,6,7,6,5,4,5,6,7][Math.min(9,Math.floor((p-.18)/.82*10))];
+    }
+    return [7,5,3,2,1,0][Math.min(5,Math.floor(clamp(recovery/WIZARD_RECOVERY_MS,0,1)*6))];
+  }
+  function grelusFrame(row,frame){
+    const n=clamp(Math.floor(frame),0,7);
+    return {col:n%4,row:row*2+Math.floor(n/4)};
+  }
   const unitSprite=u=>guardianModels[u?.bossId]||minionModels[u?.minionId];
   const unitSlotFactor=u=>guardianModels[u?.bossId]?guardianModels[u.bossId].size/205:
     ["magistrate","inkbinder","warden"].includes(u?.minionId)?unitSprite(u).size/205:1;
@@ -4397,6 +4415,23 @@
       const defeatElapsed=time-(u.defeatPreview??-Infinity);
       const previewDefeat=u.hp>0&&state.phase==="planning"&&defeatElapsed>=0&&defeatElapsed<DEFEAT_HOLD_MS+850;
       const row=u.hp<=0||previewDefeat?2:casting?1:0;
+      if(minion.grelus){
+        let pose;
+        if(row===2)pose=Math.min(7,Math.floor(7*(previewDefeat?defeatElapsed:(u.defeatElapsedMs||0))/DEFEAT_HOLD_MS));
+        else if(row===0)pose=Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%8;
+        else if(preview){
+          if(elapsed<ARM_RAISE_MS)pose=grelusPose("raising",elapsed,ARM_RAISE_MS);
+          else if(elapsed<ARM_RAISE_MS+AUTO_TRACE_MS)pose=grelusPose("tracing-auto",elapsed-ARM_RAISE_MS,AUTO_TRACE_MS);
+          else pose=grelusPose("recovery",0,1,elapsed-ARM_RAISE_MS-AUTO_TRACE_MS);
+        }else pose=grelusPose(current.stage,current.elapsed,current.duration,current.visualRecoveryMs||0);
+        const frame=grelusFrame(row,pose),cell=minion.cell,size=minion.size;
+        g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+        g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,-size/2,2-(cell-12)*size/cell,size,size);
+        const runeElapsed=elapsed-ARM_RAISE_MS;
+        if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
+          window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{school:u.masteries?.[0]||"dark",elapsed:runeElapsed,duration:AUTO_TRACE_MS,centerX:-size*.52,centerY:-size*.57,scale:3.3});
+        g.restore();return;
+      }
       const gestureFrame=preview||tracing
         ?MINION_GESTURE_FRAMES[Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%MINION_GESTURE_FRAMES.length]
         :current?.stage==="lowering"?5:0;
@@ -6539,7 +6574,7 @@
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,applyRazorangReturn,
-    guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,guardianCastRect:(id,pose)=>guardianCastRect(guardianModels[id],pose),
+    grelusPose,grelusFrame,guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,guardianCastRect:(id,pose)=>guardianCastRect(guardianModels[id],pose),
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

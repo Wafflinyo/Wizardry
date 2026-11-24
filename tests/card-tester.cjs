@@ -245,6 +245,22 @@ const assert = require('node:assert/strict');
     assert.ok(api.previewTesterDefeat());
     assert.equal(guardian.hp,guardian.maxHp,'animation preview is non-destructive');
   }
+  api.startCardTester(1);api.switchTesterTarget('grelus');
+  const grelus=api.getState().units.find(u=>u.team===1);
+  assert.equal(grelus.bossId,'grelus');
+  assert.deepEqual(Array.from(grelus.masteries),['dark','lightning']);
+  assert.ok(api.previewTesterMinion());
+  assert.ok(api.previewTesterDefeat());
+  assert.equal(grelus.hp,grelus.maxHp);
+  for(let row=0;row<3;row++)for(let pose=0;pose<8;pose++){
+    const f=api.grelusFrame(row,pose);
+    assert.equal(f.col,pose%4);
+    assert.equal(f.row,row*2+Math.floor(pose/4));
+  }
+  assert.equal(api.grelusPose('raising',0,300),0);
+  assert.equal(api.grelusPose('recovery',0,1,520),0);
+  assert.ok(api.switchTesterOpponentMode('battle'));
+  assert.deepEqual(Array.from(api.getState().units.find(u=>u.team===1).masteries),['dark','lightning']);
   const towerPlayer={profile:ctx.window.WizardryBuilds.cpu(api.cards,0,math.random,10)};
   for(const [floor,first,primary] of [
     [1,'scribe',null],[2,'acolyte',null],[3,'pageguard',null],

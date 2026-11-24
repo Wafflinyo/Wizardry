@@ -294,10 +294,14 @@ const assert = require('node:assert/strict');
     const B=ctx.window.WizardryBuilds;
     for(const foe of foes){
       const rank=foe.bossId==='grelus'?2.5:foe.bossId?2:['magistrate','inkbinder','warden'].includes(foe.minionId)?1.5:1;
-      const solo=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.82:.42):1;
+      const solo=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.82:.50):1;
       const expected=Math.round(B.stats(foe).hp*((1+.08*(partySize-1))*rank*solo));
       assert.equal(foe.maxHp,expected,`floor ${floor}, party ${partySize}, ${foe.name} rank HP`);
       assert.equal(foe.hp,expected,'starts at full rank-scaled HP');
+      const damageScale=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.95:foe.bossId?.90:.70):1;
+      const manaScale=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.85:.55):1;
+      assert.equal(foe.towerDamageScale,damageScale,'damage scaling is unchanged');
+      assert.equal(foe.maxMana,Math.max(1,Math.round((B.stats(foe).mana+Math.floor(partySize/2))*manaScale)),'mana scaling is unchanged');
     }
     const elite=foes.find(u=>['magistrate','inkbinder','warden'].includes(u.minionId));
     if(elite)assert.ok(foes.every(u=>u===elite||elite.maxHp>u.maxHp),'elite has more HP than regular minions at the same floor');

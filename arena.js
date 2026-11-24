@@ -1154,7 +1154,8 @@
     if(tower.partySize!==1||enemyCount!==2)return {hp:extra,mana:1,damage:1};
     if(bossId==="grelus")return {hp:extra*.90,mana:.90,damage:.95};
     if(bossId)return {hp:extra*.82,mana:.85,damage:.90};
-    return {hp:extra*.42,mana:.55,damage:.70};
+    // Solo minions/elites retain half HP; mana and damage reductions stay unchanged.
+    return {hp:extra*.50,mana:.55,damage:.70};
   }
   function setBattle(mode="story",size=4,tower=null){
     floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;

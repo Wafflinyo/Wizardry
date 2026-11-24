@@ -14,7 +14,38 @@
   <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
   <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
 <style>
-.mast:has(#testerTargetRow:not([hidden])) .brand{display:none} #testerTargetRow:not([hidden]){display:flex;align-items:center;justify-content:center;gap:.35rem;flex-wrap:wrap;padding:4px;background:#102630;color:#e4edeb;font-size:12px} #testerTarget,#testerSize,#testerOpponentMode{background:#173642;color:#fff;border:1px solid #547482;border-radius:5px;padding:3px 6px}
+#game:has(#testerTargetRow:not([hidden])){--battle-header-track:auto}
+.battle-navigation{display:contents}
+#game .mast:has(#testerTargetRow:not([hidden])){
+  flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;padding:3px 6px;
+}
+.mast:has(#testerTargetRow:not([hidden])) .brand{display:none}
+#testerTargetRow:not([hidden]){
+  display:flex;flex:1 1 auto;min-width:0;align-items:center;gap:5px;flex-wrap:wrap;
+  padding:4px;background:#102630;border-radius:6px;color:#e4edeb;font-size:12px;
+}
+#testerTargetRow label{display:flex;align-items:center;gap:4px;min-width:0}
+#testerTarget,#testerSize,#testerOpponentMode{
+  min-width:0;max-width:100%;min-height:30px;background:#173642;color:#fff;
+  border:1px solid #547482;border-radius:5px;padding:3px 6px;font-size:inherit;
+}
+#testerTargetRow button{min-height:30px}
+.mast:has(#testerTargetRow:not([hidden])) .battle-navigation{
+  display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:5px;
+}
+#game .mast:has(#testerTargetRow:not([hidden])) .battle-navigation button{
+  min-height:30px;margin:0;white-space:nowrap;
+}
+@media(max-width:700px){
+  #testerTargetRow:not([hidden]){flex-basis:100%;font-size:11px}
+  #testerTargetRow label{flex:1 1 116px}
+  #testerTarget{width:100%}
+  .mast:has(#testerTargetRow:not([hidden])) .tester-target-label{display:none}
+  .mast:has(#testerTargetRow:not([hidden])) .battle-navigation{margin-left:auto}
+  #testerTarget,#testerSize,#testerOpponentMode,#testerTargetRow button,
+  #game .mast:has(#testerTargetRow:not([hidden])) .battle-navigation button{min-height:34px}
+}
+
 #initiative{display:none!important}
 #resetTester{margin-left:6px;background:#102b37;border:1px solid var(--line);color:var(--ink);padding:5px 7px;border-radius:6px;font-size:10px;white-space:nowrap}
 .hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
@@ -28,8 +59,8 @@
 .customize-menu{position:static!important;margin-top:7px;clear:both}
 @media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
 </style>
-<link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.282.9">
-<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.292.5">
+<link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.317.3">
+<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.317.3">
 </head>
 <body data-screen="home">
 <section id="portal" aria-label="Wizardry home"></section>
@@ -42,14 +73,18 @@
   <div id="testerTargetRow" hidden>
     <select id="testerSize" aria-label="Team size"><option value="1">1v1</option><option value="2">2v2</option><option value="3">3v3</option><option value="4">4v4</option></select>
     <label><span class="tester-target-label">Target</span>
-    <select id="testerTarget"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option><option value="scribe">Ashbound Scribe</option><option value="acolyte">Inkbound Acolyte</option><option value="pageguard">Cracked Pageguard</option></select>
+    <select id="testerTarget" aria-label="Target"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option><option value="scribe">Ashbound Scribe</option><option value="acolyte">Inkbound Acolyte</option><option value="pageguard">Cracked Pageguard</option></select>
     </label>
     <select id="testerOpponentMode" aria-label="Opponent behavior"><option value="passive">Passive</option><option value="battle">Battle</option></select>
     <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
     <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
     <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
   </div>
-    <button id="battleHome" type="button">Home</button><button id="resetTester" type="button" hidden>Reset Tester</button><button id="battleFullscreen" type="button">Full screen</button>
+    <div class="battle-navigation">
+      <button id="battleHome" type="button">Home</button>
+      <button id="resetTester" type="button" hidden>Reset Tester</button>
+      <button id="battleFullscreen" type="button">Full screen</button>
+    </div>
   </header>
 
   <nav class="toolbar" aria-label="Battle settings">

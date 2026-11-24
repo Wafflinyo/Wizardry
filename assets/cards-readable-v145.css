@@ -26,14 +26,14 @@
 #game #cardHand.cards>button.spell.card-ornate.browsed .spell-combat b{font-size:16px!important}
 #game #cardHand.cards>button.spell.card-ornate.browsed .spell-effect{font-size:12.5px!important}
 @media(max-width:700px) and (orientation:portrait){
- body[data-screen=battle] #game.game{grid-template-rows:32px minmax(0,1fr) clamp(380px,46dvh,420px)}
+ body[data-screen=battle] #game.game{grid-template-rows:var(--battle-header-track,32px) minmax(0,1fr) clamp(380px,46dvh,420px)}
  #game .hand{grid-template-rows:24px minmax(0,1fr) 110px}
  #game #cardHand.cards{--card-height:220px;--card-width:150px;--fan-step:clamp(35px,10vw,46px)}
  #game #cardHand.cards>button.spell.card-ornate .spell-name{font-size:13px!important}
  #game #cardHand.cards>button.spell.card-ornate.browsed{transform:translateX(-50%) translateY(-44px)!important}
 }
 @media(min-width:1000px) and (min-height:621px){
- body[data-screen=battle] #game.game{grid-template-rows:40px minmax(0,1fr) 320px}
+ body[data-screen=battle] #game.game{grid-template-rows:var(--battle-header-track,40px) minmax(0,1fr) 320px}
  #game #cardHand.cards{--card-height:240px;--card-width:165px;--fan-step:clamp(80px,9vw,125px)}
 }
 @media(orientation:landscape) and (max-height:620px){

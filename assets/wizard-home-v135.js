@@ -52,12 +52,23 @@ const sortedNameLists=nameLists.map(list=>[...list].sort());
 const nameLabels=['First name','Surname beginning','Surname ending'];
 let nameParts=['','',''],originalDraftName='',deleteId=null;
 function nameFields(){
- return `<div class="portal-actions">${btn('Randomize name','randomName','small subtle')}</div><div class="field-grid">${sortedNameLists.map((list,i)=>`<div class="field"><label for="namePart${i}">${nameLabels[i]}</label><select id="namePart${i}" data-name-part="${i}"><option value="">Choose ${nameLabels[i].toLowerCase()}</option>${list.map(name=>`<option value="${name}" ${name===nameParts[i]?'selected':''}>${name}</option>`).join('')}</select></div>`).join('')}</div>`;
+ return `<div class="portal-actions">${btn('Randomize name','randomName','small subtle')}</div><div class="field-grid">${sortedNameLists.map((list,i)=>`<div class="field"><label for="namePart${i}">${nameLabels[i]}</label><div class="name-part-row"><select id="namePart${i}" data-name-part="${i}"><option value="">Choose ${nameLabels[i].toLowerCase()}</option>${list.map(name=>`<option value="${name}" ${name===nameParts[i]?'selected':''}>${name}</option>`).join('')}</select><button type="button" class="portal-btn name-refresh" data-random-name-part="${i}" aria-label="Randomize ${nameLabels[i].toLowerCase()}" title="Randomize ${nameLabels[i].toLowerCase()}"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></svg></button></div></div>`).join('')}</div>`;
 }
 function loadNameParts(name){
  const [given,surname]=name.split(' ');
  const prefix=nameLists[1].find(part=>surname?.startsWith(part)&&nameLists[2].includes(surname.slice(part.length)));
  return prefix&&nameLists[0].includes(given)&&name===given+' '+surname?[given,prefix,surname.slice(prefix.length)]:['','',''];
+}
+function syncNamePreview(){
+ draft.name=nameParts.every(Boolean)?nameParts[0]+' '+nameParts[1]+nameParts[2]:originalDraftName;
+ const preview=el('previewName');if(preview)preview.textContent=nameParts.some(Boolean)&&!nameParts.every(Boolean)?'Your wizard':draft.name||'Your wizard';
+}
+function randomizeNamePart(i){
+ if(!Number.isInteger(i)||i<0||i>=nameLists.length)return;
+ const choices=nameLists[i].filter(part=>part!==nameParts[i]);if(!choices.length)return;
+ nameParts[i]=choices[Math.floor(Math.random()*choices.length)];
+ const select=el('namePart'+i);if(select)select.value=nameParts[i];
+ syncNamePreview();
 }
 function requireName(){
  if(!draft.name||(nameParts.some(Boolean)&&!nameParts.every(Boolean)))throw Error('Choose all three name parts.');
@@ -342,11 +353,11 @@ async function startTowerLobby(){
 async function startOnline(){const l=session.lobby;if(!session.isHost||!l?.players.every(p=>p.isCpu||p.ready)||![0,1].every(t=>l.players.some(p=>p.team===t)))return;try{session.active=true;api.startLobby(l.players,l.size);const state=api.getState();await command('start',{state});lastState=JSON.stringify(state);showBattle();}catch(e){session.active=false;error(e.message);}}
 portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefined){
  nameParts[Number(e.target.dataset.namePart)]=e.target.value;
- draft.name=nameParts.every(Boolean)?nameParts[0]+' '+nameParts[1]+nameParts[2]:originalDraftName;
- el('previewName').textContent=nameParts.some(Boolean)&&!nameParts.every(Boolean)?'Your wizard':draft.name||'Your wizard';
+ syncNamePreview();
  return;
  }if(e.target.dataset.gear&&Object.hasOwn(B.gear,e.target.dataset.gear))draft[e.target.dataset.gear]=e.target.value;if(['createRobe','createHat','createSkin','createFacialHair','createHeadHair'].includes(e.target.id)){readDraft();}if(e.target.id==='lobbySize'&&session.isHost){const size=Number(e.target.value);if(session.lobby.players.some(p=>p.slot>=size)){error('Move players out of the higher seats before reducing match size.');e.target.value=session.lobby.size;return;}try{await command('size',{size});}catch(e){error(e.message);}}});
 portal.addEventListener('click',async e=>{const button=e.target.closest('button');if(!button||button.disabled)return;try{
+ if(button.dataset.randomNamePart!==undefined){if((view==='create'||view==='wizardTester')&&step===0)randomizeNamePart(Number(button.dataset.randomNamePart));return;}
  if(button.dataset.binderElement){binderElement=button.dataset.binderElement;render();portal.querySelector(`[data-binder-element="${binderElement}"]`)?.focus();return;}
  if(button.dataset.binderCard){inspectBinderCard(button.dataset.binderCard);return;}
  if(button.dataset.draftCard&&view==='spellDraft'){const card=cards.find(c=>c.id===button.dataset.draftCard);if(card){offerChoices[card.school]=card.id;render();}return;}
@@ -398,13 +409,7 @@ portal.addEventListener('click',async e=>{const button=e.target.closest('button'
  if(action==='nextFloor'){await nextFloor();return;}
  if(action==='leaveProgress'){leaveMatch();return;}
  if(action==='randomName'){
-   nameParts=nameLists.map((list,i)=>{
-     const choices=list.filter(part=>part!==nameParts[i]);
-     return choices[Math.floor(Math.random()*choices.length)];
-   });
-   draft.name=nameParts[0]+' '+nameParts[1]+nameParts[2];
-   nameParts.forEach((part,i)=>{el('namePart'+i).value=part;});
-   el('previewName').textContent=draft.name;
+   nameLists.forEach((_,i)=>randomizeNamePart(i));
    return;
  }
  if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.fillOwned(cards,draft);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}

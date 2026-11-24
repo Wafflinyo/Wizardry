@@ -30,6 +30,10 @@
   border:1px solid #547482;border-radius:5px;padding:3px 6px;font-size:inherit;
 }
 #testerTargetRow button{min-height:30px}
+/* Keep the toolbar footprint stable while contextual test controls toggle. */
+#testerTargetRow:not([hidden]) > button[hidden]{
+  display:inline-block!important;visibility:hidden;pointer-events:none;
+}
 .mast:has(#testerTargetRow:not([hidden])) .battle-navigation{
   display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:5px;
 }
@@ -367,7 +371,7 @@
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
 <script src="./assets/faultline-bulwark.js?v=0.315.1" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.317.4" defer></script>
+<script src="./arena.js?v=0.317.5" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
 <script src="./assets/wizard-home-v135.js?v=0.317.2" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">

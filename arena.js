@@ -804,6 +804,22 @@
     ctx.putImageData(frame,0,0);
     return canvas;
   }
+  // Cast atlases have a smaller body silhouette than the idle art. Calibrate
+  // against helmet/torso/boots, not the changing extent of magic particles.
+  // A fixed scale per guardian prevents size pumping during the cast.
+  // Foot coordinates were measured on the actual 288px cast20 cells.
+  const guardianCastFit={
+    abyssal:{scale:1.10,idleCenter:149.85,castCenter:150.8,feet:[266,266,266,266,266,266,265,266,265,266,266,266,265,266,265,266,266,266,266,266]},
+    gale:{scale:1.06,idleCenter:136.85,castCenter:137.8,feet:[266,266,266,266,266,266,266,266,266,266,267,267,266,266,266,267,267,266,267,267]},
+    briar:{scale:1.10,idleCenter:151.35,castCenter:151.5,feet:[265,264,265,265,264,264,265,264,264,264,264,265,264,264,264,264,264,264,265,265]},
+    glacial:{scale:1.08,idleCenter:141.95,castCenter:150.7,feet:[264,264,264,264,264,263,263,263,263,263,264,264,264,264,264,264,264,264,264,264]}
+  };
+  function guardianCastRect(model,pose){
+    const fit=model.castFit,cell=model.cell,normal=model.size/cell;
+    const size=model.size*fit.scale,scaled=size/cell;
+    return {x:(fit.idleCenter-cell/2)*normal-fit.castCenter*scaled,
+      y:2-fit.feet[pose]*scaled,size};
+  }
   const guardianModels=Object.fromEntries([
     ["abyssal",310,[[148.33,148.33,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.78,146.67,146.11,147.22,147.22]]],
     ["gale",300,[[148.33,147.78,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.22,145.56,145,145,145]]],
@@ -811,7 +827,7 @@
     ["glacial",326,[[147.22,147.22,147.22,147.22,147.22,147.22],[147.22,147.78,147.78,147.22,147.22,147.78],[146.67,146.11,145.56,145,146.67,146.11]]]
   ].map(([id,size,feet])=>{
     const art=new Image(),castAtlas=new Image();
-    const model={art,size,feet,cell:288,cleaned:null,castAtlas,castAnchor:({abyssal:147.2222,gale:147.2222,briar:146.1111,glacial:146.1111})[id]};
+    const model={art,size,feet,cell:288,cleaned:null,castAtlas,castFit:guardianCastFit[id]};
     art.onload=()=>{
       try{model.cleaned=prepareGuardianArt(art,id);}catch(err){console.warn("Guardian matte cleanup failed",id,err);}
     };
@@ -4386,7 +4402,7 @@
         :current?.stage==="lowering"?5:0;
       let frame=row===2?Math.min(5,Math.floor(5*(previewDefeat?defeatElapsed:(u.defeatElapsedMs||0))/DEFEAT_HOLD_MS)):
         casting?gestureFrame:guardian?GUARDIAN_IDLE_FRAMES[Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%GUARDIAN_IDLE_FRAMES.length]:Math.floor((time+u.index*160)/160)%6;
-      let source=minion.cleaned||minion.art,sourceRow=row,sourceCol=frame;
+      let source=minion.cleaned||minion.art,sourceRow=row,sourceCol=frame,castRect=null;
       let anchor=guardian?minion.feet[row][frame]:153;
       if(guardian&&row===1){
         let pose;
@@ -4397,7 +4413,7 @@
         }else pose=guardianCastFrame(current.stage,current.elapsed,current.duration,current.visualRecoveryMs||0);
         pose=clamp(pose,0,GUARDIAN_CAST_COUNT-1);
         if(minion.castAtlas?.naturalWidth===minion.cell*5&&minion.castAtlas?.naturalHeight===minion.cell*4){
-          source=minion.castAtlas;sourceCol=pose%5;sourceRow=Math.floor(pose/5);anchor=minion.castAnchor;
+          source=minion.castAtlas;sourceCol=pose%5;sourceRow=Math.floor(pose/5);castRect=guardianCastRect(minion,pose);
         }else{
           // The approved six key poses remain a safe fallback if the new
           // atlas has not loaded; do not generate or blend artificial frames.
@@ -4408,7 +4424,7 @@
       const top=-anchor*minion.size/160+(guardian?2:0);
       const cell=minion.cell||160;
       if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
-      g.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,-minion.size/2,top,minion.size,minion.size);
+      g.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
       const runeElapsed=guardian?elapsed-ARM_RAISE_MS:elapsed;
       if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
@@ -6523,7 +6539,7 @@
         (u.statuses.find(st=>st.kind==="tailwind")?.value||0)-(u.statuses.find(st=>st.kind==="static_shock")?.value||0)-(u.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(u)-boulderPenalty(u)));
     },
     applyGunpowderCoat,triggerGunpowderCoat,expireGunpowderCoats,applyZeusImpact,applyZeusChain,thornAccuracyPenalty,triggerQuickSand,triggerThornyWrap,applyBlizzardHit,blizzardHitAt,applyPenguinHit,NINJA_HIT_TIMES,applyLightningRod,expireLightningRods,attemptUndeadFear,attemptOctoFlinch,isFrozen,attemptMarkedFreeze,isStunned,attemptVoltStun,requiresRest,applySpell,applyChainedJavelinSiphon,applyRazorangReturn,
-    guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,
+    guardianCastFrame,guardianIdleFrameMs:GUARDIAN_IDLE_FRAME_MS,guardianCastRect:(id,pose)=>guardianCastRect(guardianModels[id],pose),
     runeTiming:()=>({trace:AUTO_TRACE_MS,glow:RUNE_GLOW_MS,
       crumble:RUNE_CRUMBLE_MS}),
     layoutCombatMessages,

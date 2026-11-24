@@ -704,65 +704,20 @@
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,art,size}];
   }));
-  // Guardian art is a separate, larger silhouette. Foot coordinates were measured
-  // on the actual 160px cells, including the kneeling and prone defeat poses.
-  // Keep the slot unchanged and scale around the visible ground contact.
-  function cleanGuardianFringe(art){
-    const sheet=document.createElement("canvas");
-    sheet.width=art.naturalWidth;sheet.height=art.naturalHeight;
-    const ctx=sheet.getContext("2d",{willReadFrequently:true});
-    ctx.drawImage(art,0,0);
-    const image=ctx.getImageData(0,0,sheet.width,sheet.height),data=image.data;
-    const src=new Uint8ClampedArray(data),w=sheet.width,h=sheet.height;
-    const light=i=>(src[i]+src[i+1]+src[i+2])/3;
-    const chroma=i=>Math.max(src[i],src[i+1],src[i+2])-Math.min(src[i],src[i+1],src[i+2]);
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-      const p=(y*w+x)*4,alpha=src[p+3];
-      if(alpha<25){data[p+3]=0;continue;}
-      const l=light(p),c=chroma(p);
-      // Only alter near-neutral pale fringes, not colored water, wind, frost,
-      // foliage or violet corruption. Every cell is treated independently.
-      if(l<125||c>=65)continue;
-      const x0=Math.floor(x/160)*160,y0=Math.floor(y/160)*160;
-      const x1=Math.min(w-1,x0+159),y1=Math.min(h-1,y0+159);
-      let edge=false;
-      for(let dy=-2;dy<=2&&!edge;dy++)for(let dx=-2;dx<=2;dx++){
-        if(dx*dx+dy*dy>5)continue;
-        const xx=x+dx,yy=y+dy;
-        if(xx<x0||xx>x1||yy<y0||yy>y1||src[(yy*w+xx)*4+3]<=100){edge=true;break;}
-      }
-      if(!edge)continue;
-      let nearest=-1,best=26;
-      for(let dy=-5;dy<=5;dy++)for(let dx=-5;dx<=5;dx++){
-        const dist=dx*dx+dy*dy,xx=x+dx,yy=y+dy;
-        if(dist>=best||xx<x0||xx>x1||yy<y0||yy>y1)continue;
-        const q=(yy*w+xx)*4;
-        if(src[q+3]>215&&(light(q)<150||chroma(q)>48)){
-          best=dist;nearest=q;
-        }
-      }
-      if(nearest>=0&&l>light(nearest)+18){
-        const mix=Math.max(0,Math.min(1,(l-light(nearest)-10)/55));
-        for(let ch=0;ch<3;ch++)data[p+ch]=src[p+ch]*(1-mix)+src[nearest+ch]*mix;
-      }
-      if(l>155)data[p+3]=alpha*Math.max(0,Math.min(1,(220-l)/65));
-      if(data[p+3]<25)data[p+3]=0;
-    }
-    ctx.putImageData(image,0,0);
-    return sheet;
-  }
+  // Original-detail, pre-cleaned guardian sheets: 288px cells, no runtime
+  // resampling or edge processing. Anchors are expressed in 160px equivalents.
   const guardianModels=Object.fromEntries([
-    ["abyssal",310,[[148,148,148,148,148,148],[148,148,148,148,148,148],[147,147,146,146,147,147]]],
-    ["gale",300,[[148,148,148,148,148,148],[148,148,148,148,148,148],[148,147,145,145,145,145]]],
-    ["briar",314,[[147,147,147,147,147,147],[147,147,147,147,147,147],[144,143,142,142,143,141]]],
-    ["glacial",326,[[147,147,147,147,147,147],[147,148,148,147,147,147],[146,146,145,145,146,146]]]
+    ["abyssal",310,[[148.33,148.33,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.78,146.67,146.11,147.22,147.22]]],
+    ["gale",300,[[148.33,147.78,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.22,145.56,145,145,145]]],
+    ["briar",314,[[147.22,147.22,147.78,147.22,147.22,147.22],[147.78,147.78,147.78,147.78,147.78,147.78],[145,143.33,142.22,142.78,143.89,140.56]]],
+    ["glacial",326,[[147.22,147.22,147.22,147.22,147.22,147.22],[147.22,147.78,147.78,147.22,147.22,147.78],[146.67,146.11,145.56,145,146.67,146.11]]]
   ].map(([id,size,feet])=>{
-    const art=new Image(),model={art,size,feet,cleaned:null};
-    art.onload=()=>{try{model.cleaned=cleanGuardianFringe(art);}catch(err){console.warn("Guardian edge cleanup:",id,err);}};
-    art.src="./assets/guardian-"+id+".webp?v=0.322.0";
-    return [id,model];
+    const art=new Image();
+    art.src="./assets/guardian-"+id+"-hd.webp?v=0.323.0";
+    return [id,{art,size,feet,cell:288}];
   }));
   const guardianVisualHeight=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size*.92:220;
+  const unitSlotFactor=u=>guardianModels[u.bossId]?guardianModels[u.bossId].size/205:1;
   const unitSprite=u=>guardianModels[u.bossId]||minionModels[u.minionId];
   const eliteSchools={magistrate:"fire",inkbinder:"nature",warden:"earth"};
   // The four corrupted tower guardians serve Grelus. Death uses the existing Dark spell school.
@@ -4204,6 +4159,7 @@
   // Inlaid floor medallion and concentrated shadows anchor every
   // character on the original depth plane instead of a hovering oval.
   function drawGroundMarker(ctx,u,scale){
+    scale*=unitSlotFactor(u);
     const y=7*scale,rx=57*scale,ry=17*scale;
     ctx.save();
     const shade=ctx.createRadialGradient(0,y,3*scale,0,y,73*scale);
@@ -4261,19 +4217,20 @@
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
     g.save();g.translate(u.x,u.y);
     drawGroundMarker(g,u,scale);
+    const slotScale=scale*unitSlotFactor(u);
     // Keep the collapsed pose readable instead of fading it nearly away.
     if(u.hp<=0)g.globalAlpha=.85;
     if(state.auras[u.team]){
-      ellipse(g,0,3,72*scale,23*scale,"#5edbd41b","#76f1d39b",2);
+      ellipse(g,0,3,72*slotScale,23*slotScale,"#5edbd41b","#76f1d39b",2);
     }
     const castAction=state.animation;
     const first=state.phase==="planning"?turnOrder().find(wizard=>!wizard.dummy&&!requiresRest(wizard))?.id:castAction?.source??state.skipCue?.source;
     if(u.hp>0&&u.id===first)
-      ellipse(g,0,5,77*scale,27*scale,"#46aaff30","#65bfff",4);
+      ellipse(g,0,5,77*slotScale,27*slotScale,"#46aaff30","#65bfff",4);
     // Green eligibility markers for heal targets, gold for enemies.
     if(state.phase==="planning"&&currentCard()&&!currentCard().fieldRounds&&caster()&&u.hp>0&&
        targetsFor(currentCard(),caster()).some(t=>t.id===u.id))
-      ellipse(g,0,5,87*scale,30*scale,
+      ellipse(g,0,5,87*slotScale,30*slotScale,
         ["ally","team"].includes(currentCard().target)?"#57ec9628":
         currentCard().target==="all_enemies"?"#9ed5d02c":"#d4b64d20",
         ["ally","team"].includes(currentCard().target)?"#95ffad":
@@ -4283,7 +4240,7 @@
       castAction.card.target==="team"?u.team===activeCaster?.team:castAction.target===u.id):
       state.phase==="planning"&&currentCard()&&(currentCard().target==="all_enemies"?u.team!==caster()?.team:
         currentCard().target==="team"?u.team===caster()?.team:state.selectedTarget===u.id);
-    if(u.hp>0&&marked)ellipse(g,0,4,96*scale,33*scale,"#ff525426","#ff646b",4);
+    if(u.hp>0&&marked)ellipse(g,0,4,96*slotScale,33*slotScale,"#ff525426","#ff646b",4);
     const sand=u.statuses.find(st=>st.kind==="quick_sand");
     const sinking=state.flashes.findLast(f=>f.quickSandUnit===u.id);
     const forming=state.animation?.card?.id==="quicksand"&&state.animation.stage==="summon"&&state.animation.target===u.id;
@@ -4314,7 +4271,9 @@
       const guardian=!!minion.feet;
       const anchor=guardian?minion.feet[row][frame]:153;
       const top=-anchor*minion.size/160+(guardian?2:0);
-      g.drawImage(minion.cleaned||minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
+      const cell=minion.cell||160;
+      if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
+      g.drawImage(minion.art,frame*cell,row*cell,cell,cell,-minion.size/2,top,minion.size,minion.size);
       if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
           school:u.masteries?.[0]||Builds.elements[0],elapsed,duration:AUTO_TRACE_MS,centerX:guardian?-minion.size*.61:-115,centerY:guardian?-minion.size*.55:-100,scale:3.3
@@ -4381,7 +4340,7 @@
     const outward=u.team?1:-1;
     const offset=top&&index===1?32*outward:team.length===4&&index===2?24*outward:0;
     const margin=state?.desktopArena?camera.x/camera.scale:0;
-    return {x:clamp(u.x-w/2+offset,8-margin,W-w-8+margin),y:top?Math.max(8,u.y-guardianVisualHeight(u)*scale-64):u.y+14,w,h:52,above:top};
+    return {x:clamp(u.x-w/2+offset,8-margin,W-w-8+margin),y:top?Math.max(8,u.y-guardianVisualHeight(u)*scale-64):u.y+14+(unitSlotFactor(u)-1)*21*scale,w,h:52,above:top};
   }
   function plateIsTarget(u,a){
     if(!a)return false;if(a.target===u.id)return true;

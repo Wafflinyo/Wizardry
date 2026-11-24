@@ -2312,7 +2312,7 @@
       if(spell.liveWireBonus===undefined){
         spell.liveWireBonus=consumeStatus(source,"live_wire")?.value||0;
         if(spell.liveWireBonus)
-          flash(source,"LIVE WIRE · +25%","#e0d5ff").liveWire={sourceId:source.id,targetId:target.id};
+          flash(source,"LIVE WIRE · +25%","#e0d5ff").liveWire={targetId:target.id};
       }
       if(spell.liveWireBonus){raw*=1+spell.liveWireBonus;notes.push("LIVE WIRE +25%");}
     }
@@ -5275,9 +5275,9 @@
     }
     for(const message of state.flashes){
       if(!message.liveWire)continue;
-      const source=getUnit(message.liveWire.sourceId),target=getUnit(message.liveWire.targetId);
-      if(source&&target)renderables.push({type:"live-wire-surge",depthY:target.y+.17,priority:2,
-        draw:()=>window.LiveWire?.surge(g,source,target,message.age)});
+      const target=getUnit(message.liveWire.targetId);
+      if(target)renderables.push({type:"live-wire-surge",depthY:target.y+.17,priority:2,
+        draw:()=>window.LiveWire?.surge(g,target,message.age)});
     }
     if(action?.stage==="summon" && action.card.id==="growth"){
       const target=getUnit(action.target);

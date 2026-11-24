@@ -563,7 +563,7 @@ for(const team of [0,1])for(let i=0;i<=60;i++){
   const source={team,x:team?740:260,y:480};
   const target={x:team?290:720,y:520};
   ctx.window.LiveWire.charge(wireCanvas,source,i/60);
-  ctx.window.LiveWire.surge(wireCanvas,source,target,i/120);
+  ctx.window.LiveWire.surge(wireCanvas,target,i/120);
 }
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(liveWire.id));

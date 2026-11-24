@@ -32,9 +32,33 @@
     }
     bolt(g,points,1.8);
   }
-  function staff(u){
-    const scale=mix(.60,.90,clamp((u.y-288)/235));
-    return [u.x+(u.team?-1:1)*48*scale,u.y-143*scale,scale];
+  const center=[500,282];
+  function discharge(g,destination,head,tail,tick,width){
+    if(head<=tail)return;
+    const [x,y]=center,[tx,ty]=destination;
+    const points=[];
+    for(let i=0;i<=14;i++){
+      const t=mix(tail,head,i/14);
+      const jag=(i%2?1:-1)*(6+12*Math.abs(Math.sin(i*9.4+tick)))*Math.sin(Math.PI*t);
+      points.push([mix(x,tx,t),mix(y,ty,t)-Math.sin(t*Math.PI)*35+jag]);
+    }
+    const [px,py]=points.at(-1);
+    for(let i=2;i<points.length-2;i+=3)
+      fork(g,points[i],tick*1.3+i*2.45,25+i%5*10,tick+i);
+    bolt(g,points,width);
+    if(head<1)facet(g,"#f3ffff",[[px-8,py],[px,py-7],[px+10,py],[px,py+7]]);
+  }
+  function storm(g,p){
+    const tick=Math.floor(p*44),radius=mix(64,24,clamp(p));
+    for(let i=0;i<9;i++){
+      const angle=i*tau/9+p*6;
+      const x=Math.cos(angle)*radius,y=Math.sin(angle)*radius*.62;
+      fork(g,[x,y],angle+Math.PI+.4,radius*.85,tick+i);
+      facet(g,i%2?"#9f8aff":"#d4ffff",[[x-5,y],[x+3,y-7],[x+8,y+2],[x+2,y+5]]);
+    }
+    const pulse=clamp(p*2);
+    facet(g,"#7565e5",[[0,-20*pulse],[18*pulse,0],[0,21*pulse],[-18*pulse,0]]);
+    facet(g,"#f1ffff",[[0,-12*pulse],[10*pulse,1],[0,11*pulse],[-9*pulse,0]]);
   }
   function coils(g,p,spread){
     const reach=clamp(p/.63);
@@ -65,31 +89,31 @@
     }
   }
   function charge(g,u,p){
-    const [x,y,scale]=staff(u);
+    const destination=[u.x,u.y-96];
+    const release=.46,arrival=.73;
     g.save();
-    g.translate(x,y+84*scale);
-    g.scale(scale,scale);
-    g.globalAlpha=clamp(p/.12)*(1-clamp((p-.80)/.20));
-    coils(g,p,1);
+    g.globalAlpha=clamp(p/.12)*(1-clamp((p-release)/.24));
+    g.save();g.translate(...center);
+    storm(g,clamp(p/release));
+    g.restore();
+    g.globalAlpha=1-clamp((p-arrival)/.22);
+    discharge(g,destination,clamp((p-release)/(arrival-release)),clamp((p-.65)/.28),Math.floor(p*55),6);
+    if(p>=arrival){
+      const flash=clamp((p-arrival)/.15);
+      g.save();g.translate(...destination);g.scale(.7+flash*.55,.7+flash*.55);
+      g.globalAlpha=1-flash;
+      storm(g,.76+flash*.24);
+      g.restore();
+    }
     g.restore();
   }
-  function surge(g,source,target,age){
+  function surge(g,target,age){
     if(age>=.48)return;
-    const [x,y]=staff(source),tx=target.x,ty=target.y-88;
-    const head=clamp(age/.14),tail=clamp((age-.12)/.27);
-    const points=[];
-    for(let i=0;i<=12;i++){
-      const t=mix(tail,head,i/12);
-      const jitter=Math.sin(i*18.7+Math.floor(age*75)*1.8)*Math.sin(t*Math.PI);
-      points.push([mix(x,tx,t),mix(y,ty,t)-Math.sin(t*Math.PI)*43+jitter*22]);
-    }
+    const tx=target.x,ty=target.y-88;
+    const head=clamp(age/.12),tail=clamp((age-.12)/.27);
     g.save();
     g.globalAlpha=1-clamp((age-.24)/.24);
-    bolt(g,points,5);
-    if(head>tail)for(let i=2;i<12;i+=2){
-      const phase=Math.floor(age*76)+i;
-      fork(g,points[i],phase*1.78,29+i%4*14,phase);
-    }
+    discharge(g,[tx,ty],head,tail,Math.floor(age*80),8);
     const burst=clamp((age-.12)/.28);
     if(burst>0&&burst<.58){
       g.save();

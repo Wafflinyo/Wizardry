@@ -691,15 +691,31 @@
   function sideUnits(team){return state.units.filter(u=>u.team===team);}
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
+  const testerMinions=Object.fromEntries([
+    ["scribe","Ashbound Scribe","fire"],["acolyte","Inkbound Acolyte","dark"],["pageguard","Cracked Pageguard","earth"]
+  ].map(([id,name,school])=>{
+    const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.317.1";
+    return [id,{name,school,art}];
+  }));
   let testerTargetType="wood";
+  function previewTesterMinion(){
+    if(state?.mode!=="tester"||state.phase!=="planning")return false;
+    const target=alive(1).find(u=>u.testerMinion);
+    if(!target)return false;
+    target.minionPreview=performance.now();
+    return true;
+  }
   function fitTesterTarget(u,type){
     u.wizardDummy=type==="wizard";
+    u.testerMinion=Object.hasOwn(testerMinions,type)?type:null;
+    delete u.minionPreview;
+    if(u.testerMinion){u.name=testerMinions[type].name;return;}
     if(!u.wizardDummy){u.name="Training Dummy";return;}
     const look=createUnit(ENEMIES[0],1,0,true);
     for(const key of ["name","hat","robe","robeColor","hatColor","skinColor","facialHair","headHair",...Object.keys(Builds.gear)])u[key]=look[key];
   }
   function switchTesterTarget(type){
-    if(state?.mode!=="tester"||state.phase!=="planning"||!["wood","wizard"].includes(type))return;
+    if(state?.mode!=="tester"||state.phase!=="planning"||!(["wood","wizard"].includes(type)||Object.hasOwn(testerMinions,type)))return;
     testerTargetType=type;
     for(const dummy of sideUnits(1))fitTesterTarget(dummy,type);
     paintUI();
@@ -3396,6 +3412,8 @@
     $("testerSize").value=String(state.size);
     $("testerTarget").disabled=!planning;
     $("testerTarget").value=testerTargetType;
+    const preview=$("testerMinionPreview");
+    if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(testerMinions,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
     const debtFixture=$("testerDebtFixture");
     if(debtFixture)debtFixture.hidden=!testing||!planning||!bloodDebtTesterTarget();
@@ -4140,6 +4158,21 @@
       g.translate(0,depth*45*scale);
     }
     g.scale(scale,scale);
+    const minion=testerMinions[u.testerMinion];
+    if(u.dummy&&minion?.art.naturalWidth){
+      const elapsed=time-(u.minionPreview??-Infinity);
+      const casting=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<1050;
+      const row=u.hp<=0?2:casting?1:0;
+      const frame=row===2?Math.min(3,Math.floor((u.defeatElapsedMs||0)/135)):
+        casting?Math.floor(elapsed/263):Math.floor((time+u.index*160)/210)%4;
+      g.drawImage(minion.art,frame*160,row*160,160,160,-115,-223,230,230);
+      if(casting){
+        window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
+          school:minion.school,elapsed,duration:1050,centerX:-139,centerY:-111,scale:3.3
+        });
+      }
+      g.restore();return;
+    }
     if(u.dummy&&!u.wizardDummy){
       drawTrainingDummy(g,u);
       window.BoulderWeight?.equip(g,armorProgress(u),31,-128,43,-118,61,-119,31);
@@ -6146,7 +6179,7 @@
       paintUI();
     },
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
-    switchTesterTarget,
+    switchTesterTarget,previewTesterMinion,
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     onlineSnapshot,

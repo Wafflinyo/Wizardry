@@ -1164,7 +1164,7 @@
       runeKind:choosesRune(card)?zenRunes(target)[0]?.kind:null,team:u.team,auto:true};
   }
   function autoFill(team){
-    if(state.phase!=="planning"||(state.mode==="tester"&&(!state.testerBattle||team===0)))return;
+    if(state.phase!=="planning"||(state.mode==="tester"&&!state.testerBattle))return;
     for(const u of alive(team)){
       if(u.dummy||(window.WizardrySession?.active?u.isHuman:u.id===state.humanByTeam[team])||state.plans[u.id])continue;
       const p=autoPlan(u);

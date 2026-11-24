@@ -202,9 +202,12 @@ const assert = require('node:assert/strict');
     }
     const hero=battle.units[0],hp=hero.hp;
     hero.hand=['waterblast'];
+    battle.units[1].hand=['waterblast'];
     api.chooseCard('waterblast');
     api.confirmTarget();
     assert.equal(battle.sequence.filter(plan=>plan.team===1&&plan.cardId===attack).length,2);
+    assert.equal(Array.from(battle.sequence,p=>p.casterId).join(','),'a0,e0,a1,e1');
+    assert.equal(Array.from(api.turnOrder(2),u=>u.id).join(','),'e0,a1,e1,a0');
     api.advanceBackground(28000);
     assert.equal(battle.phase,'planning');
     assert.ok(battle.units.slice(0,2).some((u,i)=>u.hp<(i===0?hp:u.maxHp)));

@@ -24,7 +24,11 @@ begin
   pid=gen_random_uuid()::text;
   insert into public.wizardry_test_lobbies(players) values(jsonb_build_array(jsonb_build_object('peerId',pid,'key',actor_key,'profile',payload->'profile','team',0,'slot',0,'ready',false))) returning * into r;
  else
-  select * into r from public.wizardry_test_lobbies where id=room_id and expires_at>now() for update;
+  if action_name='poll' then
+   select * into r from public.wizardry_test_lobbies where id=room_id and expires_at>now();
+  else
+   select * into r from public.wizardry_test_lobbies where id=room_id and expires_at>now() for update;
+  end if;
   if not found or r.phase='closed' then raise exception 'This lobby is closed or expired.'; end if;
   select value into actor from jsonb_array_elements(r.players) where value->>'key'=actor_key;
   host=coalesce(r.players->0->>'key'=actor_key,false);
@@ -180,13 +184,15 @@ begin
    if not host then raise exception 'Only the host can publish combat state.';end if;
    if r.phase='battle' and jsonb_typeof(payload->'state')='object' then r.battle_state=payload->'state';r.state_version=r.state_version+1;end if;
    for ack in select value from jsonb_array_elements(coalesce(payload->'ack','[]')) loop
-    if r.pending->(ack->>'peerId')->>'round'=ack->>'round' then r.pending=r.pending-(ack->>'peerId');end if;
+    if r.pending->(ack->>'peerId')->>'round'=ack->>'round' and (r.pending->(ack->>'peerId')->>'requestId') is not distinct from (ack->>'requestId') then r.pending=r.pending-(ack->>'peerId');end if;
    end loop;
   elsif action_name='leave' then
    if host then r.phase='closed';else select coalesce(jsonb_agg(x),'[]') into r.players from jsonb_array_elements(r.players) x where x->>'peerId'<>pid; r.pending=r.pending-pid;end if;
   elsif action_name not in('poll','join') then raise exception 'Unknown lobby action.';
   end if;
-  update public.wizardry_test_lobbies set players=r.players,room_size=r.room_size,phase=r.phase,battle_state=r.battle_state,state_version=r.state_version,pending=r.pending,updated_at=case when host then now() else updated_at end where id=r.id;
+  if action_name<>'poll' then
+   update public.wizardry_test_lobbies set players=r.players,room_size=r.room_size,phase=r.phase,battle_state=r.battle_state,state_version=r.state_version,pending=r.pending,updated_at=case when host then now() else updated_at end where id=r.id;
+  end if;
  end if;
  select coalesce(jsonb_agg(x-'key'),'[]') into result_players from jsonb_array_elements(r.players) x;
  v=coalesce((payload->>'version')::bigint,-1);

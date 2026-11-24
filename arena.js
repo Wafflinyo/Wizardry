@@ -360,11 +360,12 @@
     }
   }
   function drawCard(u){
-    if(!u?.hand||u.hand.length>=MAX_HAND_SIZE)return null;
+    if(!u?.hand)return null;
     recycleDeck(u);
+    if(u.hand.length>=MAX_HAND_SIZE)return null;
     const id=u.drawPile.shift();
-    if(id&&!u.testerDeck)recycleDeck(u);
     if(id)u.hand.push(id);
+    if(!u.testerDeck)recycleDeck(u);
     return id||null;
   }
   function startHand(u,includeNewest=false){
@@ -1171,7 +1172,18 @@
     // Solo reinforcements share the encounter HP budget; damage/mana remain unchanged.
     return {hp:extra*.60,mana:.55,damage:.70};
   }
+  const planUndo=new Map();
+  function rememberPlan(u){planUndo.set(u.id,{round:state.round,hand:[...u.hand],drawPile:[...u.drawPile],discardPile:[...u.discardPile],passedRound:u.passedRound});}
+  function cancelOnlinePlan(u){
+    if(state.phase!=="planning"||!u?.isHuman)return false;
+    if(!state.plans[u.id])return true;
+    const undo=planUndo.get(u.id);if(!undo||undo.round!==state.round)return false;
+    const {hand,drawPile,discardPile,passedRound}=undo;Object.assign(u,{hand,drawPile,discardPile,passedRound});
+    delete state.plans[u.id];planUndo.delete(u.id);return true;
+  }
+  function cancelChoice(){const u=caster(),s=window.WizardrySession;if(state.phase!=="planning"||!u||!s?.active||!state.plans[u.id]||s.pendingPlan)return false;return s.plan({cancel:true,round:state.round});}
   function setBattle(mode="story",size=4,tower=null){
+    planUndo.clear();
     floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;
     hostPlayback={id:Date.now()+"-"+(++battleSerial),time:0,clips:[]};
     guestPlayback=null;guestUiKey=null;
@@ -1733,6 +1745,7 @@
       !requiresRest(u)&&!state.plans[u.id]))return;
     autoFill(0);autoFill(1);
     const order=turnOrder().map(u=>state.plans[u.id]).filter(Boolean);
+    planUndo.clear();
     state.plans=Object.freeze(Object.fromEntries(Object.entries(state.plans)
       .map(([id,plan])=>[id,Object.freeze({...plan})])));
     state.sequence=Object.freeze(order.map(plan=>Object.freeze({...plan})));state.queueAt=0;state.animation=null;state.phase="resolving";
@@ -1782,7 +1795,7 @@
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
     const label=conflict??(emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy");
-    tally(c,"casts",1);
+    tally(c,success?"casts":"failed",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
       c.mana=Math.max(0,c.mana-a.card.cost);
@@ -2309,7 +2322,7 @@
         const t=getUnit(action.targetId),valid=targetsFor(card,c);
         if(!t||t.hp<=0||!valid.some(v=>v.id===t.id)){
           // A locked spell is spent on its original target, never redirected.
-          flash(c,"TARGET DEFEATED · FAILED","#ffd5b0");
+          tally(c,"failed",1);flash(c,"TARGET DEFEATED · FAILED","#ffd5b0");
           recordBattleEvent(c.name+"'s "+card.name+" fails: the locked target is defeated or unavailable.");
           continue;
         }
@@ -2317,13 +2330,13 @@
       if(card.kind==="briarremedy"){
         const notice=targetNotice(getUnit(action.targetId),card);
         if(notice){
-          flash(c,"NO EFFECTS TO CLEANSE","#cbeaa5");
+          tally(c,"failed",1);flash(c,"NO EFFECTS TO CLEANSE","#cbeaa5");
           recordBattleEvent("Briar Remedy was skipped. "+notice);
           continue;
         }
       }
       if(card.kind==="zen"&&!zenRunes(getUnit(action.targetId)).some(st=>st.kind===action.runeKind)){
-        flash(c,"RUNE ALREADY GONE","#d1edaa");
+        tally(c,"failed",1);flash(c,"RUNE ALREADY GONE","#d1edaa");
         continue;
       }
       if(state.environment?.id==="lightningfield"&&!c.masteries?.includes("lightning")&&Math.random()<BY_ID.lightningfield.shockChance){
@@ -3943,7 +3956,7 @@
         testing?"Choose any card. Mana refills each round.":"Slide across your cards to browse. Tap one, then choose a target."):
       "Your wizard is knocked out. Teammates are CPU-controlled.";
     if(planning&&state.targetingNotice)ui.hint.textContent=state.targetingNotice;
-    if(planning&&c&&state.plans[c.id]){ui.phase.textContent="WAITING FOR PLAYERS";ui.hint.textContent="Choice locked in. Waiting for the other players…";}
+    if(planning&&c&&state.plans[c.id]){ui.phase.textContent="WAITING FOR PLAYERS";ui.hint.textContent=window.WizardrySession?.active?"Waiting for other players. Cancel your choice to change it.":"Choice locked in. Waiting for the other players…";}
     const deckCount=$("battleDeckCount");
     if(deckCount)deckCount.textContent=(c?.drawPile.length||0)+" / "+(testing?(c?.grimoire?.length||24):24)+" in deck";
     const history=$("battleHistory");
@@ -3993,6 +4006,7 @@
     ui.confirm.hidden=!canConfirm&&!(planning&&choosesRune(card)&&runes.length);
     ui.confirm.disabled=!canConfirm;
     ui.confirm.textContent=(card?.fieldRounds||choosesRune(card)||card?.kind==="claritystrike"||card?.kind==="hightide")?"Cast "+card.name:card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
+    if(planning&&c&&state.plans[c.id]&&window.WizardrySession?.active){ui.confirm.hidden=false;ui.confirm.disabled=!!window.WizardrySession.pendingPlan;ui.confirm.textContent=window.WizardrySession.pendingPlan?.cancel?"Canceling…":"Cancel Choice";}
     // Preview the same rotating seat order used by resolution. The active resolving
     // action is highlighted, so 4v4 never leaves turn order ambiguous.
     if(ui.initiative){
@@ -4169,7 +4183,7 @@
       setBattle(state.mode,Number(b.dataset.size));
     };
     // Card -> appropriate ally/enemy -> explicit confirmation. CPU teammates can receive healing.
-    ui.confirm.onclick=confirmTarget;
+    ui.confirm.onclick=()=>{if(window.WizardrySession?.active&&state.phase==="planning"&&state.plans[caster()?.id])cancelChoice();else confirmTarget();};
     $("zenRunePicker").onchange=e=>selectZenRune(e.target.value);
     $("passTurn").onclick=passTurn;
     $("discardCard").onclick=discardSelected;
@@ -6667,7 +6681,7 @@
   function guestSnapshotUiKey(combat){
     return JSON.stringify([combat.mode,combat.phase,combat.round,combat.queueAt,combat.skipCue?.source,
       combat.animation?.stage,combat.selectedCard,combat.selectedHandCopy,combat.selectedTarget,combat.selectedRune,
-      Object.values(combat.plans),combat.log,combat.units.map(u=>[u.id,u.hp,u.mana,u.statuses,u.hand,u.drawPile.length])]);
+      Object.values(combat.plans),window.WizardrySession?.pendingPlan?.requestId,combat.log,combat.units.map(u=>[u.id,u.hp,u.mana,u.statuses,u.hand,u.drawPile.length])]);
   }
   function advanceAromatherapyGusts(dt){
     if(!state.aromatherapyGusts?.length)return;
@@ -6729,7 +6743,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,battleCamera,arenaSideSize,grelusDeck,towerProfile,towerEnemyBalance,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,refreshUI:()=>paintUI(),battleCamera,arenaSideSize,grelusDeck,towerProfile,towerEnemyBalance,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));
@@ -6749,6 +6763,8 @@
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     onlineSnapshot,
+    previewPendingPlan:p=>{const u=caster();if(!u||state.phase!=="planning")return false;if(!p.cancel)state.plans[u.id]={casterId:u.id,team:u.team,...p,localPending:true};clearSelection();paintUI();return true;},
+    rejectPendingPlan:p=>{const u=caster();if(u&&state.phase==="planning"&&state.plans[u.id]?.localPending&&state.plans[u.id]?.requestId===p.requestId)delete state.plans[u.id];paintUI();},
     receiveSnapshot:(snapshot,localOnly=false)=>{
       const previous=caster(), previousRound=state.round, previousUnits=state.units;
       const discard=previous?.discardedRound===previousRound?previous.discardedCard:null;
@@ -6772,8 +6788,8 @@
       if(mine)state.humanByTeam[mine.team]=mine.id;
       if(mine&&session?.pendingPlan){
         const pending=session.pendingPlan;
-        if(state.phase!=="planning"||pending.round!==state.round||state.plans[mine.id])session.pendingPlan=null;
-        else state.plans[mine.id]={casterId:mine.id,...pending};
+        if(state.phase!=="planning"||pending.round!==state.round||mine.lastPlanRequest===pending.requestId||(!pending.requestId&&state.plans[mine.id]))session.pendingPlan=null;
+        else if(!pending.cancel&&!state.plans[mine.id])state.plans[mine.id]={casterId:mine.id,team:mine.team,...pending,localPending:true};
       }
       state.selectedCard=mine?.hand.includes(selectedCard)&&!state.plans[mine.id]?selectedCard:null;
       state.selectedTarget=state.selectedCard?selectedTarget:null;
@@ -6781,15 +6797,19 @@
       const key=guestSnapshotUiKey(state);
       if(key!==guestUiKey){guestUiKey=key;paintUI();}
     },
-    submitRemotePlan:(peerId,p)=>{const u=state?.units.find(u=>u.peerId===peerId);if(state.phase!=='planning'||!u||u.hp<=0||p.round!==state.round||state.plans[u.id])return false;
+    submitRemotePlan:(peerId,p,defer=false)=>{const u=state?.units.find(u=>u.peerId===peerId);if(state.phase!=='planning'||!u?.isHuman||u.hp<=0||p.round!==state.round)return false;
+      if(p.requestId&&u.lastPlanRequest===p.requestId)return false;
+      if(p.requestId)u.lastPlanRequest=p.requestId;
+      if(p.cancel){const ok=cancelOnlinePlan(u);if(u.id===caster()?.id)clearSelection();if(!defer)paintUI();return ok;}
+      if(state.plans[u.id])return false;
       const needsDiscard=p.discardId&&u.discardedRound!==state.round;
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
-      if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
+      if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);rememberPlan(u);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
       else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(targetNotice(t,card))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
-       if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:choosesRune(card)?p.runeKind??null:null,team:u.team};}
-      clearSelection();autoFill(0);autoFill(1);runResolution();paintUI();return true;},
+       rememberPlan(u);if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:choosesRune(card)?p.runeKind??null:null,team:u.team};}
+      if(u.id===caster()?.id)clearSelection();if(!defer){autoFill(0);autoFill(1);runResolution();paintUI();}return true;},
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 

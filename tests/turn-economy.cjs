@@ -5,7 +5,7 @@ vm.runInNewContext(fs.readFileSync('arena.js','utf8').replace('  setupControlHan
 const api=ctx.window.WIZARDRY_ARENA_TEST;
 function battle(){api.startPractice(2);return api.getState();}
 // Failed accuracy and dead targets preserve mana and never heal through a rod.
-for(const success of [false,true]){const s=battle(),u=s.units[0],ally=s.units[1],enemy=s.units[2];u.mana=16;ally.hp=50;api.applyLightningRod(ally);s.phase='resolving';s.sequence=[{casterId:u.id,cardId:'volt',targetId:enemy.id}];s.queueAt=0;api.startNextAction();assert.equal(u.mana,16);s.animation.stage='tracing-auto';math.random=()=>success?0:.999;api.resolveAutoRune();assert.equal(u.mana,success?13:16);assert.equal(ally.hp,50);}
+for(const success of [false,true]){const s=battle(),u=s.units[0],ally=s.units[1],enemy=s.units[2];u.mana=16;ally.hp=50;api.applyLightningRod(ally);s.phase='resolving';s.sequence=[{casterId:u.id,cardId:'volt',targetId:enemy.id}];s.queueAt=0;api.startNextAction();assert.equal(u.mana,16);s.animation.stage='tracing-auto';math.random=()=>success?0:.999;api.resolveAutoRune();assert.equal(u.mana,success?13:16);assert.equal(u.matchStats.casts||0,success?1:0);assert.equal(u.matchStats.failed||0,success?0:1);assert.equal(ally.hp,50);}
 {const s=battle(),u=s.units[0],ally=s.units[1],enemy=s.units[2];u.mana=16;enemy.hp=0;ally.hp=50;api.applyLightningRod(ally);s.phase='resolving';s.sequence=[{casterId:u.id,cardId:'volt',targetId:enemy.id}];s.queueAt=0;api.startNextAction();assert.equal(ally.hp,50);assert.equal(u.mana,17);}
 // Discard is optional, once per round, goes to draw-pile bottom, no immediate draw.
 {const s=battle(),u=s.units[0];u.hand=['croc','shark','winddome','ronin','calming'];u.drawPile=['poseidon','wind'];u.discardPile=[];assert.equal(api.discardFromHand(u,'croc'),true);assert.equal(u.hand.length,4);assert.deepEqual(Array.from(u.drawPile),['poseidon','wind','croc']);assert.equal(api.discardFromHand(u,'shark'),false);api.drawCard(u);assert.equal(u.hand.length,5);assert.equal(u.hand[4],'poseidon');api.drawCard(u);assert.equal(u.hand.length,5);s.round++;assert.equal(api.discardFromHand(u,'shark'),true);}
@@ -112,3 +112,5 @@ for(const [first,second] of [['bubbleshield','sandwarrior'],['reflectiveice','sa
  }
 }
 console.log('Battle updates: skip timing, fizzle regeneration, immediate deck recycling, four-debuff cap, and stacked barrier priority passed.');
+
+{const u=battle().units[0];u.hand=['croc','shark','winddome','ronin','calming'];u.drawPile=[];u.discardPile=['poseidon','volt'];assert.equal(api.drawCard(u),null);assert.equal(u.drawPile.length,2,'full hand immediately recycles spent cards');assert.equal(u.discardPile.length,0);}

@@ -71,3 +71,15 @@
     --card-width:clamp(114px,17dvh,140px);
   }
 }
+
+/* Keep the rotated bottom corners inside the fan track, above the controls. */
+#game #cardHand.cards>button.spell.card-ornate:not(.browsed){
+  max-height:calc(100% - 20px)!important;
+}
+/* A highlighted card can grow up into the arena, away from the controls. */
+#game #cardHand.cards>button.spell.card-ornate.browsed{
+  top:auto!important;
+  bottom:10px;
+  transform:translateX(-50%)!important;
+}
+#game .hand-assist{z-index:20}

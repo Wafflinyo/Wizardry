@@ -75,8 +75,9 @@ async function restoreAccount(){
 async function signOutAccount(){
  if(!account||busyAccount)return;busyAccount=true;
  try{if(account.dirty&&!await flushCloud())throw Error('Your changes are still on this device. Resolve the sync issue before signing out.');
+ try{await socialRequest('offline');}catch{}
  try{await cloudRequest('logout',{token:account.token});}catch(e){if(e.status!==401)throw Error('Unable to sign out safely. Try again when connected.');}
- localStorage.removeItem(ACCOUNT_KEY);localStorage.removeItem(CACHE_KEY+account.username);account=null;conflict=null;expired=false;cloudMessage='';saved=guestCollection();active=null;draft=null;onlineProfile=null;screen('home');}finally{busyAccount=false;}
+ localStorage.removeItem(ACCOUNT_KEY);localStorage.removeItem(CACHE_KEY+account.username);account=null;resetSocial();conflict=null;expired=false;cloudMessage='';saved=guestCollection();active=null;draft=null;onlineProfile=null;screen('home');}finally{busyAccount=false;}
 }
 function importGuest(){
  const additions=guestCollection().filter(p=>!saved.some(q=>q.id===p.id));if(!additions.length)throw Error('No new browser wizards to import.');saveCollection([...saved,...additions]);render();
@@ -96,6 +97,90 @@ function renderAccountLogin(signup){
  shell('<section class="portal-hero"><h1>'+(signup?'Create Account':'Log In')+'</h1><p>Save your wizards across devices.</p><form id="cloudForm" class="menu-stack"><label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_]{3,24}" minlength="3" maxlength="24" required value="'+escape(account?.username||'')+'" '+(account?'readonly':'')+'></label><label class="field"><span>Password</span><input name="password" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="10" maxlength="72" required></label>'+(signup?'<label class="field"><span>Confirm password</span><input name="confirm" type="password" autocomplete="new-password" required></label><p class="portal-note">Username: 3–24 letters, numbers or underscores. Password: at least 10 characters. No password recovery is available yet.</p>':'')+'<button type="submit" class="portal-btn primary">'+(signup?'Create Account':'Log In')+'</button></form><div class="portal-actions">'+(!account?btn(signup?'Already have an account? Log in':'Create Account',signup?'cloudLogin':'cloudSignup','subtle'):'')+btn('Back',account?'cloudAccount':'home','subtle')+'</div></section>');
 }
 
+
+const SOCIAL_ENDPOINT='https://vocaddalptoghysgdkvh.supabase.co/functions/v1/wizardry-social';
+let socialOwner=null,socialData={friends:[],invites:[]},socialFlight=null,socialAt=0,socialSignature='',socialBusy=false,pendingSocialInvite=null;
+const socialDialog=()=>el('friendsDialog');
+const socialError=message=>{const n=el('friendsStatus');if(n)n.textContent=message;};
+async function socialRequest(action,payload={}){
+ if(!account||expired)throw Error('Sign in to use friends.');
+ const owner=account.token,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+ try{
+  const r=await fetch(SOCIAL_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token:owner,payload}),signal:controller.signal});
+  const d=await r.json();if(account?.token!==owner)throw Error('Account changed.');
+  if(!r.ok)throw Error(d.error||'Friends request failed.');return d;
+ }finally{clearTimeout(timer);}
+}
+function updateFriendBadge(){
+ const count=socialData.invites.length+socialData.friends.filter(f=>f.state==='incoming').length;
+ const b=el('friendsMenuButton');if(b)b.textContent='Friends'+(count?' ('+count+')':'');
+}
+function resetSocial(){
+ socialOwner=account?.token||null;socialData={friends:[],invites:[]};socialAt=0;socialSignature='';pendingSocialInvite=null;
+ updateFriendBadge();if(!account&&socialDialog()?.open)socialDialog().close();
+}
+function renderSocial(force=false){
+ updateFriendBadge();
+ if(!socialDialog()?.open)return;
+ const canInvite=!!(session.isHost&&session.roomId&&session.lobby?.phase==='lobby');
+ const signature=JSON.stringify([socialData,canInvite]);if(!force&&socialSignature===signature)return;socialSignature=signature;
+ const action=(label,kind,user,id)=>'<button type="button" class="portal-btn small" data-social-action="'+kind+'" '+(user?'data-social-user="'+escape(user)+'" ':'')+(id?'data-social-id="'+escape(id)+'"':'')+'>'+label+'</button>';
+ const row=(name,status,buttons)=>'<div class="social-row"><div><strong>'+escape(name)+'</strong><small>'+escape(status)+'</small></div><div class="social-actions">'+buttons+'</div></div>';
+ const groups=[['Friends',socialData.friends.filter(f=>f.state==='friend').sort((a,b)=>Number(b.online)-Number(a.online)||a.username.localeCompare(b.username)),f=>row(f.username,f.online?'● Online':'○ Offline',(canInvite?action('Invite','invite',f.username):'')+action('Remove','remove',f.username))],['Friend requests',socialData.friends.filter(f=>f.state==='incoming'),f=>row(f.username,'Wants to be your friend',action('Accept','accept',f.username)+action('Decline','remove',f.username))],['Sent requests',socialData.friends.filter(f=>f.state==='outgoing'),f=>row(f.username,'Pending',action('Cancel','remove',f.username))]];
+ el('friendsList').innerHTML=(canInvite?'<p class="portal-note">Invite friends into your current '+(towerLobby?'Tower':'Online Battles')+' lobby.</p>':'<p class="portal-note">Host a Tower or Online Battles lobby to invite friends.</p>')+groups.map(([name,rows,html])=>'<section><h3>'+name+' · '+rows.length+'</h3>'+(rows.map(html).join('')||'<p class="portal-note">None yet.</p>')+'</section>').join('');
+ el('friendsInvites').innerHTML='<h3>Game invitations · '+socialData.invites.length+'</h3>'+(socialData.invites.map(i=>row(i.username,i.tower?'Caglimot Tower':'Online Battles',action('Join','inviteAccept',null,i.id)+action('Decline','inviteDecline',null,i.id))).join('')||'<p class="portal-note">No pending invites.</p>');
+}
+function fillSocialWizards(){
+ const select=el('friendsWizard'),old=select.value;
+ select.innerHTML=saved.map(p=>'<option value="'+escape(p.id)+'">'+escape(p.name)+' · Lv '+p.level+'</option>').join('');
+ if(saved.some(p=>p.id===old))select.value=old;else if(active&&saved.some(p=>p.id===active.id))select.value=active.id;
+ if(!saved.length)select.innerHTML='<option value="">Create a wizard first</option>';
+}
+async function pollSocial(force=false){
+ if(socialOwner!==account?.token)resetSocial();
+ if(!account||expired||document.hidden||(!force&&Date.now()-socialAt<10000))return;
+ if(socialFlight)return socialFlight;
+ const owner=account.token;socialAt=Date.now();
+ socialFlight=(async()=>{try{const d=await socialRequest('list');if(account?.token!==owner)return;
+ socialData={friends:Array.isArray(d.friends)?d.friends:[],invites:Array.isArray(d.invites)?d.invites:[]};renderSocial();
+ }catch(e){if(account?.token===owner&&socialDialog()?.open)socialError(e.message);}finally{socialFlight=null;}})();
+ return socialFlight;
+}
+async function openFriends(){
+ if(!account||expired){error('Sign in to use friends.');return;}
+ if(socialOwner!==account.token)resetSocial();
+ const dialog=socialDialog();if(!dialog)return;
+ if(!dialog.open)dialog.showModal();fillSocialWizards();socialError('');renderSocial(true);await pollSocial(true);
+}
+async function finishSocialJoin(invite){
+ if(account?.token!==invite.owner)throw Error('Account changed.');
+ try{const latest=await socialRequest('inviteAccept',{id:invite.id});if(latest.roomId!==invite.roomId||latest.tower!==invite.tower)throw Error('Invitation changed. Open Friends again.');
+  if(await join(latest.roomId,latest.tower)){try{await socialRequest('inviteDecline',{id:invite.id});}catch{}void pollSocial(true);}
+ }catch(e){error(e.message);}
+}
+async function acceptSocialInvite(id){
+ if(document.body.dataset.screen==='battle'||session.active)throw Error('Finish your current battle before joining another.');
+ const wizard=saved.find(p=>p.id===el('friendsWizard').value);if(!wizard)throw Error('Select a saved wizard first.');
+ const d=await socialRequest('inviteAccept',{id});if(d.tower&&wizard.rogue?.pending)throw Error('Claim this wizard’s pending Tower spells before joining.');
+ if(session.roomId&&!window.confirm('Leave your current lobby and join this friend?'))return;
+ if(['create','towerDeck','spellDraft','wizardTester'].includes(view)&&!window.confirm('Leave the current editor and join this friend? Unsaved edits will be lost.'))return;
+ if(session.roomId)closeSession();active=wizard;onlineProfile=null;towerMessage='';api.configureProfile(active);
+ socialDialog().close();const invite={id,owner:account.token,roomId:d.roomId,tower:d.tower};
+ if(!d.tower&&!ownBuildReady()){pendingSocialInvite=invite;buildOnline();return;}
+ if(!d.tower)onlineProfile=active;await finishSocialJoin(invite);
+}
+async function onSocialAction(button){
+ if(socialBusy)return;socialBusy=true;button.disabled=true;
+ try{
+  const action=button.dataset.socialAction,username=button.dataset.socialUser,id=button.dataset.socialId;
+  if(action==='inviteAccept'){await acceptSocialInvite(id);return;}
+  if(action==='remove'&&socialData.friends.some(f=>f.username===username&&f.state==='friend')&&!window.confirm('Remove '+username+' from your friends?'))return;
+  if(action==='invite'&&(!session.isHost||session.lobby?.phase!=='lobby'))throw Error('Host an open lobby first.');
+  await socialRequest(action,action==='invite'?{username,roomId:session.roomId,lobbyToken:session.token}:id?{id}:{username});
+  socialError(action==='invite'?'Invitation sent.':action==='accept'?'Friend added.':'Updated.');await pollSocial(true);
+ }catch(e){socialError(e.message);}finally{socialBusy=false;button.disabled=false;}
+}
+
 let onlineDraft=false,onlineProfile=null,towerLobby=false,towerMessage='';
 let libraryTestProfile=null;
 let binderElement='',deckDraft=null,deckReturn='progression',draftReturn='tower',offerChoices={};
@@ -104,7 +189,7 @@ const incomingTower=new URLSearchParams(location.search).get('tower')==='1';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=id=>document.getElementById(id),title=e=>B.names[e],btn=(text,action,cls='')=>`<button class="portal-btn ${cls}" data-action="${action}">${text}</button>`;
 function error(message){let n=el('portalError');if(!n){n=document.createElement('div');n.id='portalError';n.className='portal-error';n.setAttribute('role','alert');portal.prepend(n);}n.textContent=String(message);}
-function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark studio-credit"><span aria-hidden="true">✦</span> Wafflinyo Studio Presents</div><button type="button" class="portal-btn small menu-music" data-menu-music aria-label="Menu music" aria-pressed="true">Music On</button><button type="button" class="portal-btn small" data-audio-settings>Audio</button></header>${account?`<p id="cloudStatus" class="portal-note" role="status">${escape(cloudMessage)}</p>`:''}${content}</div>`;window.WizardryMenuMusic?.sync();}
+function shell(content){portal.innerHTML=`<div class="portal-shell"><header class="portal-top"><div class="wordmark studio-credit"><span aria-hidden="true">✦</span> Wafflinyo Studio Presents</div><button type="button" class="portal-btn small menu-music" data-menu-music aria-label="Menu music" aria-pressed="true">Music On</button><button type="button" class="portal-btn small" data-audio-settings>Audio</button>${account?'<button type="button" id="friendsMenuButton" class="portal-btn small" data-friends-open>Friends</button>':''}</header>${account?`<p id="cloudStatus" class="portal-note" role="status">${escape(cloudMessage)}</p>`:''}${content}</div>`;window.WizardryMenuMusic?.sync();if(account){updateFriendBadge();void pollSocial();}}
 function screen(next){deleteId=null;view=next;document.body.dataset.portalView=next;document.body.dataset.screen='home';cancelAnimationFrame(previewFrame);render();}
 function summary(p){const s=B.stats(p);return `<div class="stats-strip"><span><b>${s.hp.toLocaleString()}</b>HP</span><span><b>${s.mana}</b>Mana</span><span><b>${p.level}</b>Level</span></div>`;}
 function render(){
@@ -256,7 +341,7 @@ function save(){
  readDraft();requireName();
  if(onlineDraft&&B.stats(draft).remaining)throw Error('Allocate all 20 skill points for your online build.');
  const profile=B.normalize(draft,cards,true);
- if(onlineDraft){onlineProfile=profile;onlineDraft=false;screen('online');return;}
+ if(onlineDraft){onlineProfile=profile;onlineDraft=false;screen('online');if(pendingSocialInvite){const invite=pendingSocialInvite;pendingSocialInvite=null;void finishSocialJoin(invite);}return;}
  persistProfile(profile);onlineProfile=null;api.configureProfile(profile);screen('hub');
 }
 function editProfile(profile){
@@ -417,7 +502,7 @@ async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=t
  }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
 function startPolling(){clearInterval(broadcastTimer);clearInterval(battleTimer);lastClock=performance.now();session.clockAt=lastClock;broadcastTimer=setInterval(syncRoom,400);battleTimer=setInterval(()=>{const now=performance.now();if(session.active&&session.isHost)api.advanceBackground(now-lastClock);lastClock=now;session.clockAt=now;},40);}
 async function host(tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
-async function join(code,tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
+async function join(code,tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();return true;}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);return false;}}
 function hostSeat(peerId,team,slot){command('seat',{team,slot}).catch(e=>error(e.message));}
 function renderLobby(){if(towerLobby&&session.lobby){renderTowerLobby();return;}const l=session.lobby;if(!l){shell(`<h1>Connecting to the colosseum…</h1>${btn('Back','hub')}`);return;}const mine=l.players.find(p=>p.peerId===session.peerId),link=new URL('arena.html',location.href);link.searchParams.set('lobby',l.hostId);link.searchParams.set('v','0.135.0');const ready=l.players.every(p=>p.isCpu||p.ready)&&[0,1].every(t=>l.players.some(p=>p.team===t));
  shell(`<div class="portal-heading"><div><p class="portal-eyebrow">ONLINE TEST · ${l.players.filter(p=>!p.isCpu).length} PLAYERS · ${l.players.filter(p=>p.isCpu).length} CPUs</p><h1>The gathering</h1></div>${btn('Leave lobby','leave','subtle')}</div><div class="network-notice">Choose your team and seat, then ready up. The host can add randomized CPUs to any open seat. Both teams need at least one wizard. Empty seats stay empty. The host must keep the match open.</div><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${session.isHost?`<label class="field"><span>SEATS PER TEAM</span><select id="lobbySize">${[1,2,3,4].map(n=>`<option value="${n}" ${n===l.size?'selected':''}>${n} per team</option>`).join('')}</select></label>`:`<p>Up to ${l.size} per team</p>`}<div class="lobby-grid">${[0,1].map(team=>`<div class="portal-panel lobby-team"><h2>Team ${team?'Moon':'Sun'}</h2>${Array.from({length:l.size},(_,slot)=>{const p=l.players.find(p=>p.team===team&&p.slot===slot);return `<div class="lobby-seat ${p?.ready?'ready':''}"><div><strong>${p?escape(p.profile.name):'Open seat '+(slot+1)}</strong><small>${p?p.profile.masteries.map(title).join(' + ')+' · '+(p.isCpu?'CPU':p.ready?'Ready':'Not ready'):'Empty'}</small></div><div class="seat-actions">${p?.peerId===session.peerId?'<span>You</span>':p?.isCpu?(session.isHost?`<button class="portal-btn small" data-remove-cpu="${team},${slot}">Remove CPU</button>`:''):!p?`<button class="portal-btn small" data-seat="${team},${slot}">Sit here</button>${session.isHost?`<button class="portal-btn small" data-add-cpu="${team},${slot}">Add CPU</button>`:''}`:''}</div></div>`;}).join('')}</div>`).join('')}</div><div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready',mine?.ready?'':'primary')}${session.isHost?`<button class="portal-btn primary" data-action="startOnline" ${!ready?'disabled':''}>Start match</button>`:''}</div>`);}
@@ -513,7 +598,7 @@ portal.addEventListener('click',async e=>{if(busyAccount)return;const button=e.t
    nameLists.forEach((_,i)=>randomizeNamePart(i));
    return;
  }
- if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.fillOwned(cards,draft);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
+ if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.fillOwned(cards,draft);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){pendingSocialInvite=null;const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
  else if(action==='online')openOnline();
  else if(action==='buildOnline')buildOnline();
  else if(action==='useOwn'&&ownBuildReady()){onlineProfile=active;screen('online');}
@@ -542,7 +627,20 @@ document.getElementById('testerOpponentMode').onchange=e=>api.switchTesterOppone
 document.getElementById('testerTarget').onchange=e=>api.switchTesterTarget(e.target.value);
 document.getElementById('resetTester').onclick=()=>startCardTester(api.getState().size);
 document.getElementById('resetButton').onclick=()=>{if(!session.active){if(api.getState().mode==='tester')startCardTester(api.getState().size);else if(api.getState().tower)screen('tower');else startBattle(api.getState().size);}};
-window.addEventListener?.('online',()=>{if(account?.dirty)void flushCloud();});
+if(typeof window.addEventListener==='function'){
+ document.addEventListener('click',e=>{
+  const opener=e.target.closest('[data-friends-open]');if(opener){void openFriends();return;}
+  const button=e.target.closest('[data-social-action]');if(button&&!button.disabled)void onSocialAction(button);
+ });
+ el('friendsClose').addEventListener('click',()=>socialDialog().close());
+ el('friendsAddForm').addEventListener('submit',async e=>{
+  e.preventDefault();if(socialBusy)return;socialBusy=true;const input=el('friendsUsername'),button=el('friendsAddButton');button.disabled=true;
+  try{await socialRequest('request',{username:input.value.trim()});input.value='';socialError('Friend request sent.');await pollSocial(true);}
+  catch(err){socialError(err.message);}finally{button.disabled=false;socialBusy=false;}
+ });
+ setInterval(()=>{if(account&&!expired)void pollSocial();},12000);
+}
+window.addEventListener?.('online',()=>{if(account?.dirty)void flushCloud();if(account)void pollSocial(true);});
  document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible'&&account?.dirty)void flushCloud();});
  if(stored(ACCOUNT_KEY,null)?.token)void restoreAccount();
  else if(new URLSearchParams(location.search).get('tester')==='wizard')create(true);

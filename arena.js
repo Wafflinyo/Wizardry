@@ -415,6 +415,19 @@
     4:[[[265,410],[130,475],[180,550],[330,605]],
        [[735,390],[870,455],[820,530],[670,590]]]
   };
+  // A shared wide formation keeps host and guest spell coordinates identical.
+  const ONLINE_TEAM_OFFSET=120,ONLINE_ARENA_MARGIN=140;
+  const arenaSideSize=(size,tower,team)=>tower&&team===0?tower.partySize:size;
+  function battleCamera(vw,vh,battle){
+    const fieldHeight=Math.max(1,vh-30),sceneHeight=battle.size>1?730:H;
+    const worldWidth=W+(battle.mode==="online"?2*ONLINE_ARENA_MARGIN:0);
+    const fit=Math.min(vw/worldWidth,fieldHeight/sceneHeight);
+    return {scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
+  }
+  function arenaHorizontalMargin(){
+    const visible=Math.max(0,camera.x/camera.scale);
+    return state?.mode==="online"?Math.max(ONLINE_ARENA_MARGIN,visible):state?.desktopArena?visible:0;
+  }
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
   const lerp=(a,b,t)=>a+(b-a)*t;
   const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
@@ -1169,9 +1182,9 @@
                  ...(mode==="pvp"?PVP_WIZARDS:ENEMIES).slice(0,size).map((d,i)=>createUnit(d,1,i))].filter(u=>!(tower||mode==="online")||activeRoster?.some(p=>p.team===u.team&&p.slot===u.index));
     // Online clients share the host's world coordinates for spell effects.
     const desktopArena=mode!=="online"&&window.matchMedia?.("(min-width: 1024px) and (any-pointer: fine)").matches;
-    const teamOffset=desktopArena?120:0;
+    const teamOffset=mode==="online"?ONLINE_TEAM_OFFSET:desktopArena?120:0;
     for(const u of units){
-      const sideSize=tower&&u.team===0?tower.partySize:size;
+      const sideSize=arenaSideSize(size,tower,u.team);
       const [x,y]=scenePositions[sideSize][u.team][u.index];
       u.x=x+(u.team?teamOffset:-teamOffset);
       u.y=y;
@@ -2367,14 +2380,14 @@
       for(const f of messages){
         const width=c.measureText(f.text).width+12,height=fontSize+12;
         if(width>W-24)break;
-        const margin=state?.desktopArena?camera.x/camera.scale:0;
+        const margin=arenaHorizontalMargin();
         const x=clamp(f.x,width/2+12-margin,W-width/2-12+margin),y=clamp(f.y-f.age*67,height/2+12,H-height/2-12);
-        const xs=[x,width/2+12,W-width/2-12],ys=[y,height/2+12,H-height/2-12];
+        const xs=[x,width/2+12-margin,W-width/2-12+margin],ys=[y,height/2+12,H-height/2-12];
         for(const b of placed){ys.push(b.y-(b.height+height)/2-gap,b.y+(b.height+height)/2+gap);xs.push(b.x-(b.width+width)/2-gap,b.x+(b.width+width)/2+gap);}
         const candidates=[];
         for(const px of xs)for(const py of ys){
           const box={f,x:px,y:py,width,height,fontSize};
-          if(px-width/2<12||px+width/2>W-12||py-height/2<12||py+height/2>H-12||placed.some(b=>overlaps(box,b)))continue;
+          if(px-width/2<12-margin||px+width/2>W-12+margin||py-height/2<12||py+height/2>H-12||placed.some(b=>overlaps(box,b)))continue;
           candidates.push(box);
         }
         candidates.sort((a,b)=>(a.x-x)**2*4+(a.y-y)**2-((b.x-x)**2*4+(b.y-y)**2));
@@ -4787,7 +4800,7 @@
     // Give the outer lower plate clearance from the inner plate's HP row.
     const outward=u.team?1:-1;
     const offset=top&&index===1?32*outward:team.length===4&&index===2?24*outward:0;
-    const margin=state?.desktopArena?camera.x/camera.scale:0;
+    const margin=arenaHorizontalMargin();
     return {x:clamp(u.x-w/2+offset,8-margin,W-w-8+margin),y:top?Math.max(8,u.y-guardianVisualHeight(u)*scale-64):u.y+14+(unitSlotFactor(u)-1)*21*scale,w,h:52,above:top};
   }
   function plateIsTarget(u,a){
@@ -5562,13 +5575,13 @@
     const bounds=canvas.getBoundingClientRect(),vw=Math.max(1,bounds.width),vh=Math.max(1,bounds.height),ratio=Math.min(window.devicePixelRatio||1,floorIntro?3:2);
     const pw=Math.round(vw*ratio),ph=Math.round(vh*ratio);if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}
     g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#06151f';g.fillRect(0,0,vw,vh);
-    const fieldHeight=Math.max(1,vh-30),sceneHeight=state.size>1?730:H,fit=Math.min(vw/W,fieldHeight/sceneHeight);
-    camera={scale:fit,x:(vw-W*fit)/2,y:(fieldHeight-sceneHeight*fit)/2};
-    if(state.desktopArena&&state.phase==="planning"){
+    camera=battleCamera(vw,vh,state);
+    const fit=camera.scale;
+    if(state.mode!=="online"&&state.desktopArena&&state.phase==="planning"){
       const visibleWidth=vw/fit;
       const offset=Math.max(0,Math.min(340,visibleWidth*.18-170,visibleWidth/2-480));
       for(const unit of state.units){
-        const [x]=scenePositions[state.size][unit.team][unit.index];
+        const [x]=scenePositions[arenaSideSize(state.size,state.tower,unit.team)][unit.team][unit.index];
         unit.x=x+(unit.team?offset:-offset);
       }
     }
@@ -6716,7 +6729,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,grelusDeck,towerProfile,towerEnemyBalance,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,battleCamera,arenaSideSize,grelusDeck,towerProfile,towerEnemyBalance,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));

@@ -25,6 +25,31 @@ for(const size of [1,2,3,4]){
     assert.equal(unit.y,compact[index].y);
   }
 }
+// Online host coordinates must be the same on phone and desktop, with enough
+// camera room for the wider formation, attached HP plates and all four runes.
+for(const size of [1,2,3,4]){
+ ctx.window.matchMedia=()=>({matches:false});
+ api.startPractice(size);
+ const compact=api.getState().units.map(({x,y})=>({x,y}));
+ const roster=compact.map((_,i)=>({team:i<size?0:1,slot:i%size,isCpu:false,peerId:'qa'+i,profile:ctx.window.WizardryBuilds.cpu(api.cards,i)}));
+ for(const desktop of [false,true]){
+  ctx.window.matchMedia=()=>({matches:desktop});
+  api.startLobby(roster,size);
+  const battle=api.getState();
+  assert.equal(battle.mode,'online');
+  for(const [i,u] of battle.units.entries()){
+   assert.equal(u.x,compact[i].x+(u.team?120:-120),'shared wide online positions');
+   assert.equal(u.y,compact[i].y);
+   for(const [w,h] of [[390,550],[844,350],[1440,700],[1920,900]]){
+    const c=api.battleCamera(w,h,battle),plate=api.unitPlateRect(u);
+    assert.ok(c.x+plate.x*c.scale>=-.001&&c.x+(plate.x+plate.w)*c.scale<=w+.001,'HP plate fits viewport');
+    for(let index=0;index<4;index++){const rune=api.statusRuneRect(u,index);assert.ok(c.x+(rune.x-rune.r)*c.scale>=-.001&&c.x+(rune.x+rune.r)*c.scale<=w+.001,'rune fits viewport');}
+   }
+  }
+ }
+}
+assert.equal(api.arenaSideSize(2,{partySize:1},0),1);
+assert.equal(api.arenaSideSize(2,{partySize:1},1),2);
 delete ctx.window.matchMedia;
 let trace,outcome;ctx.window.WIZARDRY_ELEMENT_TRACE_V45={draw:(g,o)=>trace=o,drawOutcome:(g,o)=>outcome=o};const a={stage:'tracing-auto',card:api.cards[0],elapsed:300,duration:1600};api.drawAirborneRune(a);a.stage='rune-success';api.drawRuneOutcome(a);assert.equal(trace.centerY,440);assert.equal(outcome.centerY,440);
 for(const f of ['jack-v129.js','octo-whip-v95.js','forrest-centaur-v100.js'])vm.runInNewContext(fs.readFileSync('assets/'+f,'utf8'),ctx);

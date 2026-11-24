@@ -617,7 +617,7 @@
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=2200,ARM_LOWER_MS=340,FIZZLE_MS=360;
   const RUNE_GLOW_MS=620,RUNE_CRUMBLE_MS=700;
-  const MINION_CAST_MS={raise:170,trace:1100,glow:280,crumble:340,preview:650};
+  const MINION_GESTURE_FRAME_MS=95;
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Original full Golem animation: emerge, clasp, wind up, slam,
   // stand/idle, then dissolve while the independent fissure is still moving.
@@ -1337,14 +1337,14 @@
         a.targetPoint=goal?{x:goal.x,y:goal.y+8}:null;
         a.golemPostSlamMs=0;
       }
-      startStage(a,"rune-success",c.testerMinion?MINION_CAST_MS.glow:RUNE_GLOW_MS);
+      startStage(a,"rune-success",RUNE_GLOW_MS);
       ui.hint.textContent=c.name+" completes the "+a.card.school+
         " rune ("+label+") — it pulses with magical light!";
     }else{
       // Keep the FAILED glyph on screen until its own darkening/crumbling
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
-      startStage(a,"rune-fail",c.testerMinion?MINION_CAST_MS.crumble:RUNE_CRUMBLE_MS);
+      startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
       flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?(a.card.kind==="coldstorage"?"FOUR DEBUFF RUNES":"SHIELD CONFLICT"):full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
@@ -1479,7 +1479,7 @@
     if(a.elapsed<a.duration)return;
     if(a.stage==="raising"){
       caster.armRaise=1;
-      startStage(a,"tracing-auto",caster.testerMinion?MINION_CAST_MS.trace:AUTO_TRACE_MS);
+      startStage(a,"tracing-auto",AUTO_TRACE_MS);
       const nextBonus=(caster.statuses.find(st=>st.kind==="tailwind")?.value||0)-(caster.statuses.find(st=>st.kind==="static_shock")?.value||0)-(caster.statuses.find(st=>st.kind==="turbulence")?.value||0)-thornAccuracyPenalty(caster)-boulderPenalty(caster);
       ui.hint.textContent=caster.name+" automatically traces the "+a.card.school+
         " rune · "+Math.round(Math.max(0,Math.min(1,a.card.accuracy+nextBonus))*100)+"% accuracy";
@@ -1883,7 +1883,7 @@
         return;
       }
       c.armRaise=0;
-      state.animation={action,card,stage:"raising",elapsed:0,duration:c.testerMinion?MINION_CAST_MS.raise:ARM_RAISE_MS,
+      state.animation={action,card,stage:"raising",elapsed:0,duration:ARM_RAISE_MS,
         applied:false,traceMs:0,source:c.id,target:action.targetId,
         automatic:!!action.auto||(state.mode==="story"&&c.team===1),
         runeResult:null,runeScore:null};
@@ -4193,18 +4193,20 @@
     if(minion?.art.naturalWidth){
       const elapsed=time-(u.minionPreview??-Infinity);
       const current=state.animation?.source===u.id?state.animation:null;
-      const preview=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<MINION_CAST_MS.preview;
+      const preview=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<AUTO_TRACE_MS;
       const tracing=current?.stage==="tracing-auto";
       const casting=preview||tracing||current?.stage==="raising"||current?.stage==="lowering";
       const row=u.hp<=0?2:casting?1:0;
-      const phase=preview?elapsed/MINION_CAST_MS.preview:tracing?(current.elapsed/current.duration):current?.stage==="lowering"?1:0;
+      const gestureFrame=preview||tracing
+        ?Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%6
+        :current?.stage==="lowering"?5:0;
       const frame=row===2?Math.min(5,Math.floor(5*(u.defeatElapsedMs||0)/DEFEAT_HOLD_MS)):
-        casting?Math.min(5,Math.floor(phase*6)):Math.floor((time+u.index*160)/160)%6;
+        casting?gestureFrame:Math.floor((time+u.index*160)/160)%6;
       const top=-153*minion.size/160;
       g.drawImage(minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
       if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
-          school:minion.school,elapsed,duration:MINION_CAST_MS.preview,centerX:-115,centerY:-100,scale:3.3
+          school:minion.school,elapsed,duration:AUTO_TRACE_MS,centerX:-115,centerY:-100,scale:3.3
         });
       }
       g.restore();return;

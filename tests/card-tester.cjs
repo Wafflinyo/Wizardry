@@ -214,7 +214,7 @@ const assert = require('node:assert/strict');
     }
     assert.equal(battle.animation.source,foes[0].id);
     assert.equal(battle.animation.stage,'tracing-auto');
-    assert.equal(battle.animation.duration,1100,'minion rune tracing takes half the wizard tracing time');
+    assert.equal(battle.animation.duration,api.runeTiming().trace,'minions and wizards use the same rune timing');
     api.advanceBackground(28000);
     assert.equal(battle.phase,'planning');
     assert.ok(battle.units.slice(0,2).some((u,i)=>u.hp<(i===0?hp:u.maxHp)));

@@ -1139,6 +1139,16 @@
     floor21Wind(g,x,y,time,force,true);
   }
 
+  // Solo reinforcement encounters should not have the combined resources
+  // of two full-strength wizards. Scale at encounter creation, not when a
+  // minion dies, so no combatant suddenly changes strength mid-battle.
+  function towerEnemyBalance(tower,enemyCount,bossId){
+    const extra=(1+.08*(tower.partySize-1))*(bossId?(tower.floor===21?1.45:1.22):1);
+    if(tower.partySize!==1||enemyCount!==2)return {hp:extra,mana:1,damage:1};
+    if(bossId==="grelus")return {hp:extra*.90,mana:.90,damage:.95};
+    if(bossId)return {hp:extra*.82,mana:.85,damage:.90};
+    return {hp:extra*.42,mana:.55,damage:.70};
+  }
   function setBattle(mode="story",size=4,tower=null){
     floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;
     hostPlayback={id:Date.now()+"-"+(++battleSerial),time:0,clips:[]};
@@ -1161,11 +1171,11 @@
         u.towerRole=foe.profile.towerRole;
         u.minionId=foe.profile.minionId;
         u.bossId=foe.profile.bossId;
-        const extra=(1+.08*(tower.partySize-1))*(u.bossId?(tower.floor===21?1.45:1.22):1);
-        const split=tower.partySize===1&&size>1?(u.bossId?1:.72):1;
-        u.hp=u.maxHp=Math.round(u.maxHp*extra*split);
-        u.maxMana+=Math.floor(tower.partySize/2);
+        const balance=towerEnemyBalance(tower,units.filter(v=>v.team===1).length,u.bossId);
+        u.hp=u.maxHp=Math.round(u.maxHp*balance.hp);
+        u.maxMana=Math.max(1,Math.round((u.maxMana+Math.floor(tower.partySize/2))*balance.mana));
         u.mana=u.maxMana;
+        u.towerDamageScale=balance.damage;
       }
       if(!testing){startHand(u,u.isHuman||(!activeRoster&&u.id==="a0"));continue;}
       if(u.team===1){
@@ -1531,7 +1541,7 @@
         }else if(card.damage||towerControl(card)){
           const victims=target?[target]:opponents;
           score=victims.reduce((sum,victim)=>{
-            const damage=(card.damage||0)*Builds.multiplier(u,card.school);
+            const damage=(card.damage||0)*Builds.multiplier(u,card.school)*(u.towerDamageScale??1);
             return sum+Math.min(victim.hp,damage)*(card.accuracy||1)+(damage>=victim.hp?180:0)+
               (towerControl(card)?(role==="Controller"?320:120):0);
           },0);
@@ -2636,7 +2646,7 @@
   function spellPower(source,card,spell){
     if(!Builds||!source)return 1;
     if(spell&&spell.damageVariant===undefined)spell.damageVariant=Builds.rollVariant();
-    return (spell?.damageVariant||1)*Builds.multiplier(source,card?.school);
+    return (spell?.damageVariant||1)*Builds.multiplier(source,card?.school)*(source.towerDamageScale??1);
   }
   function absorbFaultlineDamage(target,amount,source,spell){
     if(amount<=0||!spell||source.team===target.team)return amount;
@@ -6696,7 +6706,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,grelusDeck,towerProfile,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,grelusDeck,towerProfile,towerEnemyBalance,floorIntroLines,floorIntroPose,weileiFrameRect,floor21BookPosition,syncTesterTools,beginFloorIntro,endFloorIntro,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));

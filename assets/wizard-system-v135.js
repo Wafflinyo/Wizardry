@@ -1,14 +1,16 @@
 /* Shared build rules. No DOM, storage or transport dependencies. */
 (function(root){'use strict';
 const elements=['water','earth','lightning','nature','wind','dark','fire','ice'];
-const colors=['#6f4ab4','#3269c1','#128e9e','#2c8a64','#b83a55','#d08a34','#ad5c9d','#44526b','#dfd8c7','#30293c'];
+const clothingColors=Object.freeze({"#6f4ab4":"Amethyst","#3269c1":"Royal Blue","#128e9e":"Ocean Teal","#2c8a64":"Emerald","#b83a55":"Crimson","#d08a34":"Amber","#ad5c9d":"Rose","#44526b":"Slate","#dfd8c7":"Ivory","#30293c":"Midnight","#322c33":"Raven","#694839":"Chestnut","#ae6045":"Copper","#d6b06e":"Honey","#eee2d2":"Pearl","#84919e":"Silver","#645486":"Violet","#297c80":"Teal","#aa394e":"Ruby","#3176ad":"Sapphire","#459366":"Soft Emerald"});
+const colors=Object.keys(clothingColors);
+const clothingOptions=Object.freeze({original:"Original",...clothingColors});
 const skins=['#cca084','#f1cfad','#e7b081','#c7885b','#a96b4a','#805036','#58382f','#81b9c8','#b197c5','#f8e0cc','#dfb798','#be906e','#995e43','#684332','#432b26','#899e81'];
 const dyes={"#322c33":"Raven","#694839":"Chestnut","#ae6045":"Copper","#d6b06e":"Honey","#eee2d2":"Pearl","#84919e":"Silver","#645486":"Violet","#297c80":"Teal","#aa394e":"Ruby","#3176ad":"Sapphire","#459366":"Emerald"};
 const dyeOptions={original:"Original",...dyes};
 const gear={
  hairColor:{label:"Hair color",options:dyeOptions},beardColor:{label:"Facial hair color",options:dyeOptions},
- crystalColor:{label:"Staff crystal",options:dyeOptions},bootColor:{label:"Boot color",options:dyeOptions},
- robeTrim:{label:"Robe trim",options:dyeOptions},hatTrim:{label:"Hat band",options:dyeOptions},
+ crystalColor:{label:"Staff crystal",options:dyeOptions},bootColor:{label:"Boot color",options:clothingOptions},
+ robeTrim:{label:"Robe trim",options:clothingOptions},hatTrim:{label:"Hat band",options:clothingOptions},
  staffWood:{label:"Staff wood color",options:{original:"Original oak","#7b4a30":"Walnut","#633636":"Redwood","#bc8a54":"Honey maple","#c7b8a1":"Pale ash","#413a49":"Ebony","#516744":"Mosswood","#52637a":"Stormwood","#79507f":"Witchwood"}},
  staffSculpt:{label:"Staff sculpt",options:{original:"Smooth wood",spiral:"Spiral ridges",rings:"Raised rings",collared:"Wide collars",vcut:"Raised V",circle:"Raised circles",dots:"Raised dots",xcut:"Raised X"}}
 };
@@ -153,7 +155,7 @@ function normalize(input,cards,progression=false){
  if(deck.length!==required||(progression&&deck.length!==p.deck?.length))throw Error('Your grimoire must contain exactly '+required+' unlocked cards from your selected mastery elements.');
  const counts={};for(const id of deck){counts[id]=(counts[id]||0)+1;if(counts[id]>(rogue?rogue.owned[id]:MAX_COPIES))throw Error('Your grimoire contains more copies than are owned.');}
  const name=String(p.name||'').trim().replace(/[\u0000-\u001f]/g,'').slice(0,24);if(name.length<2)throw Error('Choose a wizard name with 2–24 characters.');
- return {...gearLook(p),...(rogue?{rogue}:{}),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,finalBossUnlocked:level===20&&(p.finalBossUnlocked===true||p.towerCleared===true),towerCleared:level===20&&p.finalBossUnlocked===true&&p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:colors.includes(p.robeColor)?p.robeColor:colors[0],hatColor:colors.includes(p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
+ return {...gearLook(p),...(rogue?{rogue}:{}),id:typeof p.id==='string'?p.id.slice(0,60):'',name,level,masteries,skills,deck,finalBossUnlocked:level===20&&(p.finalBossUnlocked===true||p.towerCleared===true),towerCleared:level===20&&p.finalBossUnlocked===true&&p.towerCleared===true,lastTowerWin:typeof p.lastTowerWin==='string'?p.lastTowerWin.slice(0,60):'',hat:['hood','top','round','wide','scholar'].includes(p.hat)?p.hat:'pointed',robe:'classic',headHair:["medium","long","curlyMedium","curlyLong"].includes(p.headHair)?p.headHair:"none",facialHair:p.facialHair==='none'?'none':'original',robeColor:Object.hasOwn(clothingOptions,p.robeColor)?p.robeColor:colors[0],hatColor:Object.hasOwn(clothingOptions,p.hatColor)?p.hatColor:colors[0],skinColor:skins.includes(p.skinColor)?p.skinColor:skins[0]};
 }
 function stats(p){const b=baseline(p.level);return {hp:b.hp+150*(p.skills.hp||0),mana:b.mana+2*(p.skills.mana||0),remaining:b.points-Object.values(p.skills).reduce((a,b)=>a+b,0)};}
 const masteryPercentPerPoint=1.5;
@@ -177,5 +179,5 @@ function makeDeck(cards,masteries,rng=Math.random){const legal=shuffle(cards.fil
 function cpu(cards,index=0,rng=Math.random,level=20){const masteries=shuffle(elements,rng).slice(0,2),skills={hp:0,mana:0};for(const e of masteries)skills[e]=0;for(let i=0;i<level;i++){const keys=['hp','mana',...masteries];skills[keys[Math.floor(rng()*keys.length)]]++;}
  const bag=cards.filter(c=>masteries.includes(c.school)).flatMap(c=>[c.id,c.id,c.id]),deck=shuffle(bag,rng).slice(0,24);
  return normalize({name:['Ash','Mira','Rune','Vesper','Bram','Nyx','Sora','Rowan'][index%8]+' '+names[masteries[0]],level,masteries,skills,deck,robeColor:colors[Math.floor(rng()*colors.length)],hatColor:colors[Math.floor(rng()*colors.length)],skinColor:skins[Math.floor(rng()*skins.length)]},cards);}
-root.WizardryBuilds={elements,names,colors,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockOrder,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu,rogueStarter,rogueSchedule,migrateRogue,availableSpells,copyLimit,fillOwned,rogueFloor,goldReward,libraryPrice,awardFloor,chooseOffer,buySpell,shuffle};
+root.WizardryBuilds={elements,names,colors,clothingColors,clothingOptions,skins,gear,gearLook,baseline,normalize,stats,masteryPercentPerPoint,masteryBonusPercent,multiplier,healAmount,healing,effectText,rollVariant,range,MAX_COPIES,orderedSpells,unlockOrder,unlockLevel,unlockedSpells,deckSize,progressionDeck,makeDeck,cpu,rogueStarter,rogueSchedule,migrateRogue,availableSpells,copyLimit,fillOwned,rogueFloor,goldReward,libraryPrice,awardFloor,chooseOffer,buySpell,shuffle};
 })(typeof window!=='undefined'?window:globalThis);

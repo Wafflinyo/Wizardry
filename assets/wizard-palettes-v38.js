@@ -4,12 +4,7 @@
 (function(global){
   "use strict";
   const DEFAULT="#6f4ab4",DEFAULT_SKIN="#cca084",CELL=128,MAX_CACHE=18;
-  const paletteColors=Object.freeze({
-    "#6f4ab4":"Amethyst","#3269c1":"Royal Blue","#128e9e":"Ocean Teal",
-    "#2c8a64":"Emerald","#b83a55":"Crimson","#d08a34":"Amber",
-    "#ad5c9d":"Rose","#44526b":"Slate","#dfd8c7":"Ivory",
-    "#30293c":"Midnight"
-  });
+  const paletteColors=Object.freeze({"#6f4ab4":"Amethyst","#3269c1":"Royal Blue","#128e9e":"Ocean Teal","#2c8a64":"Emerald","#b83a55":"Crimson","#d08a34":"Amber","#ad5c9d":"Rose","#44526b":"Slate","#dfd8c7":"Ivory","#30293c":"Midnight","#322c33":"Raven","#694839":"Chestnut","#ae6045":"Copper","#d6b06e":"Honey","#eee2d2":"Pearl","#84919e":"Silver","#645486":"Violet","#297c80":"Teal","#aa394e":"Ruby","#3176ad":"Sapphire","#459366":"Soft Emerald"});
   const skinColors=Object.freeze({
     "#cca084":"Classic","#f1cfad":"Fair","#e7b081":"Warm",
     "#c7885b":"Golden Tan","#a96b4a":"Bronze","#805036":"Deep Brown",

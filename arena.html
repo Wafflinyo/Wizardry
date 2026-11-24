@@ -70,6 +70,20 @@
 </style>
 <link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.317.3">
 <link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.317.7">
+<style>
+#floor21Intro{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;padding:clamp(6px,1.5vw,18px);pointer-events:auto;background:transparent;}
+#floor21Intro[hidden]{display:none!important}
+#floor21Intro.no-dialogue .floor21-dialogue{visibility:hidden}
+.floor21-dialogue{width:100%;display:flex;align-items:center;gap:clamp(8px,2vw,18px);min-height:80px;padding:8px 12px;border:1px solid #d6b578;border-radius:8px;background:linear-gradient(120deg,#111d31f5,#21182ff5);box-shadow:0 4px 18px #0009;color:#f8efdf;}
+#floor21Portrait{width:clamp(64px,15vw,122px);aspect-ratio:1;object-fit:cover;flex:none;border:1px solid #d6b578;border-radius:5px}
+.floor21-dialogue-copy{flex:1;min-width:0}
+#floor21Speaker{display:block;color:#e8c88c;font:700 clamp(13px,2vw,20px) Georgia,serif;margin-bottom:5px}
+#floor21Line{font-size:clamp(12px,2vw,18px);line-height:1.3;margin:0}
+#floor21Next{align-self:flex-end;flex:none;min-height:32px;padding:4px 8px;background:#27374b;color:#fff2d6;border:1px solid #bda06c;border-radius:5px;cursor:pointer}
+.portrait-enter{animation:floor21-slide .25s ease-out}
+@keyframes floor21-slide{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:translateX(0)}}
+@media(max-height:520px){#floor21Portrait{width:60px}.floor21-dialogue{min-height:65px;padding:5px 8px}}
+</style>
 </head>
 <body data-screen="home">
 <section id="portal" aria-label="Wizardry home"></section>
@@ -90,6 +104,7 @@
       <div class="tester-tools-menu">
         <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
         <button id="testerDefeatPreview" type="button" hidden>Preview defeat</button>
+        <button id="testerFloor21Preview" type="button">Preview Floor 21 cutscene</button>
         <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
         <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
       </div>
@@ -125,6 +140,7 @@
     </div>
     <div class="arena" id="arena">
       <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Choose a spell below, tap a target for individual attacks or healing, or cast Wind on all enemies, then confirm."></canvas>
+      <div id="floor21Intro" hidden aria-label="Floor 21 introduction"><div class="floor21-dialogue"><img id="floor21Portrait" alt=""><div class="floor21-dialogue-copy"><strong id="floor21Speaker"></strong><p id="floor21Line" aria-live="polite"></p></div><button id="floor21Next" type="button">Next ›</button></div></div>
       <div class="arena-bug" id="battleBadge">4 vs 4 · STORY / CPU</div>
       <aside id="statusPopup" class="status-popup" role="dialog" aria-modal="false" aria-labelledby="statusName" hidden>
         <button type="button" id="statusClose" class="status-close" aria-label="Close status details">×</button>
@@ -369,7 +385,7 @@
 <script src="./assets/whale-spell.js?v=0.301.1" defer></script>
 <script src="./assets/flame-wheel.js?v=0.302.2" defer></script>
 <script src="./assets/sand-warrior.js?v=0.303.2" defer></script>
-<script src="./assets/soul-ghoul.js?v=0.330.0" defer></script>
+<script src="./assets/soul-ghoul.js?v=0.331.0" defer></script>
 <script src="./assets/flashover.js?v=0.305.2" defer></script>
 <script src="./assets/briar-remedy.js?v=0.306.2" defer></script>
 <script src="./assets/lifevine.js?v=0.307.0" defer></script>
@@ -380,11 +396,11 @@
 <script src="./assets/pressure-drop.js?v=0.312.1" defer></script>
 <script src="./assets/chained-javelin.js?v=0.313.1" defer></script>
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
-<script src="./assets/faultline-bulwark.js?v=0.330.0" defer></script>
+<script src="./assets/faultline-bulwark.js?v=0.331.0" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.330.0" defer></script>
+<script src="./arena.js?v=0.331.0" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
-<script src="./assets/wizard-home-v135.js?v=0.330.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.331.0" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">
   <header><strong id="battleLogTitle">Battle Log</strong><form method="dialog"><button type="submit" autofocus>Close</button></form></header>
   <ol id="battleHistory"><li>No actions yet.</li></ol>

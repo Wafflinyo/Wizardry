@@ -949,8 +949,99 @@
   const GUEST_PLAYBACK_DELAY=350;
   const HOST_STAGE_HISTORY_MS=2400;
   let hostPlayback=null,guestPlayback=null,battleSerial=0,guestUiKey=null;
+  // Floor 21 is a local, read-at-your-own-pace introduction. Combat state
+  // remains unchanged, including online snapshots and the initial hands.
+  const weileiArt=new Image();
+  weileiArt.src="./assets/floor21-weilei.webp?v=0.331.0";
+  let floorIntro=null,shownIntroKey=null;
+  function floorIntroLines(partySize){
+    const multi=partySize>1;
+    return [
+      ["Weilei",multi?"You guys shouldn’t be up here, it’s dangerous!":"You shouldn’t be up here, it’s dangerous!"],
+      ["Weilei","You’re going to defeat Grelus?! Are you out of your mind?!"],
+      ["Grelus",multi?"Ha-Ha, is this a joke?! You all look like you got your grimoires yesterday!":"Ha-Ha, is this a joke?! You look like you got your grimoire yesterday!"],
+      ["Weilei",multi?"It doesn’t look like you all are going to walk away… Be careful.":"It doesn’t look like you’re going to walk away… Be careful."]
+    ];
+  }
+  function floorIntroOverlay(visible){
+    const box=$("floor21Intro");
+    if(box)box.hidden=!visible;
+    const hand=document.querySelector?.("section.hand");
+    if(hand)hand.inert=visible;
+  }
+  function floorIntroDialogue(){
+    const box=$("floor21Intro"),name=$("floor21Speaker"),line=$("floor21Line"),portrait=$("floor21Portrait"),button=$("floor21Next");
+    if(!box||!name||!line||!portrait||!button)return;
+    const active=!!floorIntro;
+    floorIntroOverlay(active);
+    if(!active)return;
+    const dialogue=floorIntro.step>=0&&floorIntro.step<4;
+    box.classList.toggle("no-dialogue",!dialogue);
+    button.disabled=!dialogue;
+    if(!dialogue)return;
+    const [speaker,text]=floorIntroLines(floorIntro.partySize)[floorIntro.step];
+    if(name.textContent!==speaker){
+      name.textContent=speaker;portrait.src="./assets/floor21-"+speaker.toLowerCase()+"-portrait.webp?v=0.331.0";
+      portrait.alt=speaker;portrait.classList.remove("portrait-enter");void portrait.offsetWidth;portrait.classList.add("portrait-enter");
+    }
+    line.textContent=text;
+    button.textContent=floorIntro.step===3?"Continue ›":"Next ›";
+  }
+  function beginFloorIntro(partySize,preview=false){
+    floorIntro={partySize,preview,step:-1,elapsed:0};
+    const name=$("floor21Speaker");if(name)name.textContent="";
+    floorIntroDialogue();
+  }
+  function endFloorIntro(){
+    floorIntro=null;floorIntroOverlay(false);paintUI();
+  }
+  function nextFloorIntro(){
+    if(!floorIntro||floorIntro.step<0||floorIntro.step>=4)return;
+    floorIntro.step++;floorIntro.elapsed=0;floorIntroDialogue();
+  }
+  const FLOOR21_POSE_MS=[210,180,180,180,230,180,220,200,200,160,150,180];
+  function floorIntroPose(ms){
+    let t=Math.max(0,ms);
+    for(let frame=0;frame<FLOOR21_POSE_MS.length;frame++){
+      if(t<FLOOR21_POSE_MS[frame])return {frame,lift:0,finished:false};
+      t-=FLOOR21_POSE_MS[frame];
+    }
+    // Staff leads the last pose upward and out of the actual battlefield.
+    return {frame:11,lift:Math.pow(Math.min(1,t/650),1.5)*650,finished:t>=650};
+  }
+  function tickFloorIntro(dt){
+    if(floorIntro&&floorIntro.preview&&state.mode!=="tester"){endFloorIntro();}
+    const key=state.tower?.floor===21&&state.round===1&&state.phase==="planning"?state.tower.id:null;
+    if(key&&key!==shownIntroKey){shownIntroKey=key;beginFloorIntro(state.tower.partySize||1);}
+    if(!floorIntro)return false;
+    if(!floorIntro.preview&&(!key||key!==shownIntroKey)){endFloorIntro();return false;}
+    floorIntro.elapsed+=dt;
+    if(floorIntro.step===-1&&floorIntro.elapsed>=650){floorIntro.step=0;floorIntro.elapsed=0;floorIntroDialogue();}
+    if(floorIntro.step===4&&floorIntroPose(floorIntro.elapsed).finished){endFloorIntro();return false;}
+    return true;
+  }
+  function drawFloorIntro(time){
+    const wX=302,wY=505,bX=695,bY=505,depth=.86;
+    ellipse(g,wX,wY+8,76,17,"#07111c80");
+    ellipse(g,bX,bY+8,65,15,"#07111c80");
+    // Reuse the exact live Grelus idle atlas; no alternate boss artwork.
+    const boss=guardianModels.grelus,cell=boss.cell;
+    if(boss.art.naturalWidth){
+      const frame=grelusFrame(0,Math.floor(time/GUARDIAN_IDLE_FRAME_MS)%8),rect=grelusDrawRect(boss,0);
+      g.save();g.translate(bX,bY);g.scale(depth,depth);
+      g.drawImage(boss.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);g.restore();
+    }
+    if(weileiArt.naturalWidth){
+      const pose=floorIntro.step===4?floorIntroPose(floorIntro.elapsed):{frame:0,lift:0};
+      const size=282,cell=192;
+      const x=wX-pose.lift*.34,y=wY-pose.lift;
+      g.save();g.translate(x,y);g.scale(depth,depth);g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+      g.drawImage(weileiArt,(pose.frame%4)*cell,Math.floor(pose.frame/4)*cell,cell,cell,-size/2,8-size,size,size);g.restore();
+    }
+  }
 
   function setBattle(mode="story",size=4,tower=null){
+    floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;
     hostPlayback={id:Date.now()+"-"+(++battleSerial),time:0,clips:[]};
     guestPlayback=null;guestUiKey=null;
     const testing=mode==="tester";
@@ -1055,6 +1146,7 @@
     paintUI();
   }
   function selectTarget(id){
+    if(floorIntro)return;
     if(state.phase!=="planning")return;
     const u=getUnit(id),c=caster(),card=currentCard();
     if(!c||!card||!u||u.hp<=0||
@@ -1076,6 +1168,7 @@
     chooseCard(id);
   }
   function chooseCard(id){
+    if(floorIntro)return;
     if(state.phase!=="planning"||!BY_ID[id]||!caster())return;
     if(!caster().hand.includes(id))return;
     if(state.plans[caster().id])return;
@@ -1101,6 +1194,7 @@
     paintUI();
   }
   function confirmTarget(){
+    if(floorIntro)return;
     if(state.phase!=="planning"||!caster()||!currentCard())return;
     if(!["team","all_enemies"].includes(currentCard().target)&&!correctTarget())return;
     if(queueSpell()){closeStatusInfo();resolvePressed();}
@@ -1428,6 +1522,7 @@
     u.hand.splice(at,1);u.drawPile.push(id);u.discardedRound=state.round;u.discardedCard=id;return true;
   }
   function discardSelected(){
+    if(floorIntro)return;
     const u=caster();if(state.phase!=="planning"||!u||state.plans[u.id]||!state.selectedCard)return false;
     const ok=u.testerDeck?playHandCard(u,state.selectedCard):discardFromHand(u,state.selectedCard);
     if(ok){
@@ -1437,6 +1532,7 @@
     return ok;
   }
   function passTurn(){
+    if(floorIntro)return;
     if(window.WizardrySession?.active){window.WizardrySession.plan({pass:true,round:state.round});return;}
     const c=caster();if(state.phase!=="planning"||!c||state.plans[c.id])return;
     c.passedRound=state.round;
@@ -3858,6 +3954,8 @@
   function escapeHtml(x){return String(x).replace(/[&<>"']/g,c=>
     ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
   function setupControlHandlers(){
+    const introNext=$("floor21Next");if(introNext)introNext.onclick=nextFloorIntro;
+    const introPreview=$("testerFloor21Preview");if(introPreview)introPreview.onclick=()=>{if(state.mode==="tester"&&state.phase==="planning"){const tools=$("testerTools");if(tools)tools.open=false;beginFloorIntro(state.size,true);}};
     const debtFixture=$("testerDebtFixture");
     if(debtFixture)debtFixture.onclick=()=>{
       if(state.mode!=="tester"||state.phase!=="planning")return;
@@ -3934,6 +4032,7 @@
     };
     ui.statusClose.onclick=closeStatusInfo;
     canvas.addEventListener("pointerdown",event=>{
+      if(floorIntro)return;
       const rect=canvas.getBoundingClientRect();
       const x=(event.clientX-rect.left-camera.x)/camera.scale;
       const y=(event.clientY-rect.top-camera.y)/camera.scale;
@@ -5341,6 +5440,7 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
     if(!background)drawBackground(g);
+    if(floorIntro){drawFloorIntro(time);return;}
     if(fieldId&&fieldId!=="groveland"){
       const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];
       g.save();
@@ -6417,6 +6517,7 @@
     // benefit, which is expensive on iPhones. Cap to roughly 60 fps.
     if(now-frameLast<13.3){requestAnimationFrame(tick);return;}
     const dt=Math.min(55,Math.max(0,now-frameLast||0));frameLast=now;
+    if(tickFloorIntro(dt)){render(now);requestAnimationFrame(tick);return;}
     if(window.WizardrySession?.active){
       const session=window.WizardrySession,a=state.animation,elapsed=a?.elapsed;
       if(session.isHost){
@@ -6463,7 +6564,7 @@
   }
   // Small test API for browser and deterministic combat regression checks.
   window.WIZARDRY_ARENA_TEST={
-    getState:()=>state,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
+    getState:()=>state,floorIntroLines,floorIntroPose,portraitBounds,plateAlpha,plateIsTarget,drawAirborneRune,drawRuneOutcome,
     configureProfile:p=>{configuredProfile=Builds.normalize(p,CARDS,true);activeRoster=null;},
     startTower:(players,floor,online=false)=>{
       const humans=players.map((entry,slot)=>({...entry,team:0,slot}));

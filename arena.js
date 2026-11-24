@@ -617,7 +617,8 @@
   }
   const ARM_RAISE_MS=300,AUTO_TRACE_MS=2200,ARM_LOWER_MS=340,FIZZLE_MS=360;
   const RUNE_GLOW_MS=620,RUNE_CRUMBLE_MS=700;
-  const MINION_GESTURE_FRAME_MS=95;
+  const MINION_GESTURE_FRAME_MS=150;
+  const MINION_GESTURE_FRAMES=[0,1,2,3,4,5,4,3,2,1];
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Original full Golem animation: emerge, clasp, wind up, slam,
   // stand/idle, then dissolve while the independent fissure is still moving.
@@ -4198,7 +4199,7 @@
       const casting=preview||tracing||current?.stage==="raising"||current?.stage==="lowering";
       const row=u.hp<=0?2:casting?1:0;
       const gestureFrame=preview||tracing
-        ?Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%6
+        ?MINION_GESTURE_FRAMES[Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%MINION_GESTURE_FRAMES.length]
         :current?.stage==="lowering"?5:0;
       const frame=row===2?Math.min(5,Math.floor(5*(u.defeatElapsedMs||0)/DEFEAT_HOLD_MS)):
         casting?gestureFrame:Math.floor((time+u.index*160)/160)%6;

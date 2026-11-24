@@ -1142,8 +1142,15 @@
   // Solo reinforcement encounters should not have the combined resources
   // of two full-strength wizards. Scale at encounter creation, not when a
   // minion dies, so no combatant suddenly changes strength mid-battle.
-  function towerEnemyBalance(tower,enemyCount,bossId){
-    const extra=(1+.08*(tower.partySize-1))*(bossId?(tower.floor===21?1.45:1.22):1);
+  function enemyRankHpMultiplier(bossId,minionId){
+    if(bossId==="grelus")return 2.5;
+    if(bossId)return 2;
+    if(Object.hasOwn(eliteSchools,minionId))return 1.5;
+    return 1;
+  }
+  function towerEnemyBalance(tower,enemyCount,bossId,minionId){
+    // Rank replaces the previous boss-only HP bonus; encounter and party scaling remain separate.
+    const extra=(1+.08*(tower.partySize-1))*enemyRankHpMultiplier(bossId,minionId);
     if(tower.partySize!==1||enemyCount!==2)return {hp:extra,mana:1,damage:1};
     if(bossId==="grelus")return {hp:extra*.90,mana:.90,damage:.95};
     if(bossId)return {hp:extra*.82,mana:.85,damage:.90};
@@ -1171,7 +1178,7 @@
         u.towerRole=foe.profile.towerRole;
         u.minionId=foe.profile.minionId;
         u.bossId=foe.profile.bossId;
-        const balance=towerEnemyBalance(tower,units.filter(v=>v.team===1).length,u.bossId);
+        const balance=towerEnemyBalance(tower,units.filter(v=>v.team===1).length,u.bossId,u.minionId);
         u.hp=u.maxHp=Math.round(u.maxHp*balance.hp);
         u.maxMana=Math.max(1,Math.round((u.maxMana+Math.floor(tower.partySize/2))*balance.mana));
         u.mana=u.maxMana;
@@ -1182,6 +1189,7 @@
         fitTesterTarget(u,testerTargetType);
         if(testerBattle){
           if(u.minionId||u.bossId){
+            u.hp=u.maxHp=Math.round(u.maxHp*enemyRankHpMultiplier(u.bossId,u.minionId));
             u.skills={};
             u.grimoire=u.bossId==='grelus'?grelusDeck():Builds.progressionDeck(CARDS,u.masteries,u.level);
           }

@@ -286,5 +286,21 @@ const assert = require('node:assert/strict');
       assert.ok([...foe.hand,...foe.drawPile].every(id=>foe.masteries.includes(api.cards.find(c=>c.id===id).school)));
     }
   }
+  // Rank HP must apply consistently without changing encounter mana/damage scaling.
+  for(const partySize of [1,2,3,4])for(let floor=1;floor<=21;floor++){
+    const players=Array.from({length:partySize},()=>towerPlayer);
+    api.startTower(players,floor);
+    const foes=api.getState().units.filter(u=>u.team===1);
+    const B=ctx.window.WizardryBuilds;
+    for(const foe of foes){
+      const rank=foe.bossId==='grelus'?2.5:foe.bossId?2:['magistrate','inkbinder','warden'].includes(foe.minionId)?1.5:1;
+      const solo=partySize===1&&foes.length===2?(foe.bossId==='grelus'?.90:foe.bossId?.82:.42):1;
+      const expected=Math.round(B.stats(foe).hp*((1+.08*(partySize-1))*rank*solo));
+      assert.equal(foe.maxHp,expected,`floor ${floor}, party ${partySize}, ${foe.name} rank HP`);
+      assert.equal(foe.hp,expected,'starts at full rank-scaled HP');
+    }
+    const elite=foes.find(u=>['magistrate','inkbinder','warden'].includes(u.minionId));
+    if(elite)assert.ok(foes.every(u=>u===elite||elite.maxHp>u.maxHp),'elite has more HP than regular minions at the same floor');
+  }
   console.log('Card Tester: home entry without a saved wizard, Electro Disc cast, ordered full catalog and recycling, passive dummy with knockout recovery, reset and practice isolation passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

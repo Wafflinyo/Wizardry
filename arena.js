@@ -1149,13 +1149,14 @@
     return 1;
   }
   function towerEnemyBalance(tower,enemyCount,bossId,minionId){
-    // Rank replaces the previous boss-only HP bonus; encounter and party scaling remain separate.
-    const extra=(1+.08*(tower.partySize-1))*enemyRankHpMultiplier(bossId,minionId);
+    // All tower foes gain durability; larger parties need progressively more HP per foe.
+    // Rank, party size and the solo reinforcement reduction remain independent.
+    const extra=(1.20+.15*(tower.partySize-1))*enemyRankHpMultiplier(bossId,minionId);
     if(tower.partySize!==1||enemyCount!==2)return {hp:extra,mana:1,damage:1};
     if(bossId==="grelus")return {hp:extra*.90,mana:.90,damage:.95};
     if(bossId)return {hp:extra*.82,mana:.85,damage:.90};
-    // Solo minions/elites retain half HP; mana and damage reductions stay unchanged.
-    return {hp:extra*.50,mana:.55,damage:.70};
+    // Solo minions/elites retain 55% of the new scaled HP; damage and mana are unchanged.
+    return {hp:extra*.55,mana:.55,damage:.70};
   }
   function setBattle(mode="story",size=4,tower=null){
     floorIntro=null;floorIntroOverlay(false);shownIntroKey=null;

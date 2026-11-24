@@ -621,16 +621,17 @@
   const MINION_GESTURE_FRAMES=[0,1,2,3,4,5,4,3,2,1];
   const GUARDIAN_IDLE_FRAME_MS=340;
   const GUARDIAN_IDLE_FRAMES=[0,1,2,3,4,5,4,3,2,1];
-  const GUARDIAN_CAST_COUNT=16;
+  const GUARDIAN_CAST_COUNT=20;
   const guardianSmooth=p=>{const t=Math.max(0,Math.min(1,p));return t*t*(3-2*t);};
   function guardianCastFrame(stage,elapsed,duration,recovery=0){
     if(stage==="raising")return Math.round(3*guardianSmooth(elapsed/Math.max(1,duration)));
     if(stage==="tracing-auto"){
-      if(elapsed<430)return 3+Math.round(6*guardianSmooth(elapsed/430));
-      // Hold a deliberate channeling stance; only a subtle shift around the peak.
-      return 9-Math.round(.5-.5*Math.cos((elapsed-430)*Math.PI/750));
+      const p=Math.max(0,Math.min(1,elapsed/Math.max(1,duration)));
+      // Authored poses 4–9 raise the hand and build the aura, 10–11 channel.
+      // Advance only forward, never reverse through the raising poses.
+      return p<.55?3+Math.round(6*p/.55):9+Math.round(2*(p-.55)/.45);
     }
-    return 9+Math.round(6*guardianSmooth(recovery/WIZARD_RECOVERY_MS));
+    return 11+Math.round(8*guardianSmooth(recovery/WIZARD_RECOVERY_MS));
   }
   const WIZARD_RECOVERY_MS=520; // Independent from summon/fizzle timing.
   // Original full Golem animation: emerge, clasp, wind up, slam,
@@ -803,128 +804,19 @@
     ctx.putImageData(frame,0,0);
     return canvas;
   }
-  // Generate two motion-compensated drawings between each authored cast key.
-  // Work in premultiplied RGBA, so no white matte enters newly exposed pixels.
-  function guardianMotionFrames(sheet,cell){
-    const ctx=sheet.getContext("2d",{willReadFrequently:true});
-    const keys=Array.from({length:6},(_,n)=>ctx.getImageData(n*cell,cell,cell,cell));
-    const small=72,step=6,grid=12,ratio=cell/small;
-    const atlas=document.createElement("canvas");atlas.width=cell*4;atlas.height=cell*4;
-    const out=atlas.getContext("2d");
-    function reduced(im){
-      const v=new Float32Array(small*small),rgba=im.data;
-      for(let y=0;y<small;y++)for(let x=0;x<small;x++){
-        let sum=0;
-        for(let dy=0;dy<ratio;dy++)for(let dx=0;dx<ratio;dx++){
-          const p=((y*ratio+dy)*cell+x*ratio+dx)*4;
-          sum+=((rgba[p]+rgba[p+1]+rgba[p+2])*.001+0.24)*rgba[p+3];
-        }
-        v[y*small+x]=sum/(ratio*ratio);
-      }
-      return v;
-    }
-    const reducedKeys=keys.map(reduced);
-    const read=(im,x,y)=>x<0||x>=small||y<0||y>=small?0:im[y*small+x];
-    function estimate(from,to){
-      const vx=new Float32Array(grid*grid),vy=new Float32Array(grid*grid);
-      for(let gy=0;gy<grid;gy++)for(let gx=0;gx<grid;gx++){
-        const cx=gx*step+3,cy=gy*step+3,at=gy*grid+gx;
-        let energy=0;
-        for(let y=-3;y<=3;y+=2)for(let x=-3;x<=3;x+=2)energy+=read(from,cx+x,cy+y);
-        if(energy<35)continue;
-        let best=Infinity,bx=0,by=0;
-        function candidate(dx,dy){
-          let cost=0.8*(dx*dx+dy*dy);
-          for(let y=-4;y<=4;y+=2)for(let x=-4;x<=4;x+=2){
-            const d=read(from,cx+x,cy+y)-read(to,cx+x+dx,cy+y+dy);
-            cost+=d*d;
-          }
-          if(cost<best){best=cost;bx=dx;by=dy;}
-        }
-        for(let dy=-8;dy<=8;dy+=2)for(let dx=-8;dx<=8;dx+=2)candidate(dx,dy);
-        const ox=bx,oy=by;
-        for(let dy=oy-1;dy<=oy+1;dy++)for(let dx=ox-1;dx<=ox+1;dx++)candidate(dx,dy);
-        vx[at]=bx*ratio;vy[at]=by*ratio;
-      }
-      // Smooth spatially to avoid disconnected motion at tile boundaries.
-      function soften(v){
-        const z=new Float32Array(v.length);
-        for(let y=0;y<grid;y++)for(let x=0;x<grid;x++){
-          let sum=v[y*grid+x]*4,weight=4;
-          for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-            const xx=x+dx,yy=y+dy;
-            if(xx>=0&&xx<grid&&yy>=0&&yy<grid){sum+=v[yy*grid+xx];weight++;}
-          }
-          z[y*grid+x]=sum/weight;
-        }return z;
-      }
-      return [soften(vx),soften(vy)];
-    }
-    const cap=(x,max)=>Math.max(0,Math.min(max,x));
-    function field(v,x,y){
-      const gx=cap((x/ratio-3)/step,grid-1),gy=cap((y/ratio-3)/step,grid-1);
-      const ix=Math.floor(gx),iy=Math.floor(gy),jx=Math.min(grid-1,ix+1),jy=Math.min(grid-1,iy+1);
-      const u=gx-ix,t=gy-iy;
-      return (v[iy*grid+ix]*(1-u)+v[iy*grid+jx]*u)*(1-t)+(v[jy*grid+ix]*(1-u)+v[jy*grid+jx]*u)*t;
-    }
-    function premul(im){
-      const a=new Float32Array(im.data.length);
-      for(let p=0;p<a.length;p+=4){
-        const alpha=im.data[p+3]/255;a[p+3]=alpha;
-        for(let c=0;c<3;c++)a[p+c]=im.data[p+c]*alpha;
-      }return a;
-    }
-    function sample(v,x,y,result){
-      result.fill(0);
-      if(x<0||y<0||x>cell-1||y>cell-1)return;
-      const ix=Math.floor(x),iy=Math.floor(y),jx=Math.min(cell-1,ix+1),jy=Math.min(cell-1,iy+1);
-      const u=x-ix,t=y-iy,p=(iy*cell+ix)*4,q=(iy*cell+jx)*4,r=(jy*cell+ix)*4,s=(jy*cell+jx)*4;
-      for(let c=0;c<4;c++)result[c]=(v[p+c]*(1-u)+v[q+c]*u)*(1-t)+(v[r+c]*(1-u)+v[s+c]*u)*t;
-    }
-    const first=new Float32Array(4),second=new Float32Array(4);
-    function between(A,B,forward,reverse,t){
-      const im=out.createImageData(cell,cell),rgba=im.data;
-      for(let y=0;y<cell;y++)for(let x=0;x<cell;x++){
-        const dx=field(forward[0],x,y),dy=field(forward[1],x,y);
-        const rx=field(reverse[0],x,y),ry=field(reverse[1],x,y);
-        sample(A,x-dx*t,y-dy*t,first);sample(B,x-rx*(1-t),y-ry*(1-t),second);
-        const p=(y*cell+x)*4,alpha=first[3]*(1-t)+second[3]*t;
-        if(alpha<.04)continue;
-        rgba[p+3]=Math.round(alpha*255);
-        for(let c=0;c<3;c++)rgba[p+c]=(first[c]*(1-t)+second[c]*t)/alpha;
-      }return im;
-    }
-    for(let j=0;j<6;j++){
-      const index=j*3;
-      out.putImageData(keys[j],index%4*cell,Math.floor(index/4)*cell);
-      if(j===5)break;
-      const forward=estimate(reducedKeys[j],reducedKeys[j+1]),reverse=estimate(reducedKeys[j+1],reducedKeys[j]);
-      const A=premul(keys[j]),B=premul(keys[j+1]);
-      for(let k=1;k<=2;k++){
-        const n=index+k;
-        out.putImageData(between(A,B,forward,reverse,k/3),n%4*cell,Math.floor(n/4)*cell);
-      }
-    }
-    return atlas;
-  }
   const guardianModels=Object.fromEntries([
     ["abyssal",310,[[148.33,148.33,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.78,146.67,146.11,147.22,147.22]]],
     ["gale",300,[[148.33,147.78,148.33,148.33,148.33,148.33],[147.78,147.78,147.78,147.78,147.78,147.78],[147.78,147.22,145.56,145,145,145]]],
     ["briar",314,[[147.22,147.22,147.78,147.22,147.22,147.22],[147.78,147.78,147.78,147.78,147.78,147.78],[145,143.33,142.22,142.78,143.89,140.56]]],
     ["glacial",326,[[147.22,147.22,147.22,147.22,147.22,147.22],[147.22,147.78,147.78,147.22,147.22,147.78],[146.67,146.11,145.56,145,146.67,146.11]]]
   ].map(([id,size,feet])=>{
-    const art=new Image(),model={art,size,feet,cell:288,cleaned:null,castAtlas:null};
+    const art=new Image(),castAtlas=new Image();
+    const model={art,size,feet,cell:288,cleaned:null,castAtlas,castAnchor:({abyssal:147.2222,gale:147.2222,briar:146.1111,glacial:146.1111})[id]};
     art.onload=()=>{
       try{model.cleaned=prepareGuardianArt(art,id);}catch(err){console.warn("Guardian matte cleanup failed",id,err);}
-      // Run once after image loading; keep the original authored poses as fallback.
-      if(model.cleaned){
-        const build=()=>{try{model.castAtlas=guardianMotionFrames(model.cleaned,model.cell);}catch(err){console.warn("Guardian cast frames:",id,err);}};
-        if(typeof requestIdleCallback==="function")requestIdleCallback(build,{timeout:1500});
-        else if(typeof setTimeout==="function")setTimeout(build,0);
-        else build();
-      }
     };
     art.src="./assets/guardian-"+id+"-hd.webp?v=0.324.0";
+    castAtlas.src="./assets/guardian-"+id+"-cast20.webp?v=0.327.0";
     return [id,model];
   }));
   const unitSprite=u=>guardianModels[u?.bossId]||minionModels[u?.minionId];
@@ -4504,10 +4396,14 @@
           else pose=guardianCastFrame("recovery",0,1,elapsed-ARM_RAISE_MS-AUTO_TRACE_MS);
         }else pose=guardianCastFrame(current.stage,current.elapsed,current.duration,current.visualRecoveryMs||0);
         pose=clamp(pose,0,GUARDIAN_CAST_COUNT-1);
-        const key=pose/3,lo=Math.floor(key),hi=Math.min(5,lo+1);
-        anchor=lerp(minion.feet[1][lo],minion.feet[1][hi],key-lo);
-        if(minion.castAtlas){source=minion.castAtlas;sourceCol=pose%4;sourceRow=Math.floor(pose/4);}
-        else{sourceCol=Math.round(key);sourceRow=1;anchor=minion.feet[1][sourceCol];}
+        if(minion.castAtlas?.naturalWidth===minion.cell*5&&minion.castAtlas?.naturalHeight===minion.cell*4){
+          source=minion.castAtlas;sourceCol=pose%5;sourceRow=Math.floor(pose/5);anchor=minion.castAnchor;
+        }else{
+          // The approved six key poses remain a safe fallback if the new
+          // atlas has not loaded; do not generate or blend artificial frames.
+          const key=pose<=10?Math.round(pose*3/10):Math.round(3+(pose-10)*2/9);
+          sourceCol=clamp(key,0,5);sourceRow=1;anchor=minion.feet[1][sourceCol];
+        }
       }
       const top=-anchor*minion.size/160+(guardian?2:0);
       const cell=minion.cell||160;

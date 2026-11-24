@@ -251,6 +251,7 @@
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
   CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back for 140 against a random living enemy directly above or below them. With no living neighbor, hit the same enemy again."});
+  CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":350,"retaliation":120,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a wall that absorbs up to 350 damage from the next damaging spell. If it breaks, shards deal 120 damage to the attacker."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -305,6 +306,7 @@
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
     electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
+    faultlinebulwark:"Priority 1. Absorb up to 350 from the next damaging spell. Shatter for 120 retaliation.",
     sandwarrior:"Guard yourself or an ally. Absorbs up to 250 damage.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
@@ -340,7 +342,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -970,7 +972,7 @@
     return barrierNotice(target,card);
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
-  const towerBarriers=new Set(["sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
+  const towerBarriers=new Set(["faultlinebulwark","sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
@@ -1042,7 +1044,7 @@
           },0);
           score=healing*(role==="Support"?1.4:.8);
         }else if(towerBarriers.has(card.kind)){
-          if(!target||planned(target)||barrierConflict(target,BARRIER_SPELLS[card.kind])||target.statuses.some(s=>s.kind===({sandwarrior:"sand_warrior",reflectiveice:"reflective_ice",bubbleshield:"bubble_shield",winddome:"wind_dome",shield:"solidity",frozentouch:"frozen_touch"}[card.kind])))continue;
+          if(!target||planned(target)||barrierConflict(target,BARRIER_SPELLS[card.kind])||target.statuses.some(s=>s.kind===(BARRIER_SPELLS[card.kind]??(card.kind==="shield"?"solidity":"frozen_touch"))))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.kind==="hightide"){
@@ -1258,7 +1260,7 @@
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
     const conflict=a.card.kind==="coldstorage"?targetNotice(target,a.card):barrierNotice(target,a.card);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":a.card.kind==="reflectiveice"?"reflective_ice":a.card.kind==="sandwarrior"?"sand_warrior":undefined);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":BARRIER_SPELLS[a.card.kind]);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
     const success=!emptyTide&&!sealed&&!full&&!conflict&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
@@ -1899,7 +1901,7 @@
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
@@ -1907,10 +1909,10 @@
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
   }
   const BARRIER_SPELLS={
-    winddome:"wind_dome",sandwarrior:"sand_warrior",
+    winddome:"wind_dome",sandwarrior:"sand_warrior",faultlinebulwark:"faultline_bulwark",
     bubbleshield:"bubble_shield",reflectiveice:"reflective_ice"
   };
-  const BARRIER_PRIORITY={wind_dome:1,sand_warrior:1,bubble_shield:2,reflective_ice:2};
+  const BARRIER_PRIORITY={wind_dome:1,sand_warrior:1,faultline_bulwark:1,bubble_shield:2,reflective_ice:2};
   const BARRIER_RUNES=new Set(Object.keys(BARRIER_PRIORITY));
   function barrierConflict(target,kind){
     const priority=BARRIER_PRIORITY[kind];
@@ -1953,7 +1955,7 @@
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
     if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");}
-    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"lifevine");}
+    if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"faultline_bulwark");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
     if(lost>0&&target.hp<=0)retaliateWithCursedHold(source,target,amount);
@@ -2161,6 +2163,31 @@
     if(spell&&spell.damageVariant===undefined)spell.damageVariant=Builds.rollVariant();
     return (spell?.damageVariant||1)*Builds.multiplier(source,card?.school);
   }
+  function absorbFaultlineDamage(target,amount,source,spell){
+    if(amount<=0||!spell||source.team===target.team)return amount;
+    const wall=spell.faultlineWalls?.[target.id]??consumeStatus(target,"faultline_bulwark");
+    if(!wall?.value)return amount;
+    (spell.faultlineWalls??={})[target.id]=wall;
+    const absorbed=Math.min(amount,wall.value);
+    wall.value-=absorbed;
+    tally(target,"tanked",absorbed);
+    const broken=wall.value===0;
+    flash(target,"FAULTLINE BULWARK −"+absorbed,"#edd1a7").faultline={
+      targetId:target.id,attacker:{x:source.x,y:source.y-85},broken,
+      stress:1-wall.value/BY_ID.faultlinebulwark.shieldHp
+    };
+    recordBattleEvent(target.name+"’s Faultline Bulwark absorbs "+absorbed+" damage"+(broken?" and shatters.":"."));
+    if(broken&&source.hp>0){
+      const dealt=loseHp(target,source,BY_ID.faultlinebulwark.retaliation);
+      flash(source,"FAULTLINE SHARDS −"+dealt,"#f2c78b");
+      recordBattleEvent(target.name+"’s Faultline Bulwark hits "+source.name+" for "+dealt+" damage.");
+      if(source.hp<=0){
+        source.defeatElapsedMs=0;
+        flash(source,"DEFEATED","#ffd5b0");
+      }
+    }
+    return amount-absorbed;
+  }
   function absorbBarrierDamage(target,amount){
     if(amount<=0)return amount;
     for(const kind of ["sand_warrior","bubble_shield"]){
@@ -2313,7 +2340,7 @@
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
-    let amount=absorbBarrierDamage(recipient,impact-redirected);
+    let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell));
     if(reflected){
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
@@ -3005,6 +3032,9 @@
       if(addStatus(t,"reflective_ice",null,.5,card.school)===false)return;
       t.statuses.find(st=>st.kind==="reflective_ice").expiresRound=state.round+card.wardRounds;
       flash(t,"REFLECTIVE ICE · 3 ROUNDS","#b8f7ff");
+    }else if(card.kind==="faultlinebulwark"){
+      if(addStatus(t,"faultline_bulwark",null,card.shieldHp,card.school)===false)return;
+      flash(t,"FAULTLINE BULWARK · "+card.shieldHp+" HP","#e9c49a");
     }else if(card.kind==="sandwarrior"){
       if(addStatus(t,"sand_warrior",null,card.shieldHp,card.school)===false)return;
       flash(t,"SAND WARRIOR · "+card.shieldHp+" HP","#f3cb87");
@@ -4163,7 +4193,7 @@
   }
   function plateAlpha(){return 1;}
   function unitStatuses(u){
-    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice"||st.kind==="sand_warrior")?4:0;
+    const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice"||st.kind==="sand_warrior"||st.kind==="faultline_bulwark")?4:0;
     const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
@@ -4197,6 +4227,8 @@
       case "water_prison":return {title:"Water Prison · Water debuff",detail:st.value+" damage at the start of each turn. "+st.remaining+" ticks remain. Recasting refreshes the duration."};
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
         Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
+      case "faultline_bulwark":return {title:"Faultline Bulwark · Priority 1",detail:
+        st.value+" shield HP for the next damaging spell. Shatters for 120 damage to the attacker."};
       case "sand_warrior":return {title:"Sand Warrior · Earth barrier",detail:
         st.value+" / "+BY_ID.sandwarrior.shieldHp+" shield HP. Excess damage reaches the protected wizard."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
@@ -4292,7 +4324,7 @@
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
-    sleep:"nature",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
+    sleep:"nature",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
     recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
   };
@@ -4534,6 +4566,7 @@
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
+      else if(card.id==="faultlinebulwark")window.FaultlineBulwark?.portrait(c,width,height);
       else if(card.id==="sandwarrior")window.SandWarrior?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
       else if(card.id==="darksorcerer")window.DarkSorcerer?.portrait(c,width,height);
@@ -4987,7 +5020,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5100,6 +5133,17 @@
         for(const unit of [pair.source,pair.target])for(const layer of ["back","front"])
           renderables.push({type:"lifevine-coil",depthY:unit.y+(layer==="front"?.13:-.13),priority:2,
             draw:()=>window.Lifevine.drawCoil(g,scene,unit,layer)});
+      }
+    }
+    for(const u of sorted){
+      const forming=action?.card.id==="faultlinebulwark"&&action.stage==="summon"&&action.target===u.id;
+      const wall=u.statuses.find(st=>st.kind==="faultline_bulwark")??action?.faultlineWalls?.[u.id];
+      const hit=state.flashes.findLast(f=>f.faultline?.targetId===u.id);
+      if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
+        const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
+        const impact=hit&&{...hit.faultline,age:hit.age};
+        renderables.push({type:"faultline-bulwark",depthY:u.y+.145,priority:2,
+          draw:()=>window.FaultlineBulwark?.draw(g,u,growth,impact)});
       }
     }
     for(const u of sorted){

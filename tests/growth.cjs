@@ -302,7 +302,7 @@ for(const target of [{x:200,y:490},{x:780,y:390}]){
   assert.ok((contact.x-target.x)*(target.x-500)<0);
 }
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(lance.id));
+assert.ok(api.getState().units[0].drawPile.includes(lance.id));
 console.log('Glacier Lance: center trajectory, opening hand, single target, Frostbite bonus and retention, Extreme Frostbite, expired rune and Wind Dome passed.');
 
 const rip=card('ripcurrent');
@@ -497,3 +497,40 @@ for(const dir of [-1,1]){
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(razorang.id));
 console.log('Razorang: separate contacts, random adjacent target, formation edges, lethal first hit, shield, miss, solo target, Card Tester and mirrored return passed.');
+
+const bulwark=card('faultlinebulwark');
+assert.deepEqual(JSON.parse(JSON.stringify(bulwark)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===bulwark.id));
+for(const [prior,hitSizes,expectedHp,expectedAttacker,followup=0] of [
+  [null,[200],800,1000,200],[null,[140,210],1000,880],[null,[250,250,150],700,880],
+  ['sand_warrior',[],1000,1000],['wind_dome',[],1000,1000],
+  ['bubble_shield',[360],1000,880],['reflective_ice',[],1000,1000]
+]){
+  const protector=unit('protector',0),guarded=unit('guarded',0),attacker=unit('attacker',1);
+  if(prior)guarded.statuses.push({kind:prior,value:prior==='bubble_shield'?360:1});
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[protector,guarded,attacker],auras:[null,null],log:[],flashes:[]});
+  api.applySpell({card:bulwark,runeResult:'success',action:{casterId:protector.id,targetId:guarded.id}});
+  assert.equal(has(guarded,'faultline_bulwark'),prior!=='sand_warrior'&&prior!=='wind_dome');
+  const attack=card('scorpion'),cast={card:attack};
+  for(const amount of hitSizes)damage(attacker,guarded,amount,attack,cast);
+  if(followup){
+    assert.equal(guarded.hp,1000);
+    damage(attacker,guarded,followup,attack,{card:attack});
+  }
+  assert.equal(guarded.hp,expectedHp);
+  assert.equal(attacker.hp,expectedAttacker);
+  if(prior==='bubble_shield')assert.equal(guarded.statuses.find(st=>st.kind==='bubble_shield').value,350);
+}
+vm.runInNewContext(fs.readFileSync('assets/faultline-bulwark.js','utf8'),ctx);
+const wallCanvas=new Proxy({globalAlpha:1},{get:(target,key)=>target[key]??(()=>{})});
+for(const team of [0,1]){
+  for(let i=0;i<=60;i++){
+    const target={x:team?700:300,y:470,team};
+    const attacker={x:team?260:740,y:330};
+    ctx.window.FaultlineBulwark.draw(wallCanvas,target,i/60);
+    ctx.window.FaultlineBulwark.draw(wallCanvas,target,1,{attacker,age:i/60,broken:true,stress:1});
+  }
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(bulwark.id));
+console.log('Faultline Bulwark: priority conflicts, layered barriers, cumulative hits, exact break, single retaliation, next-cast expiry, mirrored effects and opening hand passed.');

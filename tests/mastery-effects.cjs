@@ -19,28 +19,21 @@ console.log('Mastery effects: fixed boosted direct/periodic healing, boosted poi
   assert.equal(u.hp,200,'Soul Drain heals by the actual HP drained');
   assert.ok(enemy.statuses.some(st=>st.kind==='decay_mark'));
 }
-{
+for(const [id,roll,frozen] of [['bear',.249,true],['bear',.25,false],['totallyrad',.399,true],['totallyrad',.4,false]]){
   const {u,ally,enemy}=setup();
-  u.hp=ally.hp=enemy.hp=5000;
+  enemy.hp=5000;
   cast('frozentouch',u,ally,1);
-  cast('frozentouch',enemy,u,1);
-  assert.ok(!u.statuses.some(st=>st.kind==='frozen_touch'),'enemies cannot receive the shield');
-  cast('devil',enemy,ally,1);
-  assert.ok(ally.hp<5000,'Fire bypasses Frozen Touch');
-  const afterFire=ally.hp;
-  cast('volt',enemy,ally,1);
-  assert.ok(ally.hp<afterFire,'Lightning bypasses Frozen Touch');
-  assert.ok(ally.statuses.some(st=>st.kind==='frozen_touch'));
-  const hp=ally.hp;
-  cast('darksorcerer',enemy,ally,1);
-  assert.equal(ally.hp,hp,'the shield protects the recipient');
-  assert.ok(u.hp<5000,'unshielded allies take damage from the same cast');
   assert.ok(!ally.statuses.some(st=>st.kind==='frozen_touch'));
-  cast('scorpion',enemy,ally,1);
-  assert.ok(ally.hp<hp,'subsequent spells deal damage');
-  cast('frozentouch',u,u,1);
-  assert.ok(u.statuses.some(st=>st.kind==='frozen_touch'),'self casting applies the shield');
+  cast('frozentouch',u,enemy,1);
+  cast('devil',u,enemy,1);
+  assert.ok(enemy.statuses.some(st=>st.kind==='frozen_touch'));
+  const card=api.cards.find(c=>c.id===id);
+  api.applySpell({card,source:u.id,target:enemy.id,action:{casterId:u.id,targetId:enemy.id},
+    runeResult:'success',damageVariant:1,freezeRoll:roll});
+  assert.ok(!enemy.statuses.some(st=>st.kind==='frozen_touch'));
+  assert.equal(enemy.statuses.some(st=>st.kind==='frozen'),frozen);
 }
+
 {
   const {u,enemy}=setup();
   enemy.hp=5000;

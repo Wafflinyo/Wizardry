@@ -25,7 +25,7 @@
   // Cards use accuracy rolls, never manual tracing. The lightning summon
   // adds a real one-action stun only AFTER a successful damaging cast.
   const CARDS=[
-    {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:8,target:"enemy",kind:"summon",damage:900,
+    {id:"poseidon",name:"Poseidon's Wrath",school:"water",cost:9,target:"enemy",kind:"summon",damage:900,
       icon:"♆",description:"On success: recharge 1 round & Tidal Echo +30% next Water hit",short:"70% ACCURACY",accuracy:.70,duration:2550,hit:.60,artFrame:7},
     {id:"volt",name:"Professor Volt",school:"lightning",cost:3,target:"enemy",kind:"summon",damage:280,
       icon:"⚡",description:"15% Stun chance on hit · target skips one action",short:"80% ACCURACY",accuracy:.80,
@@ -51,33 +51,33 @@
     {id:"shark",name:"Reef Rush",school:"water",cost:5,target:"enemy",kind:"damage",
       damage:520,icon:"♆",accuracy:.90,duration:5800,hit:.65,rarity:"EPIC",
       short:"90% ACCURACY",description:"A dorsal fin slowly rises and circles before a shark jumps straight up, flops at the apex, then arches downward onto one target and chomps for 520 damage, then splashes back beneath the arena floor"},
-    {id:"thunder",name:"Thunderclap",school:"lightning",cost:6,target:"enemy",kind:"summon",
+    {id:"thunder",name:"Thunderclap",school:"lightning",cost:5,target:"enemy",kind:"summon",
       damage:550,icon:"⚡",accuracy:.75,duration:3060,hit:.65,rarity:"EPIC",
       short:"75% ACCURACY",description:"A dark thundercloud being with electric-blue eyes forms at the arena center, spreads its arms and claps, firing an arcing bolt at one enemy for 550 damage"},
     {id:"arrows",name:"Flaming Arrows",school:"fire",cost:3,target:"all_enemies",kind:"rain",
-      damage:150,accuracy:.85,icon:"♨",rarity:"RARE",burnChance:.10,burnDamage:50,burnTurns:3,duration:2900,
-      short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 10% chance to burn for 50 damage at the start of each of the next 3 rounds"},
+      damage:150,accuracy:.85,icon:"♨",rarity:"RARE",burnChance:0.2,burnDamage:50,burnTurns:3,duration:2900,
+      short:"85% ACCURACY",description:"A slanted fire rune circle rains a barrage of flaming arrows across all enemies. Each enemy hit takes 150 total damage with an independent 20% chance to burn for 50 damage at the start of each of the next 3 rounds"},
     {id:"ronin",name:"Wind Slashes",school:"wind",cost:5,target:"enemy",kind:"slashes",damage:150,accuracy:.80,icon:"≋",rarity:"EPIC",duration:3280,
       short:"80% ACCURACY",description:"A wandering samurai drops into the arena, slowly reaches for his sheathed katana, then draws it in a flash and releases three rapid wind slashes at one enemy. Each slash deals 150 damage: 450 total. 80% spell accuracy"},
     {id:"reaper",name:"Reaper",school:"dark",cost:8,target:"enemy",kind:"reaper",damage:950,accuracy:.80,icon:"☠",rarity:"LEGENDARY",duration:3740,
       short:"80% ACCURACY",description:"A red-eyed hooded Reaper rises from a shadow circle, lunges and slashes for 950 damage. Applies Decaying Strength: the next successful damaging spell against that enemy deals 20% more damage, including all hits of that spell"},
-    {id:"bender",name:"Stone Bender",school:"earth",cost:5,target:"enemy",kind:"stonebender",damage:540,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
-      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 540 total damage to one enemy"},
+    {id:"bender",name:"Stone Bender",school:"earth",cost:4,target:"enemy",kind:"stonebender",damage:480,accuracy:.85,icon:"◆",rarity:"EPIC",duration:3950,
+      short:"85% ACCURACY",description:"An earthbender appears with arms crossed, takes a palm-and-fist stance, then lifts her forward foot and stomps hard in front of her to raise a huge rectangular stone wall. She punches it into a barrage of broken stones, dealing 480 total damage to one enemy"},
     {id:"frosty",name:"Frosty",school:"ice",cost:4,target:"enemy",kind:"frosty",damage:400,accuracy:.80,icon:"❄",rarity:"LEGENDARY",duration:7822.5,frostDamage:50,frostTurns:3,frostChance:.30,
       short:"80% ACCURACY",description:"A winter gust reveals a happy snowman. He turns angry, becomes a muscular snow giant and hurls a huge snowball for 400 damage. He melts away after the throw, with a 30% chance to inflict Frostbite: 50 damage per turn for 3 turns"},
     {id:"solidity",name:"Solidity",school:"earth",cost:2,target:"ally",kind:"shield",reduction:.25,accuracy:1,icon:"◆",rarity:"RARE",duration:1900,hit:.76,short:"100% ACCURACY",description:"An earth-symbol shield travels to yourself or a living ally and dissolves into a Solidity rune. Reduces every hit of the next successful damaging spell by 25%, then expires. Misses and damage over time do not consume it. Does not stack."},
     {id:"calming",name:"Calming Waters",school:"water",cost:3,target:"ally",kind:"regen",heal:375,healPerTurn:125,healTurns:3,accuracy:1,icon:"≈",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Calming currents bless yourself or a living ally. Restores 125 HP at the start of each of the next 3 turns: 375 total. Cannot exceed maximum HP or revive a defeated wizard. Reapplying refreshes the duration; it does not stack."},
     {id:"static",name:"Static Shock",school:"lightning",cost:3,target:"enemy",kind:"static",damage:100,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Curses one enemy with −30 percentage points of spell accuracy for 3 turns (80% becomes 50%). On their first missed spell, discharges for 100 damage and expires. Successful spells leave the curse active until its duration ends. Refreshes without stacking."},
-    {id:"rage",name:"Blazing Rage",school:"fire",cost:3,target:"ally",kind:"rage",boost:.20,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging Fire spell deals 20% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."},
+    {id:"rage",name:"Blazing Rage",school:"fire",cost:2,target:"ally",kind:"rage",boost:0.25,accuracy:1,icon:"♨",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Fiery energy blesses yourself or a living ally. Their next successful damaging Fire spell deals 25% more damage, including every hit and target of that spell. Misses, healing and support spells preserve it. Refreshes without stacking."},
     {id:"turbulence",name:"Turbulence",school:"wind",cost:3,target:"enemy",kind:"turbulence",accuracy:1,icon:"≋",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Restless wind curses one enemy. Their next spell loses 50 percentage points of accuracy. An 80% spell becomes 30% accurate (70% failure). Combines with Static Shock and other active accuracy effects. Consumed on the next cast attempt, whether it succeeds or fails. Does not stack."},
     {id:"soul",name:"Soul Drain",school:"dark",cost:3,target:"enemy",kind:"souldrain",damage:100,drainTurns:3,accuracy:1,icon:"☠",rarity:"RARE",duration:2100,hit:.72,short:"100% ACCURACY",description:"Curses one enemy for 3 turns. At the start of each turn, drains up to 100 HP and restores the HP actually drained to the caster, capped at maximum HP. 300 total drain. Cannot revive a defeated caster. Reapplying refreshes the curse without stacking."},
     {id:"healingaura",name:"Healing Aura",school:"nature",cost:5,target:"team",kind:"teamregen",heal:600,healPerTurn:200,healTurns:3,accuracy:1,icon:"❀",rarity:"EPIC",duration:2300,hit:.72,short:"100% ACCURACY",description:"Blesses every living teammate, including yourself. Each restores 200 HP at the start of each of the next 3 turns: 600 HP per ally. Capped at maximum HP; cannot revive. Works alongside Calming Waters. Reapplying refreshes this aura without stacking copies."},
     {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."},
     {id:"scorpion",name:"Scorpion Sting",school:"earth",cost:3,target:"enemy",kind:"scorpion",damage:310,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.85,icon:"◆",rarity:"RARE",duration:4700,hit:3108/4700,short:"85% ACCURACY",description:"A giant orange scorpion rolls down curled into an armored ball, unfolds, pauses, winds up its tail and stings one enemy for 310 damage. 30% chance to poison for 50 HP per turn for 3 turns, then digs and burrows beneath the arena."}
 ,
-    {id:"octo",name:"Octo Whip",school:"water",cost:4,target:"enemy",kind:"octo",damage:230,flinchChance:.15,accuracy:.85,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"85% ACCURACY",description:"A large blue octopus slams down, flails angrily and whips one enemy for 230 damage. 15% chance to flinch: skips their action this turn only if they have not acted yet. No carryover to the next turn."}
+    {id:"octo",name:"Octo Whip",school:"water",cost:2,target:"enemy",kind:"octo",damage:230,flinchChance:.15,accuracy:.85,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"85% ACCURACY",description:"A large blue octopus slams down, flails angrily and whips one enemy for 230 damage. 15% chance to flinch: skips their action this turn only if they have not acted yet. No carryover to the next turn."}
 ,
-    {id:"devil",name:"Devil Boy",school:"fire",cost:3,target:"enemy",kind:"damage",damage:250,accuracy:.85,icon:"♨",rarity:"RARE",duration:3800,hit:.60,short:"85% ACCURACY",description:"A small red demon appears in a burst of flames, aims his musket-style pistol and fires a glowing volcanic rock at one enemy for 250 Fire damage, then disappears in another burst of flames."}
+    {id:"devil",name:"Devil Boy",school:"fire",cost:2,target:"enemy",kind:"damage",damage:250,accuracy:.85,icon:"♨",rarity:"RARE",duration:3800,hit:.60,short:"85% ACCURACY",description:"A small red demon appears in a burst of flames, aims his musket-style pistol and fires a glowing volcanic rock at one enemy for 250 Fire damage, then disappears in another burst of flames."}
 ,
     {id:"bloom",name:"Blooming Spores",school:"nature",cost:3,target:"all_enemies",kind:"spores",damage:100,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"EPIC",duration:4600,hit:.72,short:"90% ACCURACY",description:"A huge spotted closed flower bud bulges with pressure, then bursts open into full bloom and releases spore dust, dealing 100 Nature damage to every enemy. Each enemy hit has an independent 30% chance to be poisoned for 50 HP per turn for 3 turns."}
 ,
@@ -97,7 +97,7 @@
   CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Put yourself or a living ally in Flow State. The recipient gains 1 extra mana at the start of each of their next 3 turns: 2 mana after casting, or 3 after passing, up to their mana capacity. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
   CARDS.push({id:"windfist",name:"Wind Fist Barrage",school:"wind",cost:6,target:"enemy",kind:"windfist",damage:500,hitDamage:50,hits:10,accuracy:.85,icon:"≋",rarity:"EPIC",duration:5400,hit:.98,short:"85% ACCURACY",description:"A monk drops into a three-point crouched landing, stands, claps his hands and bows, then takes an open-palm forward stance. He leaps up and unleashes ten forceful wind fists at one enemy: 50 damage per punch, 500 total. 85% spell accuracy."});
   CARDS.push({id:"jack",name:"Jack the Lantern",school:"dark",cost:4,target:"enemy",kind:"jack",damage:280,accuracy:.85,icon:"☠",rarity:"EPIC",duration:5200,hit:.82,fearChance:.30,fearTurns:3,short:"85% ACCURACY",description:"A pumpkin-headed scarecrow rises with its head bowed as three crows circle overhead. It lifts its head to face one enemy, sending the crows to swarm for 280 Dark damage. Inflicts Fear for 3 rounds: a 30% chance to skip each turn. Refreshes without stacking."});
-  CARDS.push({id:"croc",name:"Creeping Croc",school:"water",cost:6,target:"enemy",kind:"croc",damage:800,accuracy:.85,icon:"♆",rarity:"EPIC",duration:4500,hit:.62,fearChance:.10,short:"85% ACCURACY",description:"A crocodile floats almost completely submerged toward one enemy, showing only its eyes, the top of its head and its ridged back. It suddenly lunges from the water and snaps for 800 damage. On hit: 10% chance to Fear, skipping the target only if they have not acted yet this round. Never carries into the next round."});
+  CARDS.push({id:"croc",name:"Creeping Croc",school:"water",cost:7,target:"enemy",kind:"croc",damage:800,accuracy:.85,icon:"♆",rarity:"EPIC",duration:4500,hit:.62,fearChance:.10,short:"85% ACCURACY",description:"A crocodile floats almost completely submerged toward one enemy, showing only its eyes, the top of its head and its ridged back. It suddenly lunges from the water and snaps for 800 damage. On hit: 10% chance to Fear, skipping the target only if they have not acted yet this round. Never carries into the next round."});
   CARDS.push({id:"electricalcharge",name:"Electrical Charge",school:"lightning",cost:2,target:"ally",kind:"electricalcharge",chargeTurns:3,accuracy:1,icon:"ϟ",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Charge yourself or a living ally through the next 3 rounds. The recipient gains 1 mana each time a Lightning spell reaches them, once per cast, up to their mana capacity. Includes chain lightning and Lightning Rod discharge. Misses do not grant mana. Recasting resets the duration."});
   CARDS.push({"id":"grillmaster","name":"Grill Master","school":"fire","cost":4,"target":"enemy","kind":"grillmaster","damage":440,"burnChance":0.2,"burnDamage":50,"burnTurns":3,"accuracy":0.85,"icon":"♨","rarity":"RARE","duration":4200,"hit":0.6,"short":"85% ACCURACY","description":"A living cast-iron grill heats up under a closed lid, then snaps its jaws open and blasts one enemy for 440 base Fire damage. A successful hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   CARDS.push({"id":"venustrap","name":"Venus Trap","school":"nature","cost":4,"target":"enemy","kind":"damage","damage":400,"accuracy":0.9,"icon":"❀","rarity":"RARE","duration":4200,"hit":0.655,"short":"90% ACCURACY","description":"A giant Venus flytrap sprouts at the center of the arena, rears up and roars, then stretches out to engulf one enemy for 400 base Nature damage."});
@@ -107,13 +107,13 @@
   CARDS.push({"id": "acidair", "name": "Acid Air", "school": "wind", "cost": 4, "target": "enemy", "kind": "acidair", "poisonChance": 1, "poisonDamage": 100, "poisonTurns": 5, "accuracy": 0.9, "icon": "≋", "rarity": "RARE", "duration": 2300, "hit": 0.58, "short": "90% ACCURACY", "description": "A toxic wind coils around one enemy’s face and inflicts Extreme Poison for 100 base damage at the start of each of the next 5 turns."});
   CARDS.push({"id": "decaystrength", "name": "Decay of Strength", "school": "dark", "cost": 3, "target": "enemy", "kind": "decaystrength", "boost": 0.2, "accuracy": 1, "icon": "☠", "rarity": "RARE", "duration": 1850, "hit": 0.67, "short": "100% ACCURACY", "description": "Mark one enemy. The next damaging spell against them deals 20% more damage across its hits."});
   CARDS.push({"id": "burningpheonix", "name": "Burning Pheonix", "school": "fire", "cost": 9, "target": "enemy", "kind": "damage", "damage": 890, "accuracy": 0.7, "rarity": "LEGENDARY", "duration": 5100, "hit": 0.88, "short": "70% ACCURACY", "description": "A blazing ground flame rises into a phoenix. It beats its wings high above the arena and dives into one enemy for 890 base Fire damage."});
-  CARDS.push({"id":"electrodisc","name":"Electro Disc","school":"lightning","cost":4,"target":"enemy","kind":"electrodisc","damage":360,"hitDamage":120,"hits":3,"accuracy":0.9,"icon":"ϟ","rarity":"EPIC","duration":4200,"hit":0.94,"short":"90% ACCURACY","description":"Three electro discs deal 120 damage each to one enemy."});
+  CARDS.push({"id":"electrodisc","name":"Electro Disc","school":"lightning","cost":3,"target":"enemy","kind":"electrodisc","damage":360,"hitDamage":120,"hits":3,"accuracy":0.9,"icon":"ϟ","rarity":"EPIC","duration":4200,"hit":0.94,"short":"90% ACCURACY","description":"Three electro discs deal 120 damage each to one enemy."});
   CARDS.push({"id":"zen","name":"Zen","school":"wind","cost":2,"target":"ally","kind":"zen","accuracy":1,"icon":"≋","rarity":"RARE","duration":1300,"hit":0.48,"short":"100% ACCURACY","description":"Choose one negative rune on yourself or an ally to remove."});
   CARDS.push({"id":"scaldingair","name":"Scalding Air","school":"wind","cost":4,"target":"enemy","kind":"scaldingair","damage":140,"burnChance":0.4,"burnDamage":100,"burnTurns":5,"accuracy":0.9,"icon":"≋","rarity":"RARE","duration":1350,"hit":0.57,"short":"90% ACCURACY","description":"140 damage. 40% chance of Extreme Burn: 100 damage per round for 5 rounds."});
   CARDS.push({"id":"tree","name":"TREE!","school":"nature","cost":7,"target":"enemy","kind":"tree","damage":720,"seedChance":0.3,"seedDamage":75,"seedTurns":5,"accuracy":0.8,"icon":"❧","rarity":"EPIC","duration":4100,"hit":0.8,"short":"80% ACCURACY","description":"720 damage. 30% chance to plant a Healing Seed that transfers up to 75 HP to the caster each round for 5 rounds."});
   CARDS.push({"id":"bulletseed","name":"Bullet Seed","school":"nature","cost":2,"target":"enemy","kind":"bulletseed","damage":150,"hitDamage":30,"hits":5,"seedChance":0.4,"seedDamage":75,"seedTurns":5,"accuracy":0.9,"icon":"❧","rarity":"RARE","duration":4400,"hit":0.91,"short":"90% ACCURACY","description":"Five seeds deal 30 damage each. 40% chance per cast to apply Healing Seed for 5 rounds."});
-  CARDS.push({"id":"yeti","name":"Yeti","school":"ice","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"❄","rarity":"RARE","duration":4200,"hit":0.728,"short":"90% ACCURACY","description":"A yeti breathes frost, charges one enemy, and smashes with both fists."});
-  CARDS.push({"id":"totallyrad","name":"Totally Rad","school":"ice","cost":4,"target":"enemy","kind":"totallyrad","damage":320,"freezeChance":0.15,"accuracy":0.9,"icon":"❄","rarity":"RARE","duration":4500,"hit":0.73,"short":"90% ACCURACY","description":"Launches a giant snowball for 320 damage. 15% chance to Freeze on hit."});
+  CARDS.push({"id":"yeti","name":"Yeti","school":"ice","cost":5,"target":"enemy","kind":"damage","damage":570,"accuracy":0.9,"icon":"❄","rarity":"RARE","duration":4200,"hit":0.728,"short":"90% ACCURACY","description":"A yeti breathes frost, charges one enemy, and smashes with both fists."});
+  CARDS.push({"id":"totallyrad","name":"Totally Rad","school":"ice","cost":3,"target":"enemy","kind":"totallyrad","damage":320,"freezeChance":0.15,"accuracy":0.9,"icon":"❄","rarity":"RARE","duration":4500,"hit":0.73,"short":"90% ACCURACY","description":"Launches a giant snowball for 320 damage. 15% chance to Freeze on hit."});
   CARDS.push({"id":"lightningball","name":"Lightning Ball","school":"lightning","cost":4,"target":"enemy","kind":"lightningball","damage":315,"accuracy":0.85,"icon":"ϟ","rarity":"RARE","duration":4100,"hit":0.44,"bounceChance":0.7,"bounceDrop":0.1,"bounceDamage":0.9,"short":"85% ACCURACY","description":"315 initial damage. Bounces to a new enemy at 70%, 60%, 50%, then 10 points less per bounce. Each bounce deals 10% less base damage."});
   CARDS.push({"id":"wickedwitch","name":"Wicked Witch","school":"dark","cost":5,"target":"enemy","kind":"wickedwitch","damage":350,"accuracy":0.85,"icon":"☠","rarity":"RARE","duration":4650,"hit":0.64,"burnDamage":50,"burnTurns":3,"frostDamage":50,"frostTurns":3,"poisonDamage":50,"poisonTurns":3,"stunChance":0.3,"short":"85% ACCURACY","description":"350 Dark damage. Fire, Ice, Poison, and Lightning beams each have a 25% chance. Each has a 30% chance of its matching status: Burn, Frostbite, Poison, or skip this round."});
   CARDS.push({"id":"kamikaze","name":"Kamikaze?","school":"fire","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"♨","rarity":"RARE","duration":7850,"hit":7034/7850,"short":"90% ACCURACY","description":"A gremlin plants a bomb, then picks it back up after the fuse goes dark. The explosion hits one enemy for 470 Fire damage."});
@@ -124,7 +124,7 @@
   CARDS.push({"id":"soulharvest","name":"Soul Harvest","school":"dark","cost":7,"target":"enemy","kind":"soulharvest","damage":540,"soullessDamage":250,"soullessRounds":3,"accuracy":0.85,"icon":"☠","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"Hook one enemy for 540 base damage and trap their soul in a lantern. Soulless deals 250 damage after 3 rounds."});
   CARDS.push({"id":"sirensmelody","name":"Sirens Melody","school":"water","cost":5,"target":"team","kind":"teamheal","heal":350,"accuracy":0.95,"icon":"≈","rarity":"EPIC","duration":3400,"hit":0.62,"short":"95% ACCURACY","description":"A siren rises on a rock and sings. Restores up to 350 base HP to each living ally, including you."});
   CARDS.push({"id":"quicksand","name":"Quick Sand","school":"earth","cost":4,"target":"enemy","kind":"quicksand","accuracy":1,"icon":"◆","rarity":"RARE","duration":1750,"hit":0.65,"short":"100% ACCURACY","sinkDamage":250,"drain":150,"turns":3,"description":"Lasts 3 rounds. Each cast attempt sinks the target and drains up to 150 HP to heal your living teammate with the lowest current HP, including yourself. The third attempt closes the sand for 250 additional damage."});
-  CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":7,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
+  CARDS.push({"id":"reikel","name":"Reikel","school":"fire","cost":6,"target":"enemy","kind":"reikel","damage":670,"dispelChance":0.3,"accuracy":0.85,"icon":"♨","rarity":"EPIC","duration":4000,"hit":0.78,"short":"85% ACCURACY","description":"Pierces one enemy for 670 base Fire damage. On hit, 30% chance to destroy one random beneficial rune. Wind Dome blocks both effects."});
   CARDS.push({"id":"crystalicemirrors","name":"Crystal Ice Mirrors","school":"ice","cost":3,"target":"enemy","kind":"crystalicemirrors","accuracy":1,"icon":"❄","rarity":"EPIC","duration":2250,"hit":0.67,"short":"100% ACCURACY","reflectChance":0.4,"turns":3,"description":"Mark one enemy for 3 rounds. Each damaging cast has a 40% chance to turn its damage back on the caster instead. Multi-hit spells roll once. Team attacks reflect one target’s share."});
   CARDS.push({"id":"electriceel","name":"Electric Eel","school":"lightning","cost":5,"target":"enemy","kind":"electriceel","damage":430,"stunChance":0.25,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":4400,"hit":0.64,"short":"90% ACCURACY","description":"Coils around one enemy and shocks them for 430 base damage. 25% chance to Stun, skipping their pending action this round."});
   CARDS.push({"id":"growth","name":"Growth","school":"nature","cost":3,"target":"ally","kind":"growth","boost":0.25,"accuracy":1,"icon":"❧","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Bless yourself or a living ally. Their next direct Nature heal or damaging cast gains 25% across every hit and target. Rune ticks, misses, and fully blocked casts preserve Growth. Does not stack."});
@@ -136,18 +136,18 @@
   CARDS.push({id:"volcaniceruption",name:"Volcanic Eruption",school:"fire",cost:7,target:"all_enemies",kind:"volcaniceruption",
     damage:430,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:1,icon:"♨",rarity:"EPIC",duration:4860,hit:.6,
     short:"100 / 80 / 60 / 40%",description:"Lava strikes enemies in random order. Hit chances: 100%, 80%, 60%, 40%. Each hit deals 430 damage with a 30% chance of Extreme Burn (100 per round for 5 rounds)."});
-  CARDS.push({id:"frozentouch",name:"Frozen Touch",school:"ice",cost:2,target:"ally",kind:"frozentouch",
-    accuracy:1,icon:"❄",rarity:"EPIC",duration:1850,hit:.60,short:"100% ACCURACY",
-    description:"Shield yourself or an ally from all hits of the next eligible incoming spell. Fire and Lightning bypass the shield. Lasts until triggered."});
+  CARDS.push({id:"frozentouch",name:"Frozen Touch",school:"ice",cost:4,target:"enemy",kind:"frozentouch",
+    freezeBonus:.25,accuracy:1,icon:"❄",rarity:"EPIC",duration:1850,hit:.60,short:"100% ACCURACY",
+    description:"Mark an enemy. The next damaging Ice spell that hits them gains 25 percentage points of Freeze chance, added to any existing chance."});
   CARDS.push({id:"wynzor",name:"Wynzor",school:"wind",cost:8,target:"enemy",kind:"damage",
     damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:4700,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
   CARDS.push({id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:8,target:"enemy",kind:"damage",
     damage:910,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:6340,hit:4352/6340,short:"80% ACCURACY",
     description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 910 base Earth damage, with a 25% chance to disable its pending action this round."});
-  CARDS.push({id:"rogginbowler",name:"Roggin’ Bowler",school:"earth",cost:6,target:"enemy",kind:"damage",
-    damage:610,accuracy:.85,icon:"◆",rarity:"RARE",duration:4490,hit:3510/4490,short:"85% ACCURACY",
-    description:"An ogre hefts a bowling boulder onto its shoulder, points at the enemy, then winds up and rolls it into them for 610 base Earth damage."});
+  CARDS.push({id:"rogginbowler",name:"Roggin’ Bowler",school:"earth",cost:5,target:"enemy",kind:"damage",
+    damage:560,accuracy:.85,icon:"◆",rarity:"RARE",duration:4490,hit:3510/4490,short:"85% ACCURACY",
+    description:"An ogre hefts a bowling boulder onto its shoulder, points at the enemy, then winds up and rolls it into them for 560 base Earth damage."});
   CARDS.push(
     {"id":"iceblast","name":"Ice Blast","school":"ice","cost":1,"accuracy":0.95,"damage":75,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Ice blast deals 75 base damage to one enemy."},
     {"id":"blazingembers","name":"Blazing Embers","school":"fire","cost":1,"accuracy":0.95,"damage":85,"target":"enemy","kind":"damage","starterBlast":true,"duration":1420,"hit":0.78,"description":"A quick Fire blast deals 85 base damage to one enemy."},
@@ -163,7 +163,7 @@
     kind:"waterprison",accuracy:1,icon:"≈",rarity:"RARE",duration:1550,hit:.72,
     water_prisonDamage:150,water_prisonTurns:3,
     description:"Trap one enemy in a rectangular prison of water. They take 150 Water damage at the start of each of the next 3 turns."});
-  CARDS.push({id:"lightningfield",name:"Lightning Field",school:"lightning",cost:4,target:"team",
+  CARDS.push({id:"lightningfield",name:"Lightning Field",school:"lightning",cost:5,target:"team",
     kind:"lightningfield",accuracy:1,icon:"ϟ",rarity:"EPIC",duration:1500,hit:.68,
     fieldRounds:5,fieldBoost:.10,shockChance:.15,
     description:"Storm covers both teams through the next 5 rounds. Lightning spell damage +10%. Wizards without Lightning mastery have a 15% chance to get shocked when casting, skipping for bonus mana."});
@@ -171,10 +171,10 @@
     kind:"damage",accuracy:.85,damage:650,burnChance:.45,burnDamage:100,burnTurns:5,
     icon:"♨",rarity:"EPIC",duration:4200,hit:3350/4200,
     description:"A hovering solar warrior hurls a blazing sun at one enemy for 650 base Fire damage. 45% chance of Extreme Burn: 100 damage per turn for 5 turns."});
-  CARDS.push({id:"landray",name:"Land Ray",school:"earth",cost:5,target:"enemy",
-    kind:"damage",damage:400,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
+  CARDS.push({id:"landray",name:"Land Ray",school:"earth",cost:3,target:"enemy",
+    kind:"damage",damage:385,accuracy:.90,stunChance:.20,icon:"◆",rarity:"RARE",
     duration:6305,hit:3945/6305,
-    description:"A buried land ray strikes one enemy with its barbed tail for 400 base Earth damage. 20% chance to Shock and skip their pending action this round."});
+    description:"A buried land ray strikes one enemy with its barbed tail for 385 base Earth damage. 20% chance to Shock and skip their pending action this round."});
   const DOUBLE_PICK_HITS=[3190,4840];
   CARDS.push({id:"doublepick",name:"Double Pick",school:"ice",cost:3,target:"enemy",
     kind:"doublepick",damage:440,hitDamage:220,hits:2,accuracy:.90,icon:"❄",rarity:"RARE",
@@ -192,9 +192,9 @@
     kind:"aromatherapy",accuracy:.90,heal:100,healTurns:3,icon:"≋",rarity:"RARE",duration:1800,hit:.73,
     description:"A pink gust leaves a cleansable debuff rune on the caster. Each living teammate, including the caster, recovers 100 base HP over the next 3 rounds."});
   CARDS.push({id:"flamingflamingo",name:"Flaming Flamingo",school:"fire",cost:4,target:"all_enemies",
-    kind:"flamingflamingo",accuracy:.85,damage:225,burnChance:.20,burnDamage:50,burnTurns:3,
+    kind:"flamingflamingo",accuracy:.85,damage:280,burnChance:.20,burnDamage:50,burnTurns:3,
     icon:"♨",rarity:"RARE",duration:3600,hit:.64,
-    description:"A one-legged flamingo sweeps the enemy team with fire for 225 base damage each. Each enemy hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
+    description:"A one-legged flamingo sweeps the enemy team with fire for 280 base damage each. Each enemy hit has a 20% chance to Burn for 50 damage per round for 3 rounds."});
   CARDS.push({id:"earthquake",name:"Earthquake",school:"earth",cost:5,target:"all_enemies",
     kind:"earthquake",accuracy:.80,damage:300,icon:"◆",rarity:"RARE",duration:2250,hit:.40,
     description:"Shatters the active environmental rune and deals 300 base damage to each living enemy."});
@@ -283,7 +283,7 @@
     ronin:"Three hits of 150.",reaper:"Next damaging spell against target deals 20% more.",
     frosty:"30% frostbite: 50 × 3 rounds.",solidity:"Next damaging spell deals 25% less.",
     calming:"125 HP per round for 3 rounds.",static:"−30 accuracy for 3 rounds. First miss deals 100.",
-    rage:"Next damaging Fire cast gains 20%.",turbulence:"Next cast loses 50 accuracy points.",
+    rage:"Next damaging Fire cast gains 25%.",turbulence:"Next cast loses 50 accuracy points.",
     soul:"Drains 100 HP per round for 3 rounds and heals the caster.",healingaura:"200 HP per ally per round for 3 rounds.",
     freezing:"Next Ice hit has a 50% freeze chance.",scorpion:"30% poison: 50 × 3 rounds.",
     octo:"15% flinch if the target has yet to act.",bloom:"30% poison per enemy: 50 × 3 rounds.",
@@ -312,12 +312,12 @@
     sandwarrior:"Guard yourself or an ally. Absorbs up to 250 damage.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
-    frozentouch:"Blocks the next eligible spell. Fire and Lightning bypass it.",
+    frozentouch:"Adds 25 Freeze chance points to the next damaging Ice spell that hits the marked enemy.",
     sentinelfissure:"25% chance to cancel the target’s pending action.",
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
-    flamingflamingo:"225 damage per enemy. 20% Burn chance each.",
+    flamingflamingo:"280 damage per enemy. 20% Burn chance each.",
     reflectiveice:"First damaging spell: take half and reflect half. Lasts 3 rounds.",
     cursedhold:"For 3 rounds, your killer takes 2× the finishing hit.",
     claritystrike:"Remove one random negative rune. Target gains 1 mana.",
@@ -899,8 +899,16 @@
     if(card?.school!=="ice")return false;
     if(spell?.freezeMarkTargets?.[target.id])return false;
     if(spell){if(!spell.freezeMarkTargets)spell.freezeMarkTargets={};spell.freezeMarkTargets[target.id]=true;}
-    const mark=consumeStatus(target,"freezing_temps");if(!mark||target.hp<=0||(roll??Math.random())>=.5)return false;
-    return freezeTarget(target,card.school);
+    if(target.hp<=0)return false;
+    const touch=consumeStatus(target,"frozen_touch");
+    if(touch)flash(target,"FROZEN TOUCH · TRIGGERED","#b8efff").frozenTouchRecipient=target.id;
+    const mark=consumeStatus(target,"freezing_temps");
+    if(target.statuses.some(st=>st.kind==="frozen"))return false;
+    const chance=Math.min(1,(card.freezeChance||0)+(touch?.value||0));
+    if(chance>0&&(roll??spell?.freezeRoll??Math.random())<chance)
+      return freezeTarget(target,card.school);
+    if(mark&&(roll??Math.random())<.5)return freezeTarget(target,card.school);
+    return false;
   }
   function freezeTarget(target,school){
     if(!canReceiveDebuff(target,"frozen"))return false;
@@ -974,7 +982,7 @@
     return barrierNotice(target,card);
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
-  const towerBarriers=new Set(["faultlinebulwark","sandwarrior","reflectiveice","winddome","bubbleshield","shield","frozentouch"]);
+  const towerBarriers=new Set(["faultlinebulwark","sandwarrior","reflectiveice","winddome","bubbleshield","shield"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
       ["turbulence","static","manascourge","drowzyflowers","quicksand"].includes(card.kind);
@@ -1046,7 +1054,7 @@
           },0);
           score=healing*(role==="Support"?1.4:.8);
         }else if(towerBarriers.has(card.kind)){
-          if(!target||planned(target)||barrierConflict(target,BARRIER_SPELLS[card.kind])||target.statuses.some(s=>s.kind===(BARRIER_SPELLS[card.kind]??(card.kind==="shield"?"solidity":"frozen_touch"))))continue;
+          if(!target||planned(target)||barrierConflict(target,BARRIER_SPELLS[card.kind])||target.statuses.some(s=>s.kind===(BARRIER_SPELLS[card.kind]??("solidity"))))continue;
           score=(role==="Guardian"?300:180)+220*(1-target.hp/target.maxHp);
           if(target!==u&&target.towerRole==="Support")score+=65;
         }else if(card.kind==="hightide"){
@@ -1899,9 +1907,9 @@
     c.restore();return placed;
   }
   const MAX_DEBUFF_RUNES=4;
-  const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2213,7 +2221,7 @@
     return amount;
   }
   function preventsHitEffects(spell,target){
-    return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]||spell?.frozenTouchTargets?.[target.id]);
+    return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
   }
 
   function growthBonus(source,spell){
@@ -2271,15 +2279,6 @@
       }
     }
     base*=1-reduction;
-    if(base>0&&source.team!==target.team&&card?.school&&card.school!=="fire"&&card.school!=="lightning"){
-      if(spell?.frozenTouchTargets?.[recipient.id]){tally(recipient,"tanked",Math.floor(base*(spell?.damageVariant||1)*Builds.multiplier(source,card.school)));return 0;}
-      if(consumeStatus(recipient,"frozen_touch")){
-        if(spell)(spell.frozenTouchTargets??={})[recipient.id]=true;
-        tally(recipient,"tanked",Math.floor(base*(spell?.damageVariant||1)*Builds.multiplier(source,card.school)));
-        flash(recipient,"FROZEN TOUCH · BLOCKED","#b8efff").frozenTouchRecipient=recipient.id;
-        return 0;
-      }
-    }
     // Estimate the original hit while leaving the intended target’s runes intact.
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
@@ -2298,7 +2297,7 @@
     if(card?.school==="fire"){
       let rage=spell?.rageBonus;
       if(rage===undefined){rage=consumeStatus(source,"blazing_rage")?.value||0;if(spell)spell.rageBonus=rage;}
-      if(rage){raw*=1+rage;notes.push("BLAZING RAGE +20%");}
+      if(rage){raw*=1+rage;notes.push("BLAZING RAGE +25%");}
     }
     const blade=consumeStatus(source,"blade");
     if(blade){raw*=1+blade.value;notes.push("BLADE");}
@@ -2388,7 +2387,7 @@
     recordBattleEvent(source.name+" → "+target.name+": "+amount+" damage"+
       (notes.length?" ["+notes.join(", ")+"]":""));
     if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
-    attemptMarkedFreeze(target,card,spell);
+    if(base>0&&source.team!==target.team)attemptMarkedFreeze(target,card,spell);
     const directDamage=oldHp-target.hp;
     healFromLightningRod(rodOwners,redirected,recipient);
     triggerGunpowderCoat(target,card,spell);
@@ -2978,7 +2977,6 @@
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
         if(t.hp>0&&!preventsHitEffects(anim,t)){
-          if(!t.statuses.some(st=>st.kind==="frozen")&&(anim.freezeRoll??Math.random())<card.freezeChance)freezeTarget(t,card.school);
           anim.shatterPending=!t.statuses.some(st=>st.kind==="frozen");
         }
       }
@@ -2999,9 +2997,6 @@
     }else if(card.kind==="totallyrad"){
       if(anim.runeResult==="success"&&t?.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
-        if(t.hp>0&&!preventsHitEffects(anim,t)&&!t.statuses.some(st=>st.kind==="frozen")&&
-           (anim.freezeRoll??Math.random())<card.freezeChance)
-          freezeTarget(t,card.school);
       }
     }else if(card.kind==="tree"){
       if(anim.runeResult==="success"&&t?.hp>0&&t.team!==c.team){
@@ -3133,7 +3128,7 @@
         flash(t,"BOULDER WEIGHT","#e6c38a");
       }
     }else if(card.kind==="frozentouch"){
-      addStatus(t,"frozen_touch",null,1,card.school);
+      if(!t||t.team===c.team||addStatus(t,"frozen_touch",null,card.freezeBonus,card.school)===false)return;
       flash(t,"FROZEN TOUCH","#b8efff");
     }else if(card.kind==="crystalicemirrors"){
       if(t?.team!==c.team&&canReceiveDebuff(t,"crystal_ice_mirrors")){
@@ -3265,7 +3260,7 @@
     } else if(card.kind==="turbulence"&&canReceiveDebuff(t,"turbulence")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"turbulence",null,.5,card.school);flash(t,"TURBULENCE","#b8efdc");recordBattleEvent(t.name+" loses 50 accuracy points on their next spell.");
     } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
-      addStatus(t,"blazing_rage",null,card.boost,card.school);flash(t,"BLAZING RAGE +20%","#ffbb76");recordBattleEvent(t.name+" gains +20% damage on their next damaging Fire spell.");
+      addStatus(t,"blazing_rage",null,card.boost,card.school);flash(t,"BLAZING RAGE +25%","#ffbb76");recordBattleEvent(t.name+" gains +25% damage on their next damaging Fire spell.");
     } else if(card.kind==="static"&&canReceiveDebuff(t,"static_shock")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"static_shock",null,.30,card.school);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=card.damage;
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");recordBattleEvent(t.name+" is cursed with Static Shock for 3 turns.");
@@ -3450,7 +3445,7 @@
     ui.chosenSpell.textContent=card?card.name.toUpperCase():"CHOOSE YOUR SPELL";
     const allEnemies=card?.target==="all_enemies",allAllies=card?.target==="team";
     ui.chosenTarget.textContent=card?.kind==="hightide"?(state.environment?"Entire arena · Clears the environmental rune":"Fails without an active environmental rune"):card?.fieldRounds?"Both teams · Environmental rune":choosesRune(card)?(target?"Choose a negative rune on "+target.name:"Select an ally with a negative rune"):card?.kind==="claritystrike"?(target?target.name+" · Random negative rune · +1 mana":"Select yourself or an ally"):allAllies?(card.id==="aromatherapy"?"All living allies · 100 base HP over 3 rounds":"All living allies · 200 HP × 3 turns each"):allEnemies?
-      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="whale"?"All living enemies · 320 each":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 225 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 10% burn chance":"All living enemies · next spell +10 accuracy points"):
+      (card.kind==="volcaniceruption"?"Random enemy order · 100 / 80 / 60 / 40% to hit":card.kind==="darksorcerer"?"All living enemies · 570 each · 20% Curse":card.kind==="sticksandstones"?"All living enemies · "+card.damage+" each · 15% Decay of Strength":card.id==="whale"?"All living enemies · 320 each":card.id==="earthquake"?"All living enemies · 300 each · clears the environmental rune":card.id==="flamingflamingo"?"All living enemies · 280 each · 20% Burn chance each":card.id==="arrows"?"All living enemies · 150 each · 20% burn chance":"All living enemies · next spell +10 accuracy points"):
       target?"Target: "+target.name:
       !card?"Tap a card to select":
       "Tap "+(card.target==="ally"?"an ally":"an enemy")+" on the battlefield";
@@ -4296,9 +4291,9 @@
         "Every hit of the next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."};
       case "growth":return {title:"Growth · Nature rune",detail:"Your next Nature spell that directly heals or deals damage gains 25% across all hits and targets. Rune ticks, misses, and fully blocked casts preserve it. Does not stack."};
       case "raging_waters":return {title:"Raging Waters · Water rune",detail:"Your next damaging Water spell that lands deals +25% damage on every hit. The rune is consumed when the spell deals damage and does not stack."};
-      case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
+      case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 25% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
       case "boulder_weight":return {title:"Boulder Weight",detail:"−30 percentage points of spell accuracy. "+Math.min(3,st.expiresRound-state.round)+" turns remaining."};
-      case "frozen_touch":return {title:"Frozen Touch",detail:"Blocks all hits from the next incoming damaging spell. Fire and Lightning bypass the shield."};
+      case "frozen_touch":return {title:"Frozen Touch",detail:"Adds 25 percentage points to the next damaging Ice hit’s Freeze chance."};
       case "crystal_ice_mirrors":return {title:"Crystal Ice Mirrors",detail:"40% chance per damaging cast to reflect its damage back at the caster. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "quick_sand":return {title:"Quick Sand",detail:st.sinks+" / 3 sinks · "+Math.max(0,st.expiresRound-state.round)+" rounds left. Each attempt drains "+(st.drain??BY_ID.quicksand.drain)+" HP to the lowest-HP teammate on the caster’s side. The third adds "+st.value+" damage."};
       case "thorny_wrap":return {title:"Thorny Wrap · Nature curse",detail:"Thorny vines deal 150 damage whenever "+u.name+" attempts any spell, whether it succeeds or misses. −15 percentage points of accuracy while attached. "+Math.max(0,st.expiresRound-state.round)+" turns remain. Skipped turns do not trigger damage. Refreshes without stacking; damage bypasses spell shields."};

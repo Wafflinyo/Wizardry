@@ -162,11 +162,11 @@ const assert = require('node:assert/strict');
   api.chooseCard('frozentouch');
   const protectedWizard=teamTest.units.find(unit=>unit.team===0&&unit.id!==teamTest.selectedCaster);
   api.selectTarget(protectedWizard.id);
-  assert.equal(teamTest.selectedTarget,protectedWizard.id,'Frozen Touch accepts a living ally');
+  assert.notEqual(teamTest.selectedTarget,protectedWizard.id,'Frozen Touch rejects allies');
   api.selectTarget(dummies[0].id);
-  assert.equal(teamTest.selectedTarget,protectedWizard.id,'Frozen Touch rejects an enemy');
+  assert.equal(teamTest.selectedTarget,dummies[0].id,'Frozen Touch accepts an enemy');
   api.selectTarget(teamTest.selectedCaster);
-  assert.equal(teamTest.selectedTarget,teamTest.selectedCaster,'Frozen Touch accepts self');
+  assert.equal(teamTest.selectedTarget,dummies[0].id,'Frozen Touch rejects self');
   teamTest.units[0].skills.wind=0;
   dummies.forEach(unit=>{unit.hp=1;});
   for (const id of getOrder().slice(discardedForFrost,getOrder().indexOf('sticksandstones'))) {

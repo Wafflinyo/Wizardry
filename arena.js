@@ -704,13 +704,20 @@
     const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.318.0";
     return [id,{name,art,size}];
   }));
+  const guardianModels=Object.fromEntries([
+    ["abyssal",208],["gale",202],["briar",210],["glacial",218]
+  ].map(([id,size])=>{
+    const art=new Image();art.src="./assets/guardian-"+id+".webp?v=0.321.0";
+    return [id,{art,size}];
+  }));
+  const unitSprite=u=>guardianModels[u.bossId]||minionModels[u.minionId];
   const eliteSchools={magistrate:"fire",inkbinder:"nature",warden:"earth"};
   // The four corrupted tower guardians serve Grelus. Death uses the existing Dark spell school.
   const towerBosses={
-    5:{id:"abyssal",name:"Abyssal Knight",school:"water",role:"Guardian",hat:"hood",robeColor:"#128e9e",hatColor:"#44526b",skinColor:"#81b9c8",crystalColor:"#297c80"},
-    10:{id:"gale",name:"Gale Ronin",school:"wind",role:"Striker",hat:"wide",robeColor:"#2c8a64",hatColor:"#44526b",skinColor:"#be906e",crystalColor:"#459366"},
-    15:{id:"briar",name:"Briar Archon",school:"nature",role:"Controller",hat:"scholar",robeColor:"#2c8a64",hatColor:"#30293c",skinColor:"#899e81",crystalColor:"#459366"},
-    20:{id:"glacial",name:"Glacial Overlord",school:"ice",role:"Guardian",hat:"round",robeColor:"#3269c1",hatColor:"#dfd8c7",skinColor:"#81b9c8",crystalColor:"#84919e"},
+    5:{id:"abyssal",name:"Abyssal Knight",school:"water",secondary:"dark",role:"Guardian",hat:"hood",robeColor:"#128e9e",hatColor:"#44526b",skinColor:"#81b9c8",crystalColor:"#297c80"},
+    10:{id:"gale",name:"Gale Ronin",school:"wind",secondary:"dark",role:"Striker",hat:"wide",robeColor:"#2c8a64",hatColor:"#44526b",skinColor:"#be906e",crystalColor:"#459366"},
+    15:{id:"briar",name:"Briar Archon",school:"nature",secondary:"dark",role:"Controller",hat:"scholar",robeColor:"#2c8a64",hatColor:"#30293c",skinColor:"#899e81",crystalColor:"#459366"},
+    20:{id:"glacial",name:"Glacial Overlord",school:"ice",secondary:"dark",role:"Guardian",hat:"round",robeColor:"#3269c1",hatColor:"#dfd8c7",skinColor:"#81b9c8",crystalColor:"#84919e"},
     21:{id:"grelus",name:"Grelus",school:"dark",secondary:"lightning",role:"Controller",hat:"pointed",robeColor:"#30293c",hatColor:"#d08a34",skinColor:"#b197c5",crystalColor:"#d6b06e"}
   };
   const randomMasteries=(rng=Math.random)=>{const choices=[...Builds.elements];const first=choices.splice(Math.floor(rng()*choices.length),1)[0];return [first,choices[Math.floor(rng()*choices.length)]];};
@@ -732,15 +739,25 @@
   }
   function previewTesterMinion(){
     if(state?.mode!=="tester"||state.phase!=="planning")return false;
-    const target=alive(1).find(u=>u.minionId);
+    const target=alive(1).find(u=>unitSprite(u));
     if(!target)return false;
+    delete target.defeatPreview;
     target.minionPreview=performance.now();
+    return true;
+  }
+  function previewTesterDefeat(){
+    if(state?.mode!=="tester"||state.phase!=="planning")return false;
+    const target=alive(1).find(u=>unitSprite(u));
+    if(!target)return false;
+    delete target.minionPreview;
+    target.defeatPreview=performance.now();
     return true;
   }
   function fitTesterTarget(u,type){
     u.wizardDummy=type==="wizard";
     u.minionId=Object.hasOwn(minionModels,type)?type:null;
     delete u.minionPreview;
+    delete u.defeatPreview;
     delete u.bossId;
     if(u.minionId){u.name=minionModels[type].name;u.masteries=enemyMasteries(eliteSchools[type]);return;}
     const boss=testerBoss(type);
@@ -3479,7 +3496,9 @@
     }
     if(!planning){const tools=$("testerTools");if(tools)tools.open=false;}
     const preview=$("testerMinionPreview");
-    if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(minionModels,testerTargetType);
+    if(preview)preview.hidden=!testing||!planning||!(Object.hasOwn(minionModels,testerTargetType)||Object.hasOwn(guardianModels,testerTargetType));
+    const defeatPreview=$("testerDefeatPreview");
+    if(defeatPreview)defeatPreview.hidden=!testing||!planning||!Object.hasOwn(guardianModels,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
     const debtFixture=$("testerDebtFixture");
     if(debtFixture)debtFixture.hidden=!testing||!planning||!bloodDebtTesterTarget();
@@ -4224,18 +4243,20 @@
       g.translate(0,depth*45*scale);
     }
     g.scale(scale,scale);
-    const minion=minionModels[u.minionId];
+    const minion=unitSprite(u);
     if(minion?.art.naturalWidth){
       const elapsed=time-(u.minionPreview??-Infinity);
       const current=state.animation?.source===u.id?state.animation:null;
       const preview=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<AUTO_TRACE_MS;
       const tracing=current?.stage==="tracing-auto";
       const casting=preview||tracing||current?.stage==="raising"||current?.stage==="lowering";
-      const row=u.hp<=0?2:casting?1:0;
+      const defeatElapsed=time-(u.defeatPreview??-Infinity);
+      const previewDefeat=u.hp>0&&state.phase==="planning"&&defeatElapsed>=0&&defeatElapsed<DEFEAT_HOLD_MS+850;
+      const row=u.hp<=0||previewDefeat?2:casting?1:0;
       const gestureFrame=preview||tracing
         ?MINION_GESTURE_FRAMES[Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%MINION_GESTURE_FRAMES.length]
         :current?.stage==="lowering"?5:0;
-      const frame=row===2?Math.min(5,Math.floor(5*(u.defeatElapsedMs||0)/DEFEAT_HOLD_MS)):
+      const frame=row===2?Math.min(5,Math.floor(5*(previewDefeat?defeatElapsed:(u.defeatElapsedMs||0))/DEFEAT_HOLD_MS)):
         casting?gestureFrame:Math.floor((time+u.index*160)/160)%6;
       const top=-153*minion.size/160;
       g.drawImage(minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
@@ -6247,7 +6268,7 @@
       paintUI();
     },
     startPractice:size=>{activeRoster=null;setBattle('story',size);},
-    switchTesterTarget,previewTesterMinion,switchTesterOpponentMode,
+    switchTesterTarget,previewTesterMinion,previewTesterDefeat,switchTesterOpponentMode,
     startCardTester:(size=1)=>{activeRoster=null;setBattle('tester',size);},
     startLobby:(roster,size)=>{activeRoster=roster.map(p=>({...p,profile:Builds.normalize(p.profile,CARDS)}));setBattle('online',size);for(const team of [0,1])state.humanByTeam[team]=state.units.find(u=>u.team===team&&u.peerId===window.WizardrySession?.peerId)?.id||null;state.planningSide=state.units.find(u=>u.peerId===window.WizardrySession?.peerId)?.team||0;paintUI();},
     onlineSnapshot,

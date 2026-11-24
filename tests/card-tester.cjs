@@ -236,6 +236,15 @@ const assert = require('node:assert/strict');
   assert.ok(practice.units[0].hand.every(id=>masteries.includes(api.cards.find(card=>card.id===id).school)));
   assert.equal(practice.units[1].dummy,undefined);
 
+  for(const [id,school] of [['abyssal','water'],['gale','wind'],['briar','nature'],['glacial','ice']]){
+    api.startCardTester(1);api.switchTesterTarget(id);
+    const guardian=api.getState().units.find(u=>u.team===1);
+    assert.equal(guardian.bossId,id);
+    assert.deepEqual(Array.from(guardian.masteries),[school,'dark']);
+    assert.ok(api.previewTesterMinion());
+    assert.ok(api.previewTesterDefeat());
+    assert.equal(guardian.hp,guardian.maxHp,'animation preview is non-destructive');
+  }
   const towerPlayer={profile:ctx.window.WizardryBuilds.cpu(api.cards,0,math.random,10)};
   for(const [floor,first,primary] of [
     [1,'scribe',null],[2,'acolyte',null],[3,'pageguard',null],
@@ -247,6 +256,7 @@ const assert = require('node:assert/strict');
     assert.equal(foes[0].bossId||foes[0].minionId,first);
     if(primary)assert.equal(foes[0].masteries[0],primary);
     if(floor===21)assert.deepEqual(Array.from(foes[0].masteries),['dark','lightning']);
+    if([5,10,15,20].includes(floor))assert.equal(foes[0].masteries[1],'dark');
     assert.ok(foes.filter(u=>u.bossId).length<=1);
     for(const foe of foes){
       assert.equal(new Set(foe.masteries).size,2);

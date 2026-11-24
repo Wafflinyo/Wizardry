@@ -60,3 +60,14 @@
 #game #cardHand.cards>button.spell.card-ornate{grid-template-rows:0 minmax(20px,1fr) 26px 28px 40px}
 #game #cardHand.cards>button.spell.card-ornate.browsed{grid-template-rows:0 minmax(40px,1fr) 32px 34px 52px}
 }
+
+
+@media(max-width:700px) and (orientation:portrait){
+  body[data-screen=battle] #game.game:has(#testerTargetRow:not([hidden])){
+    grid-template-rows:var(--battle-header-track,auto) minmax(0,1fr) clamp(300px,41dvh,368px);
+  }
+  #game:has(#testerTargetRow:not([hidden])) #cardHand.cards{
+    --card-height:clamp(167px,24dvh,205px);
+    --card-width:clamp(114px,17dvh,140px);
+  }
+}

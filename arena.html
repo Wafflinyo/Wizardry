@@ -30,10 +30,15 @@
   border:1px solid #547482;border-radius:5px;padding:3px 6px;font-size:inherit;
 }
 #testerTargetRow button{min-height:30px}
-/* Keep the toolbar footprint stable while contextual test controls toggle. */
-#testerTargetRow:not([hidden]) > button[hidden]{
-  display:inline-block!important;visibility:hidden;pointer-events:none;
+.tester-tools{position:relative;flex:none}
+.tester-tools summary{cursor:pointer;white-space:nowrap;padding:7px 5px}
+.tester-tools-menu{
+  position:absolute;right:0;top:100%;z-index:110;display:grid;gap:4px;
+  width:max-content;min-width:136px;padding:6px;background:#102630;
+  border:1px solid #547482;border-radius:6px;
 }
+.tester-tools-menu button[hidden]{display:none!important}
+#game .mast:has(#testerTargetRow:not([hidden])){position:relative;z-index:50}
 .mast:has(#testerTargetRow:not([hidden])) .battle-navigation{
   display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:5px;
 }
@@ -41,11 +46,11 @@
   min-height:30px;margin:0;white-space:nowrap;
 }
 @media(max-width:700px){
-  #testerTargetRow:not([hidden]){flex-basis:100%;font-size:11px}
-  #testerTargetRow label{flex:1 1 116px}
+  #testerTargetRow:not([hidden]){display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;flex-basis:100%;font-size:11px}
   #testerTarget{width:100%}
   .mast:has(#testerTargetRow:not([hidden])) .tester-target-label{display:none}
   .mast:has(#testerTargetRow:not([hidden])) .battle-navigation{margin-left:auto}
+  .tester-tools summary{padding:6px 2px}
   #testerTarget,#testerSize,#testerOpponentMode,#testerTargetRow button,
   #game .mast:has(#testerTargetRow:not([hidden])) .battle-navigation button{min-height:34px}
 }
@@ -64,7 +69,7 @@
 @media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
 </style>
 <link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.317.3">
-<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.317.3">
+<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.317.6">
 </head>
 <body data-screen="home">
 <section id="portal" aria-label="Wizardry home"></section>
@@ -80,9 +85,14 @@
     <select id="testerTarget" aria-label="Target"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option><option value="scribe">Ashbound Scribe</option><option value="acolyte">Inkbound Acolyte</option><option value="pageguard">Cracked Pageguard</option></select>
     </label>
     <select id="testerOpponentMode" aria-label="Opponent behavior"><option value="passive">Passive</option><option value="battle">Battle</option></select>
-    <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
-    <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
-    <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
+    <details class="tester-tools" id="testerTools">
+      <summary>Test tools</summary>
+      <div class="tester-tools-menu">
+        <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
+        <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
+        <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
+      </div>
+    </details>
   </div>
     <div class="battle-navigation">
       <button id="battleHome" type="button">Home</button>
@@ -371,7 +381,7 @@
 <script src="./assets/razorang.js?v=0.314.3" defer></script>
 <script src="./assets/faultline-bulwark.js?v=0.315.1" defer></script>
 <script src="./assets/live-wire.js?v=0.316.2" defer></script>
-<script src="./arena.js?v=0.317.5" defer></script>
+<script src="./arena.js?v=0.317.6" defer></script>
 <script src="./assets/menu-music.js?v=0.282.2" defer></script>
 <script src="./assets/wizard-home-v135.js?v=0.317.2" defer></script>
 <dialog id="battleLogPanel" aria-labelledby="battleLogTitle">

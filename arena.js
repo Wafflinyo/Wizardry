@@ -692,12 +692,12 @@
   function alive(side){return sideUnits(side).filter(u=>u.hp>0);}
   function getUnit(id){return state.units.find(u=>u.id===id)||null;}
   const testerMinions=Object.fromEntries([
-    ["scribe","Ashbound Scribe","fire",193,[153,153,153,153,153,153,153,153,152,150,151,151]],
-    ["acolyte","Inkbound Acolyte","dark",195,[148,148,148,148,155,155,155,155,147,147,147,147]],
-    ["pageguard","Cracked Pageguard","earth",178,[141,141,141,141,144,144,144,144,141,141,144,144]]
-  ].map(([id,name,school,size,feet])=>{
-    const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.317.1";
-    return [id,{name,school,art,size,feet}];
+    ["scribe","Ashbound Scribe","fire",194],
+    ["acolyte","Inkbound Acolyte","dark",196],
+    ["pageguard","Cracked Pageguard","earth",189]
+  ].map(([id,name,school,size])=>{
+    const art=new Image();art.src="./assets/tester-"+id+".webp?v=0.317.6";
+    return [id,{name,school,art,size}];
   }));
   let testerTargetType="wood",testerOpponentMode="passive";
   function switchTesterOpponentMode(mode){
@@ -3441,6 +3441,7 @@
       opponentMode.value=testerOpponentMode;
       opponentMode.disabled=!planning||testerTargetType==="wood";
     }
+    if(!planning){const tools=$("testerTools");if(tools)tools.open=false;}
     const preview=$("testerMinionPreview");
     if(preview)preview.hidden=!testing||!planning||!Object.hasOwn(testerMinions,testerTargetType);
     const resetTester=$("resetTester");if(resetTester)resetTester.hidden=!testing;
@@ -4196,9 +4197,9 @@
       const casting=preview||tracing||current?.stage==="raising"||current?.stage==="lowering";
       const row=u.hp<=0?2:casting?1:0;
       const phase=preview?elapsed/1050:tracing?(current.elapsed/current.duration):current?.stage==="lowering"?1:0;
-      const frame=row===2?Math.min(3,Math.floor((u.defeatElapsedMs||0)/135)):
-        casting?Math.min(3,Math.floor(phase*4)):Math.floor((time+u.index*160)/210)%4;
-      const top=-(minion.feet[row*4+frame]+1)*minion.size/160;
+      const frame=row===2?Math.min(5,Math.floor(5*(u.defeatElapsedMs||0)/DEFEAT_HOLD_MS)):
+        casting?Math.min(5,Math.floor(phase*6)):Math.floor((time+u.index*160)/160)%6;
+      const top=-153*minion.size/160;
       g.drawImage(minion.art,frame*160,row*160,160,160,-minion.size/2,top,minion.size,minion.size);
       if(preview){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{

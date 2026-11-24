@@ -569,3 +569,23 @@ api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(liveWire.id));
 assert.equal(api.cards.filter(spell=>spell.school==='lightning').length,15);
 console.log('Live Wire: allied charge, misses, other elements, Wind Dome, chain-wide boost, single consumption, effects, and opening hand passed.');
+
+{
+  const zeus=card('zeus');
+  const caster=Object.assign(unit('zeus-caster',0),{hand:[zeus.id],mana:12}),target=unit('zeus-target',1);
+  const battle={phase:'resolving',round:3,units:[caster,target],auras:[null,null],log:[],flashes:[]};
+  ctx.window.setupGrowthTest(battle);
+  const aim={card:zeus,source:caster.id,target:target.id,damageVariant:1};
+  assert.equal(api.applyZeusImpact({...aim,runeResult:'failed'},.99),false);
+  assert.equal(caster.rechargeRound,undefined);
+  assert.equal(api.applyZeusImpact({...aim,runeResult:'success'},.99),true);
+  assert.equal(target.hp,50);
+  assert.equal(caster.rechargeRound,4);
+  assert.ok(has(caster,'recharge'));
+  assert.ok(!api.requiresRest(caster));
+  battle.round=4;
+  assert.ok(api.requiresRest(caster));
+  battle.round=5;
+  assert.ok(!api.requiresRest(caster));
+}
+console.log('Zeus’s Might: recharge after successful cast, fizzle preserves next turn, exactly one round skipped.');

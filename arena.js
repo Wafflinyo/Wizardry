@@ -91,7 +91,7 @@
     {id:"blizzard",name:"Blizzard",school:"ice",cost:5,target:"all_enemies",kind:"blizzard",damage:160,accuracy:.80,icon:"❄",rarity:"EPIC",duration:3400,hit:.99,frostChance:.60,frostDamage:100,frostTurns:5,short:"80% ACCURACY",description:"Whipping icy winds rip through every enemy for 160 damage. Each enemy hit has a 60% chance of Extreme Frostbite: 100 damage per turn for 5 turns. Refreshes one Frostbite without stacking."},
     {id:"thornwrap",name:"Thorny Wrap",school:"nature",cost:3,target:"enemy",kind:"thornwrap",accuracy:1,icon:"❧",rarity:"RARE",duration:2300,hit:.85,short:"100% ACCURACY",description:"A thorny vine erupts beneath one enemy and wraps around them for 3 turns. Each spell attempt deals 150 damage to the wrapped caster, even if their spell misses. While attached: −15 accuracy points. Refreshes without stacking."},
     {id:"kineticsand",name:"Kinetic Sand",school:"earth",cost:6,target:"enemy",kind:"damage",damage:620,accuracy:.85,icon:"◆",rarity:"EPIC",duration:4800,hit:.79,short:"85% ACCURACY",description:"Sand whirls at the arena center, rises into a towering wave and dives onto one enemy. It encases the target, then clenches in a crushing grip for 620 Earth damage before crumbling away."},
-    {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:950,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 950 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun."},
+    {id:"zeus",name:"Zeus’s Might",school:"lightning",cost:9,target:"enemy",kind:"zeus",damage:950,chainDamage:200,stunChance:.20,accuracy:.70,icon:"⚡",rarity:"LEGENDARY",duration:4000,hit:.565,short:"70% ACCURACY",description:"Zeus descends waist-up in a cloud, winds up and hurls his golden thunderbolt for 950 damage. Lightning then chains to each immediate adjacent enemy for 200 damage. Every target hit has an independent 20% chance to lose one action to stun. On a successful cast, skip your next round to recharge."},
     {id:"gunpowderkiss",name:"Gunpowder Kiss",school:"fire",cost:2,target:"enemy",kind:"gunpowder",accuracy:1,coatTurns:3,coatDamage:150,icon:"♨",rarity:"EPIC",duration:4200,hit:.70,short:"100% ACCURACY",description:"A mistress made entirely of gunpowder forms from thin air and blows a powder kiss onto one enemy. Gunpowder Coat lasts 3 turns. A Fire spell hit ignites it for 150 extra damage, once per turn and up to 3 times. The coat stays after each explosion. Reapplying refreshes without stacking. Burn ticks do not trigger it."}
   ];
   CARDS.push({id:"flowstate",name:"Flow State",school:"water",cost:2,target:"ally",kind:"flowstate",accuracy:1,icon:"≈",rarity:"RARE",duration:2300,hit:.72,short:"100% ACCURACY",description:"Put yourself or a living ally in Flow State. The recipient gains 1 extra mana at the start of each of their next 3 turns: 2 mana after casting, or 3 after passing, up to their mana capacity. Lasts for 3 mana gains, including skipped turns. Reapplying refreshes without stacking."});
@@ -291,7 +291,7 @@
     undead:"10% chance to skip the target’s pending action.",winddome:"Blocks the next incoming damaging spell.",
     penguins:"Three hits of 100. Each can inflict Frostbite (15%).",blizzard:"60% extreme frostbite per enemy: 100 × 5 rounds.",
     thornwrap:"150 per spell attempt and −15 accuracy for 3 rounds.",
-    zeus:"200 adjacent chain damage. 20% stun per target.",gunpowderkiss:"Fire hits ignite 150 extra damage, up to 3 times.",
+    zeus:"200 adjacent chain damage. 20% stun per target. Recharge 1 round on success.",gunpowderkiss:"Fire hits ignite 150 extra damage, up to 3 times.",
     flowstate:"+1 mana per round for the next 3 gains.",windfist:"Ten hits of 50.",
     jack:"Fear: 30% skip chance each round for 3 rounds.",croc:"10% chance to Fear, skipping the target’s action if they haven’t acted this round.",
     electricalcharge:"+1 mana per Lightning cast received for 3 rounds.",grillmaster:"20% burn: 50 × 3 rounds.",
@@ -2518,6 +2518,10 @@
     a.zeusImpactResolved=true;a.applied=true;
     const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
+    caster.rechargeRound=state.round+1;
+    addStatus(caster,"recharge",null,1,a.card.school);
+    flash(caster,"RECHARGE · NEXT ROUND","#e0d5ff");
+    recordBattleEvent(caster.name+" must recharge next round after casting Zeus’s Might.");
     // Snapshot formation neighbors before the primary strike can defeat its target.
     a.zeusChainTargets=dragonSplashTargets(target,caster).map((u,i)=>({id:u.id,x:u.x,y:u.y,hit:false,hitAt:.645+i*.02}));
     damage(caster,target,a.card.damage,a.card,a);

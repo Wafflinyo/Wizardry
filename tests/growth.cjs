@@ -349,7 +349,7 @@ for(let i=0;i<30;i++){
   assert.equal(pose.y,waveTarget.y,'the returning wave does not bob above the floor');
 }
 api.startCardTester();
-assert.ok(api.getState().units[0].hand.includes(rip.id));
+assert.ok(api.getState().units[0].drawPile.includes(rip.id));
 console.log('Rip Current: 250 damage, lowest living teammate, delayed 180 HP, misses, shield blocking, Dark Grounds and eight wave poses passed.');
 
 const pressure=card('pressuredrop');
@@ -534,3 +534,38 @@ for(const team of [0,1]){
 api.startCardTester();
 assert.ok(api.getState().units[0].hand.includes(bulwark.id));
 console.log('Faultline Bulwark: priority conflicts, layered barriers, cumulative hits, exact break, single retaliation, next-cast expiry, mirrored effects and opening hand passed.');
+
+const liveWire=card('livewire');
+assert.deepEqual(JSON.parse(JSON.stringify(liveWire)),
+  JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(spell=>spell.id===liveWire.id));
+{
+  const caster=unit('charge-caster',0),charged=unit('charge-ally',0);
+  const first=unit('bolt-first',1),second=unit('bolt-second',1);
+  ctx.window.setupGrowthTest({phase:'resolving',round:1,units:[caster,charged,first,second],auras:[null,null],log:[],flashes:[]});
+  api.applySpell({card:liveWire,runeResult:'success',action:{casterId:caster.id,targetId:charged.id}});
+  assert.ok(has(charged,'live_wire'));
+  const lightning=card('lightningball');
+  api.applySpell({card:lightning,runeResult:'failed',action:{casterId:charged.id,targetId:first.id}});
+  assert.equal(damage(charged,first,100,card('scorpion'),{}),100);
+  first.statuses.push({kind:'wind_dome',value:1});
+  assert.equal(damage(charged,first,100,lightning,{card:lightning}),0);
+  assert.ok(has(charged,'live_wire'));
+  const chain={card:lightning};
+  assert.equal(damage(charged,first,100,lightning,chain),125);
+  assert.equal(damage(charged,second,100,lightning,chain),125);
+  assert.equal(damage(charged,second,100,lightning,chain),125);
+  assert.equal(damage(charged,second,100,lightning,{card:lightning}),100);
+  assert.ok(!has(charged,'live_wire'));
+}
+vm.runInNewContext(fs.readFileSync('assets/live-wire.js','utf8'),ctx);
+const wireCanvas=new Proxy({},{get:(target,key)=>target[key]??(()=>{})});
+for(const team of [0,1])for(let i=0;i<=60;i++){
+  const source={team,x:team?740:260,y:480};
+  const target={x:team?290:720,y:520};
+  ctx.window.LiveWire.charge(wireCanvas,source,i/60);
+  ctx.window.LiveWire.surge(wireCanvas,source,target,i/120);
+}
+api.startCardTester();
+assert.ok(api.getState().units[0].hand.includes(liveWire.id));
+assert.equal(api.cards.filter(spell=>spell.school==='lightning').length,15);
+console.log('Live Wire: allied charge, misses, other elements, Wind Dome, chain-wide boost, single consumption, effects, and opening hand passed.');

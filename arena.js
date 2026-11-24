@@ -252,6 +252,7 @@
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
   CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back for 140 against a random living enemy directly above or below them. With no living neighbor, hit the same enemy again."});
   CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":350,"retaliation":120,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a wall that absorbs up to 350 damage from the next damaging spell. If it breaks, shards deal 120 damage to the attacker."});
+  CARDS.push({"id":"livewire","name":"Live Wire","school":"lightning","cost":2,"target":"ally","kind":"livewire","boost":0.25,"accuracy":1,"icon":"ϟ","rarity":"RARE","duration":1850,"hit":0.73,"description":"Charge yourself or one ally. Every hit of their next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
     card.description+=' Each wizard can carry four debuff runes.';
@@ -266,6 +267,7 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
     pressuredrop:"Decay of Strength: all hits of the next damaging spell deal 25% less damage.",
@@ -342,7 +344,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
-  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
+  const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
     for(let i=result.length-1;i>0;i--){
@@ -1901,7 +1903,7 @@
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
-    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
+    "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
@@ -2305,6 +2307,14 @@
     if(!reflected){
       gainElectricalChargeMana(target,card,spell);
       if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));return 0;}
+    }
+    if(base>0&&card?.school==="lightning"&&spell&&!reflected&&source.team!==target.team){
+      if(spell.liveWireBonus===undefined){
+        spell.liveWireBonus=consumeStatus(source,"live_wire")?.value||0;
+        if(spell.liveWireBonus)
+          flash(source,"LIVE WIRE · +25%","#e0d5ff").liveWire={sourceId:source.id,targetId:target.id};
+      }
+      if(spell.liveWireBonus){raw*=1+spell.liveWireBonus;notes.push("LIVE WIRE +25%");}
     }
     if(base>0&&card?.school==="nature"){
       const bonus=growthBonus(source,spell);
@@ -3006,6 +3016,10 @@
       for(let i=0;i<10;i++)applyWindFistHit(anim,i);
     }else if(card.kind==="doublepick"||card.kind==="electrodisc"||card.kind==="bulletseed"){
       for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
+    }else if(card.kind==="livewire"){
+      addStatus(t,"live_wire",null,card.boost,card.school);
+      flash(t,"LIVE WIRE · CHARGED","#e0d5ff");
+      recordBattleEvent(t.name+" gains +25% damage across their next damaging Lightning spell.");
     }else if(card.kind==="ragingwaters"||card.kind==="growth"){
       const nature=card.kind==="growth";
       if(!nature&&!canReceiveDebuff(t,"raging_waters")){
@@ -4267,6 +4281,8 @@
       case "curse":return {title:"Curse · Dark rune",detail:st.value+" damage per round for "+st.remaining+" more rounds."};
       case "soul_drain":return {title:"Soul Drain · Dark curse",detail:"Drains up to 100 HP at the start of each turn for "+st.remaining+" more turns and heals "+(getUnit(st.sourceId)?.name||"the caster")+" by the HP actually drained. Healing is capped at maximum HP and cannot revive. Does not consume spell-only effects."};
       case "turbulence":return {title:"Turbulence · Wind curse",detail:"Subtracts 50 accuracy points on the next spell: 80% becomes 30% accuracy (70% failure). Combines immediately with Static Shock and other accuracy effects; there is no waiting order. Consumed on the next cast attempt, even if it misses. Does not stack."};
+      case "live_wire":return {title:"Live Wire · Lightning rune",detail:
+        "Every hit of the next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."};
       case "growth":return {title:"Growth · Nature rune",detail:"Your next Nature spell that directly heals or deals damage gains 25% across all hits and targets. Rune ticks, misses, and fully blocked casts preserve it. Does not stack."};
       case "raging_waters":return {title:"Raging Waters · Water rune",detail:"Your next damaging Water spell that lands deals +25% damage on every hit. The rune is consumed when the spell deals damage and does not stack."};
       case "blazing_rage":return {title:"Blazing Rage · Fire blessing",detail:"Next successful damaging Fire spell deals 20% more damage, including all hits and targets. Misses, healing, support spells and damage-over-time ticks preserve it. Does not stack."};
@@ -4324,7 +4340,7 @@
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
-    sleep:"nature",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
+    sleep:"nature",live_wire:"lightning",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
     recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
   };
@@ -4566,6 +4582,7 @@
       else if(card.id==="darkgrounds")window.DarkGrounds?.portrait(c,width,height);
       else if(card.id==="lightningfield")window.LightningField?.portrait(c,width,height);
       else if(card.id==="waterprison")window.WaterPrison?.portrait(c,width,height);
+      else if(card.id==="livewire")window.LiveWire?.portrait(c,width,height);
       else if(card.id==="faultlinebulwark")window.FaultlineBulwark?.portrait(c,width,height);
       else if(card.id==="sandwarrior")window.SandWarrior?.portrait(c,width,height);
       else if(card.id==="bubbleshield")window.BubbleShield?.portrait(c,width,height);
@@ -5020,7 +5037,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5246,6 +5263,17 @@
           progress:clamp(action.elapsed/action.duration,0,1),target,layer
         })
       });
+    }
+    if(action?.stage==="summon"&&action.card.id==="livewire"){
+      const target=getUnit(action.target);
+      if(target)renderables.push({type:"live-wire-charge",depthY:target.y+.15,priority:2,
+        draw:()=>window.LiveWire?.charge(g,target,clamp(action.elapsed/action.duration,0,1))});
+    }
+    for(const message of state.flashes){
+      if(!message.liveWire)continue;
+      const source=getUnit(message.liveWire.sourceId),target=getUnit(message.liveWire.targetId);
+      if(source&&target)renderables.push({type:"live-wire-surge",depthY:target.y+.17,priority:2,
+        draw:()=>window.LiveWire?.surge(g,source,target,message.age)});
     }
     if(action?.stage==="summon" && action.card.id==="growth"){
       const target=getUnit(action.target);

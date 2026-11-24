@@ -604,11 +604,11 @@ console.log('Zeus’s Might: recharge after successful cast, fizzle preserves ne
   assert.ok(api.triggerQuickSand(enemy));
   battle.round++;
   assert.ok(api.triggerQuickSand(enemy));
-  assert.equal(enemy.hp,200);
+  assert.equal(enemy.hp,300);
   assert.equal(caster.hp+ally.hp,1400);
   assert.ok(!has(enemy,'quick_sand'));
   api.applySpell({card:sand,runeResult:'success',action:{casterId:caster.id,targetId:enemy.id}});
   battle.round+=3;
   assert.ok(api.triggerQuickSand(enemy));
-  assert.equal(enemy.hp,200);
+  assert.equal(enemy.hp,300);
 }

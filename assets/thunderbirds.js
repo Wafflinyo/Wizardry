@@ -18,7 +18,9 @@ beamAtlas.src="./assets/thunderbirds-electric-beams.webp?v=2";
 const beamReady=()=>beamAtlas.complete&&beamAtlas.naturalWidth===128&&beamAtlas.naturalHeight===136;
 const FLAP=[0,1,2,3,4,5,6,5,4,3,2,1];
 function scene(target,p){
- const dir=target.x>=500?1:-1,hover=[{x:500-dir*200,y:168},{x:500+dir*63,y:235}];
+ const dir=target.x>=500?1:-1;
+ // Keep the firing formation compact and entirely on the incoming side of the target.
+ const hover=[{x:target.x-dir*400,y:155},{x:target.x-dir*285,y:255}];
  const birds=hover.map((h,i)=>{
    const angle=p/.46*Math.PI*4+i*Math.PI;
    const flying={x:500+Math.cos(angle)*285,y:200+Math.sin(angle)*86};
@@ -32,7 +34,9 @@ function scene(target,p){
    return {x,y,face,pose,size,bx:x+face*(211-128)*scale,by:y+(126-112)*scale};
  });
  const hit={x:target.x,y:target.y-105};
- const joint={x:hit.x-dir*120,y:hit.y-58};
+ // Aim both beaks at a common point between the formation and the enemy.
+ const midY=(birds[0].by+birds[1].by)/2;
+ const joint={x:hit.x-dir*115,y:mix(midY,hit.y,.55)};
  return {p,birds,hit,joint,alpha:Math.min(ease(p/.05),1-ease((p-.97)/.03))};
 }
 function bird(g,b){const h=b.size*R/C;g.save();g.translate(b.x,b.y);g.scale(b.face,1);tile(g,b.pose,-b.size/2,-h/2,b.size,h);g.restore();}
@@ -84,11 +88,33 @@ function draw(g,s){
  if(p>=.58&&p<.87){
    const extend=ease((p-.58)/.12);
    g.save();g.globalAlpha*=1-ease((p-.84)/.03);
-   for(const b of s.birds)beam(g,{x:b.bx,y:b.by},s.joint,beat,82,extend,p);
+   const ordered=s.birds.slice().sort((a,b)=>
+     Math.hypot(a.bx-s.hit.x,a.by-s.hit.y)-Math.hypot(b.bx-s.hit.x,b.by-s.hit.y));
+   const [near,far]=ordered;
+   // Composite the nearer bird first, not just its beam. The farther beam
+   // must visibly pass in front of the nearer bird's body and wings.
+   beam(g,{x:near.bx,y:near.by},s.joint,beat,82,extend,p);
    if(p>=.70)beam(g,s.joint,s.hit,beat,128,ease((p-.70)/.03),p);
    g.restore();
+   bird(g,near);
+   g.save();g.globalAlpha*=1-ease((p-.84)/.03);
+   beam(g,{x:far.bx,y:far.by},s.joint,beat,82,extend,p);
+   // Small electric overlap at the join hides the three sprite endpoints.
+   if(p>=.69){
+     const strength=ease((p-.69)/.04),r=24*strength;
+     g.save();g.translate(s.joint.x,s.joint.y);
+     g.globalAlpha*=strength;
+     g.fillStyle="rgba(36,149,255,.48)";
+     g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fill();
+     g.fillStyle="rgba(201,247,255,.9)";
+     g.beginPath();g.arc(0,0,r*.42,0,Math.PI*2);g.fill();
+     g.restore();
+   }
+   g.restore();
+   bird(g,far);
+ }else{
+   for(const b of s.birds)bird(g,b);
  }
- for(const b of s.birds)bird(g,b);
  g.restore();
 }
 function impact(g,s){

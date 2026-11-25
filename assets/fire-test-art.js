@@ -161,22 +161,50 @@ function makeFurnace(){
  function flame(g,index,x,y,w,h){
    g.drawImage(flames,index%4*128,Math.floor(index/4)*128,128,128,x-w/2,y-h*.91,w,h);
  }
+ // Atmospheric ash, not a floor overlay: broad drifting smoke banks across
+ // the air above the platform and smaller plumes rising from the flame vents.
+ // These are existing illustrated smoke poses, recolored to charcoal.
  function drawSmoke(g,x,y,width,height,time){
    if(!smokeArt)return;
    const poses=[4,5,6,7,6,5];
-   // Low ash clouds and drifting smoke along the back and sides; avoid the
-   // central crystal, and keep all clouds behind live fighters and HP plates.
-   const banks=[[.12,.60,.29,.24],[.38,.50,.24,.20],[.66,.51,.25,.19],[.89,.61,.28,.24],
-                [.21,.77,.25,.20],[.79,.78,.25,.20]];
+   const banks=[
+     [.04,.35,.57,.38],[.48,.39,.58,.29],[.96,.36,.58,.39],
+     [.22,.54,.46,.40],[.76,.54,.46,.40],
+     [.05,.70,.34,.32],[.95,.70,.34,.32]
+   ];
+   // A light smoky cast connects the banks across the upper air. The effect
+   // stays behind every unit, crystal emblem and UI; no change to floor art.
+   g.save();
+   const haze=g.createLinearGradient(0,y+height*.14,0,y+height*.86);
+   haze.addColorStop(0,"rgba(46,37,36,0)");
+   haze.addColorStop(.33,"rgba(63,51,47,.16)");
+   haze.addColorStop(.64,"rgba(66,53,48,.12)");
+   haze.addColorStop(1,"rgba(46,37,36,0)");
+   g.fillStyle=haze;g.fillRect(x,y,width,height);
+   g.restore();
    for(const [i,[u,v,size,opacity]] of banks.entries()){
-     const phase=(time/5400+i*.173)%1;
-     const drift=Math.sin(phase*Math.PI*2+i)*width*.025;
-     const rise=(.5+.5*Math.sin(phase*Math.PI*2))*height*.028;
-     const pose=poses[(Math.floor(time/180)+i*2)%poses.length];
+     const phase=time/6600+i*.173;
+     const drift=Math.sin(phase*Math.PI*2)*width*.075;
+     const rise=Math.sin(phase*Math.PI*2+i)*height*.022;
+     const pose=poses[(Math.floor(time/240)+i*2)%poses.length];
      const w=width*size,h=w*224/288;
+     g.save();g.globalAlpha*=opacity*(.88+.12*Math.sin(phase*Math.PI*2));
+     g.drawImage(smokeArt,pose%4*288,Math.floor(pose/4)*224,288,224,
+       x+u*width-w/2+drift,y+v*height-h*.60-rise,w,h);
+     g.restore();
+   }
+   // Staggered wisps rise from selected vents, expand, then dissolve into
+   // the broad atmospheric banks. Faded endpoints make the loop seamless.
+   for(const [i,[u,v,size]] of vents.entries()){
+     if(i%2!==0)continue;
+     const phase=((time/3400+i*.237)%1+1)%1;
+     const pose=poses[(Math.floor(phase*12)+i)%poses.length];
+     const w=width*(size*1.3+phase*.10),h=w*224/288;
+     const opacity=.43*Math.sin(Math.PI*phase);
+     const drift=width*.045*phase*Math.sin(i*2.4+phase*2);
      g.save();g.globalAlpha*=opacity;
      g.drawImage(smokeArt,pose%4*288,Math.floor(pose/4)*224,288,224,
-       x+u*width-w/2+drift,y+v*height-h*.88-rise,w,h);
+       x+u*width-w/2+drift,y+v*height-h*.9-height*(.035+phase*.20),w,h);
      g.restore();
    }
  }

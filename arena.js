@@ -6230,7 +6230,11 @@
         renderables.push({type:"cursed-hold-front",depthY:u.y+.05,priority:2,
           draw:()=>fitUnitEffect(g,u,()=>window.CursedHold?.bind(g,u,progress,time,true))});
       }
-      if(u.statuses.some(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound))renderables.push({type:"thunder-mine-attached",depthY:u.y+.18,priority:2,draw:()=>window.ThunderMine?.attached(g,u,time,unitSlotFactor(u))});
+      if(window.ThunderMine&&u.statuses.some(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound)){
+        const mineMount=window.ThunderMine.mount(u,unitSlotFactor(u));
+        renderables.push({type:"thunder-mine-attached",depthY:mineMount.depth,priority:0,
+          draw:()=>window.ThunderMine.attached(g,u,time,unitSlotFactor(u))});
+      }
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time}))});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);

@@ -22,18 +22,49 @@ function tile(g,img,n,x,y,size,alpha=1,dir=1){
  g.save();g.globalAlpha*=alpha;g.translate(x,y);g.scale(dir,1);
  g.drawImage(img,(n%4)*C,Math.floor(n/4)*C,C,C,-size/2,-size/2,size,size);g.restore();
 }
+// Local coordinates in each model's unscaled sprite space, measured
+// relative to the floor anchor. Back faces AWAY from the opposing team.
+// [rear offset, upper/mid-back height, mine size].
+const BACK={
+ wizard:[45,103,66],dummy:[42,108,64],
+ scribe:[44,91,59],acolyte:[48,91,62],pageguard:[55,74,68],
+ magistrate:[55,108,75],inkbinder:[53,111,72],warden:[64,91,78],
+ abyssal:[83,149,96],gale:[70,153,88],briar:[86,147,98],
+ glacial:[94,145,104],grelus:[63,123,80]
+};
 function mount(u,scale=1){
- scale=Math.max(.75,Math.min(1.8,scale||1));
- return {x:u.x+(u.team===0?15:-15)*scale,y:u.y-91*scale,size:75*scale,scale};
+ // Match drawUnit's perspective projection exactly. The model-specific
+ // local dimensions already include each creature's authored size.
+ const depth=.60+.30*clamp((u.y-288)/235);
+ const id=u.bossId||u.minionId||(u.dummy&&!u.wizardDummy?"dummy":"wizard");
+ const profile=BACK[id]||BACK.wizard.map(n=>n*Math.max(.75,Math.min(1.8,scale||1)));
+ const [rear,height,size]=profile,dir=u.team===1?1:-1;
+ const sand=u.statuses?.find(st=>st.kind==="quick_sand");
+ const sink=(sand?.sinks||0)*45*depth;
+ return {x:u.x+dir*rear*depth,y:u.y-height*depth+sink,
+   size:size*depth,scale:size/75*depth,dir,depth:u.y-.035,model:id};
 }
 function scene(source,target,p,scale=1){
- const dir=target.x>=source.x?1:-1,m=mount(target,scale),size=138;
- const stopX=target.x-dir*62,stopY=target.y+3;
- let x=500,y=510-39,frame=0,depth=510,alpha=1;
+ const m=mount(target,scale),rear=m.dir;
+ // Travel around the far side of the enemy and jump inward onto their
+ // back, rather than jumping straight across the enemy's chest.
+ const stopX=m.x+rear*(m.size*.65+9),stopY=target.y-13;
+ const runDir=stopX>=500?1:-1;
+ let x=500,y=510-39,frame=0,depth=510,alpha=1,size=138,dir=runDir;
  if(p<.16){const t=ease(p/.16);y-=155*(1-t);alpha=clamp(p/.035);frame=0;}
  else if(p<.31){frame=Math.min(3,1+Math.floor((p-.16)/.15*3));}
- else if(p<.63){const t=ease((p-.31)/.32);x=500+(stopX-500)*t;depth=510+(stopY-510)*t;y=depth-36-3*Math.sin(t*8*Math.PI);frame=4+Math.floor((p-.31)*28)%5;}
- else if(p<.78){const t=clamp((p-.63)/.15);x=stopX+(m.x-stopX)*t;y=stopY-36+(m.y-(stopY-36))*t-55*Math.sin(Math.PI*t);depth=stopY;frame=9+Math.min(2,Math.floor(t*3));}
+ else if(p<.63){
+   const t=ease((p-.31)/.32);
+   x=500+(stopX-500)*t;depth=510+(stopY-510)*t-Math.sin(Math.PI*t)*53;
+   y=depth-36-3*Math.sin(t*8*Math.PI);
+   frame=4+Math.floor((p-.31)*28)%5;
+ }
+ else if(p<.78){
+   const t=clamp((p-.63)/.15);x=stopX+(m.x-stopX)*t;
+   y=stopY-36+(m.y-(stopY-36))*t-45*Math.sin(Math.PI*t);
+   depth=m.depth;dir=-rear;frame=9+Math.min(2,Math.floor(t*3));
+   size=138+(m.size-138)*ease(t);
+ }
  else alpha=0;
  return {x,y,depth,frame,dir,size,alpha,p,m};
 }
@@ -44,7 +75,9 @@ function castFx(g,s){
 }
 function attached(g,u,time,scale=1){
  const m=mount(u,scale),frame=12+Math.floor((Number(time)||0)/170)%4;
- tile(g,body,frame,m.x,m.y,m.size);
+ // The same mounted pose is mirrored for each team; the depth pass
+ // lets the shoulder/robe cover the inner edge of the mine.
+ tile(g,body,frame,m.x,m.y,m.size,1,-m.dir);
 }
 function explode(g,u,ms,scale=1){
  const m=mount(u,scale);
@@ -62,5 +95,5 @@ function shake(ms){
  const a=(1-t/160)**1.5;return {x:Math.sin(t*.13)*8*a,y:Math.cos(t*.17)*5*a};
 }
 function portrait(g,w,h){tile(g,body,6,w/2,h/2,Math.min(w,h)*1.12);}
-window.ThunderMine={ensure,ready,error:()=>err,scene,draw,castFx,attached,explode,shake,portrait};ensure();
+window.ThunderMine={ensure,ready,error:()=>err,mount,scene,draw,castFx,attached,explode,shake,portrait};ensure();
 })();

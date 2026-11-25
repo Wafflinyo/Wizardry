@@ -26,3 +26,22 @@ const active=t=>t.statuses.find(st=>st.kind==='thunder_mine');
  const {c,t}=setup();api.applySpell(cast(c,t));api.consumeStatus(t,'thunder_mine');assert.equal(api.beginThunderMineDetonation({card,runeResult:'success'},t),false);
 }
 console.log('Thunder Mine: initial damage, four-rune cap, successful-cast reaction, cleanse and single detonation passed.');
+
+// Sprite placement: both teams' mines are on the rear side, behind the
+// body, and the attachment point is model- and perspective-dependent.
+{
+ const artCtx={window:{},Image:class{},setTimeout:()=>0,clearTimeout(){}};
+ vm.runInNewContext(fs.readFileSync('assets/thunder-mine.js','utf8'),artCtx);
+ const art=artCtx.window.ThunderMine;
+ for(const model of [{},{dummy:true},{minionId:'scribe'},{minionId:'acolyte'},{minionId:'pageguard'},{minionId:'magistrate'},{minionId:'inkbinder'},{minionId:'warden'},{bossId:'abyssal'},{bossId:'gale'},{bossId:'briar'},{bossId:'glacial'},{bossId:'grelus'}]){
+  const l={...model,team:0,x:250,y:450},r={...model,team:1,x:750,y:450};
+  const a=art.mount(l),b=art.mount(r);
+  assert.ok(a.x<l.x&&b.x>r.x&&a.depth<l.y&&b.depth<r.y);
+  assert.equal(l.x-a.x,b.x-r.x);
+  assert.equal(a.y,b.y);
+  const leap=art.scene(l,r,.779999);
+  assert.ok(Math.abs(leap.x-b.x)<.1&&Math.abs(leap.y-b.y)<.1);
+ }
+ const u={x:750,y:450,team:1},wizard=art.mount(u),page=art.mount({...u,minionId:'pageguard'}),guardian=art.mount({...u,bossId:'glacial'});
+ assert.ok(page.y>wizard.y&&guardian.y<wizard.y&&guardian.size>wizard.size);
+}

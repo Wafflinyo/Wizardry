@@ -1961,6 +1961,7 @@
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
     if(a.stage==="summon"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="summon"&&a.card.kind==="magneticpulse")advanceMagneticRune(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
     if(a.stage==="summon"&&a.card.kind==="razorang"&&p>=a.card.returnAt)applyRazorangReturn(a,caster);
@@ -3494,6 +3495,19 @@
     if(amount<=0)return;
     flash(target,"+"+amount+" HP · BRIAR REMEDY","#ccf9a2");
   }
+  function advanceMagneticRune(a){
+    const r=a.magneticRune;
+    if(!r||r.done||a.elapsed<r.hitAt)return;
+    r.done=true;
+    const target=getUnit(r.targetId);
+    if(!target||target.hp<=0)return;
+    if(consumeStatus(target,r.kind)){
+      r.destroyed=true;
+      flash(target,"BENEFICIAL RUNE DESTROYED","#8eeaff");
+      recordBattleEvent(a.card.name+" destroys "+r.name+" on "+target.name+".");
+      paintUI();
+    }
+  }
   function applySpell(anim){
     if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
     anim.applied=true;
@@ -3515,10 +3529,13 @@
         if(runes.length){
           const rune=runes[Math.floor(Math.random()*runes.length)];
           const name=describeStatus(t,rune).title.split(" · ")[0];
-          if(consumeStatus(t,rune.kind)){
-            flash(t,"BENEFICIAL RUNE DESTROYED","#8eeaff");
-            recordBattleEvent(card.name+" destroys "+name+" on "+t.name+".");
-          }
+          // Choose once; remove only when the follow-up shock arrives.
+          const slots=unitStatuses(t).map(st=>st.kind);
+          let slot=slots.indexOf(rune.kind);
+          if(slot<0){slot=Math.min(3,slots.length);slots[slot]=rune.kind;}
+          const startAt=card.duration*card.hit;
+          anim.magneticRune={targetId:t.id,kind:rune.kind,name,school:statusSchool(rune,t),
+            slot,slots,startAt,hitAt:startAt+270,done:false,destroyed:false};
         }
       }
     }else if(card.kind==="thunderbirds"){
@@ -4989,6 +5006,14 @@
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
     return list.slice(0,4);
   }
+  function displayedStatusSlots(u){
+    const normal=unitStatuses(u),a=state.animation,r=a?.magneticRune;
+    if(a?.stage!=="summon"||r?.targetId!==u.id||a.elapsed>r.hitAt+510)return normal;
+    // Reveal a selected hidden rune and hold the other stones in place
+    // until its debris has cleared.
+    return r.slots.map(kind=>u.statuses.find(st=>st.kind===kind)||
+      (kind==="aura"?normal.find(st=>st.kind==="aura"):null));
+  }
   function statusRuneRect(u,index){
     const p=unitPlateRect(u);
     return {x:p.x+18+index*36,y:p.above?p.y-24:p.y+74,r:17,hitRadius:30};
@@ -5098,7 +5123,8 @@
   function hitStatusRune(x,y){
     let closest=null,distance=Infinity;
     for(const u of state.units){if(u.hp<=0||plateAlpha(u)<.1)continue;
-      for(const [i,st] of unitStatuses(u).entries()){
+      for(const [i,st] of displayedStatusSlots(u).entries()){
+        if(!st)continue;
         const r=statusRuneRect(u,i),d=Math.hypot(x-r.x,y-r.y);
         if(d<=r.hitRadius&&d<distance){closest={u,st};distance=d;}
       }
@@ -5207,8 +5233,9 @@
     g.restore();
     // Persistent magic runes sit BELOW the HP plate, never over the
     // fighter's face. Each rune is independently tappable for details.
-    const symbols=unitStatuses(u);
+    const symbols=displayedStatusSlots(u);
     symbols.forEach((st,i)=>{
+      if(!st)return;
       const r=statusRuneRect(u,i);
       const school=statusSchool(st,u);
       drawStatusStone(g,r,school,st.kind==="blood_debt"?"#ff5476":runeColors[school]);
@@ -6813,6 +6840,14 @@
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
     drawZenCast(state.animation);
+    if(action?.stage==="summon"&&action.card.kind==="magneticpulse"&&action.magneticRune){
+      const r=action.magneticRune,target=getUnit(r.targetId);
+      if(target){
+        const icon=statusRuneRect(target,r.slot);
+        window.MagneticPulse?.runeShock(g,{x:target.x,y:target.y-100},icon,
+          action.elapsed-r.startAt,r.hitAt-r.startAt,r.destroyed,runeColors[r.school]);
+      }
+    }
     if(action?.stage==="summon"&&action.card.kind==="claritystrike"){
       const target=getUnit(action.target);
       if(target){

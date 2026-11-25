@@ -1352,6 +1352,15 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
+    if(card?.testOnly){
+      if(state.mode!=="tester")return false;
+      const art=window.HellhoundArt;
+      if(art&&!art.ready()){
+        ui.hint.textContent="Loading Hellhound frames — tap Confirm again when ready.";
+        art.ensure().then(ok=>{if(state.mode==="tester"&&state.phase==="planning"&&currentCard()?.id==="hellhound")ui.hint.textContent=ok?"Hellhound ready. Confirm your target.":"Hellhound artwork failed to load. Tap Confirm to retry.";});
+        return false;
+      }
+    }
     const notice=targetNotice(target,card);
     if(notice){
       state.selectedTarget=null;
@@ -1545,10 +1554,7 @@
       const targets=targetsFor(card,u);
       for(const target of group?[null]:targets){
         let score=0;
-        if(card.testOnly&&state.mode!=="tester")return;
-    if(card.kind==="hellhound"){
-      for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
-    }else if(card.kind==="coldstorage"){
+        if(card.kind==="coldstorage"){
           if(!target||!canReceiveDebuff(target,"cold_storage")||target.statuses.some(st=>st.kind==="cold_storage"))continue;
           score=Math.min(card.bankedMana,Math.max(0,target.maxMana-target.mana-1))*45+
             (healingSuppressed(card.school)?0:Math.min(card.bankedHeal,target.maxHp-target.hp));
@@ -3440,8 +3446,11 @@
     if(!c||c.hp<=0)return;
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
+    if(card.testOnly&&state.mode!=="tester")return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="coldstorage"){
+    if(card.kind==="hellhound"){
+      for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
+    }else if(card.kind==="coldstorage"){
       if(addStatus(t,"cold_storage",null,card.bankedMana,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="cold_storage"),{releaseRound:state.round+1,bankerId:c.id});
       flash(t,"COLD STORAGE · BANKED","#b7eaff");

@@ -5860,7 +5860,13 @@
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
         const scene=window.MagneticPulse.scene(source,target,clamp(action.elapsed/action.duration,0,1));
-        renderables.push({type:"magnetic-pulse",depthY:target.y+.18,priority:2,draw:()=>window.MagneticPulse.draw(g,scene)});
+        // Metal summon, electrical charge, traveling pulse and target impact
+        // are independent layers. No effect sprite is baked over the target.
+        const art=window.MagneticPulse;
+        renderables.push({type:"magnetic-ring",depthY:target.y+.04,priority:2,draw:()=>art.draw(g,scene)});
+        renderables.push({type:"magnetic-charge",depthY:target.y+.05,priority:2,draw:()=>art.charge(g,scene)});
+        renderables.push({type:"magnetic-wave",depthY:target.y+.18,priority:2,draw:()=>art.pulse(g,scene)});
+        renderables.push({type:"magnetic-impact",depthY:target.y+.20,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thundergoddrums"&&window.ThunderGodDrums){

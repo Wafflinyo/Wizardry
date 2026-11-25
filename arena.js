@@ -276,6 +276,11 @@
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
+    hellhound:"3 hits × 160. Each hit has 15% Burn chance.",
+    ringoffire:"3 rounds: take 100 damage whenever HP is restored.",
+    backdraft:"Spread existing Burn to an adjacent living enemy.",
+    furnace:"5 rounds: Fire damage +10%, Burn chance +10 points.",
+    infernaltitan:"Destroy one barrier before dealing damage.",
     livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
@@ -1246,6 +1251,7 @@
       plans:{},sequence:[],queueAt:0,animation:null,winner:null,auras:[null,null],
       flashes:[],log:[],activeCard:null,inspectedStatus:null};
     handSwipe?.reset();
+    if(testing)window.WizardryFireTestArt?.ensure();
     ui.statusPopup.hidden=true;
     ui.status.textContent=testing?(testerBattle?"Battle testing: opponents play from shuffled decks.":"Test any spell with passive allies and opponents. Casts succeed and mana refills between rounds."):mode==="story"?
       "You control "+units[0].name+". All other wizards are CPU-controlled.":
@@ -1355,7 +1361,7 @@
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
     if(card?.testOnly&&(state.mode!=="tester"||window.WizardryFireTestArt&&!window.WizardryFireTestArt.ready())){
-      state.targetingNotice="Import the Fire Test Pack from Test tools before casting.";paintUI();return false;
+      state.targetingNotice="Fire animations are loading. If they fail, use Test tools → Retry Fire animations.";paintUI();return false;
     }
     const notice=targetNotice(target,card);
     if(notice){
@@ -3980,7 +3986,7 @@
     }
     const importButton=$("testerFirePack");if(importButton){importButton.hidden=!testing;importButton.disabled=!ready;}
     const status=$("testerToolsStatus");
-    if(status)status.textContent=testing&&!window.WizardryFireTestArt?.ready()?"Import the Fire Test Pack to use the five new Fire spells.":!ready?"Available when the current animation finishes.":!target?"Select a minion or boss for animation previews.":"Choose an animation or test fixture.";
+    if(status)status.textContent=testing&&!window.WizardryFireTestArt?.ready()?"Fire animations are loading automatically. Retry if needed.":!ready?"Available when the current animation finishes.":!target?"Select a minion or boss for animation previews.":"Choose an animation or test fixture.";
     for(const id of ["testerSize","testerTarget","testerOpponentMode"]){
       const input=$(id);if(input)input.disabled=!ready||(id==="testerOpponentMode"&&testerTargetType==="wood");
     }
@@ -4139,7 +4145,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of CARDS)for(let copy=0;copy<Builds.MAX_COPIES;copy++){
+      for(const k of [...CARDS,...TEST_FIRE_CARDS])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4158,7 +4164,7 @@
       drawCardArts();
     }
     for(const b of ui.hand.children){
-      const copy=Number(b.dataset.copy)||0,indices=(c?.hand||[]).map((id,i)=>id===b.dataset.card?i:-1).filter(i=>i>=0),index=indices[copy],inHand=index!==undefined;
+      const copy=Number(b.dataset.copy)||0,indices=(c?.hand||[]).map((id,i)=>id===b.dataset.card?i:-1).filter(i=>i>=0),index=indices[copy],inHand=index!==undefined&&(!BY_ID[b.dataset.card].testOnly||testing);
       b.hidden=!inHand;
       b.classList.toggle("chosen",inHand&&b.dataset.card===card?.id&&copy===(state.selectedHandCopy||0));
       // Every held card remains inspectable, even when mana is insufficient.

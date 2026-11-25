@@ -273,10 +273,11 @@
   const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:400,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4780,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 400 base damage to that enemy."};
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
+  const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -286,6 +287,7 @@
     thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
     shortcircuit:"Then +10 damage per enemy mana (max +150).",
+    thundermine:"3 rounds: next successful damaging cast triggers 300 damage.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
@@ -365,7 +367,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=["thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -1911,6 +1913,7 @@
         if(a.elapsed>=440+i*55)applyFallingHit(a,a.rainTargets[i]);
     if(a.stage==="bear-claw"&&p>=.45&&!a.applied)applySpell(a);
     if(a.stage==="raising")caster.armRaise=ease(p);
+    else if(a.stage==="mine-detonation")caster.armRaise=0;
     else if(a.stage==="lowering")caster.armRaise=1-ease(p);
     else caster.armRaise=1;
     if(a.stage==="summon"&&a.card.id==="windfist"&&a.runeResult==="success")
@@ -2005,6 +2008,7 @@
         }
       }
     }
+    if(a.stage==="mine-detonation"&&a.elapsed>=240)applyThunderMineDetonation(a);
     if(a.elapsed<a.duration)return;
     if(a.stage==="raising"){
       caster.armRaise=1;
@@ -2329,6 +2333,11 @@
       paintUI();
     }else if(a.stage==="lowering"){
       caster.armRaise=0;
+      if(beginThunderMineDetonation(a,caster))return;
+      state.animation=null;
+      startNextAction();
+    }else if(a.stage==="mine-detonation"){
+      caster.armRaise=0;
       state.animation=null;
       startNextAction();
     }
@@ -2487,7 +2496,7 @@
   const MAX_RUNES=4;
   const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2567,7 +2576,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");}
+    if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");consumeStatus(target,"thunder_mine");}
     if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"faultline_bulwark");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
@@ -3406,7 +3415,7 @@
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
-    for(const u of state.units)for(const kind of ["static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold"]){
+    for(const u of state.units)for(const kind of ["static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
       const status=u.statuses.find(st=>st.kind===kind);
       if(status&&(u.hp<=0||state.round>=status.expiresRound))consumeStatus(u,kind);
     }
@@ -3600,6 +3609,43 @@
     }
     if(a.elapsed>=t.impactAt)a.applied=true;
   }
+  function attachThunderMine(c,target,card,anim){
+    if(!target?.hp||preventsHitEffects(anim,target)||!canReceiveDebuff(target,"thunder_mine"))return false;
+    if(addStatus(target,"thunder_mine",null,card.mineDamage,card.school)===false)return false;
+    const mine=target.statuses.find(st=>st.kind==="thunder_mine");
+    Object.assign(mine,{sourceId:c.id,expiresRound:state.round+card.mineTurns});
+    flash(target,"THUNDER MINE · 3 ROUNDS","#9de9ff");
+    recordBattleEvent(target.name+" has a Thunder Mine attached for 3 rounds.");
+    return true;
+  }
+  function thunderMineTriggerable(a){
+    const card=a?.card;
+    return a?.runeResult==="success"&&!!card&&card.id!=="static"&&
+      (card.target==="enemy"||card.target==="all_enemies")&&
+      (Number(card.damage)>0||Number(card.hitDamage)>0||card.id==="earthquake");
+  }
+  function beginThunderMineDetonation(a,c){
+    if(state.mode!=="tester"||!c?.hp||!thunderMineTriggerable(a)||a.mineTriggered)return false;
+    const mine=c.statuses.find(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound);
+    if(!mine)return false;
+    a.mineTriggered=true;
+    a.mineDetonation={targetId:c.id,sourceId:mine.sourceId,damage:mine.value||300,hit:false};
+    startStage(a,"mine-detonation",960);
+    return true;
+  }
+  function applyThunderMineDetonation(a){
+    const d=a.mineDetonation;
+    if(!d||d.hit)return;
+    d.hit=true;
+    const victim=getUnit(d.targetId);
+    if(!victim?.hp||!consumeStatus(victim,"thunder_mine"))return;
+    const amount=Math.min(victim.hp,absorbBarrierDamage(victim,d.damage));
+    loseHp(getUnit(d.sourceId),victim,amount);
+    flash(victim,"-"+amount,"#a7eaff");
+    recordBattleEvent("Thunder Mine detonates on "+victim.name+" for "+amount+" damage.");
+    if(!victim.hp){victim.defeatElapsedMs=0;flash(victim,"DEFEATED","#ffd5b0");}
+    paintUI();
+  }
   function applySpell(anim){
     if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
     anim.applied=true;
@@ -3613,6 +3659,10 @@
       for(const entry of anim.drumTargets??drumTargets(c))applyDrumHit(anim,entry);
     }else if(card.kind==="hellhound"){
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
+    }else if(card.kind==="thundermine"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      anim.mineAttached=attachThunderMine(c,t,card,anim);
     }else if(card.kind==="shortcircuit"){
       if(!t||t.hp<=0||t.team===c.team)return;
       // Direct test calls use the same sequence without a rendering clock.
@@ -4340,7 +4390,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5141,6 +5191,7 @@
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
+      case "thunder_mine":return {title:"Thunder Mine · Cast trigger",detail:"After the next successful damaging spell, detonates for 300 damage and disappears. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Passing, healing and missed spells do not trigger it. Cleansing removes it harmlessly."};
       case "gunpowder_coat":return {title:"Gunpowder Coat · Fire reaction",detail:"A Fire spell hit triggers 150 extra explosion damage once per turn, up to 3 times. "+Math.max(0,st.expiresRound-state.round)+" turns remain; "+Math.max(0,3-(st.triggers||0))+" explosions remain. The coat stays after exploding. Burn ticks and other elements do not ignite it. A successful recast refreshes the coat."};
       case "water_prison":return {title:"Water Prison · Water debuff",detail:st.value+" damage at the start of each turn. "+st.remaining+" ticks remain. Recasting refreshes the duration."};
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
@@ -5241,7 +5292,7 @@
   }
   const statusSchools={
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
-    burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
+    thunder_mine:"lightning",burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
@@ -5480,6 +5531,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
+      else if(card.id==="thundermine")window.ThunderMine?.portrait(c,width,height);
       else if(EXTRA_FIRE_TEST.some(spell=>spell.id===card.id))window.FireTestArt?.[card.id]?.portrait(c,width,height);
       else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
@@ -5896,7 +5948,8 @@
     const earthquakeProgress=state.animation?.card?.id==="earthquake"&&state.animation.stage==="summon"
       ?clamp(state.animation.elapsed/state.animation.duration,0,1):null;
     const drumCast=state.mode==="tester"&&state.animation?.card?.id==="thundergoddrums"&&state.animation.stage==="summon"?state.animation:null;
-    const impactShake=drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
+    const mineShake=state.animation?.stage==="mine-detonation"?window.ThunderMine?.shake(state.animation.elapsed):null;
+    const impactShake=mineShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
@@ -5949,7 +6002,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5984,6 +6037,18 @@
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thundermine"&&window.ThunderMine){
+      const source=getUnit(action.source),target=getUnit(action.target),art=window.ThunderMine;
+      if(source&&target){
+        const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target));
+        renderables.push({type:"thunder-mine-body",depthY:scene.depth,priority:2,draw:()=>art.draw(g,scene)});
+        renderables.push({type:"thunder-mine-cast-fx",depthY:Math.max(scene.depth,target.y)+.13,priority:2,draw:()=>art.castFx(g,scene)});
+      }
+    }
+    if(state.mode==="tester"&&action?.stage==="mine-detonation"&&action.mineDetonation&&window.ThunderMine){
+      const target=getUnit(action.mineDetonation.targetId);
+      if(target)renderables.push({type:"thunder-mine-explosion",depthY:target.y+.35,priority:3,draw:()=>window.ThunderMine.explode(g,target,action.elapsed,unitSlotFactor(target))});
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="shortcircuit"&&window.ShortCircuit){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.ShortCircuit;
@@ -6165,6 +6230,7 @@
         renderables.push({type:"cursed-hold-front",depthY:u.y+.05,priority:2,
           draw:()=>fitUnitEffect(g,u,()=>window.CursedHold?.bind(g,u,progress,time,true))});
       }
+      if(u.statuses.some(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound))renderables.push({type:"thunder-mine-attached",depthY:u.y+.18,priority:2,draw:()=>window.ThunderMine?.attached(g,u,time,unitSlotFactor(u))});
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time}))});
       const growing=action?.card?.id==="thornwrap"&&action.stage==="summon"&&action.target===u.id;
       const wrapped=u.statuses.some(st=>st.kind==="thorny_wrap"&&state.round<st.expiresRound);
@@ -7188,11 +7254,11 @@
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
-    drawCardArts,cardInfo,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
+    drawCardArts,cardInfo,attachThunderMine,thunderMineTriggerable,beginThunderMineDetonation,applyThunderMineDetonation,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

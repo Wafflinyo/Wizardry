@@ -132,7 +132,10 @@ function makeFurnace(){
    const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
    for(let j=0;j<p.length;j+=4){
      const l=.299*p[j]+.587*p[j+1]+.114*p[j+2];
-     p[j]=Math.min(255,35+l*.72);p[j+1]=Math.min(255,29+l*.70);p[j+2]=Math.min(255,27+l*.67);
+     // Neutral ash gray with dark charcoal folds and more solid smoke cores.
+     const gray=Math.round(35+Math.pow(l/255,.85)*185);
+     p[j]=p[j+1]=p[j+2]=gray;
+     p[j+3]=Math.round(255*Math.pow(p[j+3]/255,.66));
    }
    c.putImageData(data,0,0);smokeArt=canvas;
  }
@@ -168,18 +171,18 @@ function makeFurnace(){
    if(!smokeArt)return;
    const poses=[4,5,6,7,6,5];
    const banks=[
-     [.04,.35,.57,.38],[.48,.39,.58,.29],[.96,.36,.58,.39],
-     [.22,.54,.46,.40],[.76,.54,.46,.40],
-     [.05,.70,.34,.32],[.95,.70,.34,.32]
+     [.04,.35,.62,.79],[.48,.39,.62,.67],[.96,.36,.62,.79],
+     [.22,.54,.50,.76],[.76,.54,.50,.76],
+     [.05,.70,.37,.65],[.95,.70,.37,.65]
    ];
    // A light smoky cast connects the banks across the upper air. The effect
    // stays behind every unit, crystal emblem and UI; no change to floor art.
    g.save();
    const haze=g.createLinearGradient(0,y+height*.14,0,y+height*.86);
-   haze.addColorStop(0,"rgba(46,37,36,0)");
-   haze.addColorStop(.33,"rgba(63,51,47,.16)");
-   haze.addColorStop(.64,"rgba(66,53,48,.12)");
-   haze.addColorStop(1,"rgba(46,37,36,0)");
+   haze.addColorStop(0,"rgba(45,45,45,0)");
+   haze.addColorStop(.33,"rgba(75,75,75,.31)");
+   haze.addColorStop(.64,"rgba(65,65,65,.25)");
+   haze.addColorStop(1,"rgba(45,45,45,0)");
    g.fillStyle=haze;g.fillRect(x,y,width,height);
    g.restore();
    for(const [i,[u,v,size,opacity]] of banks.entries()){
@@ -188,7 +191,7 @@ function makeFurnace(){
      const rise=Math.sin(phase*Math.PI*2+i)*height*.022;
      const pose=poses[(Math.floor(time/240)+i*2)%poses.length];
      const w=width*size,h=w*224/288;
-     g.save();g.globalAlpha*=opacity*(.88+.12*Math.sin(phase*Math.PI*2));
+     g.save();g.globalAlpha*=opacity*(.93+.07*Math.sin(phase*Math.PI*2));
      g.drawImage(smokeArt,pose%4*288,Math.floor(pose/4)*224,288,224,
        x+u*width-w/2+drift,y+v*height-h*.60-rise,w,h);
      g.restore();
@@ -200,7 +203,7 @@ function makeFurnace(){
      const phase=((time/3400+i*.237)%1+1)%1;
      const pose=poses[(Math.floor(phase*12)+i)%poses.length];
      const w=width*(size*1.3+phase*.10),h=w*224/288;
-     const opacity=.43*Math.sin(Math.PI*phase);
+     const opacity=.80*Math.sin(Math.PI*phase);
      const drift=width*.045*phase*Math.sin(i*2.4+phase*2);
      g.save();g.globalAlpha*=opacity;
      g.drawImage(smokeArt,pose%4*288,Math.floor(pose/4)*224,288,224,

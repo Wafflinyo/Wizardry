@@ -265,7 +265,7 @@
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   // New Hellhound is isolated from binders, CPU decks and normal progression.
   const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
-  const TEST_INFERNO_TITAN={id:"infernotitan",name:"Inferno Titan",school:"fire",cost:8,target:"enemy",kind:"infernotitan",damage:700,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:.80,icon:"♨",rarity:"TEST",testOnly:true,duration:6100,hit:.70,description:"A molten knight rises, grips his straight lava blade with both hands and drives it point-first into the ground. A traveling fissure erupts beneath the selected enemy for 700 base damage, with a 30% chance of Extreme Burn (100 damage each round for 5 rounds)."};
+  const TEST_INFERNO_TITAN={id:"infernotitan",name:"Inferno Titan",school:"fire",cost:8,target:"enemy",kind:"infernotitan",damage:700,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:.80,icon:"♨",rarity:"TEST",testOnly:true,duration:5400,hit:.61,description:"A molten knight rises, grips his straight lava blade with both hands and drives it point-first into the ground. A traveling fissure erupts beneath the selected enemy for 700 base damage, with a 30% chance of Extreme Burn (100 damage each round for 5 rounds)."};
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN].map(x=>[x.id,x]));
   const CARD_EFFECTS={
@@ -5674,7 +5674,7 @@
     }
     // Keep the painted diamond (image Y=414) under the world summon point
     // while reserving visible space below front-row feet for attached labels.
-    const impactFx=state.animation?.card?.id==="sentinelfissure"?window.SentinelFissure:state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
+    const impactFx=state.animation?.card?.id==="infernotitan"?window.InfernoTitan:state.animation?.card?.id==="sentinelfissure"?window.SentinelFissure:state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
     const earthquakeProgress=state.animation?.card?.id==="earthquake"&&state.animation.stage==="summon"
       ?clamp(state.animation.elapsed/state.animation.duration,0,1):null;
     const impactShake=earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null;
@@ -5750,7 +5750,7 @@
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
         const scene=window.InfernoTitan.scene(source,target,clamp(action.elapsed/action.duration,0,1));
-        renderables.push({type:"infernotitan-fissure",depthY:Math.min(scene.y,target.y)-.5,priority:0,draw:()=>window.InfernoTitan.fissure(g,scene)});
+        renderables.push({type:"infernotitan-fissure",depthY:-1000,priority:0,draw:()=>window.InfernoTitan.fissure(g,scene)});
         renderables.push({type:"infernotitan",depthY:scene.y,priority:2,draw:()=>window.InfernoTitan.draw(g,scene)});
         renderables.push({type:"infernotitan-geyser",depthY:target.y+.15,priority:2,draw:()=>window.InfernoTitan.geyser(g,scene)});
       }

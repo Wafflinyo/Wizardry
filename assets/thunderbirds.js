@@ -19,8 +19,19 @@ const beamReady=()=>beamAtlas.complete&&beamAtlas.naturalWidth===128&&beamAtlas.
 const FLAP=[0,1,2,3,4,5,6,5,4,3,2,1];
 function scene(target,p){
  const dir=target.x>=500?1:-1;
- // A tall, open firing formation makes both incoming branches readable.
- const hover=[{x:target.x-dir*400,y:105},{x:target.x-dir*345,y:325}];
+ // Keep the two beaks roughly aligned vertically on the casting side,
+ // with a modest horizontal stagger. Aim at a point well before the enemy.
+ const hit={x:target.x,y:target.y-105};
+ const joint={x:hit.x-dir*190,y:Math.max(125,Math.min(320,hit.y-18))};
+ const beakOffsetY=14*235/256;
+ const beakOffsetX=83*235/256;
+ // Keep the birds on-screen even for inner slots in larger battles.
+ const rearBeakX=Math.max(155,Math.min(845,joint.x-dir*165));
+ const frontBeakX=rearBeakX+dir*20;
+ const hover=[
+   {x:rearBeakX-dir*beakOffsetX,y:joint.y-65-beakOffsetY},
+   {x:frontBeakX-dir*beakOffsetX,y:joint.y+65-beakOffsetY}
+ ];
  const birds=hover.map((h,i)=>{
    const angle=p/.46*Math.PI*4+i*Math.PI;
    const flying={x:500+Math.cos(angle)*285,y:200+Math.sin(angle)*86};
@@ -33,14 +44,11 @@ function scene(target,p){
    const pose=FLAP[(Math.floor(p*64)+i*3)%FLAP.length]+i*7;
    return {x,y,face,pose,size,bx:x+face*(211-128)*scale,by:y+(126-112)*scale};
  });
- const hit={x:target.x,y:target.y-105};
- // Aim both beaks at a common point between the formation and the enemy.
- const midY=(birds[0].by+birds[1].by)/2;
- const joint={x:hit.x-dir*135,y:mix(midY,hit.y,.17)};
+ // All three segments share the exact same convergence point.
  return {p,birds,hit,joint,alpha:Math.min(ease(p/.05),1-ease((p-.97)/.03))};
 }
 function bird(g,b){const h=b.size*R/C;g.save();g.translate(b.x,b.y);g.scale(b.face,1);tile(g,b.pose,-b.size/2,-h/2,b.size,h);g.restore();}
-function beam(g,from,to,n,thickness,progress=1,phase=0){
+function beam(g,from,to,n,thickness,progress=1,phase=0,mergedBeam=false){
  const dx=(to.x-from.x)*progress,dy=(to.y-from.y)*progress,len=Math.hypot(dx,dy);
  if(len<1)return;
  const width=thickness*(.72+.28*ease(progress)),t=phase*95;
@@ -59,7 +67,10 @@ function beam(g,from,to,n,thickness,progress=1,phase=0){
  // The full-length beam stays anchored to both ends.
  if(beamReady()){
    const seq=[0,1,2,3,2,1],frame=seq[Math.floor(t)%seq.length];
-   g.drawImage(beamAtlas,0,frame*34,128,34,0,-width/2,len,width);
+   // The outgoing stream uses the interior of the texture so the
+   // separate circular launch flare doesn't appear again at the junction.
+   const crop=mergedBeam?14:0;
+   g.drawImage(beamAtlas,crop,frame*34,128-crop,34,0,-width/2,len,width);
  }else{
    g.drawImage(atlas,(n%7)*C+4,Math.floor(n/7)*R+76,248,72,0,-width/2,len,width);
  }
@@ -126,14 +137,9 @@ function draw(g,s){
    // connected Y rather than three disconnected images or a circular dot.
    if(p>=.67){
      const merged=ease((p-.67)/.06);
-     beam(g,s.joint,s.hit,beat,128,merged,p);
-     const radius=32+3*Math.sin(p*130);
-     const glow=g.createRadialGradient(s.joint.x,s.joint.y,0,s.joint.x,s.joint.y,radius);
-     glow.addColorStop(0,"rgba(221,252,255,.44)");
-     glow.addColorStop(.36,"rgba(95,208,255,.24)");
-     glow.addColorStop(1,"rgba(31,130,255,0)");
-     g.fillStyle=glow;
-     g.fillRect(s.joint.x-radius,s.joint.y-radius,radius*2,radius*2);
+     beam(g,s.joint,s.hit,beat,128,merged,p,true);
+     // Keep the merge luminous without a separate round orb. The
+     // overlapping round-ended electrical cores make the junction continuous.
    }
    g.restore();
    bird(g,far);

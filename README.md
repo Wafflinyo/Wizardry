@@ -1,8 +1,8 @@
 # Wizardry
 
-Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/arena.html?v=0.180.0.
+Play the current 2.5D game at https://wafflinyo.github.io/Wizardry/.
 
-The original duel has been retired. `index.html` opens the current game.
+The original duel has been retired. `index.html` opens the current game. The main menu displays the version embedded in the loaded HTML, independent of the URL query. For each release, bump the version in `index.html`, the `mainMenuVersion` text and accessibility label in `arena.html`, and `package.json`; also bump cache query strings for any changed assets.
 
 ## Wizard setup
 

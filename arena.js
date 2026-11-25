@@ -1361,7 +1361,7 @@
         art.ensure().then(ok=>{
           if(state!==snapshot||state.mode!=="tester"||state.phase!=="planning"||currentCard()?.id!=="hellhound"||correctTarget()?.id!==selected||caster()?.id!==selectedCaster)return;
           if(ok)confirmTarget();
-          else ui.hint.textContent="Hellhound artwork failed to load. Tap Confirm to retry.";
+          else ui.hint.textContent="Hellhound: "+(art.error?.()||"artwork failed to load")+". Tap Confirm to retry.";
         });
         return false;
       }

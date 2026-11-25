@@ -1356,8 +1356,13 @@
       if(state.mode!=="tester")return false;
       const art=window.HellhoundArt;
       if(art&&!art.ready()){
-        ui.hint.textContent="Loading Hellhound frames — tap Confirm again when ready.";
-        art.ensure().then(ok=>{if(state.mode==="tester"&&state.phase==="planning"&&currentCard()?.id==="hellhound")ui.hint.textContent=ok?"Hellhound ready. Confirm your target.":"Hellhound artwork failed to load. Tap Confirm to retry.";});
+        const snapshot=state,selected=target?.id,selectedCaster=c?.id;
+        ui.hint.textContent="Loading Hellhound artwork…";
+        art.ensure().then(ok=>{
+          if(state!==snapshot||state.mode!=="tester"||state.phase!=="planning"||currentCard()?.id!=="hellhound"||correctTarget()?.id!==selected||caster()?.id!==selectedCaster)return;
+          if(ok)confirmTarget();
+          else ui.hint.textContent="Hellhound artwork failed to load. Tap Confirm to retry.";
+        });
         return false;
       }
     }
@@ -3218,10 +3223,11 @@
   }
   function hellhoundTargets(target,caster){
     if(!target||!caster||target.team===caster.team||target.hp<=0)return [];
-    const formation=sideUnits(target.team).slice().sort((a,b)=>a.y-b.y||a.x-b.x);
+    const formation=sideUnits(target.team).filter(unit=>unit.hp>0).sort((a,b)=>a.y-b.y||a.x-b.x);
     const index=formation.indexOf(target);
-    // Left/right mean the immediately preceding/following seat in formation.
-    // Preserve empty/dead seats rather than jumping or attacking the primary twice.
+    // Middle always attacks the selected enemy. The two outer heads independently
+    // take the nearest living neighbor on their corresponding side of the formation.
+    // Never repeat a target or fire a head without an assigned enemy.
     return [target,formation[index-1],formation[index+1]].flatMap((unit,head)=>{
       if(!unit||unit.hp<=0)return [];
       const [start,end]=HELLHOUND_WINDOWS[head];

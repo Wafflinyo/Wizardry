@@ -1,36 +1,25 @@
-/* Individually cut 24 actor poses + 30 flame poses; single lossless-alpha atlas.
-   A user-imported atlas is persisted locally, never mixed with old Hellhound art. */
+/* Individually cut 24 actor poses + 30 separate flame poses, served from the game. */
 (()=>{
 "use strict";
-const W=320,H=256,COLS=6,KEY="wizardry.hellhound.v3.atlas",clamp=x=>Math.max(0,Math.min(1,x));
+const W=320,H=256,COLS=6,clamp=x=>Math.max(0,Math.min(1,x));
 let tiles=[],pending=null;
 const status=msg=>{const el=document.getElementById("hellhoundStatus");if(el)el.textContent=msg;};
 async function decode(src){
  const img=new Image();
  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error("Invalid artwork file"));img.src=src;});
- if(img.naturalWidth!==1920||img.naturalHeight!==2304)throw Error("Select the supplied 1920 × 2304 Hellhound-Test-Art.webp");
+ if(img.naturalWidth!==1920||img.naturalHeight!==2304)throw Error("Hellhound artwork has invalid dimensions.");
  const next=Array.from({length:54},(_,n)=>{
   const tile=document.createElement("canvas");tile.width=W;tile.height=H;
   const g=tile.getContext("2d");g.drawImage(img,(n%COLS)*W,Math.floor(n/COLS)*H,W,H,0,0,W,H);return tile;
  });
  tiles=next;status("Hellhound artwork ready · 24 character / 30 flame frames");window.WIZARDRY_ARENA_TEST?.drawCardArts();return true;
 }
-async function ensure(){
- if(tiles.length===54)return true;if(pending)return pending;
- let saved;try{saved=localStorage.getItem(KEY);}catch{}
- if(!saved){status("Import Hellhound-Test-Art.webp once to enable the spell.");return false;}
- pending=decode(saved).catch(e=>{status(e.message);return false;}).finally(()=>{pending=null;});return pending;
-}
-const input=document.getElementById("hellhoundFile"),button=document.getElementById("hellhoundImport");
-if(button&&input){
- button.onclick=()=>input.click();
- input.onchange=async()=>{const file=input.files?.[0];if(!file)return;status("Loading Hellhound frames…");
-  try{
-   const src=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-   await decode(src);
-   try{localStorage.setItem(KEY,src);}catch{status("Artwork ready for this session. Browser storage is unavailable.");}
-  }catch(e){status(e.message);}finally{input.value="";}
- };
+function ensure(){
+ if(tiles.length===54)return Promise.resolve(true);
+ if(pending)return pending;
+ status("Loading Hellhound artwork…");
+ pending=decode("./assets/hellhound-test-art-v3.webp?v=1").catch(e=>{status(e.message);return false;}).finally(()=>{pending=null;});
+ return pending;
 }
 function actor(g,n,x,y,scale,dir){
  const tile=tiles[n];if(!tile)return;
@@ -40,9 +29,9 @@ function actor(g,n,x,y,scale,dir){
 // Mouth positions measured from individual 320×256 rendered poses.
 // Order: main (middle), far/upper adjacent, near/lower adjacent.
 const mouths={
- 13:[[202,117],[279,134],[109,130]],
- 14:[[190,96],[270,117],[96,130]],
- 15:[[194,106],[270,122],[99,112]]
+ 13:[[203,120],[280,139],[106,137]],
+ 14:[[190,103],[271,124],[99,130]],
+ 15:[[195,108],[270,128],[101,121]]
 };
 function scene(source,target,entries,p){
  const dir=target.x>=source.x?1:-1,scale=.92,x=500,y=510;
@@ -62,7 +51,7 @@ function scene(source,target,entries,p){
  }
  return {dir,scale,x,y,n,p,streams};
 }
-function draw(g,s){if(s.p<.04||s.p>.98)g.save();else g.save();
+function draw(g,s){g.save();
  g.globalAlpha*=Math.min(clamp(s.p/.04),clamp((1-s.p)/.02));
  actor(g,s.n,s.x,s.y,s.scale,s.dir);g.restore();}
 function flame(g,s){
@@ -71,8 +60,12 @@ function flame(g,s){
  // Each stream is independently aimed from its own mouth at its assigned target.
  // Atlas flame starts on the left, with growth already rendered into its 30 frames.
  g.save();g.translate(s.sx,s.sy);g.rotate(Math.atan2(dy,dx));g.imageSmoothingEnabled=true;
- g.drawImage(tile,0,-60,len*1.06,120);g.restore();
+ const width=len/0.90,height=Math.min(112,Math.max(54,len*.38));
+ g.drawImage(tile,-width*.05,-height*.52,width,height);g.restore();
 }
-function portrait(g,w,h){if(tiles.length!==54)return;const scale=Math.min(w/310,h/220);actor(g,8,w/2,h*.96,scale,1);}
+function portrait(g,w,h){
+ if(tiles.length!==54){ensure();g.save();g.fillStyle="#ffba81";g.font="bold 10px system-ui";g.textAlign="center";g.fillText("Loading…",w/2,h/2);g.restore();return;}
+ const scale=Math.min(w/295,h/210);actor(g,8,w/2,h*.97,scale,1);
+}
 window.HellhoundArt={ensure,ready:()=>tiles.length===54,scene,draw,flame,portrait};
 })();

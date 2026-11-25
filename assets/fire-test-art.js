@@ -38,59 +38,89 @@ function make(name,C,R,peak){
 }
 // Full opaque environment artwork, with the same authored flame atlas used by Flashover.
 function makeFurnace(){
- const ground=new Image(),flames=new Image(),original=new Image(),smoke=new Image();let pending=null,error="",landscapeArt=null,smokeArt=null;
- const imagesReady=()=>original.complete&&original.naturalWidth===1000&&original.naturalHeight===620&&ground.complete&&ground.naturalWidth===1000&&ground.naturalHeight===620&&flames.complete&&flames.naturalWidth===512&&flames.naturalHeight===256;
+ const flames=new Image(),original=new Image(),smoke=new Image();let pending=null,error="",landscapeArt=null,smokeArt=null;
+ const imagesReady=()=>original.complete&&original.naturalWidth===1000&&original.naturalHeight===620&&flames.complete&&flames.naturalWidth===512&&flames.naturalHeight===256;
  const ready=()=>!!landscapeArt&&imagesReady();
- // Paint the exact approved arena first. The volcanic texture is clipped to the
- // inner stone floor, excluding the original central crystal medallion and gold rim.
- // All original architecture, banners, braziers and exterior pixels remain untouched.
- // The recessed floor is drawn entirely inside the existing platform. Neither the
- // original arena nor its center medallion is shifted or scaled.
+ // Modify the original artwork itself, not a separate floor texture.
+ // These outlines only delimit the stone pixels that can be heated; they are
+ // never rendered as a new floor, rim or wall. Preserve the center emblem.
  function floorPath(ctx){
-   ctx.moveTo(500,302);
-   ctx.bezierCurveTo(672,299,804,315,894,357);
-   ctx.bezierCurveTo(937,377,965,409,967,439);
-   ctx.bezierCurveTo(970,478,924,520,849,544);
-   ctx.bezierCurveTo(756,573,625,583,500,583);
-   ctx.bezierCurveTo(375,583,244,573,151,544);
-   ctx.bezierCurveTo(76,520,30,478,33,439);
-   ctx.bezierCurveTo(35,409,63,377,106,357);
-   ctx.bezierCurveTo(196,315,328,299,500,302);ctx.closePath();
+   ctx.moveTo(500,303);
+   ctx.bezierCurveTo(672,300,804,316,894,358);
+   ctx.bezierCurveTo(937,378,965,410,966,439);
+   ctx.bezierCurveTo(969,478,924,519,849,543);
+   ctx.bezierCurveTo(756,572,625,582,500,582);
+   ctx.bezierCurveTo(375,582,244,572,151,543);
+   ctx.bezierCurveTo(76,519,31,478,34,439);
+   ctx.bezierCurveTo(35,410,63,378,106,358);
+   ctx.bezierCurveTo(196,316,328,300,500,303);ctx.closePath();
  }
  function medallionPath(ctx){
-   ctx.moveTo(500,355);ctx.lineTo(513,370);
-   ctx.bezierCurveTo(575,370,629,390,632,414);
-   ctx.bezierCurveTo(636,439,578,461,514,465);
-   ctx.lineTo(501,486);ctx.lineTo(486,465);
-   ctx.bezierCurveTo(421,461,364,439,369,414);
-   ctx.bezierCurveTo(373,390,425,370,487,370);
-   ctx.lineTo(500,355);ctx.closePath();
+   ctx.moveTo(500,354);ctx.lineTo(514,369);
+   ctx.bezierCurveTo(576,369,631,389,634,414);
+   ctx.bezierCurveTo(638,440,579,462,515,466);
+   ctx.lineTo(501,487);ctx.lineTo(485,466);
+   ctx.bezierCurveTo(420,462,362,440,367,414);
+   ctx.bezierCurveTo(371,389,424,369,486,369);
+   ctx.lineTo(500,354);ctx.closePath();
  }
+ // Guide the heat along the actual original arena tile joints. The final
+ // incandescent core is selected from the original dark seam pixels,
+ // preserving every stone's existing faceted shading and silhouette.
+ const joints=[
+   [[38,400],[95,394],[136,407],[220,398],[260,387],[325,389],[375,406]],
+   [[96,347],[151,359],[225,343],[293,345],[333,320],[428,331],[438,347]],
+   [[151,359],[136,407],[167,443],[251,456],[274,420],[260,387]],
+   [[333,320],[350,351],[429,350],[455,369]],
+   [[570,303],[581,329],[665,345],[715,321],[800,343],[813,355]],
+   [[631,404],[696,386],[742,379],[808,388],[878,382],[926,388],[956,412]],
+   [[715,321],[742,379],[723,416],[785,431],[854,414],[878,382]],
+   [[38,444],[93,464],[167,443],[251,456],[277,480],[323,488],[392,462]],
+   [[277,480],[253,510],[181,511],[117,530]],
+   [[93,464],[110,495],[181,511]],
+   [[323,488],[354,523],[431,516],[461,540],[535,535],[569,516],[643,529]],
+   [[630,451],[696,475],[751,465],[785,431]],
+   [[696,475],[685,510],[751,529],[819,510],[854,475],[930,467]],
+   [[751,465],[854,475],[898,445],[965,440]],
+   [[354,523],[308,551],[350,574]],
+   [[431,516],[450,556],[500,582]],
+   [[569,516],[580,554],[643,575]],
+   [[685,510],[643,529],[580,554]],
+   [[819,510],[852,539],[907,518]]
+ ];
  function compose(){
    const surface=document.createElement("canvas");surface.width=1000;surface.height=620;
-   const ctx=surface.getContext("2d");
-   ctx.drawImage(original,0,0);
-   ctx.save();ctx.beginPath();floorPath(ctx);medallionPath(ctx);ctx.clip("evenodd");
-   // Visible inner wall: dark heated stone, with the existing gold lip in front.
-   // A larger rear inset implies a lower floor in the arena's viewing angle.
-   const wall=ctx.createLinearGradient(0,302,0,583);
-   wall.addColorStop(0,"#302325");wall.addColorStop(.38,"#4a2c29");
-   wall.addColorStop(.75,"#3b292a");wall.addColorStop(1,"#231c20");
-   ctx.fillStyle=wall;ctx.fillRect(0,300,1000,286);
-   ctx.save();ctx.beginPath();
-   ctx.translate(500,442);ctx.scale(.976,.925);ctx.translate(-500,-442);ctx.translate(0,3);
-   floorPath(ctx);ctx.clip();
-   // The magma is lowered within the recessed surface, not the entire arena.
-   ctx.drawImage(ground,-40,43,1080,645);
-   ctx.restore();
-   // Shade the inner edge of the floor without changing the original outer rim.
-   ctx.save();ctx.beginPath();ctx.translate(500,442);ctx.scale(.976,.925);ctx.translate(-500,-442);ctx.translate(0,3);
-   floorPath(ctx);ctx.clip();
-   const shade=ctx.createLinearGradient(0,302,0,583);
-   shade.addColorStop(0,"rgba(17,12,17,.55)");shade.addColorStop(.14,"rgba(25,13,15,0)");
-   shade.addColorStop(.83,"rgba(25,13,15,0)");shade.addColorStop(1,"rgba(16,12,16,.42)");
-   ctx.fillStyle=shade;ctx.fillRect(0,300,1000,286);ctx.restore();
-   ctx.restore();
+   const ctx=surface.getContext("2d",{willReadFrequently:true});ctx.drawImage(original,0,0);
+   const mask=document.createElement("canvas");mask.width=1000;mask.height=620;
+   const m=mask.getContext("2d",{willReadFrequently:true});
+   m.beginPath();floorPath(m);medallionPath(m);m.fillStyle="#fff";m.fill("evenodd");
+   const allowed=m.getImageData(0,0,1000,620).data;
+   const seam=document.createElement("canvas");seam.width=1000;seam.height=620;
+   const sc=seam.getContext("2d",{willReadFrequently:true});
+   sc.lineJoin="round";sc.lineCap="round";sc.strokeStyle="#fff";sc.lineWidth=12;
+   for(const points of joints){sc.beginPath();sc.moveTo(...points[0]);for(const p of points.slice(1))sc.lineTo(...p);sc.stroke();}
+   const guide=sc.getImageData(0,0,1000,620).data;
+   const frame=ctx.getImageData(0,0,1000,620),p=frame.data,src=new Uint8ClampedArray(p);
+   const lum=k=>.299*src[k]+.587*src[k+1]+.114*src[k+2];
+   for(let y=300;y<584;y++)for(let x=30;x<970;x++){
+     const k=(y*1000+x)*4,maskAlpha=allowed[k+3]/255;if(maskAlpha===0)continue;
+     const r=src[k],g=src[k+1],b=src[k+2],l=lum(k);
+     // Gold details and all bright turquoise ornamentation are protected.
+     if(r>g*1.06&&r>b*1.28&&g>72)continue;
+     const nearby=Math.max(lum(k-12),lum(k+12),lum(k-12000),lum(k+12000));
+     const contrast=nearby-l;
+     const dark=clamp((89-l)/36),edge=clamp((contrast-6)/23);
+     const heat=guide[k+3]/255*dark*edge;
+     const core=clamp((heat-.16)/.65);
+     const warm=guide[k+3]/255*clamp((105-l)/60)*.20;
+     // Recolor the actual original stone pixels, retaining local light/shadow.
+     const baseR=l*.88+22+warm*72,baseG=l*.60+10+warm*21,baseB=l*.55+12;
+     const rr=baseR+(255-baseR)*core,gg=baseG+(110+core*100-baseG)*core,bb=baseB+(12-baseB)*core;
+     p[k]=Math.round(r+(rr-r)*maskAlpha);
+     p[k+1]=Math.round(g+(gg-g)*maskAlpha);
+     p[k+2]=Math.round(b+(bb-b)*maskAlpha);
+   }
+   ctx.putImageData(frame,0,0);
    landscapeArt=surface;
  }
  // Recolor the existing illustrated Dark Grounds smoke poses once, offscreen.
@@ -115,10 +145,9 @@ function makeFurnace(){
      const finish=ok=>{if(done)return;done=true;clearTimeout(timer);error=ok?"":"Unable to load Furnace landscape or flame artwork";resolve(ok);if(ok){try{window.WIZARDRY_ARENA_TEST?.drawCardArts();}catch(e){}}};
      const check=()=>{if(imagesReady()){try{if(!landscapeArt)compose();finish(ready());}catch(e){console.warn("Furnace landscape composition failed",e);finish(false);}}};
      const timer=setTimeout(()=>finish(false),12000);
-     ground.onload=flames.onload=original.onload=check;
-     ground.onerror=flames.onerror=original.onerror=()=>finish(false);
+     flames.onload=original.onload=check;
+     flames.onerror=original.onerror=()=>finish(false);
      original.src="./assets/arena-concept-approved-v48.webp?v=0.48.0";
-     ground.src="./assets/furnace-arena-v3.webp?v=1";
      flames.src="./assets/flashover-flames.webp?v=0.305.2";
      check();
    }).finally(()=>{pending=null;});
@@ -156,8 +185,7 @@ function makeFurnace(){
    const intensity=clamp(strength);
    if(intensity<=0)return;
    g.save();g.globalAlpha*=intensity;
-   // The active field replaces the background completely, just as Groveland does.
-   // No alpha mask on the volcanic ground; no floor from the previous arena leaks through.
+   // The field is the original arena with its own stone pixels heated in place.
    g.drawImage(landscapeArt,x,y,width,height);
    drawSmoke(g,x,y,width,height,time);
    const beat=Math.floor(time/105);

@@ -25,7 +25,7 @@ const assert = require('node:assert/strict');
   ),ctx);
   vm.runInNewContext(read('assets/wizard-home-v135.js'),ctx);
   const api = ctx.window.WIZARDRY_ARENA_TEST;
-  const getOrder = () => Array.from(api.cards,card=>card.id).reverse();
+  const getOrder = () => [...Array.from(api.testCards,card=>card.id),...Array.from(api.cards,card=>card.id).reverse()];
   assert.equal(ctx.document.body.dataset.screen,'home');
   await element('portal').click({target:{closest:()=>({hasAttribute:()=>false,dataset:{action:'tests'}})}});
   assert.match(element('portal').innerHTML,/data-action="cardTester">New Card Tester/);

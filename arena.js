@@ -5723,12 +5723,13 @@
       const x=(vw-W*cover)/2,y=diamondY-414*cover,width=W*cover,height=H*cover;
       g.drawImage(background,x,y,width,height);
       if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
+       if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
       g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
     if(impactShake)g.translate(impactShake.x,impactShake.y);
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
-    if(!background)drawBackground(g);
+    if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:96,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
     if(floorIntro){drawFloorIntro(time);return;}
     if(fieldId&&fieldId!=="groveland"){
       const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];
@@ -5785,16 +5786,18 @@
     }));
     if(state.mode==="tester"&&window.FireTestArt){
       const fire=window.FireTestArt;
-      if(fieldId==="furnace"){
-        const progress=formingField?clamp(formingField.elapsed/formingField.duration,0,1):null;
-        renderables.push({type:"furnace",depthY:-1100,priority:0,draw:()=>fire.furnace.field(g,time,progress)});
-      }
+
       if(action?.stage==="summon"&&["ringoffire","backdraft"].includes(action.card.kind)){
         const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1),art=fire[action.card.kind];
-        if(target)renderables.push({type:action.card.kind,depthY:target.y+.12,priority:2,draw:()=>art.draw(g,target,p,unitSlotFactor(target))});
+        if(target){
+          const factor=unitSlotFactor(target);
+          if(action.card.kind==="ringoffire")renderables.push({type:"ring-back",depthY:target.y-.12,priority:0,draw:()=>art.draw(g,target,p,factor,"back")});
+          renderables.push({type:action.card.kind,depthY:target.y+.12,priority:2,draw:()=>art.draw(g,target,p,factor,"front")});
+        }
       }
       for(const u of sorted)if(u.hp>0&&u.statuses.some(st=>st.kind==="ring_of_fire"&&state.round<st.expiresRound)&&!(action?.stage==="summon"&&action.card.kind==="ringoffire"&&action.target===u.id)){
-        renderables.push({type:"ring-of-fire-idle",depthY:u.y+.1,priority:2,draw:()=>fire.ringoffire.idle(g,u,time,unitSlotFactor(u))});
+        renderables.push({type:"ring-of-fire-idle-back",depthY:u.y-.1,priority:0,draw:()=>fire.ringoffire.idle(g,u,time,unitSlotFactor(u),"back")});
+        renderables.push({type:"ring-of-fire-idle",depthY:u.y+.1,priority:2,draw:()=>fire.ringoffire.idle(g,u,time,unitSlotFactor(u),"front")});
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}

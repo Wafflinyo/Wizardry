@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wizardry – Discord banner</title>
+<style>body{background:#0b1724;color:#e3edf6;font:16px system-ui,sans-serif;margin:0;padding:24px}main{max-width:1280px;margin:auto}h1{font-size:22px}canvas{width:100%;height:auto;display:block;background:#06151f;border-radius:8px}button{font:inherit;color:#e3edf6;background:#243b52;border:1px solid #647e99;padding:12px 20px;border-radius:6px;cursor:pointer;margin-top:16px}button:disabled{opacity:.45;cursor:default}iframe{position:absolute;left:-1500px;top:0;width:1280px;height:720px;border:0;pointer-events:none}p{color:#aec1d3}</style></head>
+<body><main><h1>Wizardry · Grelus duel</h1><p id="status" role="status">Loading original game graphics…</p><canvas id="banner" width="1280" height="720"></canvas><button id="save" disabled>Save Discord banner (PNG)</button></main><script>
+(async()=>{
+ const status=document.getElementById('status'),out=document.getElementById('banner'),save=document.getElementById('save');
+ try{
+  const r=await fetch('./arena.html',{cache:'no-cache'});if(!r.ok)throw Error('Could not load game.');
+  const html=await r.text(),doc=new DOMParser().parseFromString(html,'text/html');
+  // Render in an isolated document, without login, persistence, networking or sound.
+  for(const script of doc.querySelectorAll('script[src]'))if(/wizard-home-v135|menu-music|rune-audio|audio-settings/.test(script.getAttribute('src')))script.remove();
+  const base=doc.createElement('base');base.href=new URL('./',location.href).href;doc.head.prepend(base);
+  doc.body.dataset.screen='battle';
+  const style=doc.createElement('style');style.textContent='html,body{margin:0!important;padding:0!important;width:1280px!important;height:720px!important;overflow:hidden!important}#game,.battle,#arena{display:block!important;position:static!important;overflow:visible!important;width:1280px!important;height:720px!important;max-height:none!important;min-height:0!important;transform:none!important}#battleCanvas{display:block!important;position:fixed!important;inset:0!important;width:1280px!important;height:720px!important;max-width:none!important;max-height:none!important;z-index:999999!important}';doc.head.append(style);
+  const frame=document.createElement('iframe');frame.title='Isolated game renderer';frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
+  const loaded=new Promise((resolve,reject)=>{frame.onload=resolve;frame.onerror=reject;});frame.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;document.body.append(frame);await loaded;
+  const w=frame.contentWindow,api=w.WIZARDRY_ARENA_TEST,B=w.WizardryBuilds;if(!api||!B)throw Error('Game renderer unavailable.');
+  const profile=B.cpu(api.cards,0,()=>.37,20);profile.name='Galen Rainstone';profile.towerCleared=true;
+  api.startTower([{profile,isCpu:false,peerId:null}],21);
+  const battle=api.getState(),wizard=battle.units.find(u=>u.team===0),grelus=battle.units.find(u=>u.bossId==='grelus');if(!wizard||!grelus)throw Error('Grelus model unavailable.');
+  // Exhibition composition only: remove reinforcement, retain real wizard and boss builds.
+  battle.units=[wizard,grelus];battle.size=1;battle.desktopArena=false;battle.tower.skipIntro=true;
+  Object.assign(wizard,{x:225,y:520});Object.assign(grelus,{x:775,y:500});
+  w.document.body.dataset.screen='battle';api.refreshUI();
+  // Wait for the exact original arena and character atlases to load.
+  const originals=['assets/arena-concept-approved-v48.webp','assets/wizard-approved-animations-v33.png','assets/grelus-animations.webp'];
+  await Promise.all(originals.map(src=>new Promise((resolve,reject)=>{const img=new w.Image();img.onload=resolve;img.onerror=()=>reject(Error('Original artwork did not load: '+src));img.src=src;})));
+  await new Promise(resolve=>setTimeout(resolve,1300));
+  await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
+  const canvas=w.document.getElementById('battleCanvas');if(canvas.width<100||canvas.height<100)throw Error('Battle canvas is not visible.');
+  out.getContext('2d').drawImage(canvas,0,0,1280,720);
+  frame.remove();status.textContent='Original Wizardry renderer · 1280 × 720 · 1v1 exhibition with Grelus';save.disabled=false;
+  save.onclick=()=>out.toBlob(blob=>{if(!blob){status.textContent='Could not export image.';return;}const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='Wizardry-Grelus-Discord-Banner.png';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);},'image/png');
+ }catch(e){status.textContent='Unable to render banner: '+e.message;}
+})();
+</script></body></html>

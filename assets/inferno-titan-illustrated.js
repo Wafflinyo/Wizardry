@@ -47,9 +47,9 @@ function fissure(g,s){
 }
 function geyser(g,s){
  if(!ready()||s.p<ARRIVE||s.p>=.98)return;
- const n=Math.min(15,Math.floor(s.eruption*16)),size=365;
+ const n=Math.min(15,Math.floor(s.eruption*16)),size=352;
  g.save();g.imageSmoothingEnabled=true;g.globalAlpha*=1-clamp((s.p-.95)/.03);
- tile(g,32+n,s.tx-size*.5,s.ty-size*222/256,size,size);g.restore();
+ tile(g,32+n,s.tx-size*.5,s.ty-size*222/256+10,size,size);g.restore();
 }
 function shake(p,dir){
  const ms=p*DURATION;

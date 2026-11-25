@@ -1681,17 +1681,6 @@
     const live=seats.slice(offset).concat(seats.slice(0,offset)).filter(u=>u.hp>0);
     return interleaveTeams(live,u=>u.team,live[0]?.team??0);
   }
-  // Only the unplayed tail may change. Locked cards and targets stay untouched.
-  function rebalanceRemainingActions(){
-    const prefix=state.sequence.slice(0,state.queueAt);
-    const rest=state.sequence.slice(state.queueAt).filter(p=>getUnit(p.casterId)?.hp>0);
-    if(!rest.length){state.sequence=Object.freeze(prefix);return;}
-    const teamOf=p=>getUnit(p.casterId)?.team;
-    const last=prefix.at(-1),first=last?1-teamOf(last):teamOf(rest[0]);
-    const ordered=interleaveTeams(rest,teamOf,first);
-    if(rest.length!==state.sequence.length-state.queueAt||ordered.some((p,i)=>p!==state.sequence[state.queueAt+i]))
-      state.sequence=Object.freeze([...prefix,...ordered]);
-  }
   function discardFromHand(u,id){
     if(!u||u.discardedRound===state.round)return false;
     const at=u.hand.indexOf(id);if(at<0)return false;
@@ -2291,8 +2280,7 @@
   function startNextAction(){
     if(!state||state.phase!=="resolving"||checkBattleEnd())return;
     while(state.queueAt<state.sequence.length){
-      rebalanceRemainingActions();
-      if(state.queueAt>=state.sequence.length)break;
+      // Keep the locked round order; a defeated wizard simply loses their action.
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
       if(checkBattleEnd())return;
       if(!c||c.hp<=0)continue;
@@ -6900,7 +6888,7 @@
     layoutCombatMessages,
     rollJackFear,applyJackFear,expireJackFear,
     applyWindFistHit,WIND_FIST_RELEASES,WIND_FIST_HIT_TIMES,
-    applyVampDamage,applyVampHeal,canReceiveDebuff,addStatus,consumeStatus,statusRuneRect,hitStatusRune,discardSelected,discardFromHand,resolveAutoRune,turnOrder,rebalanceRemainingActions,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,
+    applyVampDamage,applyVampHeal,canReceiveDebuff,addStatus,consumeStatus,statusRuneRect,hitStatusRune,discardSelected,discardFromHand,resolveAutoRune,turnOrder,grantTurnMana,checkBattleEnd,updateBattleEnding,finishRound,passTurn,startNextAction,runResolution,tick,
     setBattle,queueSpell,autoFill,resolvePressed,
     chooseCard,selectCaster,selectTarget,selectZenRune,confirmTarget,unitPlateRect,
     statusRuneRect,showStatusInfo,closeStatusInfo,unitStatuses,

@@ -271,10 +271,11 @@
   const TEST_FURNACE={id:"furnace",name:"Furnace",school:"fire",cost:5,target:"team",kind:"furnace",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,fieldRounds:5,fieldBoost:.10,description:"Environmental rune for 5 rounds: Fire damage +10% and Fire spells with Burn chances gain 10 percentage points."};
   const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.30,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 30% chance to Stun."};
   const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:400,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4780,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 400 base damage to that enemy."};
+  const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -282,6 +283,7 @@
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
     thunderbirds:"530 base damage. 30% Stun chance.",
     thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
+    magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
@@ -361,7 +363,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=["magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -3505,6 +3507,20 @@
       for(const entry of anim.drumTargets??drumTargets(c))applyDrumHit(anim,entry);
     }else if(card.kind==="hellhound"){
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
+    }else if(card.kind==="magneticpulse"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      if(t.hp>0&&!preventsHitEffects(anim,t)){
+        const runes=t.statuses.filter(st=>BENEFICIAL_RUNES.has(st.kind));
+        if(runes.length){
+          const rune=runes[Math.floor(Math.random()*runes.length)];
+          const name=describeStatus(t,rune).title.split(" · ")[0];
+          if(consumeStatus(t,rune.kind)){
+            flash(t,"BENEFICIAL RUNE DESTROYED","#8eeaff");
+            recordBattleEvent(card.name+" destroys "+name+" on "+t.name+".");
+          }
+        }
+      }
     }else if(card.kind==="thunderbirds"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
@@ -4205,7 +4221,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5334,6 +5350,7 @@
       else if(card.id==="infernotitan")window.InfernoTitan?.portrait(c,width,height);
       else if(card.id==="thunderbirds")window.Thunderbirds?.portrait(c,width,height);
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
+      else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(EXTRA_FIRE_TEST.some(spell=>spell.id===card.id))window.FireTestArt?.[card.id]?.portrait(c,width,height);
       else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
@@ -5803,7 +5820,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5838,6 +5855,13 @@
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="magneticpulse"&&window.MagneticPulse){
+      const source=getUnit(action.source),target=getUnit(action.target);
+      if(source&&target){
+        const scene=window.MagneticPulse.scene(source,target,clamp(action.elapsed/action.duration,0,1));
+        renderables.push({type:"magnetic-pulse",depthY:target.y+.18,priority:2,draw:()=>window.MagneticPulse.draw(g,scene)});
+      }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thundergoddrums"&&window.ThunderGodDrums){
       const art=window.ThunderGodDrums;
@@ -7013,7 +7037,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

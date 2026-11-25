@@ -22,7 +22,7 @@ function tile(g,img,frame,x,y,w,h){
  const n=Math.min(23,Math.max(0,Math.floor(frame)));
  g.drawImage(img,n%6*C,Math.floor(n/6)*R,C,R,x,y,w,h);
 }
-function scene(source,target,p,mana,factor=1,blocked=false){
+function scene(source,target,p,mana,factor=1,blocked=false,tally=null,clockMs=0){
  p=clamp(p);
  const dir=target.x>=source.x?1:-1,w=235;
  // The arena background is registered to the world diamond at (500,510).
@@ -34,9 +34,12 @@ function scene(source,target,p,mana,factor=1,blocked=false){
  else if(p>=.43&&p<.77)frame=15+Math.min(4,Math.floor((p-.43)/.34*5));
  else if(p>=.77)frame=20+Math.min(3,Math.floor((p-.77)/.23*4));
  const alpha=ease(p/.13)*(1-ease((p-.90)/.10));
- const strength=clamp((Number(mana)||0)/30);
+ // Intensity grows with each counted mana instead of reaching maximum
+ // before the counter has actually filled.
+ const strength=clamp((tally?.counting?tally.counted:Number(mana)||0)/15);
+ if(tally?.counting)frame=18;
  const targetScale=Math.max(.8,Math.min(1.7,factor||1));
- return {x,y,top,w,dir,p,frame,alpha,strength,blocked,
+ return {x,y,top,w,dir,p,frame,alpha,strength,blocked,tally,clockMs,
    hand:{x:x+dir*w*.39,y:top+w*.475},
    core:{x:x+dir*w*.045,y:top+w*.52},
    hit:{x:target.x,y:target.y-95*targetScale},targetScale};
@@ -110,14 +113,24 @@ function discharge(g,s){
  if(s.p<.57||s.p>=.81)return;
  // Short lead-in, then a sustained current until the overload. No
  // independent floating orb or repeated sawtooth pattern in the gap.
- const u=ease((s.p-.57)/.11),fade=1-ease((s.p-.72)/.09);
+ const u=s.tally?.counting?1:ease((s.p-.57)/.11),fade=s.tally?.counting?1:1-ease((s.p-.72)/.09);
  const head={x:s.hand.x+(s.hit.x-s.hand.x)*u,y:s.hand.y+(s.hit.y-s.hand.y)*u};
- const f=Math.floor(s.p*120),power=4.8+s.strength*2.4;
+ const f=Math.floor(s.clockMs/42),power=4.8+s.strength*2.4;
  glow(g,s.hand.x,s.hand.y,26,fade*.9);
  lightning(g,s.hand,head,f,power,fade,14+s.strength*9,true);
  // A thinner irregular filament flickers along the main channel.
  lightning(g,s.hand,head,f+47,power*.36,fade*.66,24+s.strength*8,false);
  if(u>.1&&u<1)glow(g,head.x,head.y,13,fade*.56);
+ if(s.tally?.counting){
+   const age=s.tally.elapsed%s.tally.stepMs;
+   const pulse=s.tally.counted>0?1-ease(age/s.tally.stepMs):0;
+   glow(g,s.hit.x,s.hit.y,27+14*pulse, .38+.32*pulse);
+   // Brief little forks at the contact point on every counted mana.
+   for(let k=0;k<3;k++){
+     const angle=f*.29+k*2.1,r=18+16*pulse;
+     lightning(g,s.hit,{x:s.hit.x+Math.cos(angle)*r,y:s.hit.y+Math.sin(angle)*r},f+k*5,1.8+pulse, .56+.28*pulse,6,false);
+   }
+ }
 }
 function impact(g,s){
  if(s.p<.68||s.p>=.98||s.blocked)return;
@@ -142,10 +155,27 @@ function impact(g,s){
    g.fillStyle=k%3?"#5fdcff":"#e9ffff";g.beginPath();g.moveTo(l,0);g.lineTo(-l*.4,-l*.17);g.lineTo(-l*.72,0);g.lineTo(-l*.4,l*.17);g.closePath();g.fill();g.restore();
  }
 }
+function drawTally(g,t){
+ if(!t.counting)return;
+ // Central counter stays away from the target's HP and rune row.
+ const x=500,y=103,w=242,h=91;
+ const pulse=t.counted>0&&t.counted<t.goal?1-ease((t.elapsed%t.stepMs)/t.stepMs):0;
+ g.save();g.translate(x,y);
+ g.fillStyle="rgba(5,21,34,.93)";g.strokeStyle="#61c8ee";g.lineWidth=1.8;
+ g.beginPath();g.moveTo(-w/2+9,-h/2);g.lineTo(w/2-9,-h/2);g.lineTo(w/2,-h/2+9);g.lineTo(w/2,h/2-9);g.lineTo(w/2-9,h/2);g.lineTo(-w/2+9,h/2);g.lineTo(-w/2,h/2-9);g.lineTo(-w/2,-h/2+9);g.closePath();g.fill();g.stroke();
+ g.textAlign="center";g.textBaseline="middle";
+ g.font="700 15px system-ui,sans-serif";g.fillStyle="#b8edff";
+ g.fillText("MANA COUNT  "+t.counted+" / "+t.goal,0,-27);
+ g.font="800 20px system-ui,sans-serif";g.fillStyle="#7ce7ff";
+ g.fillText("BONUS  +"+t.bonus,0,-5);
+ g.font="900 "+(25+2*pulse)+"px system-ui,sans-serif";
+ g.fillStyle="#f1fcff";g.fillText(t.total+" BASE DMG",0,23);
+ g.restore();
+}
 function portrait(g,w,h){
  if(!ready())return;
  const size=Math.min(w,h)*1.04;
  tile(g,body,14,(w-size)/2,(h-size)/2,size,size);
 }
-window.ShortCircuit={ensure,ready,error:()=>lastError,scene,draw,charge,discharge,impact,portrait};ensure();
+window.ShortCircuit={ensure,ready,error:()=>lastError,scene,draw,charge,discharge,impact,drawTally,portrait};ensure();
 })();

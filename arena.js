@@ -272,7 +272,7 @@
   const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.30,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 30% chance to Stun."};
   const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:400,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4780,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 400 base damage to that enemy."};
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
-  const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:300,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Deals 350 base damage plus 10 damage per mana the target currently has at impact, up to 300 bonus damage."};
+  const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Deals 350 base damage plus 10 damage per mana the target currently has at impact, up to 15 mana counted (+150 maximum bonus damage)."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
@@ -285,7 +285,7 @@
     thunderbirds:"530 base damage. 30% Stun chance.",
     thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
-    shortcircuit:"+10 base damage per enemy mana (max +300).",
+    shortcircuit:"+10 base damage per enemy mana (max 15 mana / +150).",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
@@ -1961,7 +1961,8 @@
     if(a.stage==="summon"&&a.card.id==="meteorshower")
       for(const entry of a.meteorTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
-    if(a.stage==="summon"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.kind==="shortcircuit")advanceShortCircuit(a);
+    if(a.stage==="summon"&&a.card.kind!=="shortcircuit"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="magneticpulse")advanceMagneticRune(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
@@ -3538,8 +3539,40 @@
       paintUI();
     }
   }
+  const SHORT_CIRCUIT_TICK_MS=150,SHORT_CIRCUIT_HOLD_MS=300;
+  function shortCircuitCount(card,mana){
+    return Math.min(Math.floor(card.maxManaBonus/card.manaDamage),Math.max(0,Math.floor(Number(mana)||0)));
+  }
   function shortCircuitBase(card,mana){
-    return card.damage+Math.min(card.maxManaBonus,Math.max(0,Number(mana)||0)*card.manaDamage);
+    return card.damage+shortCircuitCount(card,mana)*card.manaDamage;
+  }
+  function shortCircuitTally(a){
+    const t=a.shortCircuitTally;
+    if(!t)return null;
+    const elapsed=Math.max(0,a.elapsed-t.startAt);
+    const counted=Math.min(t.goal,Math.floor(elapsed/SHORT_CIRCUIT_TICK_MS));
+    const counting=a.elapsed<t.impactAt;
+    const visualProgress=counting?a.card.hit-.00001:clamp(a.card.hit+(a.elapsed-t.impactAt)/a.card.duration,0,1);
+    return {counted,goal:t.goal,bonus:counted*a.card.manaDamage,
+      total:a.card.damage+counted*a.card.manaDamage,counting,visualProgress,
+      elapsed,stepMs:SHORT_CIRCUIT_TICK_MS,clockMs:a.elapsed};
+  }
+  function advanceShortCircuit(a){
+    if(a.applied||a.runeResult!=="success")return;
+    const arrival=a.card.duration*a.card.hit;
+    if(!a.shortCircuitTally){
+      if(a.elapsed<arrival)return;
+      const target=getUnit(a.target??a.action?.targetId);
+      if(!target||target.hp<=0){a.applied=true;return;}
+      // Snapshot current mana when electricity first reaches the enemy.
+      // This is before the eventual damage can trigger Electrical Charge.
+      a.shortCircuitMana=Math.max(0,Number(target.mana)||0);
+      const goal=shortCircuitCount(a.card,a.shortCircuitMana);
+      const startAt=a.elapsed,impactAt=startAt+goal*SHORT_CIRCUIT_TICK_MS+SHORT_CIRCUIT_HOLD_MS;
+      a.shortCircuitTally={goal,startAt,impactAt};
+      a.duration=impactAt+(a.card.duration-arrival);
+    }
+    if(a.elapsed>=a.shortCircuitTally.impactAt)applySpell(a);
   }
   function applySpell(anim){
     if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
@@ -3556,8 +3589,9 @@
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
     }else if(card.kind==="shortcircuit"){
       if(!t||t.hp<=0||t.team===c.team)return;
-      // Snapshot before damage can trigger Electrical Charge mana gain.
-      anim.shortCircuitMana=Math.max(0,Number(t.mana)||0);
+      // Use the mana snapshot that drove the visible counter.
+      // Direct/headless casts without a tally still sample current mana.
+      anim.shortCircuitMana??=Math.max(0,Number(t.mana)||0);
       anim.shortCircuitBase=shortCircuitBase(card,anim.shortCircuitMana);
       damage(c,t,anim.shortCircuitBase,card,anim);
       anim.shortCircuitBlocked=preventsHitEffects(anim,t);
@@ -5928,8 +5962,9 @@
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="shortcircuit"&&window.ShortCircuit){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.ShortCircuit;
       if(source&&target){
-        const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),
-          action.shortCircuitMana??target.mana,unitSlotFactor(target),action.shortCircuitBlocked);
+        const tally=shortCircuitTally(action);
+        const scene=art.scene(source,target,tally?.visualProgress??clamp(action.elapsed/action.card.duration,0,1),
+          action.shortCircuitMana??target.mana,unitSlotFactor(target),action.shortCircuitBlocked,tally,action.elapsed);
         renderables.push({type:"short-circuit-automaton",depthY:scene.y,priority:2,draw:()=>art.draw(g,scene)});
         renderables.push({type:"short-circuit-charge",depthY:scene.y+.05,priority:2,draw:()=>art.charge(g,scene)});
         renderables.push({type:"short-circuit-discharge",depthY:Math.max(scene.y,target.y)+.12,priority:2,draw:()=>art.discharge(g,scene)});
@@ -6892,6 +6927,10 @@
     }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
+    if(action?.stage==="summon"&&action.card.kind==="shortcircuit"){
+      const tally=shortCircuitTally(action);
+      if(tally?.counting)window.ShortCircuit?.drawTally(g,tally);
+    }
     drawZenCast(state.animation);
     if(action?.stage==="summon"&&action.card.kind==="magneticpulse"&&action.magneticRune){
       const r=action.magneticRune,target=getUnit(r.targetId);
@@ -7127,7 +7166,7 @@
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
-    drawCardArts,cardInfo,shortCircuitBase,
+    drawCardArts,cardInfo,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,

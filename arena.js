@@ -269,7 +269,7 @@
   const TEST_RING_OF_FIRE={id:"ringoffire",name:"Ring of Fire",school:"fire",cost:3,target:"enemy",kind:"ringoffire",accuracy:.90,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,rounds:3,description:"Attach a negative Fire rune for 3 rounds. Every time the enemy actually recovers HP, they take 100 damage."};
   const TEST_BACKDRAFT={id:"backdraft",name:"Backdraft",school:"fire",cost:3,target:"enemy",kind:"backdraft",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.45,damage:180,description:"Deals 180 base damage. If the enemy was burning, spreads that Burn to one random adjacent living enemy, preserving its normal or extreme tier."};
   const TEST_FURNACE={id:"furnace",name:"Furnace",school:"fire",cost:5,target:"team",kind:"furnace",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,fieldRounds:5,fieldBoost:.10,description:"Environmental rune for 5 rounds: Fire damage +10% and Fire spells with Burn chances gain 10 percentage points."};
-  const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.20,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 20% chance to Stun."};
+  const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.30,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 30% chance to Stun."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
@@ -279,7 +279,7 @@
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
     hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
-    thunderbirds:"530 base damage. 20% Stun chance.",
+    thunderbirds:"530 base damage. 30% Stun chance.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",

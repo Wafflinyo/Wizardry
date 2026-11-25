@@ -43,7 +43,7 @@ const mouths={
  15:[[195,108],[270,128],[101,121]]
 };
 function scene(source,target,entries,p){
- const dir=target.x>=source.x?1:-1,scale=.92,x=500,y=510;
+ const dir=target.x>=source.x?1:-1,scale=1.28,x=500,y=510;
  let n;
  if(p<.42)n=Math.min(12,Math.floor(p/.42*13));
  else if(p<.70)n=[13,14,15,14][Math.min(3,Math.floor((p-.42)/.28*4))];
@@ -69,7 +69,7 @@ function flame(g,s){
  // Each stream is independently aimed from its own mouth at its assigned target.
  // Atlas flame starts on the left, with growth already rendered into its 30 frames.
  g.save();g.translate(s.sx,s.sy);g.rotate(Math.atan2(dy,dx));g.imageSmoothingEnabled=true;
- const width=len/0.90,height=Math.min(112,Math.max(54,len*.38));
+ const width=len/0.90,height=Math.min(168,Math.max(81,len*.57));
  tile(g,24+s.f,-width*.05,-height*.52,width,height);g.restore();
 }
 function portrait(g,w,h){

@@ -263,14 +263,10 @@
   const ELECTRO_DISC_HIT_TIMES=ELECTRO_DISC_RELEASES.map(p=>p+.075);
   const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
-  // New Hellhound is isolated from binders, CPU decks and normal progression.
-  const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:14.8/32,description:"Three-headed hellhound. Center head burns the selected enemy for 420 base damage; left and right heads deal 420 each to the immediately adjacent living enemies. Missing or defeated neighbors are skipped; no repeat hits."};
-  const HELLHOUND_WINDOWS=[[13.5/32,16/32],[17.5/32,20/32],[21.5/32,24/32]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries(CARDS.map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
-    hellhound:"420 each: main target, then adjacent enemies (up to three).",
     livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
@@ -347,7 +343,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=CARDS.map(card=>card.id).reverse();
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -1233,7 +1229,6 @@
         for(let i=0;i<MAX_HAND_SIZE&&u.drawPile.length;i++)drawCard(u);
       }
     }
-    if(testing)window.HellhoundArt?.ensure();
     state={mode,size,units,desktopArena,tower,testerBattle,round:1,phase:"planning",planningSide:0,
       // Only seat 0 on each human-controlled team belongs to a real player.
       // Everyone else is a CPU stand-in until live co-op / PvP exists.
@@ -1324,8 +1319,6 @@
     if(state.selectedRune)closeStatusInfo();
     state.selectedCard=id;state.selectedRune=null;state.targetingNotice=null;
     const card=BY_ID[id],u=caster();
-    if(card.testOnly&&state.mode!=="tester"){clearSelection();return;}
-    if(card.testOnly)window.HellhoundArt?.ensure();
     state.selectedTarget=card.selfOnly||(choosesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
       state.selectedTarget=targetsFor(card,u).find(target=>!targetNotice(target,card))?.id??null;
@@ -1352,15 +1345,6 @@
   }
   function queueSpell(){
     const c=caster(),card=currentCard(),target=correctTarget();
-    if(card?.testOnly){
-      if(state.mode!=="tester")return false;
-      const art=window.HellhoundArt;
-      if(art&&!art.ready()){
-        ui.hint.textContent="Loading Hellhound frames — tap Confirm again when ready.";
-        art.ensure().then(ok=>{if(state.mode==="tester"&&state.phase==="planning"&&currentCard()?.id==="hellhound")ui.hint.textContent=ok?"Hellhound ready. Confirm your target.":"Hellhound artwork failed to load. Tap Confirm to retry.";});
-        return false;
-      }
-    }
     const notice=targetNotice(target,card);
     if(notice){
       state.selectedTarget=null;
@@ -1913,10 +1897,6 @@
         if(p>=blizzardHitAt(i,a.blizzardTargets.length))applyBlizzardHit(a,entry);
     if(a.stage==="summon"&&a.card.id==="penguins"&&a.runeResult==="success")
       for(let i=0;i<3;i++)if(a.elapsed>=NINJA_HIT_TIMES[i]*a.card.duration)applyPenguinHit(a,i);
-    if(a.stage==="summon"&&a.card.kind==="hellhound"&&a.runeResult==="success"){
-      for(const entry of a.houndTargets||[])if(p>=entry.hitAt)applyHellhoundHit(a,entry);
-      if(p>=HELLHOUND_WINDOWS[2][1])a.applied=true;
-    }
     if(a.stage==="summon"&&a.card.kind==="sticksandstones")
       for(const entry of a.stoneTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
@@ -1934,7 +1914,7 @@
     if(a.stage==="summon"&&a.card.id==="meteorshower")
       for(const entry of a.meteorTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
-    if(a.stage==="summon"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
@@ -1990,10 +1970,7 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.kind==="hellhound"){
-        a.houndTargets=hellhoundTargets(getUnit(a.target),caster);
-        startStage(a,"summon",a.card.duration);
-      }else if(a.card.kind==="darksorcerer"){
+      if(a.card.kind==="darksorcerer"){
         a.sorcererTargets=alive(1-caster.team).map(({x,y})=>({x,y}));
         startStage(a,"summon",a.card.duration);
       }else if(a.card.kind==="sticksandstones"){
@@ -3216,26 +3193,6 @@
     addStatus(target,"decay_mark",null,boost,school);
     flash(target,"DECAY OF STRENGTH",runeColors[school]);
   }
-  function hellhoundTargets(target,caster){
-    if(!target||!caster||target.team===caster.team||target.hp<=0)return [];
-    const formation=sideUnits(target.team).slice().sort((a,b)=>a.y-b.y||a.x-b.x);
-    const index=formation.indexOf(target);
-    // Left/right mean the immediately preceding/following seat in formation.
-    // Preserve empty/dead seats rather than jumping or attacking the primary twice.
-    return [target,formation[index-1],formation[index+1]].flatMap((unit,head)=>{
-      if(!unit||unit.hp<=0)return [];
-      const [start,end]=HELLHOUND_WINDOWS[head];
-      return [{id:unit.id,x:unit.x,y:unit.y,head,start,end,hitAt:start+(end-start)*.46,hit:false}];
-    });
-  }
-  function applyHellhoundHit(a,entry){
-    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
-    entry.hit=true;
-    const caster=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
-    if(!caster?.hp||!victim?.hp||victim.team===caster.team)return false;
-    damage(caster,victim,a.card.damage,a.card,a);
-    paintUI();return true;
-  }
   function sticksAndStonesTargets(caster){
     return alive(1-caster.team).slice(0,4).map((target,index)=>{
       const swingAt=2440+175*index;
@@ -3446,11 +3403,8 @@
     if(!c||c.hp<=0)return;
     if(card.target==="ally"&&(!t||t.hp<=0||t.team!==c.team))return;
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
-    if(card.testOnly&&state.mode!=="tester")return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="hellhound"){
-      for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
-    }else if(card.kind==="coldstorage"){
+    if(card.kind==="coldstorage"){
       if(addStatus(t,"cold_storage",null,card.bankedMana,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="cold_storage"),{releaseRound:state.round+1,bankerId:c.id});
       flash(t,"COLD STORAGE · BANKED","#b7eaff");
@@ -4124,7 +4078,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of CARDS)for(let copy=0;copy<Builds.MAX_COPIES;copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4143,7 +4097,7 @@
       drawCardArts();
     }
     for(const b of ui.hand.children){
-      const copy=Number(b.dataset.copy)||0,indices=(c?.hand||[]).map((id,i)=>id===b.dataset.card?i:-1).filter(i=>i>=0),index=indices[copy],inHand=index!==undefined&&(!BY_ID[b.dataset.card].testOnly||state.mode==="tester");
+      const copy=Number(b.dataset.copy)||0,indices=(c?.hand||[]).map((id,i)=>id===b.dataset.card?i:-1).filter(i=>i>=0),index=indices[copy],inHand=index!==undefined;
       b.hidden=!inHand;
       b.classList.toggle("chosen",inHand&&b.dataset.card===card?.id&&copy===(state.selectedHandCopy||0));
       // Every held card remains inspectable, even when mana is insufficient.
@@ -5248,7 +5202,6 @@
       else if(card.id==="hightide")window.HighTide?.portrait(c,width,height);
       else if(card.id==="earthquake")window.Earthquake?.portrait(c,width,height);
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
-      else if(card.id==="hellhound")window.HellhoundArt?.portrait(c,width,height);
       else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
       else if(card.id==="pressuredrop")window.PressureDrop?.portrait(c,width,height);
@@ -5714,7 +5667,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5732,14 +5685,6 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="hellhound"&&window.HellhoundArt){
-      const source=getUnit(action.source),target=getUnit(action.target);
-      if(source&&target){
-        const scene=window.HellhoundArt.scene(source,target,action.houndTargets||[],clamp(action.elapsed/action.duration,0,1));
-        renderables.push({type:"hellhound",depthY:scene.y,priority:2,draw:()=>window.HellhoundArt.draw(g,scene)});
-        for(const stream of scene.streams)renderables.push({type:"hellhound-flame",depthY:stream.y+.12,priority:2,draw:()=>window.HellhoundArt.flame(g,stream)});
-      }
-    }
     if(action?.stage==="summon"&&action.card.kind==="razorang"&&window.Razorang){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
@@ -6884,7 +6829,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_HELLHOUND],hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

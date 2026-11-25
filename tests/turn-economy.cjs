@@ -20,11 +20,11 @@ console.log('Turn economy: successful-cast mana and hit-timed Rod healing, misse
 ctx.window.WizardrySession=null;
 {
  const s=battle(),u=s.units[0],enemy=s.units[2];
- u.mana=8;enemy.statuses=['burn','frostbite','turbulence','static_shock'].map(kind=>({kind,value:1}));
+ u.mana=8;enemy.statuses=['burn','frostbite','growth','static_shock'].map(kind=>({kind,value:1}));
  s.phase='resolving';s.sequence=[{casterId:u.id,cardId:'turbulence',targetId:enemy.id}];s.queueAt=0;
  api.startNextAction();s.animation.stage='tracing-auto';math.random=()=>0;
  assert.equal(api.resolveAutoRune(),false,'a debuff cast fizzles against four runes');
- assert.match(s.log[0],/four debuff runes/);
+ assert.match(s.log[0],/four runes/);
  assert.equal(u.mana,8);assert.equal(u.passedRound,s.round);
  api.advanceBackground(3000);
  assert.equal(u.mana,10,'a fizzle earns the skip mana bonus');
@@ -111,6 +111,23 @@ for(const [first,second] of [['bubbleshield','sandwarrior'],['reflectiveice','sa
    assert.equal(defender.statuses.length,0);
  }
 }
-console.log('Battle updates: skip timing, fizzle regeneration, immediate deck recycling, four-debuff cap, and stacked barrier priority passed.');
+console.log('Battle updates: skip timing, fizzle regeneration, immediate deck recycling, four-rune cap, and stacked barrier priority passed.');
 
 {const u=battle().units[0];u.hand=['croc','shark','winddome','ronin','calming'];u.drawPile=[];u.discardPile=['poseidon','volt'];assert.equal(api.drawCard(u),null);assert.equal(u.drawPile.length,2,'full hand immediately recycles spent cards');assert.equal(u.discardPile.length,0);}
+
+// Four total: mixed runes, all beneficial, all negative, and refresh.
+for(const kinds of [['growth','blazing_rage','burn','wind_dome'],['growth','blazing_rage','live_wire','flow_state'],['burn','poison','frostbite','static_shock']]){
+ const s=battle(),u=s.units[0];
+ for(const kind of kinds)assert.notEqual(api.addStatus(u,kind,null,1),false);
+ assert.equal(u.statuses.length,4);
+ const before=u.statuses.map(st=>st.kind).join(',');
+ assert.equal(api.addStatus(u,'cold_storage',null,2),false);
+ assert.equal(api.addStatus(u,'calming_waters',null,100),false);
+ assert.equal(u.statuses.map(st=>st.kind).join(','),before);
+ assert.notEqual(api.addStatus(u,kinds[0],null,2),false);
+ assert.equal(u.statuses.length,4);
+ api.consumeStatus(u,kinds[1]);
+ assert.notEqual(api.addStatus(u,'calming_waters',null,100),false);
+ assert.equal(u.statuses.length,4);
+}
+console.log('Shared rune limit: four total, no eviction, refresh and freed slot passed.');

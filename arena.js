@@ -1,6 +1,6 @@
 /* Wizardry 0.136 — 2.5D battles, level-20 builds and host-authoritative test lobbies. */
 (()=>{"use strict";
-  const W=1000,H=620,MAX_MANA=20,MAX_SLOTS=3;
+  const W=1000,H=620,MAX_MANA=20;
   const Builds=window.WizardryBuilds;
   let configuredProfile=null,activeRoster=null,camera={scale:1,x:0,y:0};
   const canvas=document.getElementById("battleCanvas"),g=canvas.getContext("2d");
@@ -255,7 +255,7 @@
   CARDS.push({"id":"livewire","name":"Live Wire","school":"lightning","cost":2,"target":"ally","kind":"livewire","boost":0.25,"accuracy":1,"icon":"ϟ","rarity":"RARE","duration":1850,"hit":0.73,"description":"Charge yourself or one ally. Every hit of their next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
-    card.description+=' Each wizard can carry four debuff runes.';
+    card.description+=' Each wizard can carry four runes.';
   }
   const WIND_FIST_RELEASES=Array.from({length:10},(_,i)=>.52+i*.014);
   const WIND_FIST_HIT_TIMES=WIND_FIST_RELEASES.map(p=>p+.032);
@@ -1506,7 +1506,7 @@
     if(target&&card?.kind==="briarremedy"&&!briarEffects(target).length)
       return target.name+" has no Burn, Poison, or Frostbite to cleanse.";
     if(target&&card?.kind==="coldstorage"&&!canReceiveDebuff(target,"cold_storage"))
-      return target.name+" already has four debuff runes.";
+      return target.name+" already has four runes.";
     return barrierNotice(target,card);
   }
   const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
@@ -1828,7 +1828,7 @@
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
     const conflict=a.card.kind==="coldstorage"?targetNotice(target,a.card):barrierNotice(target,a.card);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="ringoffire"?"ring_of_fire":a.card.kind==="waterprison"?"water_prison":BARRIER_SPELLS[a.card.kind]);
+    const full=castRunesFull(a.card,c,target);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
     const success=!emptyTide&&!sealed&&!full&&!conflict&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
@@ -1842,7 +1842,7 @@
     // subsequent summon/fizzle animation's length.
     a.lowerFromFrame=waveFrame(a.traceMs||0);
     a.visualRecoveryMs=0;
-    const label=conflict??(emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four debuff runes":Math.round(a.effectiveAccuracy*100)+"% accuracy");
+    const label=conflict??(emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four runes":Math.round(a.effectiveAccuracy*100)+"% accuracy");
     tally(c,success?"casts":"failed",1);
     if(success){
       tally(c,"mana",Math.min(c.mana,a.card.cost));
@@ -1862,7 +1862,7 @@
       // animation has finished. No generic red X or premature fizzle.
       c.passedRound=state.round;
       startStage(a,"rune-fail",RUNE_CRUMBLE_MS);
-      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?(a.card.kind==="coldstorage"?"FOUR DEBUFF RUNES":"SHIELD CONFLICT"):full?"FOUR DEBUFF RUNES":"MISS","#f6a7a2");
+      flash(c,emptyTide?"NO ENVIRONMENTAL RUNE":sealed?"HEALING SEALED":conflict?(a.card.kind==="coldstorage"?"FOUR RUNES":"SHIELD CONFLICT"):full?"FOUR RUNES":"MISS","#f6a7a2");
       if(shock){consumeStatus(c,"static_shock");const amount=absorbBarrierDamage(c,shock.damage||100);loseHp(getUnit(shock.sourceId),c,amount);flash(c,"STATIC SHOCK −"+amount,"#a5dfff");
         recordBattleEvent(c.name+" takes 100 damage from Static Shock; the curse expires.");
         if(!c.hp){c.defeatElapsedMs=0;flash(c,"DEFEATED","#ffdb9c");}}
@@ -2308,11 +2308,12 @@
         const u=getUnit(a.source);
         if(u&&u.hp>0){
           if(a.runeResult==="success"){
-            u.rechargeRound=state.round+1;
-            addStatus(u,"recharge",null,1,a.card.school);
-            addStatus(u,"tidal_echo",null,.30,a.card.school);
-            flash(u,"TIDAL ECHO","#87f2fa");
-            recordBattleEvent(u.name+" gains Tidal Echo (+30% next successful Water hit) and must recharge next round.");
+            if(addStatus(u,"recharge",null,1,a.card.school)!==false)u.rechargeRound=state.round+1;
+            if(addStatus(u,"tidal_echo",null,.30,a.card.school)!==false){
+              flash(u,"TIDAL ECHO","#87f2fa");
+              recordBattleEvent(u.name+" gains Tidal Echo (+30% next successful Water hit).");
+            }
+            if(u.rechargeRound===state.round+1)recordBattleEvent(u.name+" must recharge next round.");
           }else{
             recordBattleEvent(u.name+"'s Poseidon's Wrath fizzled: no recharge and no new Tidal Echo.");
           }
@@ -2480,7 +2481,7 @@
       return {f,x:W/2,y:26+i*32,width:Math.min(W-24,measured+12),height:27,fontSize};});
     c.restore();return placed;
   }
-  const MAX_DEBUFF_RUNES=4;
+  const MAX_RUNES=4;
   const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
@@ -2489,8 +2490,33 @@
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
   }
+  function runeCount(u){
+    return u.statuses.length+(state.auras?.[u.team]?1:0);
+  }
+  // All personal runes share one cap, regardless of polarity or barrier
+  // priority. Reapplication does not need a new slot.
   function canReceiveDebuff(u,kind){
-    return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||u.statuses.filter(st=>DEBUFFS.has(st.kind)).length<MAX_DEBUFF_RUNES);
+    return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||runeCount(u)<MAX_RUNES);
+  }
+  const RUNE_CAST_KINDS={ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
+    drowzyflowers:"sleep",crystalicemirrors:"crystal_ice_mirrors",frozentouch:"frozen_touch",
+    quicksand:"quick_sand",manascourge:"mana_scourge",gunpowder:"gunpowder_coat",decaystrength:"decay_mark",
+    acidair:"decaying_strength",boulderweight:"boulder_weight",thornwrap:"thorny_wrap",
+    electricalcharge:"electrical_charge",freezing:"freezing_temps",souldrain:"soul_drain",
+    turbulence:"turbulence",static:"static_shock",trap:"trap",coldstorage:"cold_storage",
+    livewire:"live_wire",growth:"growth",ragingwaters:"raging_waters",flowstate:"flow_state",
+    rage:"blazing_rage",regen:"calming_waters",shield:"solidity",blade:"blade",
+    ringoffire:"ring_of_fire",aromatherapy:"aromatherapy",cursedhold:"cursed_hold"};
+  function castRunesFull(card,c,target){
+    if(card.fieldRounds)return !canReceiveDebuff(c,ENVIRONMENT_RUNE);
+    if(card.kind==="lifevine")return !canReceiveDebuff(c,"lifevine")||!canReceiveDebuff(target,"lifevine");
+    if(card.kind==="aromatherapy"||card.kind==="cursedhold")return !canReceiveDebuff(c,RUNE_CAST_KINDS[card.kind]);
+    if(card.kind==="teamregen")return !alive(c.team).some(u=>canReceiveDebuff(u,"healing_aura"));
+    if(card.kind==="aura")return !state.auras[c.team]&&alive(c.team).some(u=>runeCount(u)>=MAX_RUNES);
+    // A mandatory recharge cannot be silently bypassed by filling the row.
+    if((card.id==="poseidon"||card.id==="zeus"&&c.bossId!=="grelus")&&!canReceiveDebuff(c,"recharge"))return true;
+    const kind=BARRIER_SPELLS[card.kind]||RUNE_CAST_KINDS[card.kind];
+    return !!target?.hp&&!!kind&&!canReceiveDebuff(target,kind);
   }
   const BARRIER_SPELLS={
     winddome:"wind_dome",sandwarrior:"sand_warrior",faultlinebulwark:"faultline_bulwark",
@@ -2602,8 +2628,11 @@
     return amount;
   }
   function addStatus(u,kind,_icon,value,school){
-    if(BARRIER_RUNES.has(kind)&&(!canReceiveDebuff(u,kind)||barrierConflict(u,kind)))return false;
-    if(kind!=="recharge"&&DEBUFFS.has(kind)&&!canReceiveDebuff(u,kind))return false;
+    if(!canReceiveDebuff(u,kind)){
+      if(u?.hp>0)flash(u,"FOUR RUNES · FULL","#f6a7a2");
+      return false;
+    }
+    if(BARRIER_RUNES.has(kind)&&barrierConflict(u,kind))return false;
     const sourceId=state.animation?.action?.casterId;
     let existing=u.statuses.find(s=>s.kind===kind);
     if(existing){
@@ -2613,7 +2642,6 @@
       existing.value=value;
       if(school)existing.school=school;
       existing.charges=1;if(sourceId)existing.sourceId=sourceId;return;}
-    if(!DEBUFFS.has(kind)&&u.statuses.filter(st=>!DEBUFFS.has(st.kind)).length>=MAX_SLOTS){const at=u.statuses.findIndex(st=>!BARRIER_RUNES.has(st.kind)&&!DEBUFFS.has(st.kind));if(at>=0)consumeStatus(u,u.statuses[at].kind);}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1,...(sourceId?{sourceId}:{})});
   }
   function applyPeriodicStatus(target,kind,card){
@@ -2676,7 +2704,7 @@
   function applyLightningRod(wizard){
     const card=BY_ID.rod;
     if(!canReceiveDebuff(wizard,"lightning_rod")){
-      flash(wizard,"FOUR DEBUFF RUNES","#f6a7a2");
+      flash(wizard,"FOUR RUNES","#f6a7a2");
       return;
     }
     addStatus(wizard,"lightning_rod",null,card.redirect,card.school);
@@ -3531,8 +3559,8 @@
           const name=describeStatus(t,rune).title.split(" · ")[0];
           // Choose once; remove only when the follow-up shock arrives.
           const slots=unitStatuses(t).map(st=>st.kind);
-          let slot=slots.indexOf(rune.kind);
-          if(slot<0){slot=Math.min(3,slots.length);slots[slot]=rune.kind;}
+          const slot=slots.indexOf(rune.kind);
+          if(slot<0)return;
           const startAt=card.duration*card.hit;
           anim.magneticRune={targetId:t.id,kind:rune.kind,name,school:statusSchool(rune,t),
             slot,slots,startAt,hitAt:startAt+270,done:false,destroyed:false};
@@ -3576,7 +3604,7 @@
         {creditorId:c.id,expiresRound:state.round+2});
       flash(t,"BLOOD DEBT · MARKED","#ff9eb9");
     }else if(card.kind==="lifevine"){
-      if(t===c)return;
+      if(t===c||!canReceiveDebuff(c,"lifevine")||!canReceiveDebuff(t,"lifevine"))return;
       for(const [unit,partner] of [[c,t],[t,c]]){
         consumeStatus(unit,"lifevine");
         addStatus(unit,"lifevine",null,card.share,card.school);
@@ -3709,16 +3737,16 @@
     }else if(card.kind==="doublepick"||card.kind==="electrodisc"||card.kind==="bulletseed"){
       for(let i=0;i<card.hits;i++)applyRepeatedHit(anim,i);
     }else if(card.kind==="livewire"){
-      addStatus(t,"live_wire",null,card.boost,card.school);
+      if(addStatus(t,"live_wire",null,card.boost,card.school)===false)return;
       flash(t,"LIVE WIRE · CHARGED","#e0d5ff");
       recordBattleEvent(t.name+" gains +25% damage across their next damaging Lightning spell.");
     }else if(card.kind==="ragingwaters"||card.kind==="growth"){
       const nature=card.kind==="growth";
       if(!nature&&!canReceiveDebuff(t,"raging_waters")){
-        flash(t,"FOUR DEBUFF RUNES","#f6a7a2");
+        flash(t,"FOUR RUNES","#f6a7a2");
         return;
       }
-      addStatus(t,nature?"growth":"raging_waters",null,card.boost,card.school);
+      if(addStatus(t,nature?"growth":"raging_waters",null,card.boost,card.school)===false)return;
       flash(t,nature?"GROWTH +25%":"RAGING WATERS +25%",nature?"#ccf7a3":"#a8eeff");
       recordBattleEvent(t.name+(nature?" gains +25% on their next direct Nature heal or damaging cast.":" gains +25% damage on their next damaging Water spell."));
     }else if(card.kind==="aromatherapy"){
@@ -3748,7 +3776,7 @@
       if(addStatus(t,"bubble_shield",null,card.shieldHp,card.school)===false)return;
       flash(t,"BUBBLE SHIELD · "+card.shieldHp+" HP","#a6f2ff");
     }else if(card.kind==="flowstate"){
-      addStatus(t,"flow_state",null,1,card.school);
+      if(addStatus(t,"flow_state",null,1,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="flow_state"),{remaining:3,appliedRound:state.round,lastTickRound:state.round});
       flash(t,"FLOW STATE · 3 TURNS","#a7f5ff");
       recordBattleEvent(t.name+" gains +1 extra mana for the next 3 turns.");
@@ -3894,9 +3922,10 @@
           damage(c,enemy,card.damage,card,anim);
       }
       if(anim.runeResult==="success"){
-        addStatus(c,"tailwind",null,.10,card.school);
-        flash(c,"TAILWIND +10% ACC","#b5f2dd");
-        recordBattleEvent(c.name+" gains Tailwind: +10 accuracy points on the next spell (any element).");
+        if(addStatus(c,"tailwind",null,.10,card.school)!==false){
+          flash(c,"TAILWIND +10% ACC","#b5f2dd");
+          recordBattleEvent(c.name+" gains Tailwind: +10 accuracy points on the next spell (any element).");
+        }
       }
     }else if(card.kind==="octo"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
@@ -3937,7 +3966,7 @@
       }
       recordBattleEvent(c.name+" casts "+card.name+", restoring up to "+healing+" HP to each living ally.");
     } else if(card.kind==="teamregen"){
-      for(const ally of alive(c.team)){addStatus(ally,"healing_aura",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school);const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
+      for(const ally of alive(c.team)){if(addStatus(ally,"healing_aura",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school)===false)continue;const effect=ally.statuses.find(st=>st.kind==="healing_aura");effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;flash(ally,"HEALING AURA","#c9f4ab");}
       recordBattleEvent(c.name+" blesses the entire team: 200 HP per turn for 3 turns each.");
     } else if(card.kind==="souldrain"&&canReceiveDebuff(t,"soul_drain")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"soul_drain",null,card.damage,card.school);const curse=t.statuses.find(st=>st.kind==="soul_drain");
@@ -3946,25 +3975,25 @@
     } else if(card.kind==="turbulence"&&canReceiveDebuff(t,"turbulence")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"turbulence",null,.5,card.school);flash(t,"TURBULENCE","#b8efdc");recordBattleEvent(t.name+" loses 50 accuracy points on their next spell.");
     } else if(card.kind==="rage"&&t&&t.hp>0&&t.team===c.team){
-      addStatus(t,"blazing_rage",null,card.boost,card.school);flash(t,"BLAZING RAGE +25%","#ffbb76");recordBattleEvent(t.name+" gains +25% damage on their next damaging Fire spell.");
+      if(addStatus(t,"blazing_rage",null,card.boost,card.school)===false)return;flash(t,"BLAZING RAGE +25%","#ffbb76");recordBattleEvent(t.name+" gains +25% damage on their next damaging Fire spell.");
     } else if(card.kind==="static"&&canReceiveDebuff(t,"static_shock")&&t&&t.hp>0&&t.team!==c.team){
       addStatus(t,"static_shock",null,.30,card.school);const curse=t.statuses.find(st=>st.kind==="static_shock");curse.expiresRound=state.round+3;curse.damage=card.damage;
       flash(t,"STATIC SHOCK −30% ACC","#a5dfff");recordBattleEvent(t.name+" is cursed with Static Shock for 3 turns.");
     } else if(card.kind==="regen"&&t&&t.hp>0&&t.team===c.team){
-      addStatus(t,"calming_waters",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school);const effect=t.statuses.find(st=>st.kind==="calming_waters");
+      if(addStatus(t,"calming_waters",null,Builds.healAmount(card.healPerTurn,c,card.school),card.school)===false)return;const effect=t.statuses.find(st=>st.kind==="calming_waters");
       effect.remaining=card.healTurns;effect.appliedRound=state.round;effect.lastTickRound=state.round;
       flash(t,"CALMING WATERS","#a8f1ee");recordBattleEvent(t.name+" gains Calming Waters: 125 HP per turn for 3 turns.");
     } else if(card.kind==="shield"&&t&&t.hp>0&&t.team===c.team){
-      addStatus(t,"solidity",null,card.reduction,card.school);flash(t,"SOLIDITY −25%","#d8d7a0");
+      if(addStatus(t,"solidity",null,card.reduction,card.school)===false)return;flash(t,"SOLIDITY −25%","#d8d7a0");
       recordBattleEvent("Shield attached to "+t.name);
     } else if(card.kind==="blade"&&t&&t.hp>0){
-      addStatus(t,"blade",null,.50,card.school);flash(t,"+50%","#f8db94");
+      if(addStatus(t,"blade",null,.50,card.school)===false)return;flash(t,"+50%","#f8db94");
       recordBattleEvent("Blade attached to "+t.name);
     } else if(card.kind==="trap"&&canReceiveDebuff(t,"trap")&&t&&t.hp>0){
       addStatus(t,"trap",null,.35,card.school);flash(t,"TRAP","#e8ba91");
       recordBattleEvent("Trap attached to "+t.name);
     } else if(card.fieldRounds){
-      if(!canReceiveDebuff(c))return;
+      if(!canReceiveDebuff(c,ENVIRONMENT_RUNE))return;
       const previous=BY_ID[state.environment?.id],previousOwner=getUnit(state.environment?.ownerId);
       state.environment=null;
       if(previousOwner)consumeStatus(previousOwner,ENVIRONMENT_RUNE);
@@ -3975,6 +4004,7 @@
       recordBattleEvent(c.name+" covers the battlefield with "+card.name+
         (previous&&previous.id!==card.id?", replacing "+previous.name+".":"."));
     } else if(card.kind==="aura"){
+      if(!state.auras[c.team]&&alive(c.team).some(u=>runeCount(u)>=MAX_RUNES))return;
       state.auras[c.team]={turns:2,value:.20};
       recordBattleEvent("Two-round damage aura for "+(c.team?"Team B":"Team A"));
     }
@@ -5002,15 +5032,14 @@
   function plateAlpha(){return 1;}
   function unitStatuses(u){
     const rank=st=>(DEBUFFS.has(st.kind)||st.kind==="decay_mark")?10:(st.kind==="wind_dome"||st.kind==="reflective_ice"||st.kind==="sand_warrior"||st.kind==="faultline_bulwark")?4:0;
-    const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a)).slice(0,4);
+    const list=[...u.statuses].sort((a,b)=>rank(b)-rank(a));
     if(state.auras[u.team])list.push({kind:"aura",icon:"◎",value:state.auras[u.team].value});
-    return list.slice(0,4);
+    return list;
   }
   function displayedStatusSlots(u){
     const normal=unitStatuses(u),a=state.animation,r=a?.magneticRune;
     if(a?.stage!=="summon"||r?.targetId!==u.id||a.elapsed>r.hitAt+510)return normal;
-    // Reveal a selected hidden rune and hold the other stones in place
-    // until its debris has cleared.
+    // Hold the existing visible rune slots until the debris has cleared.
     return r.slots.map(kind=>u.statuses.find(st=>st.kind===kind)||
       (kind==="aura"?normal.find(st=>st.kind==="aura"):null));
   }

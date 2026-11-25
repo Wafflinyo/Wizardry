@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071422">
+  <title>Wizardry : The Fall of Lupen’s Kingdom</title>
+  <link rel="stylesheet" href="./arena.css?v=0.284.9">
+  <link rel="stylesheet" href="./assets/spell-cards-v49.css?v=0.49.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v51.css?v=0.51.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v53.css?v=0.53.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v57.css?v=0.57.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v60.css?v=0.67.0">
+  <link rel="stylesheet" href="./assets/spell-cards-v62.css?v=0.62.0">
+  <link rel="stylesheet" href="./assets/hud-v69.css?v=0.72.0">
+<style>
+#game:has(#testerTargetRow:not([hidden])){--battle-header-track:auto}
+.battle-navigation{display:contents}
+#game .mast:has(#testerTargetRow:not([hidden])){
+  flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px;padding:3px 6px;
+}
+.mast:has(#testerTargetRow:not([hidden])) .brand{display:none}
+#testerTargetRow:not([hidden]){
+  display:flex;flex:1 1 auto;min-width:0;align-items:center;gap:5px;flex-wrap:wrap;
+  padding:4px;background:#102630;border-radius:6px;color:#e4edeb;font-size:12px;
+}
+#testerTargetRow label{display:flex;align-items:center;gap:4px;min-width:0}
+#testerTarget,#testerSize,#testerOpponentMode{
+  min-width:0;max-width:100%;min-height:30px;background:#173642;color:#fff;
+  border:1px solid #547482;border-radius:5px;padding:3px 6px;font-size:inherit;
+}
+#testerTargetRow button{min-height:30px}
+.tester-tools{position:relative;flex:none}
+.tester-tools summary{cursor:pointer;white-space:nowrap;padding:7px 5px}
+.tester-tools-menu{
+  position:absolute;right:0;top:100%;z-index:110;display:grid;gap:4px;
+  width:max-content;min-width:136px;padding:6px;background:#102630;
+  border:1px solid #547482;border-radius:6px;
+}
+.tester-tools-menu button[hidden]{display:none!important}
+#game .mast:has(#testerTargetRow:not([hidden])){position:relative;z-index:50}
+.mast:has(#testerTargetRow:not([hidden])) .battle-navigation{
+  display:flex;flex:0 0 auto;flex-wrap:wrap;align-items:center;gap:5px;
+}
+#game .mast:has(#testerTargetRow:not([hidden])) .battle-navigation button{
+  min-height:30px;margin:0;white-space:nowrap;
+}
+@media(max-width:700px){
+  #testerTargetRow:not([hidden]){display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;flex-basis:100%;font-size:11px}
+  #testerTarget{width:100%}
+  .mast:has(#testerTargetRow:not([hidden])) .tester-target-label{display:none}
+  .mast:has(#testerTargetRow:not([hidden])) .battle-navigation{margin-left:auto}
+  .tester-tools summary{padding:6px 2px}
+  #testerTarget,#testerSize,#testerOpponentMode,#testerTargetRow button,
+  #game .mast:has(#testerTargetRow:not([hidden])) .battle-navigation button{min-height:34px}
+}
+
+#initiative{display:none!important}
+#resetTester{margin-left:6px;background:#102b37;border:1px solid var(--line);color:var(--ink);padding:5px 7px;border-radius:6px;font-size:10px;white-space:nowrap}
+.hand-assist{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info info" "cast pass";height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch;gap:7px;padding-top:7px}
+.hand-assist .spell-choice-info{grid-area:info;min-width:0}
+.hand-assist .spell-choice-info span{white-space:normal;overflow-wrap:anywhere}
+#zenRunePicker{grid-column:1/-1;grid-row:2;min-width:0;background:#122b36;color:#f1f8e6;border:1px solid #638a7c;border-radius:6px;padding:6px}
+.hand-assist:has(#zenRunePicker:not([hidden])){grid-template-areas:"info info" ". ." "cast pass"}
+#confirmTarget{grid-area:cast;min-width:0;white-space:normal;width:100%;position:static;margin:0;min-height:38px}
+#passTurn{grid-area:pass;margin:0;position:static;white-space:normal;min-height:38px}
+.hand-assist>[hidden]{display:none!important}
+.customize-menu{position:static!important;margin-top:7px;clear:both}
+@media(orientation:landscape) and (max-height:620px){.hand-assist{gap:4px;padding-top:4px}#confirmTarget,#passTurn{font-size:9px;min-height:30px;padding:5px 8px}}
+</style>
+<link rel="stylesheet" href="./assets/wizard-home-v135.css?v=0.337.0">
+<link rel="stylesheet" href="./assets/cards-readable-v145.css?v=0.350.0">
+<style>
+#floor21Intro{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;padding:clamp(6px,1.5vw,18px);pointer-events:auto;background:transparent;}
+#floor21Intro[hidden]{display:none!important}
+#floor21Intro.no-dialogue .floor21-dialogue{visibility:hidden}
+.floor21-dialogue{width:100%;display:flex;align-items:center;gap:clamp(8px,2vw,18px);min-height:80px;padding:8px 12px;border:1px solid #d6b578;border-radius:8px;background:linear-gradient(120deg,#111d31f5,#21182ff5);box-shadow:0 4px 18px #0009;color:#f8efdf;}
+#floor21Portrait{width:clamp(64px,15vw,122px);aspect-ratio:1;object-fit:cover;flex:none;border:1px solid #d6b578;border-radius:5px}
+.floor21-dialogue-copy{flex:1;min-width:0}
+#floor21Speaker{display:block;color:#e8c88c;font:700 clamp(13px,2vw,20px) Georgia,serif;margin-bottom:5px}
+#floor21Line{font-size:clamp(12px,2vw,18px);line-height:1.3;margin:0}
+#floor21Next{align-self:flex-end;flex:none;min-height:32px;padding:4px 8px;background:#27374b;color:#fff2d6;border:1px solid #bda06c;border-radius:5px;cursor:pointer}
+.portrait-enter{animation:floor21-slide .25s ease-out}
+@keyframes floor21-slide{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:translateX(0)}}
+@media(max-height:520px){#floor21Portrait{width:60px}.floor21-dialogue{min-height:65px;padding:5px 8px}}
+</style>
+</head>
+<body data-screen="home">
+<section id="portal" aria-label="Wizardry home"></section>
+<main class="game" id="game">
+  <header class="mast">
+    <div class="brand">
+      <span class="brand-gem">✦</span>
+      <div><strong>WIZARDRY</strong><small>THE SUNKEN COLOSSEUM</small></div>
+    </div>
+  <div id="testerTargetRow" hidden>
+    <select id="testerSize" aria-label="Team size"><option value="1">1v1</option><option value="2">2v2</option><option value="3">3v3</option><option value="4">4v4</option></select>
+    <label><span class="tester-target-label">Target</span>
+    <select id="testerTarget" aria-label="Target"><option value="wood">Wooden dummy</option><option value="wizard">Random wizard</option><option value="scribe">Ashbound Scribe</option><option value="acolyte">Inkbound Acolyte</option><option value="pageguard">Cracked Pageguard</option><optgroup label="Elite minions"><option value="magistrate">Cinder Magistrate</option><option value="inkbinder">Inkbinder</option><option value="warden">Faultbound Warden</option></optgroup><optgroup label="Corrupted guardians"><option value="abyssal">Abyssal Knight</option><option value="gale">Gale Ronin</option><option value="briar">Briar Archon</option><option value="glacial">Glacial Overlord</option></optgroup><optgroup label="Final boss"><option value="grelus">Grelus</option></optgroup></select>
+    </label>
+    <select id="testerOpponentMode" aria-label="Opponent behavior"><option value="passive">Passive</option><option value="battle">Battle</option></select>
+    <details class="tester-tools" id="testerTools">
+      <summary>Test tools</summary>
+      <div class="tester-tools-menu"><p id="testerToolsStatus" role="status"></p>
+<p id="hellhoundStatus" role="status" style="font-size:11px;grid-column:1/-1;margin:0"></p>
+        <button id="testerMinionPreview" type="button" hidden>Preview cast</button>
+        <button id="testerDefeatPreview" type="button" hidden>Preview defeat</button>
+        <button id="testerFloor21Preview" type="button">Preview Floor 21 cutscene</button>
+        <button id="testerDebtFixture" type="button" hidden>Heal marked dummy</button>
+        <button id="testerBriarFixture" type="button" hidden>Apply test effects</button>
+      </div>
+    </details>
+  </div>
+    <div class="battle-navigation">
+      <button id="battleHome" type="button">Home</button>
+      <button id="resetTester" type="button" hidden>Reset Tester</button>
+      <button id="battleFullscreen" type="button">Full screen</button>
+      <button type="button" data-audio-settings>Audio</button>
+    </div>
+  </header>
+
+  <nav class="toolbar" aria-label="Battle settings">
+    <div class="toolbar-group"><span class="tool-label">MODE</span>
+      <div class="switch-row" id="modeControls">
+        <button type="button" class="chip active" data-mode="story" aria-pressed="true">Practice · CPU</button>
+        <button type="button" class="chip" data-mode="pvp" aria-pressed="false">Online lobby</button>
+      </div>
+    </div>
+    <div class="toolbar-group"><span class="tool-label">SIZE</span>
+      <div class="switch-row" id="sizeControls">
+        <button type="button" class="chip" data-size="1">1v1</button>
+        <button type="button" class="chip" data-size="2">2v2</button>
+        <button type="button" class="chip" data-size="3">3v3</button>
+        <button type="button" class="chip active" data-size="4">4v4</button>
+      </div>
+    </div>
+  </nav>
+  <section class="battle" aria-label="2.5D battle arena">
+    <div class="battle-top">
+      <div><span class="eyebrow">SIDE-VIEW BATTLE</span><h1>Trial of the Elements</h1></div>
+      <div class="phase"><span id="roundLabel">ROUND 1</span><strong id="phaseLabel">YOUR MOVE</strong></div>
+    </div>
+    <div class="arena" id="arena">
+      <canvas id="battleCanvas" width="1000" height="620" aria-label="Battlefield. Choose a spell below, tap a target for individual attacks or healing, or cast Wind on all enemies, then confirm."></canvas>
+      <div id="floor21Intro" hidden aria-label="Floor 21 introduction"><div class="floor21-dialogue"><img id="floor21Portrait" alt=""><div class="floor21-dialogue-copy"><strong id="floor21Speaker"></strong><p id="floor21Line" aria-live="polite"></p></div><button id="floor21Next" type="button">Next ›</button></div></div>
+      <div class="arena-bug" id="battleBadge">4 vs 4 · STORY / CPU</div>
+      <aside id="statusPopup" class="status-popup" role="dialog" aria-modal="false" aria-labelledby="statusName" hidden>
+        <button type="button" id="statusClose" class="status-close" aria-label="Close status details">×</button>
+        <strong id="statusName">Status effect</strong>
+        <p id="statusText"></p>
+      </aside>
+    </div>
+    <div class="turnbar">
+      <span class="turn-orb">✦</span><span id="turnHint" aria-live="polite">Tap a spell, then an enemy. Confirm to cast.</span>
+      <span class="count" id="queueCount">YOUR TURN</span>
+      <button id="battleRecap" type="button" aria-haspopup="dialog" aria-controls="battleLogPanel" aria-expanded="false">Battle Log ▾</button>
+    </div>
+    <div class="initiative" id="initiative" aria-label="Initiative order" hidden></div>
+  </section>
+  <section class="hand" aria-label="Your wizard's five-card hand">
+    <div class="hand-head">
+      <div><span class="eyebrow">YOUR GRIMOIRE</span><h2 id="handTitle">Tidecaller · Choose a spell</h2></div>
+      <div class="hand-resources"><span id="battleDeckCount">0 / 24 in deck</span><span class="mana" id="selectedMana">10 / 10 MANA</span></div>
+    </div>
+    <div class="cards" id="cardHand" role="group" aria-label="Five-card fan. Swipe to browse, tap to select, or double-tap to fold."></div>
+    <div class="fan-caption">SWIPE TO BROWSE <span>◆</span> TAP TO SELECT <span>◆</span> DOUBLE-TAP TO FOLD</div>
+    <div class="hand-assist" aria-live="polite">
+      <div class="spell-choice-info">
+        <strong id="chosenSpell">SELECT A SPELL</strong>
+        <span id="chosenTarget">Then tap an enemy on the battlefield</span>
+      </div>
+      <select id="zenRunePicker" aria-label="Negative rune to remove" hidden></select>
+      <button type="button" id="discardCard" class="reset" disabled>Discard selected</button>
+      <button type="button" id="passTurn" class="reset">Pass Turn · +2 Mana</button>
+      <button type="button" id="confirmTarget" class="confirm-target" hidden>Confirm Target</button>
+    </div>
+    <details class="customize-menu">
+      <summary>Customize your wizard</summary>
+      <div class="wizard-style" aria-label="Wizard appearance">
+        <label>HAT
+          <select id="wizardHat"><option value="pointed">Pointed</option><option value="wide">Wide brim</option><option value="hood">Hood</option><option value="top">Top hat</option><option value="round">Round-top hat</option><option value="scholar">Scholar</option></select>
+        </label>
+        <label>ROBES
+          <select id="wizardRobe"><option value="classic">Classic</option><option value="split">Split-tail</option><option value="armored">Armored</option></select>
+        </label>
+        <label>ROBE COLOR
+          <select id="wizardColor" class="palette-select"><option value="original">Original</option><option value="#6f4ab4" selected>Amethyst</option><option value="#3269c1">Royal Blue</option><option value="#128e9e">Ocean Teal</option><option value="#2c8a64">Emerald</option><option value="#b83a55">Crimson</option><option value="#d08a34">Amber</option><option value="#ad5c9d">Rose</option><option value="#44526b">Slate</option><option value="#dfd8c7">Ivory</option><option value="#30293c">Midnight</option><option value="#322c33">Raven</option><option value="#694839">Chestnut</option><option value="#ae6045">Copper</option><option value="#d6b06e">Honey</option><option value="#eee2d2">Pearl</option><option value="#84919e">Silver</option><option value="#645486">Violet</option><option value="#297c80">Teal</option><option value="#aa394e">Ruby</option><option value="#3176ad">Sapphire</option><option value="#459366">Soft Emerald</option></select>
+        </label>
+        <label>HAT COLOR
+          <select id="wizardHatColor" class="palette-select"><option value="original">Original</option><option value="#6f4ab4" selected>Amethyst</option><option value="#3269c1">Royal Blue</option><option value="#128e9e">Ocean Teal</option><option value="#2c8a64">Emerald</option><option value="#b83a55">Crimson</option><option value="#d08a34">Amber</option><option value="#ad5c9d">Rose</option><option value="#44526b">Slate</option><option value="#dfd8c7">Ivory</option><option value="#30293c">Midnight</option><option value="#322c33">Raven</option><option value="#694839">Chestnut</option><option value="#ae6045">Copper</option><option value="#d6b06e">Honey</option><option value="#eee2d2">Pearl</option><option value="#84919e">Silver</option><option value="#645486">Violet</option><option value="#297c80">Teal</option><option value="#aa394e">Ruby</option><option value="#3176ad">Sapphire</option><option value="#459366">Soft Emerald</option></select>
+        </label>
+        <label>HEAD HAIR<select id="wizardHeadHair"><option value="none">No hair</option><option value="medium">Medium hair</option><option value="long">Long hair</option><option value="curlyMedium">Curly medium</option><option value="curlyLong">Curly long</option></select></label>
+        <label>FACIAL HAIR<select id="wizardFacialHair"><option value="original">Original</option><option value="none">Clean-shaven</option></select></label>
+        <label>SKIN TONE
+          <select id="wizardSkinColor" class="palette-select"><option value="#cca084">Classic</option><option value="#f1cfad">Fair</option><option value="#e7b081">Warm</option><option value="#c7885b">Golden Tan</option><option value="#a96b4a">Bronze</option><option value="#805036">Deep Brown</option><option value="#58382f">Espresso</option><option value="#81b9c8">Frost Blue</option><option value="#b197c5">Lavender</option><option value="#f8e0cc">Porcelain</option><option value="#dfb798">Sand</option><option value="#be906e">Olive tan</option><option value="#995e43">Sienna</option><option value="#684332">Umber</option><option value="#432b26">Deep mahogany</option><option value="#899e81">Sage</option></select>
+        </label>
+      </div>
+    </details>
+  </section>
+  <footer class="footer">
+    <span id="status">You control one wizard; other fighters are CPU-controlled.</span>
+    <button id="resetButton" class="reset" type="button">↺ New battle</button>
+  </footer>
+  <!-- Retained as hidden compatibility nodes; these are NOT gameplay controls. -->
+  <section class="legacy-data" hidden aria-hidden="true">
+    <div id="allyRoster"></div><div id="enemyRoster"></div>
+    <select id="targetPicker"></select>
+    <button type="button" id="queueButton"></button>
+    <button type="button" id="autoButton"></button>
+    <button type="button" id="resolveButton"></button>
+    <div id="plannedList"></div>
+  </section>
+</main>
+
+<script src="./assets/poseidon-v22-row0.js?v=0.22.0" defer></script>
+<script src="./assets/poseidon-v22-row1.js?v=0.22.0" defer></script>
+<script src="./assets/poseidon-v22-row2.js?v=0.22.0" defer></script>
+<script src="./assets/poseidon-v22-row3.js?v=0.22.0" defer></script>
+<script src="./assets/stone-golem-approved-v23-row0.js?v=0.23.0" defer></script>
+<script src="./assets/stone-golem-approved-v23-row1.js?v=0.23.0" defer></script>
+<script src="./assets/stone-golem-approved-v23-row2.js?v=0.23.0" defer></script>
+<script src="./assets/stone-golem-approved-v23-row3.js?v=0.23.0" defer></script>
+<script src="./assets/wizard-material-masks-v2815.js" defer></script>
+<script src="./assets/wizard-palettes-v38.js?v=0.338.0" defer></script>
+<script src="./assets/golem-effects-v42.js?v=0.147.0" defer></script>
+<script src="./assets/element-tracing-v45.js?v=0.280.29" defer></script>
+<script src="./assets/arena-lowpoly-v47.js?v=0.47.0" defer></script>
+<script src="./assets/professor-volt-v49.js?v=0.147.0" defer></script>
+<script src="./assets/lady-estel-v51.js?v=0.147.0" defer></script>
+<script src="./assets/tornado-barrage-v54.js?v=0.147.0" defer></script>
+<script src="./assets/vampire-siphon-v57.js?v=0.147.0" defer></script>
+<script src="./assets/baby-dragon-fire-v61.js?v=0.147.0" defer></script>
+<script src="./assets/polar-bear-v67.js?v=0.147.0" defer></script>
+<script src="./assets/reef-rush-v77.js?v=0.147.0" defer></script>
+<script src="./assets/frosty-v85.js?v=0.147.0" defer></script>
+<script src="./assets/stone-bender-v83.js?v=0.147.0" defer></script>
+<script src="./assets/reaper-v82.js?v=0.147.0" defer></script>
+<script src="./assets/wind-slashes-v81.js?v=0.147.0" defer></script>
+<script src="./assets/flaming-arrows-v80.js?v=0.80.1" defer></script>
+<script src="./assets/thunderclap-v79.js?v=0.147.0" defer></script>
+<script src="./assets/card-art-v70.js?v=0.101.0" defer></script>
+<script src="./assets/hand-swipe-v71.js?v=0.292.5" defer></script>
+<script src="./assets/solidity-v86.js?v=0.143.0" defer></script>
+<script src="./assets/calming-waters-v87.js?v=0.143.0" defer></script>
+<script src="./assets/static-shock-v88.js?v=0.143.0" defer></script>
+<script src="./assets/blazing-rage-v89.js?v=0.143.0" defer></script>
+<script src="./assets/turbulence-v90.js?v=0.143.0" defer></script>
+<script src="./assets/soul-drain-v91.js?v=0.143.0" defer></script>
+<script src="./assets/healing-aura-v92.js?v=0.143.0" defer></script>
+<script src="./assets/freezing-temps-v93.js?v=0.143.0" defer></script>
+<script src="./assets/scorpion-sting-v94.js?v=0.180.0" defer></script>
+<script src="./assets/octo-whip-v95.js?v=0.147.0" defer></script>
+<script src="./assets/devil-boy-v96.js?v=0.147.0" defer></script>
+<script src="./assets/blooming-spores-v97.js?v=0.180.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part0.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part1.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part2.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part3.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part4.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-atlas-v118-part5.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-bolt-v118.js?v=0.118.0" defer></script>
+<script src="./assets/lightning-rod-v118.js?v=0.148.0" defer></script>
+<script src="./assets/undead-rampage-v99.js?v=0.180.0" defer></script>
+<script src="./assets/forrest-centaur-v100.js?v=0.180.0" defer></script>
+<script src="./assets/wind-dome-v101.js?v=0.101.0" defer></script>
+<script src="./assets/ninja-penguins-v105.js?v=0.147.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part0.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part1.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part2.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part3.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part4.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part5.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part6.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part7.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part8.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part9.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part10.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part11.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part12.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part13.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part14.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part15.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-atlas-v117-part16.js?v=0.117.0" defer></script>
+<script src="./assets/kinetic-sand-frames-v117.js?v=0.274.1" defer></script>
+<script src="./assets/zeus-atlas-v119-part0.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part1.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part2.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part3.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part4.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part5.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part6.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part7.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-atlas-v119-part8.js?v=0.119.0" defer></script>
+<script src="./assets/zeus-might-v1191.js?v=0.147.0" defer></script>
+<script src="./assets/gunpowder-kiss-atlas-v120-part0.js?v=0.120.0" defer></script>
+<script src="./assets/gunpowder-kiss-atlas-v120-part1.js?v=0.120.0" defer></script>
+<script src="./assets/gunpowder-kiss-atlas-v120-part2.js?v=0.120.0" defer></script>
+<script src="./assets/gunpowder-kiss-atlas-v120-part3.js?v=0.120.0" defer></script>
+<script src="./assets/gunpowder-kiss-v120.js?v=0.180.0" defer></script>
+<script src="./assets/flow-atlas-v122-part0.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part1.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part2.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part3.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part4.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part5.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part6.js?v=0.122.0" defer></script>
+<script src="./assets/flow-atlas-v122-part7.js?v=0.122.0" defer></script>
+<script src="./assets/flow-state-v121.js?v=0.234.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part0.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part1.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part2.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part3.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part4.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part5.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part6.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-monk-v123-part7.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part0.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part1.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part2.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part3.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part4.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part5.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part6.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-fists-v123-part7.js?v=0.123.0" defer></script>
+<script src="./assets/wind-fist-v123.js?v=0.147.0" defer></script>
+<script src="./assets/jack-v129.js?v=0.147.0" defer></script>
+<script src="./assets/croc-v134.js?v=0.147.0" defer></script>
+<script src="./assets/wizard-system-v135.js?v=0.338.0" defer></script>
+<script src="./assets/electrical-charge.js?v=0.151.0" defer></script>
+<script src="./assets/grill-master.js?v=0.153.0" defer></script>
+<script src="./assets/decay-strength.js?v=0.180.0" defer></script>
+<script src="./assets/acid-air.js?v=0.180.0" defer></script>
+<script src="./assets/burning-pheonix.js?v=0.189.0" defer></script>
+<script src="./assets/cyclops.js?v=0.180.0" defer></script>
+<script src="./assets/boulder-weight.js?v=0.180.0" defer></script>
+<script src="./assets/heizmann.js?v=0.180.0" defer></script>
+<script src="./assets/venus-trap.js?v=0.180.0" defer></script>
+<script src="./assets/electro-disc.js?v=0.193.0" defer></script>
+<script src="./assets/scalding-air.js?v=0.200.0" defer></script>
+<script src="./assets/tree-spell.js?v=0.204.0" defer></script>
+<script src="./assets/bullet-seed.js?v=0.207.0" defer></script>
+<script src="./assets/ice-yeti.js?v=0.237.0" defer></script>
+<script src="./assets/totally-rad.js?v=0.211.0" defer></script>
+<script src="./assets/lightning-ball.js?v=0.212.0" defer></script>
+<script src="./assets/wicked-witch.js?v=0.216.0" defer></script>
+<script src="./assets/kamikaze.js?v=0.220.0" defer></script>
+<script src="./assets/crab-giant.js?v=0.222.0" defer></script>
+<script src="./assets/raging-waters.js?v=0.223.0" defer></script>
+<script src="./assets/meteor-shower.js?v=0.226.0" defer></script>
+<script src="./assets/dark-spells.js?v=0.231.0" defer></script>
+<script src="./assets/thorny-wrap.js?v=0.233.0" defer></script>
+<script src="./assets/blizzard.js?v=0.236.0" defer></script>
+<script src="./assets/sirens-melody.js?v=0.240.0" defer></script>
+<script src="./assets/quick-sand.js?v=0.244.0" defer></script>
+<script src="./assets/reikel.js?v=0.251.0" defer></script>
+<script src="./assets/crystal-ice-mirrors.js?v=0.252.0" defer></script>
+<script src="./assets/electric-eel.js?v=0.273.3" defer></script>
+<script src="./assets/sticks-and-stones.js?v=0.265.0" defer></script>
+<script src="./assets/dark-sorcerer.js?v=0.274.8" defer></script>
+<script src="./assets/bubble-shield.js?v=0.274.1" defer></script>
+<script src="./assets/drowzy-flowers.js?v=0.271.1" defer></script>
+<script src="./assets/growth-art.js?v=0.271.3" defer></script>
+<script src="./assets/storm-lizard.js?v=0.274.10" defer></script>
+<script src="./assets/sentinel-fissure.js?v=0.280.47" defer></script>
+<script src="./assets/volcanic-eruption.js?v=0.275.1" defer></script>
+<script src="./assets/frozen-touch.js?v=0.276.3" defer></script>
+<script src="./assets/wynzor.js?v=0.277.8" defer></script>
+<script src="./assets/wizard-hats.js?v=0.280.15" defer></script>
+<script src="./assets/rune-audio.js?v=0.341.0" defer></script>
+<script src="./assets/roggin-bowler.js?v=0.280.49" defer></script>
+<script src="./assets/wind-razor.js?v=0.285.3" defer></script>
+<script src="./assets/water-prison.js?v=0.286.1" defer></script>
+<script src="./assets/lightning-field.js?v=0.287.0" defer></script>
+<script src="./assets/sunfire.js?v=0.288.0" defer></script>
+<script src="./assets/land-ray.js?v=0.289.5" defer></script>
+<script src="./assets/double-pick.js?v=0.290.9" defer></script>
+<script src="./assets/dark-grounds.js?v=0.291.0" defer></script>
+<script src="./assets/groveland.js?v=0.292.2" defer></script>
+<script src="./assets/aromatherapy.js?v=0.293.2" defer></script>
+<script src="./assets/flaming-flamingo.js?v=0.294.0" defer></script>
+<script src="./assets/earthquake.js?v=0.295.0" defer></script>
+<script src="./assets/clarity-strike.js?v=0.296.2" defer></script>
+<script src="./assets/cursed-hold.js?v=0.304.0" defer></script>
+<script src="./assets/reflective-ice.js?v=0.298.1" defer></script>
+<script src="./assets/thorny-hug.js?v=0.299.2" defer></script>
+<script src="./assets/high-tide.js?v=0.300.1" defer></script>
+<script src="./assets/whale-spell.js?v=0.301.1" defer></script>
+<script src="./assets/flame-wheel.js?v=0.302.2" defer></script>
+<script src="./assets/sand-warrior.js?v=0.303.2" defer></script>
+<script src="./assets/soul-ghoul.js?v=0.335.0" defer></script>
+<script src="./assets/flashover.js?v=0.305.2" defer></script>
+<script src="./assets/briar-remedy.js?v=0.306.2" defer></script>
+<script src="./assets/lifevine.js?v=0.307.0" defer></script>
+<script src="./assets/blood-debt.js?v=0.308.0" defer></script>
+<script src="./assets/cold-storage.js?v=0.309.0" defer></script>
+<script src="./assets/glacier-lance.js?v=0.310.3" defer></script>
+<script src="./assets/rip-current.js?v=0.311.5" defer></script>
+<script src="./assets/pressure-drop.js?v=0.312.1" defer></script>
+<script src="./assets/chained-javelin.js?v=0.313.1" defer></script>
+<script src="./assets/razorang.js?v=0.314.3" defer></script>
+<script src="./assets/faultline-bulwark.js?v=0.335.0" defer></script>
+<script src="./assets/live-wire.js?v=0.316.2" defer></script>
+<script src="./assets/hellhound-art.js?v=0.352.4" defer></script>
+<script src="./assets/inferno-titan-illustrated.js?v=0.353.3" defer></script>
+<script src="./arena.js?v=0.353.1" defer></script>
+<script src="./assets/menu-music.js?v=0.341.0" defer></script>
+<script src="./assets/wizard-home-v135.js?v=0.346.0" defer></script>
+<script src="./assets/audio-settings.js?v=0.341.0" defer></script>
+<dialog id="battleLogPanel" aria-labelledby="battleLogTitle">
+  <header><strong id="battleLogTitle">Battle Log</strong><form method="dialog"><button type="submit" autofocus>Close</button></form></header>
+  <ol id="battleHistory"><li>No actions yet.</li></ol>
+</dialog>
+<dialog id="matchResults" class="match-results" aria-labelledby="matchResultsTitle"></dialog>
+<dialog id="binderCardDetail" class="match-results binder-detail" aria-labelledby="binderCardTitle"></dialog>
+<dialog id="audioSettings" aria-labelledby="audioSettingsTitle" style="width:min(340px,90vw);background:#18202d;color:#fff;border:1px solid #64748b;border-radius:12px;padding:20px;z-index:9999"><h2 id="audioSettingsTitle">Audio Settings</h2><label style="display:block;margin:16px 0">Music <output id="musicVolumeValue"></output><input id="musicVolume" type="range" min="0" max="100" step="1" style="display:block;width:100%"></label><label style="display:block;margin:16px 0">Sound Effects <output id="effectsVolumeValue"></output><input id="effectsVolume" type="range" min="0" max="100" step="1" style="display:block;width:100%"></label><button type="button" class="portal-btn" id="audioSettingsClose">Done</button></dialog>
+<dialog id="friendsDialog" aria-labelledby="friendsTitle" class="friends-dialog"><header><h2 id="friendsTitle">Friends</h2><button type="button" id="friendsClose" class="portal-btn small">Close</button></header><form id="friendsAddForm"><label for="friendsUsername">Add by username</label><div class="social-actions"><input id="friendsUsername" autocomplete="off" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9_]{3,24}" required maxlength="24" placeholder="Username"><button id="friendsAddButton" type="submit" class="portal-btn small primary">Send request</button></div></form><p id="friendsStatus" role="status" aria-live="polite"></p><label for="friendsWizard">Wizard to join with</label><select id="friendsWizard"></select><div id="friendsInvites"></div><div id="friendsList"></div></dialog>
+<style>
+.friends-dialog{width:min(520px,92vw);max-height:85dvh;overflow:auto;background:#18202d;color:#fff;border:1px solid #64748b;border-radius:12px;padding:18px;box-sizing:border-box}
+.friends-dialog::backdrop{background:#080c15b8}.friends-dialog header,.social-row,.social-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.friends-dialog header,.social-row{justify-content:space-between}.friends-dialog h2{margin:0}.friends-dialog h3{font-size:1rem;margin:16px 0 8px}.friends-dialog input,.friends-dialog select{min-width:0;background:#0c1422;color:white;border:1px solid #607087;border-radius:6px;padding:8px;font:inherit}.friends-dialog input{flex:1}.friends-dialog select{width:100%;margin-top:5px}.friends-dialog label{display:block;margin:10px 0 4px}.friends-dialog small{display:block;color:#acbccd;margin-top:3px}.social-row{border-bottom:1px solid #ffffff24;padding:8px 0}.social-row>div:first-child{overflow-wrap:anywhere;min-width:0}.friends-dialog .portal-btn{min-height:34px}.friends-dialog #friendsStatus{color:#f0cb84;min-height:1.2em;margin:6px 0}.portal-top{flex-wrap:wrap}
+</style>
+</body>
+</html>

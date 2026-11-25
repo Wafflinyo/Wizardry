@@ -264,13 +264,13 @@
   const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   // New Hellhound is isolated from binders, CPU decks and normal progression.
-  const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.35,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 35% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
+  const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
-    hellhound:"Main + adjacent enemies. 35% Burn each: 50 × 3 rounds.",
+    hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
     livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",

@@ -266,13 +266,21 @@
   // New Hellhound is isolated from binders, CPU decks and normal progression.
   const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
   const TEST_INFERNO_TITAN={id:"infernotitan",name:"Inferno Titan",school:"fire",cost:8,target:"enemy",kind:"infernotitan",damage:700,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:.80,icon:"♨",rarity:"TEST",testOnly:true,duration:5400,hit:.61,description:"A molten knight rises, grips his straight lava blade with both hands and drives it point-first into the ground. A traveling fissure erupts beneath the selected enemy for 700 base damage, with a 30% chance of Extreme Burn (100 damage each round for 5 rounds)."};
+  const TEST_RING_OF_FIRE={id:"ringoffire",name:"Ring of Fire",school:"fire",cost:3,target:"enemy",kind:"ringoffire",accuracy:.90,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,rounds:3,description:"Attach a negative Fire rune for 3 rounds. Every time the enemy actually recovers HP, they take 100 damage."};
+  const TEST_BACKDRAFT={id:"backdraft",name:"Backdraft",school:"fire",cost:3,target:"enemy",kind:"backdraft",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.45,damage:180,description:"Deals 180 base damage. If the enemy was burning, spreads that Burn to one random adjacent living enemy, preserving its normal or extreme tier."};
+  const TEST_FURNACE={id:"furnace",name:"Furnace",school:"fire",cost:5,target:"team",kind:"furnace",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,fieldRounds:5,fieldBoost:.10,description:"Environmental rune for 5 rounds: Fire damage +10% and Fire spells with Burn chances gain 10 percentage points."};
+  const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
+  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
     hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
+    ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
+    backdraft:"Spreads existing Burn to one adjacent living enemy.",
+    furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
     livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
     chainedjavelin:"Siphons up to 2 of the target’s remaining mana.",
@@ -349,7 +357,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=["ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -1327,7 +1335,7 @@
     state.selectedCard=id;state.selectedRune=null;state.targetingNotice=null;
     const card=BY_ID[id],u=caster();
     if(card.testOnly&&state.mode!=="tester"){clearSelection();return;}
-    if(card.testOnly)(card.id==="infernotitan"?window.InfernoTitan:window.HellhoundArt)?.ensure();
+    if(card.testOnly)testSpellArt(card)?.ensure();
     state.selectedTarget=card.selfOnly||(choosesRune(card)&&zenRunes(u).length)?u.id:null;
     if(state.mode==="tester"&&!["team","all_enemies"].includes(card.target))
       state.selectedTarget=targetsFor(card,u).find(target=>!targetNotice(target,card))?.id??null;
@@ -1356,7 +1364,7 @@
     const c=caster(),card=currentCard(),target=correctTarget();
     if(card?.testOnly){
       if(state.mode!=="tester")return false;
-      const art=card.id==="infernotitan"?window.InfernoTitan:window.HellhoundArt;
+      const art=testSpellArt(card);
       if(art&&!art.ready()){
         const snapshot=state,selected=target?.id,selectedCaster=c?.id;
         ui.hint.textContent="Loading "+card.name+" artwork…";
@@ -1814,7 +1822,7 @@
     a.effectiveAccuracy=testing||guaranteed?1:Math.max(0,Math.min(1,a.card.accuracy+bonus));
     const target=getUnit(a.target);
     const conflict=a.card.kind==="coldstorage"?targetNotice(target,a.card):barrierNotice(target,a.card);
-    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="waterprison"?"water_prison":BARRIER_SPELLS[a.card.kind]);
+    const full=a.card.fieldRounds?!canReceiveDebuff(c):a.card.kind==="aromatherapy"?!canReceiveDebuff(c,"aromatherapy"):a.card.kind==="cursedhold"?!canReceiveDebuff(c,"cursed_hold"):target?.hp>0&&(DEBUFF_SPELLS.has(a.card.kind)||BARRIER_SPELLS[a.card.kind])&&!canReceiveDebuff(target,a.card.kind==="ringoffire"?"ring_of_fire":a.card.kind==="waterprison"?"water_prison":BARRIER_SPELLS[a.card.kind]);
     const sealed=towerHealing.has(a.card.kind)&&healingSuppressed(a.card.school);
     const emptyTide=a.card.kind==="hightide"&&!state.environment;
     const success=!emptyTide&&!sealed&&!full&&!conflict&&(testing||guaranteed||spellHitCheck(a.card,Math.random(),bonus));
@@ -2459,9 +2467,9 @@
     c.restore();return placed;
   }
   const MAX_DEBUFF_RUNES=4;
-  const DEBUFF_SPELLS=new Set(['waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2568,6 +2576,14 @@
     if(partner){
       const shared=restoreHp(source,partner,Math.floor(amount*BY_ID.lifevine.share),false);
       if(shared>0)flash(partner,"+"+shared+" HP · LIFEVINE","#c4ff90").lifevineTarget=partner.id;
+    }
+    const ring=target.statuses.find(st=>st.kind==="ring_of_fire"&&state.round<st.expiresRound);
+    if(amount>0&&ring&&target.hp>0&&state.mode==="tester"){
+      const lost=loseHp(getUnit(ring.sourceId),target,100);
+      flash(target,"RING OF FIRE −"+lost,"#ff9c60");
+      (state.fireRingHits??=[]).push({id:target.id,time:performance.now()});
+      recordBattleEvent(target.name+" takes "+lost+" Ring of Fire damage after healing.");
+      if(target.hp<=0){target.defeatElapsedMs=0;flash(target,"DEFEATED","#ffd5b0");}
     }
     return amount;
   }
@@ -3214,8 +3230,9 @@
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);paintUI();return true;
   }
+  function spellBurnChance(card){return Math.min(1,(card.burnChance||0)+(card.burnChance>0&&card.school==="fire"&&state.environment?.id==="furnace"?.10:0));}
   function trySpellBurn(target,card,spell,roll){
-    if((card.kind==="scaldingair"&&!canReceiveDebuff(target))||!canReceiveDebuff(target,"burn")||preventsHitEffects(spell,target)||(roll??Math.random())>=card.burnChance)return;
+    if((card.kind==="scaldingair"&&!canReceiveDebuff(target))||!canReceiveDebuff(target,"burn")||preventsHitEffects(spell,target)||(roll??Math.random())>=spellBurnChance(card))return;
     applyPeriodicStatus(target,"burn",card);
   }
   function applyDecayOfStrength(target,boost,school){
@@ -3276,7 +3293,7 @@
     damage(c,target,a.card.damage,a.card,a);
     // Only primary target can burn; fireball must have hit successfully.
     // Burns refresh to three future round ticks and never stack.
-    if(canReceiveDebuff(target,"burn")&&target.hp>0&&!preventsHitEffects(a,target)&&a.runeResult==="success"&&roll<a.card.burnChance){
+    if(canReceiveDebuff(target,"burn")&&target.hp>0&&!preventsHitEffects(a,target)&&a.runeResult==="success"&&roll<spellBurnChance(a.card)){
       if(applyPeriodicStatus(target,"burn",a.card)){
       recordBattleEvent(target.name+" is burned: 50 damage at the start of the next 3 rounds.");
       a.dragonBurned=true;}
@@ -3463,6 +3480,23 @@
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
       if(t.hp>0)trySpellBurn(t,card,anim,anim.burnRoll);
+    }else if(card.kind==="ringoffire"){
+      if(!t||t.hp<=0||t.team===c.team||addStatus(t,"ring_of_fire",null,100,"fire")===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="ring_of_fire"),{sourceId:c.id,expiresRound:state.round+3});
+      flash(t,"RING OF FIRE · 3 ROUNDS","#ff9c60");
+    }else if(card.kind==="backdraft"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      const burn=t.statuses.find(st=>st.kind==="burn"&&st.remaining>0);
+      const formation=sideUnits(t.team).filter(u=>u.hp>0).sort((a,b)=>a.y-b.y||a.x-b.x),at=formation.indexOf(t);
+      const neighbors=[formation[at-1],formation[at+1]].filter(u=>u&&u.hp>0);
+      damage(c,t,card.damage,card,anim);
+      if(burn&&!preventsHitEffects(anim,t)&&neighbors.length){
+        const next=neighbors[Math.floor(Math.random()*neighbors.length)];
+        if(applyPeriodicStatus(next,"burn",{school:"fire",burnDamage:burn.extreme?100:50,burnTurns:burn.extreme?5:3})){
+          recordBattleEvent("Backdraft spreads Burn to "+next.name+".");
+          (state.fireRingHits??=[]).push({id:next.id,time:performance.now()});
+        }
+      }
     }else if(card.kind==="coldstorage"){
       if(addStatus(t,"cold_storage",null,card.bankedMana,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="cold_storage"),{releaseRound:state.round+1,bankerId:c.id});
@@ -3918,6 +3952,7 @@
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
     state.round++;
+    for(const unit of state.units){const ring=unit.statuses.find(st=>st.kind==="ring_of_fire");if(ring&&(unit.hp<=0||state.round>=ring.expiresRound))consumeStatus(unit,"ring_of_fire");}
     for(const unit of state.units){
       const mark=unit.statuses.find(st=>st.kind==="blood_debt");
       if(mark&&(state.round>=mark.expiresRound||!(getUnit(mark.creditorId)?.hp>0)))consumeStatus(unit,"blood_debt");
@@ -4137,7 +4172,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4923,6 +4958,7 @@
       case "fissure_disable":return {title:"Disabled · Sentinel Fissure",detail:"Skips this wizard’s pending action this round."};
       case "pressure_drop":return {title:"Decay of Strength · Outgoing damage",detail:"All hits of this wizard’s next damaging spell deal 25% less damage. Lasts until used or cleansed."};
       case "cold_storage":return {title:"Cold Storage · Banked resources",detail:"The crystal breaks at the start of round "+st.releaseRound+" and releases up to 2 mana and 150 HP."};
+      case "ring_of_fire":return {title:"Ring of Fire · Fire debuff",detail:"100 damage whenever HP is actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "blood_debt":return {title:"Blood Debt · Healing theft",detail:"The next HP recovery sends half to "+(getUnit(st.creditorId)?.name||"the caster")+", up to 200 HP. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "lifevine":return {title:"Lifevine · Linked healing",detail:"Linked to "+(getUnit(st.partnerId)?.name||"an ally")+". Shares 30% of HP actually restored. "+Math.max(0,st.expiresRound-state.round)+" rounds left."};
       case "fear_turn":return {title:"Fear · This round only",detail:(u.fearSource||"Fear")+" frightened "+u.name+". They skip their pending action this round. This Fear expires after that action or at round end; it never carries into the next round."};
@@ -5263,6 +5299,7 @@
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="hellhound")window.HellhoundArt?.portrait(c,width,height);
       else if(card.id==="infernotitan")window.InfernoTitan?.portrait(c,width,height);
+      else if(EXTRA_FIRE_TEST.some(spell=>spell.id===card.id))window.FireTestArt?.[card.id]?.portrait(c,width,height);
       else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
       else if(card.id==="pressuredrop")window.PressureDrop?.portrait(c,width,height);
@@ -5728,7 +5765,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5746,6 +5783,22 @@
     const renderables=sorted.map(u=>({
       type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
+    if(state.mode==="tester"&&window.FireTestArt){
+      const fire=window.FireTestArt;
+      if(fieldId==="furnace"){
+        const progress=formingField?clamp(formingField.elapsed/formingField.duration,0,1):null;
+        renderables.push({type:"furnace",depthY:-1100,priority:0,draw:()=>fire.furnace.field(g,time,progress)});
+      }
+      if(action?.stage==="summon"&&["ringoffire","backdraft"].includes(action.card.kind)){
+        const target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1),art=fire[action.card.kind];
+        if(target)renderables.push({type:action.card.kind,depthY:target.y+.12,priority:2,draw:()=>art.draw(g,target,p,unitSlotFactor(target))});
+      }
+      for(const u of sorted)if(u.hp>0&&u.statuses.some(st=>st.kind==="ring_of_fire"&&state.round<st.expiresRound)&&!(action?.stage==="summon"&&action.card.kind==="ringoffire"&&action.target===u.id)){
+        renderables.push({type:"ring-of-fire-idle",depthY:u.y+.1,priority:2,draw:()=>fire.ringoffire.idle(g,u,time,unitSlotFactor(u))});
+      }
+      const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
+      for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="infernotitan"&&window.InfernoTitan){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
@@ -6907,7 +6960,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_INFERNO_TITAN,TEST_HELLHOUND],hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

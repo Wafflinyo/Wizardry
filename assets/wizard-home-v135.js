@@ -122,7 +122,7 @@ function resetSocial(){
 function renderSocial(force=false){
  updateFriendBadge();
  if(!socialDialog()?.open)return;
- const canInvite=!!(session.isHost&&session.roomId&&session.lobby?.phase==='lobby');
+ const canInvite=!!(session.isHost&&session.roomId&&session.lobby?.phase==='lobby'&&session.lobby.kind!=='match'&&(session.lobby.kind!=='party'||(session.lobby.matchmaking?.status||'idle')==='idle'));
  const signature=JSON.stringify([socialData,canInvite]);if(!force&&socialSignature===signature)return;socialSignature=signature;
  const action=(label,kind,user,id)=>'<button type="button" class="portal-btn small" data-social-action="'+kind+'" '+(user?'data-social-user="'+escape(user)+'" ':'')+(id?'data-social-id="'+escape(id)+'"':'')+'>'+label+'</button>';
  const row=(name,status,buttons)=>'<div class="social-row"><div><strong>'+escape(name)+'</strong><small>'+escape(status)+'</small></div><div class="social-actions">'+buttons+'</div></div>';
@@ -213,6 +213,7 @@ function render(){
  if(view==='library'&&active)renderLibrary();
  if(view==='libraryTester'&&libraryTestProfile)renderLibrary(libraryTestProfile,true);
  if(view==='online'&&active)renderOnline();
+ if(view==='custom'&&active)renderCustom();
  if(view==='lobby')renderLobby();
 }
 const nameLists=[
@@ -362,7 +363,10 @@ function buildOnline(){
  originalDraftName=draft.name;nameParts=loadNameParts(draft.name);step=1;screen('create');
 }
 function renderOnline(){
- shell(`<section class="portal-hero"><h1>Online Battles</h1><p>Level 20 · ${escape(onlineProfile?.name||active.name)}</p><div class="portal-actions">${btn('Build Online Wizard','buildOnline')}${ownBuildReady()?btn('Use Saved Wizard','useOwn'):''}${btn('Create Online Lobby','host','primary')}${joinCode&&!incomingTower?btn('Join Invited Lobby','join'):''}</div><label class="field"><span>Lobby link or code</span><input id="joinInput" autocomplete="off"></label>${btn('Join Lobby','joinInput')}${btn('Back','hub','subtle')}</section>`);
+ shell(`<section class="portal-hero"><h1>Online Battles</h1><p>Level 20 · ${escape(onlineProfile?.name||active.name)}</p><div class="menu-stack">${btn('Casual Matchmaking','casual','primary')}${btn('Custom Battles','custom')}${btn('Build Online Wizard','buildOnline')}${ownBuildReady()?btn('Use Saved Wizard','useOwn'):''}${btn('Back','hub','subtle')}</div>${joinCode&&!incomingTower?btn('Join Invited Lobby','join'):''}</section>`);
+}
+function renderCustom(){
+ shell(`<section class="portal-hero"><h1>Custom Battles</h1><p>Invite up to eight players and choose your teams. Level 20 · ${escape(onlineProfile?.name||active.name)}</p><div class="portal-actions">${btn('Build Online Wizard','buildOnline')}${ownBuildReady()?btn('Use Saved Wizard','useOwn'):''}${btn('Create Custom Lobby','host','primary')}${joinCode&&!incomingTower?btn('Join Invited Lobby','join'):''}</div><label class="field"><span>Lobby link or code</span><input id="joinInput" autocomplete="off"></label>${btn('Join Lobby','joinInput')}${btn('Back','onlineMenu','subtle')}</section>`);
 }
 const wizardFloor=B.rogueFloor;
 const partyFloor=players=>Math.min(21,...players.filter(p=>!p.isCpu).map(p=>wizardFloor(p.profile)));
@@ -394,6 +398,7 @@ function showMatchResults(combat){
 window.WizardryMatchResults={show:showMatchResults};
 function leaveMatch(){
  resultsDialog.close();
+ if(returnPartyId&&session.lobby?.kind==='match'&&lastResult?.phase==='finished'){void returnToParty();return;}
  if(session.roomId)closeSession();
  screen(lastResult?.tower?'tower':lastResult?.mode==='tester'?'tests':active?'hub':'home');
 }
@@ -465,14 +470,17 @@ const ENDPOINT='https://vocaddalptoghysgdkvh.supabase.co/functions/v1/wizardry-l
 const session=window.WizardrySession={active:false,isHost:false,peerId:null,lobby:null,roomId:null,token:null,version:-1,
  plan(p){const u=api.getState().units.find(u=>u.peerId===this.peerId);if(!u||api.getState().phase!=='planning'||this.pendingPlan)return false;if(!p.cancel&&u.discardedRound===p.round)p={...p,discardId:u.discardedCard};p={...p,requestId:p.round+':'+(++planSerial)};if(this.isHost){const ok=api.submitRemotePlan(this.peerId,p);void syncRoom();return ok;}this.pendingPlan=p;api.previewPendingPlan(p);const g=generation;command('plan',{plan:p,version:this.version}).catch(e=>{if(g===generation&&this.pendingPlan?.requestId===p.requestId){this.pendingPlan=null;api.rejectPendingPlan(p);error(e.message);}});return true;}};
 let broadcastTimer=null,battleTimer=null,busy=false,lastState='',lastLobby='',acks=[],generation=0,failures=0,planSerial=0,lastClock=performance.now();
+let returnPartyId=null,matchSwitching=false,startingMatch=false,matchmakingBusy=false,lastMatchCheck=0;
 const randomToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 async function request(action,payload={},serializedState=''){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{let body=JSON.stringify({action,roomId:session.roomId,token:session.token,payload});if(serializedState)body=body.slice(0,-2)+',"state":'+serializedState+'}}';const r=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body,signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Lobby request failed.');return data;}finally{clearTimeout(timer);}}
-function closeSession(){const old={roomId:session.roomId,token:session.token};generation++;clearInterval(broadcastTimer);clearInterval(battleTimer);session.active=false;session.lobby=null;session.peerId=null;session.isHost=false;session.roomId=null;session.token=null;session.version=-1;session.pendingPlan=null;busy=false;lastState='';lastLobby='';acks=[];
+function closeSession(){const old={roomId:session.roomId,token:session.token};returnPartyId=null;matchSwitching=false;startingMatch=false;lastMatchCheck=0;generation++;clearInterval(broadcastTimer);clearInterval(battleTimer);session.active=false;session.lobby=null;session.peerId=null;session.isHost=false;session.roomId=null;session.token=null;session.version=-1;session.pendingPlan=null;busy=false;lastState='';lastLobby='';acks=[];
  if(old.roomId&&old.token)fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'leave',...old,payload:{}}),keepalive:true}).catch(()=>{});
 }
-function acceptRoom(data){if(data.roomId===session.roomId&&data.version<session.version)return;session.roomId=data.roomId;session.peerId=data.peerId;session.isHost=data.isHost;session.version=data.version;
+function acceptRoom(data){if(session.roomId&&data.roomId!==session.roomId)return;if(data.roomId===session.roomId&&data.version<session.version)return;session.roomId=data.roomId;session.peerId=data.peerId;session.isHost=data.isHost;session.version=data.version;
  const signature=JSON.stringify(data.lobby);session.lobby=data.lobby;towerLobby=data.lobby.tower===true;
- if(data.lobby.phase==='closed'){closeSession();screen(towerLobby?'tower':'online');error('The host closed this lobby.');return;}
+ if(data.lobby.kind==='party'&&data.lobby.matchmaking?.status==='matched'&&data.lobby.matchmaking.matchRoom){void enterMatchedRoom(data.lobby.matchmaking.matchRoom);return;}
+
+ if(data.lobby.phase==='closed'){if(returnPartyId&&session.lobby?.kind==='match'){void returnToParty();return;}closeSession();screen(towerLobby?'tower':'online');error('The host closed this lobby.');return;}
  if(!session.isHost&&data.lobby.phase==='battle'&&data.state){
    session.active=true;api.receiveSnapshot(data.state);
    if(data.state.phase==='finished'){showMatchResults(data.state);}
@@ -494,18 +502,53 @@ function acceptRoom(data){if(data.roomId===session.roomId&&data.version<session.
  }
  if(view==='progression'&&lastResult?.tower.online&&data.lobby.phase==='lobby'&&session.isHost&&
    data.lobby.players.every(p=>p.ready)&&!(lastResult?.tower.floor===21&&lastResult.winner===0))void startTowerLobby();
+ if(data.lobby.kind==='match'&&data.lobby.phase==='lobby'&&session.isHost&&!startingMatch&&!session.active){void startOnline();}
 }
 async function command(action,payload={}){const g=generation,data=await request(action,payload);if(g===generation)acceptRoom(data);return data;}
-async function syncRoom(){if(busy||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version},sendState='';if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.onlineSnapshot()):'';if(serialized&&serialized!==lastState){sendState=serialized;lastState=serialized;}payload.ack=acks.splice(0);}const data=await request(action,payload,sendState);if(g===generation){failures=0;acceptRoom(data);
+async function syncRoom(){if(busy||matchSwitching||startingMatch||!session.token||!session.roomId)return;busy=true;const g=generation;try{let action='poll',payload={version:session.version},sendState='';if(session.isHost){action='sync';const serialized=session.active?JSON.stringify(api.onlineSnapshot()):'';if(serialized&&serialized!==lastState){sendState=serialized;lastState=serialized;}payload.ack=acks.splice(0);}if(session.lobby?.kind==='party'&&['queued','found'].includes(session.lobby.matchmaking?.status)&&Date.now()-lastMatchCheck>=1000){payload.matchmaking='status';lastMatchCheck=Date.now();}
+ const data=await request(action,payload,sendState);if(g===generation){failures=0;acceptRoom(data);
  if(session.isHost&&session.active&&api.getState().tower?.online&&api.getState().phase==='finished'){
    const result=await request('towerNext');if(g===generation)acceptRoom(result);
- }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
+ }}}catch(e){if(g===generation){lastState='';if(++failures===3)error('Connection interrupted. Reconnecting to the lobby…');if(/closed|expired|not a member|host disconnected/i.test(e.message)){if(returnPartyId&&session.lobby?.kind==='match'){void returnToParty();return;}closeSession();screen(towerLobby?'tower':'online');error(e.message);}}}finally{if(g===generation)busy=false;}}
 function startPolling(){clearInterval(broadcastTimer);clearInterval(battleTimer);lastClock=performance.now();session.clockAt=lastClock;broadcastTimer=setInterval(syncRoom,400);battleTimer=setInterval(()=>{const now=performance.now();if(session.active&&session.isHost)api.advanceBackground(now-lastClock);lastClock=now;session.clockAt=now;},40);}
-async function host(tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
+async function host(tower=false,casual=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;closeSession();session.token=randomToken();screen('lobby');error('Opening your lobby…');try{const data=await request('create',{profile,tower,casual});acceptRoom(data);render();startPolling();}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);}}
 async function join(code,tower=false){if(tower&&active?.rogue?.pending){openSpellDraft('tower');return;}const profile=tower?active:onlineProfile;if(!profile)return;towerLobby=tower;let id=String(code||'').trim();try{if(id.includes('://'))id=new URL(id).searchParams.get('lobby')||'';}catch{}if(!/^[a-f0-9-]{36}$/i.test(id)){error('Paste a valid lobby invitation link or code.');return;}closeSession();session.token=randomToken();session.roomId=id;screen('lobby');error('Joining lobby…');try{const data=await request('join',{profile,tower});acceptRoom(data);render();startPolling();return true;}catch(e){closeSession();screen(towerLobby?'tower':'online');error(e.message);return false;}}
 function hostSeat(peerId,team,slot){command('seat',{team,slot}).catch(e=>error(e.message));}
-function renderLobby(){if(towerLobby&&session.lobby){renderTowerLobby();return;}const l=session.lobby;if(!l){shell(`<h1>Connecting to the colosseum…</h1>${btn('Back','hub')}`);return;}const mine=l.players.find(p=>p.peerId===session.peerId),link=new URL('arena.html',location.href);link.searchParams.set('lobby',l.hostId);link.searchParams.set('v','0.135.0');const ready=l.players.every(p=>p.isCpu||p.ready)&&[0,1].every(t=>l.players.some(p=>p.team===t));
- shell(`<div class="portal-heading"><div><p class="portal-eyebrow">ONLINE TEST · ${l.players.filter(p=>!p.isCpu).length} PLAYERS · ${l.players.filter(p=>p.isCpu).length} CPUs</p><h1>The gathering</h1></div>${btn('Leave lobby','leave','subtle')}</div><div class="network-notice">Choose your team and seat, then ready up. The host can add randomized CPUs to any open seat. Both teams need at least one wizard. Empty seats stay empty. The host must keep the match open.</div><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${session.isHost?`<label class="field"><span>SEATS PER TEAM</span><select id="lobbySize">${[1,2,3,4].map(n=>`<option value="${n}" ${n===l.size?'selected':''}>${n} per team</option>`).join('')}</select></label>`:`<p>Up to ${l.size} per team</p>`}<div class="lobby-grid">${[0,1].map(team=>`<div class="portal-panel lobby-team"><h2>Team ${team?'Moon':'Sun'}</h2>${Array.from({length:l.size},(_,slot)=>{const p=l.players.find(p=>p.team===team&&p.slot===slot);return `<div class="lobby-seat ${p?.ready?'ready':''}"><div><strong>${p?escape(p.profile.name):'Open seat '+(slot+1)}</strong><small>${p?p.profile.masteries.map(title).join(' + ')+' · '+(p.isCpu?'CPU':p.ready?'Ready':'Not ready'):'Empty'}</small></div><div class="seat-actions">${p?.peerId===session.peerId?'<span>You</span>':p?.isCpu?(session.isHost?`<button class="portal-btn small" data-remove-cpu="${team},${slot}">Remove CPU</button>`:''):!p?`<button class="portal-btn small" data-seat="${team},${slot}">Sit here</button>${session.isHost?`<button class="portal-btn small" data-add-cpu="${team},${slot}">Add CPU</button>`:''}`:''}</div></div>`;}).join('')}</div>`).join('')}</div><div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready',mine?.ready?'':'primary')}${session.isHost?`<button class="portal-btn primary" data-action="startOnline" ${!ready?'disabled':''}>Start match</button>`:''}</div>`);}
+function renderLobby(){if(towerLobby&&session.lobby){renderTowerLobby();return;}if(session.lobby?.kind==='party'){renderParty();return;}if(session.lobby?.kind==='match'){renderMatchedLobby();return;}const l=session.lobby;if(!l){shell(`<h1>Connecting to the colosseum…</h1>${btn('Back','hub')}`);return;}const mine=l.players.find(p=>p.peerId===session.peerId),link=new URL('arena.html',location.href);link.searchParams.set('lobby',l.hostId);link.searchParams.set('v','0.135.0');const ready=l.players.every(p=>p.isCpu||p.ready)&&[0,1].every(t=>l.players.some(p=>p.team===t));
+ shell(`<div class="portal-heading"><div><p class="portal-eyebrow">CUSTOM BATTLE · ${l.players.filter(p=>!p.isCpu).length} PLAYERS · ${l.players.filter(p=>p.isCpu).length} CPUs</p><h1>Custom Battles</h1></div>${btn('Leave lobby','leave','subtle')}</div><div class="network-notice">Choose your team and seat, then ready up. The host can add randomized CPUs to any open seat. Both teams need at least one wizard. Empty seats stay empty. The host must keep the match open.</div><div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Lobby invitation link">${btn('Copy invite link','copy')}</div>${session.isHost?`<label class="field"><span>SEATS PER TEAM</span><select id="lobbySize">${[1,2,3,4].map(n=>`<option value="${n}" ${n===l.size?'selected':''}>${n} per team</option>`).join('')}</select></label>`:`<p>Up to ${l.size} per team</p>`}<div class="lobby-grid">${[0,1].map(team=>`<div class="portal-panel lobby-team"><h2>Team ${team?'Moon':'Sun'}</h2>${Array.from({length:l.size},(_,slot)=>{const p=l.players.find(p=>p.team===team&&p.slot===slot);return `<div class="lobby-seat ${p?.ready?'ready':''}"><div><strong>${p?escape(p.profile.name):'Open seat '+(slot+1)}</strong><small>${p?p.profile.masteries.map(title).join(' + ')+' · '+(p.isCpu?'CPU':p.ready?'Ready':'Not ready'):'Empty'}</small></div><div class="seat-actions">${p?.peerId===session.peerId?'<span>You</span>':p?.isCpu?(session.isHost?`<button class="portal-btn small" data-remove-cpu="${team},${slot}">Remove CPU</button>`:''):!p?`<button class="portal-btn small" data-seat="${team},${slot}">Sit here</button>${session.isHost?`<button class="portal-btn small" data-add-cpu="${team},${slot}">Add CPU</button>`:''}`:''}</div></div>`;}).join('')}</div>`).join('')}</div><div class="portal-actions">${btn(mine?.ready?'Not ready':'Ready','ready',mine?.ready?'':'primary')}${session.isHost?`<button class="portal-btn primary" data-action="startOnline" ${!ready?'disabled':''}>Start match</button>`:''}</div>`);}
+function renderParty(){
+ const l=session.lobby,m=l.matchmaking||{status:'idle'},mine=l.players.find(p=>p.peerId===session.peerId),idle=m.status==='idle',full=l.players.length===l.size&&l.players.every(p=>p.ready&&!p.isCpu);
+ const link=new URL('arena.html',location.href);link.searchParams.set('lobby',l.hostId);
+ const status=m.status==='queued'?'Searching for another complete '+l.size+'-player party…':m.status==='found'?'Match found! '+m.accepted+' / '+m.total+' accepted. Everyone has 30 seconds to accept.':m.status==='matched'?'Entering the arena…':'Invite friends, select your format and ready up.';
+ const controls=m.status==='found'?`<div class="portal-actions">${m.myAccepted?'<span>Accepted · waiting for others</span>':btn('Accept Match','matchAccept','primary')}${btn('Decline','matchDecline')}</div>`:m.status==='queued'?(session.isHost?btn('Cancel Search','matchCancel'):'<p>Waiting for the party leader or an opponent…</p>'):idle?`<div class="portal-actions">${btn(mine?.ready?'Not Ready':'Ready','ready',mine?.ready?'':'primary')}${session.isHost?`<button class="portal-btn primary" data-action="matchQueue" ${full?'':'disabled'}>Find Match</button>`:''}</div>`:'';
+ shell(`<div class="portal-heading"><div><p class="portal-eyebrow">CASUAL MATCHMAKING · ${l.size}v${l.size}</p><h1>Your Party · ${l.players.length}/${l.size}</h1></div>${btn('Leave Party','leave','subtle')}</div><div class="network-notice" role="status">${status}</div>${session.isHost&&idle?`<label class="field"><span>Battle Format</span><select id="lobbySize">${[1,2,3,4].map(n=>`<option value="${n}" ${n===l.size?'selected':''}>${n}v${n}</option>`).join('')}</select></label>`:''}${idle&&session.isHost?`<div class="share-link"><input id="lobbyLink" readonly value="${escape(link.href)}" aria-label="Party invitation link">${btn('Copy invite link','copy')}</div>${account?'<button class="portal-btn" data-friends-open>Invite Friends</button>':''}`:''}<div class="portal-panel lobby-team">${Array.from({length:l.size},(_,slot)=>{const p=l.players.find(p=>p.slot===slot);return `<div class="lobby-seat ${p?.ready?'ready':''}"><div><strong>${p?escape(p.profile.name):'Open seat '+(slot+1)}</strong><small>${p?(p.peerId===l.players[0]?.peerId?'Leader · ':'')+(p.ready?'Ready':'Not ready'):'Invite a friend'}</small></div><span>${p?.peerId===session.peerId?'You':''}</span></div>`}).join('')}</div>${controls}`);
+}
+function renderMatchedLobby(){const l=session.lobby;shell(`<section class="portal-hero"><h1>Match found · ${l.size}v${l.size}</h1><p>Both parties accepted. Preparing the arena…</p>${btn('Leave Match','leave','subtle')}<div class="lobby-grid">${[0,1].map(team=>`<div class="portal-panel"><h2>Team ${team?'Moon':'Sun'}</h2>${l.players.filter(p=>p.team===team).map(p=>`<p>${escape(p.profile.name)}</p>`).join('')}</div>`).join('')}</div></section>`);}
+async function matchAction(action){
+ if(matchmakingBusy||matchSwitching||session.lobby?.kind!=='party')return;
+ matchmakingBusy=true;try{await command('poll',{version:session.version,matchmaking:action,proposalId:session.lobby.matchmaking?.proposalId});}finally{matchmakingBusy=false;}
+}
+async function enterMatchedRoom(id){
+ if(matchSwitching||session.lobby?.kind!=='party'||!id)return;
+ matchSwitching=true;const original=session.roomId;returnPartyId=original;
+ generation++;busy=false;session.active=false;session.roomId=id;session.version=-1;session.pendingPlan=null;lastState='';lastLobby='';acks=[];
+ const g=generation;
+ try{const data=await request('poll',{version:-1});if(g!==generation)return;acceptRoom(data);if(!session.active)screen('lobby');}
+ catch(e){if(g===generation){session.roomId=original;session.version=-1;returnPartyId=null;error(e.message);}}
+ finally{if(g===generation)matchSwitching=false;}
+}
+async function returnToParty(){
+ if(matchSwitching||!returnPartyId)return;
+ matchSwitching=true;const matchId=session.roomId,original=returnPartyId,g=++generation;
+ // Publish the final state before moving the host away from the battle.
+ try{
+  if(session.isHost&&api.getState().phase==='finished'){try{await request('sync',{state:api.onlineSnapshot(),ack:[]});}catch(e){if(!/closed|expired|not a member|host disconnected/i.test(e.message))throw e;}}
+  session.roomId=original;const data=await request('poll',{version:-1,matchmaking:'return'});
+  if(g!==generation)return;
+  session.active=false;session.version=-1;session.pendingPlan=null;lastState='';lastLobby='';acks=[];lastResult=null;returnPartyId=null;lastMatchCheck=0;acceptRoom(data);screen('lobby');
+ }catch(e){if(g===generation){session.roomId=matchId;error(e.message);if(lastResult&&!resultsDialog.open)resultsDialog.showModal();}}
+ finally{if(g===generation){busy=false;matchSwitching=false;}}
+}
 function renderTowerLobby(){
  const l=session.lobby,mine=l.players.find(p=>p.peerId===session.peerId),floor=partyFloor(l.players);
  const link=new URL('arena.html',location.href);
@@ -522,7 +565,7 @@ async function startTowerLobby(){
    session.active=true;lastState=JSON.stringify(combat);showBattle();
  }catch(err){error(err.message);}finally{startingFloor=false;}
 }
-async function startOnline(){const l=session.lobby;if(!session.isHost||!l?.players.every(p=>p.isCpu||p.ready)||![0,1].every(t=>l.players.some(p=>p.team===t)))return;try{session.active=true;api.startLobby(l.players,l.size);const state=api.getState();await command('start',{state});lastState=JSON.stringify(state);showBattle();}catch(e){session.active=false;error(e.message);}}
+async function startOnline(){const l=session.lobby;if(startingMatch||session.active||!session.isHost||!l?.players.every(p=>p.isCpu||p.ready)||![0,1].every(t=>l.players.some(p=>p.team===t)))return;startingMatch=true;try{session.active=true;api.startLobby(l.players,l.size);const state=api.getState();await command('start',{state});lastState=JSON.stringify(state);showBattle();}catch(e){session.active=false;error(e.message);}finally{startingMatch=false;}}
 portal.addEventListener('change',async e=>{if(e.target.dataset.namePart!==undefined){
  nameParts[Number(e.target.dataset.namePart)]=e.target.value;
  syncNamePreview();
@@ -600,6 +643,13 @@ portal.addEventListener('click',async e=>{if(busyAccount)return;const button=e.t
  }
  if(action==='cardTester')startCardTester();else if(action==='wizardTester')create(true);else if(action==='create')create();else if(action==='edit'){editProfile(active);}else if(action==='next'){readDraft();if(step===0)requireName();if(step===1&&!draft.masteries.length)throw Error('Choose one or two masteries.');step=Math.min(3,step+1);render();}else if(action==='previous'){readDraft();step=Math.max(0,step-1);render();}else if(action==='save')save();else if(action==='resetPoints'){for(const k in draft.skills)draft.skills[k]=0;render();}else if(action==='allCards'){draft.deck=B.fillOwned(cards,draft);render();}else if(action==='clearDeck'){draft.deck=[];render();}else if(action==='cancelBuild'){pendingSocialInvite=null;const back=onlineDraft?'online':view==='wizardTester'?'tests':active?'hub':'home';onlineDraft=false;if(back==='online'&&!onlineProfile){screen('hub');}else screen(back);}
  else if(action==='online')openOnline();
+ else if(action==='onlineMenu')screen('online');
+ else if(action==='custom')screen('custom');
+ else if(action==='casual')await host(false,true);
+ else if(action==='matchQueue')await matchAction('queue');
+ else if(action==='matchCancel')await matchAction('cancel');
+ else if(action==='matchAccept')await matchAction('accept');
+ else if(action==='matchDecline')await matchAction('decline');
  else if(action==='buildOnline')buildOnline();
  else if(action==='useOwn'&&ownBuildReady()){onlineProfile=active;screen('online');}
  else if(action==='invited'){if(incomingTower)await join(joinCode,true);else openOnline();}

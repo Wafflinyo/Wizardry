@@ -17,8 +17,8 @@ Deno.serve(async(req:Request)=>{
    if(!payload.profile||payload.profile.deck?.length>24)throw Error('Invalid wizard.');
    const builds=(globalThis as any).WizardryBuilds;
    const tower=payload.tower===true&&body.action!=='cpuAdd';
-   const wizard=builds.normalize(payload.profile,cards,tower);
-   if(!tower&&(wizard.level!==20||builds.stats(wizard).remaining!==0))throw Error('Online Battles requires a level-20 build with all skill points allocated.');
+   const wizard=builds.normalize(payload.profile,cards,true);
+   if(!tower&&body.action==='create'&&payload.casual===true&&wizard.level!==20)throw Error('Casual matchmaking requires a saved level-20 wizard.');
    payload.profile={...wizard,towerLobby:tower};
   }
   if(body.action==='ready'&&typeof payload.ready!=='boolean')throw Error('Invalid ready state.');

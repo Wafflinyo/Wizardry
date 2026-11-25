@@ -113,60 +113,101 @@ function fissure(g,s){
  }
  g.restore();
 }
-// A continuous molten fountain, built as irregular faceted streams rather than
-// repeated spikes. All streams remain anchored to the target's ground point.
-function ribbon(g,x,y,height,width,bend,phase,colors){
- const N=10,ls=[],rs=[],centers=[];
- for(let i=0;i<=N;i++){
-  const t=i/N,flow=Math.sin(t*8-phase)*width*.13*Math.sin(Math.PI*t),
-    cx=x+bend*t*t+flow,cy=y-height*t,wide=width*(.72+.48*Math.sin(t*Math.PI))*(1-t*.78);
-  const a=wide*(.83+hash(i+Math.floor(phase*2))* .3),b=wide*(.85+hash(i+32)*.3);
-  ls.push([cx-a,cy]);rs.push([cx+b,cy]);centers.push([cx+wide*.08*Math.sin(t*12),cy]);
- }
- for(let i=0;i<N;i++){
-  poly(g,[ls[i],ls[i+1],centers[i+1],centers[i]],colors[(i+1)%2]);
-  poly(g,[centers[i],centers[i+1],rs[i+1],rs[i]],colors[2+i%2]);
- }
+// A single continuous pressurized liquid column. Surface detail is advected
+// from the vent to the crest, and spills down the sides under gravity.
+function fluidPath(g,pts){
+ g.beginPath();g.moveTo(...pts[0]);
+ for(let i=1;i<pts.length-1;i++)g.quadraticCurveTo(pts[i][0],pts[i][1],(pts[i][0]+pts[i+1][0])*.5,(pts[i][1]+pts[i+1][1])*.5);
+ g.lineTo(...pts.at(-1));g.closePath();
+}
+function liquidPatch(g,x,y,rx,ry,lean,color){
+ g.fillStyle=color;
+ fluidPath(g,[[x-rx*.7,y+ry*.8],[x-rx,y+ry*.15],[x-rx*.66+lean*.45,y-ry*.55],[x+lean,y-ry],[x+rx*.76+lean*.6,y-ry*.48],[x+rx,y+ry*.15],[x+rx*.38,y+ry],[x-rx*.7,y+ry*.8]]);
+ g.fill();
 }
 function geyser(g,s){
- if(s.p<ARRIVE||s.p>=.94)return;
- const age=(s.p-ARRIVE)*DURATION,q=s.eruption,x=s.tx,y=s.ty;
- const grow=1-Math.pow(1-clamp(age/260),3),fall=1-smooth((age-700)/1150),amp=grow*fall;
- const height=325*amp,width=52*(.55+.45*amp),phase=age*.020;
- g.save();g.globalAlpha*=1-smooth((age-1300)/650);
- glow(g,x,y,115,.48*fall,.36);
- // Jagged vent and glowing lava pool, kept in the floor plane.
- const rim=Array.from({length:14},(_,i)=>{const a=i*Math.PI/7,r=width*(1.05+hash(i+80)*.34);return [x+Math.cos(a)*r,y+Math.sin(a)*r*.34];});
+ if(s.p<ARRIVE||s.p>=.97)return;
+ const age=(s.p-ARRIVE)*DURATION,x=s.tx,y=s.ty;
+ const grow=smooth(age/240),pressure=1-smooth((age-960)/790);
+ const amp=grow*pressure,height=305*amp,halfWidth=(31+12*grow)*Math.sqrt(pressure),phase=age*.009;
+ const fade=1-smooth((age-1600)/470);
+ g.save();g.globalAlpha*=fade;
+ glow(g,x,y,110,.30*pressure,.35);
+ const poolWidth=42+grow*28, poolHeight=12+grow*8;
+ const rim=Array.from({length:18},(_,i)=>{const a=i*Math.PI/9,r=.90+hash(i+80)*.18;return [x+Math.cos(a)*poolWidth*r,y+Math.sin(a)*poolHeight*r];});
  poly(g,rim,"#382627");
- poly(g,rim.map(([px,py])=>[mix(x,px,.83),mix(y,py,.83)]),"#b83a1e");
- poly(g,rim.map(([px,py])=>[mix(x,px,.65),mix(y,py,.65)]),"#f88b2a");
- if(height>2){
-  ribbon(g,x-width*.29,y,height*.85,width*.43,-width*.96,phase+.6,["#b13b1e","#ed5a22","#d8491d","#ff8e2e"]);
-  ribbon(g,x+width*.29,y,height*.80,width*.43,width*1.15,phase+1.7,["#dc4b20","#ff902c","#a82f18","#ef5c1f"]);
-  ribbon(g,x,y,height,width*.50,width*.12*Math.sin(phase),phase,["#ff8b24","#ffb337","#ff9c2d","#ffd56c"]);
-  ribbon(g,x-width*.04,y,height*.84,width*.22,-width*.12,phase+2,["#ffdf73","#fff2b3","#ffc24a","#ffe28b"]);
- }
- // Ballistic streams of rendered molten chunks. Staggered releases keep the
- // plume flowing upwards, spreading at its crest, and raining back down.
- for(let i=0;i<38;i++){
-  const launch=(i%8)*43+Math.floor(i/8)*105,t=(age-launch)/1050;
-  if(t<0||t>1.06)continue;
-  const speed=210+hash(i+12)*235,spread=(hash(i+100)-.5)*218,
-    px=x+spread*t+(hash(i+19)-.5)*21,
-    py=y-speed*t+speed*.84*t*t;
-  if(py>y+5)continue;
-  const size=(8+hash(i+6)*26)*(1-t*.48);
-  g.save();g.globalAlpha*=Math.min(1,(1.06-t)*5);
-  if(i%5===0)rock(g,px,py,size*.82,phase*.15+i,.8);else molten(g,px,py,size,t+i*.23);
+ poly(g,rim.map(([px,py])=>[mix(x,px,.86),mix(y,py,.86)]),"#a2371b");
+ poly(g,rim.map(([px,py])=>[mix(x,px,.66),mix(y,py,.66)]),"#ed7625");
+ // Surface currents: all geometry is one connected, rounded liquid mass.
+ const center=t=>x+halfWidth*(.13*Math.sin(t*5.8-phase)+.075*Math.sin(t*11-phase*1.4))*Math.sin(Math.PI*t);
+ const radius=t=>halfWidth*(.70+.26*Math.sin(Math.PI*t)+.36*Math.exp(-((t-.84)**2)/.018))*(.92+.10*Math.sin(t*13-phase*2));
+ if(height>2&&halfWidth>1){
+  const n=22,left=[],right=[];
+  for(let i=0;i<=n;i++){
+   const t=i/n,cap=t>.88?Math.sqrt(Math.max(.018,1-((t-.88)/.122)**2)):1,cy=y-height*t,cx=center(t),r=radius(t)*cap;
+   left.push([cx-r*(1+.07*Math.sin(t*27-phase*2.4)),cy]);
+   right.push([cx+r*(1+.08*Math.cos(t*24-phase*2.2)),cy]);
+  }
+  const outline=[...left,...right.reverse()];
+  g.save();fluidPath(g,outline);g.clip();
+  const grad=g.createLinearGradient(x-halfWidth*1.4,0,x+halfWidth*1.4,0);
+  grad.addColorStop(0,"#a33519");grad.addColorStop(.19,"#ed5b20");grad.addColorStop(.43,"#ffac35");grad.addColorStop(.60,"#ffcb56");grad.addColorStop(.82,"#ee7621");grad.addColorStop(1,"#b83a19");
+  g.fillStyle=grad;g.fillRect(x-halfWidth*2,y-height-10,halfWidth*4,height+20);
+  // Traveling molten folds and hot streaks move upward continuously rather
+  // than cycling fixed polygon leaves. Their shapes remain clipped to the fluid.
+  const colors=["#ffb63f","#ffe18a","#e9511a","#f88a24","#ffcc59","#b8411d"];
+  for(let i=0;i<38;i++){
+   const lane=(hash(i+18)-.5)*1.65,period=640+hash(i+40)*480;
+   const t=((age/period+hash(i+30))%1.13)-.075;
+   const t0=clamp(t),cx=center(t0)+lane*radius(t0),cy=y-t*height;
+   const rx=halfWidth*(.12+hash(i+22)*.22),ry=height*(.065+hash(i+7)*.09);
+   g.globalAlpha=.50+hash(i+55)*.37;
+   liquidPatch(g,cx,cy,rx,ry,Math.sin(phase+t*6+i)*rx*.30,colors[i%colors.length]);
+  }
+  // A few narrow highlights travel almost the full height of the column.
+  for(let i=0;i<9;i++){
+   const t=((age/740+i/9)%1.2)-.12,cx=center(clamp(t))+(hash(i+90)-.5)*halfWidth*.98,cy=y-t*height;
+   g.globalAlpha=.55;
+   liquidPatch(g,cx,cy,halfWidth*.065,height*.11,Math.sin(phase+i)*3,"#fff0a0");
+  }
   g.restore();
  }
- // Fast low expanding flash of molten droplets across the floor.
- const shock=age/390;if(shock<1){glow(g,x,y,82+shock*80,.40*(1-shock),.35);
-  for(let i=0;i<15;i++){
-   const a=i*2.399,r=(35+hash(i+67)*90)*shock;
-   g.save();g.globalAlpha*=1-shock;molten(g,x+Math.cos(a)*r,y+Math.sin(a)*r*.32-4*shock*(1-shock)*22,8+hash(i+5)*13,shock+i*.11);g.restore();
+ // Fluid spills from the crest in curved continuous falling streams,
+ // replenished from the same source. Each thin strand follows a ballistic arc.
+ for(let i=0;i<12;i++){
+  const start=210+i*63,life=1040+(i%4)*80,t=(age-start)/life;
+  if(t<0||t>1.35)continue;
+  const sign=i%2?1:-1,reach=55+hash(i+64)*65,peak=220+hash(i+4)*65;
+  const points=[];
+  for(let j=0;j<=12;j++){
+   const q=t-j*.018;
+   if(q<0||q>1.12)continue;
+   const px=x+sign*(10+reach*q*q),py=y-4*peak*q*(1-q);
+   if(py>y+3)continue;
+   points.push([px,py]);
   }
+  if(points.length<2)continue;
+  g.save();g.globalAlpha*=Math.min(1,(1.35-t)*3);
+  for(let pass=0;pass<2;pass++){
+   g.strokeStyle=pass?"#ffc452":"#d24a1c";g.lineWidth=(pass?3:8)*(1-Math.min(1,t)*.36);g.lineCap="round";g.lineJoin="round";
+   g.beginPath();g.moveTo(...points[0]);for(let j=1;j<points.length;j++)g.lineTo(...points[j]);g.stroke();
+  }
+  g.restore();
  }
+ // Small hot droplets arc outward and fall. The main volume remains a single
+ // unbroken stream, not a stack of particles or separate triangular flames.
+ for(let i=0;i<25;i++){
+  const launch=100+(i%8)*55+Math.floor(i/8)*145,t=(age-launch)/1170;
+  if(t<0||t>1.04)continue;
+  const peak=135+hash(i+12)*155,spread=(hash(i+100)-.5)*218;
+  const px=x+spread*t,py=y-4*peak*t*(1-t);
+  if(py>y+5)continue;
+  const size=(5+hash(i+6)*13)*(1-t*.38);
+  g.save();g.globalAlpha*=clamp((1.04-t)*5);
+  molten(g,px,py,size,t+i*.23);g.restore();
+ }
+ const shock=age/300;
+ if(shock<1)glow(g,x,y,65+shock*45,.36*(1-shock),.35);
  g.restore();
 }
 function shake(p,dir){

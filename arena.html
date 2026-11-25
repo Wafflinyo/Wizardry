@@ -95,10 +95,61 @@ body[data-screen="home"][data-portal-view="home"] #mainMenuVersion{
 }
 body[data-screen="home"][data-portal-view="home"] #portal{padding-bottom:calc(42px + env(safe-area-inset-bottom))}
 </style>
+<style>
+/* Mobile-only compact action strip: preserve the desktop layout and give
+   the full card fan the height that was reserved for stacked buttons. */
+@media(max-width:700px) and (orientation:portrait), (pointer:coarse) and (orientation:landscape) and (max-height:620px){
+ body[data-screen=battle] #game .hand{
+   grid-template-columns:minmax(0,1fr);
+   grid-template-rows:30px minmax(0,1fr) auto;
+   row-gap:2px;padding:3px 5px;
+ }
+ body[data-screen=battle] #game .hand-head{height:30px;min-height:30px;max-height:30px}
+ body[data-screen=battle] #game #cardHand.cards{grid-column:1;grid-row:2;height:100%;min-height:0;padding:0;margin:0}
+ body[data-screen=battle] #game #cardHand.cards>button.spell.card-ornate:not(.browsed){
+   height:min(var(--card-height),calc(100% - 16px))!important;
+   bottom:9px;
+ }
+ body[data-screen=battle] #game .hand-assist{
+   grid-column:1;grid-row:3;display:grid!important;align-content:start;
+   grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto auto;
+   grid-template-areas:"info info info" "discard cast pass";
+   padding:3px 0 1px;gap:3px;min-height:0!important;height:auto!important;
+ }
+ body[data-screen=battle] #game .hand-assist:has(#confirmTarget[hidden]){
+   grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"info info" "discard pass";
+ }
+ body[data-screen=battle] #game .hand-assist:has(#zenRunePicker:not([hidden])){
+   grid-template-rows:auto auto auto;grid-template-areas:"info info info" "runes runes runes" "discard cast pass";
+ }
+ body[data-screen=battle] #game .hand-assist:has(#zenRunePicker:not([hidden])):has(#confirmTarget[hidden]){
+   grid-template-areas:"info info" "runes runes" "discard pass";
+ }
+ body[data-screen=battle] #game .hand-assist .spell-choice-info{
+   grid-area:info;min-height:0;display:flex;flex-direction:row;align-items:center;gap:5px;flex-wrap:wrap;
+ }
+ body[data-screen=battle] #game .hand-assist strong,
+ body[data-screen=battle] #game .hand-assist span{font-size:9px;line-height:1.15}
+ body[data-screen=battle] #game #discardCard,
+ body[data-screen=battle] #game #passTurn,
+ body[data-screen=battle] #game #confirmTarget{
+   min-height:30px;height:auto;width:100%;min-width:0;font-size:10px;line-height:1.1;
+   white-space:normal;padding:4px 3px;margin:0;
+ }
+ body[data-screen=battle] #game #zenRunePicker{grid-area:runes;padding:3px;font-size:10px;min-height:25px}
+ body[data-screen=battle] #game #discardCard{grid-area:discard}
+ body[data-screen=battle] #game #passTurn{grid-area:pass}
+ body[data-screen=battle] #game #confirmTarget{grid-area:cast}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:620px){
+ body[data-screen=battle] #game .hand{grid-template-rows:25px minmax(0,1fr) auto}
+ body[data-screen=battle] #game .hand-head{height:25px;min-height:25px;max-height:25px}
+}
+</style>
 </head>
 <body data-screen="home">
 <section id="portal" aria-label="Wizardry home"></section>
-<div id="mainMenuVersion" aria-label="Game version 0.354.22">v0.354.22</div>
+<div id="mainMenuVersion" aria-label="Game version 0.354.23">v0.354.23</div>
 <main class="game" id="game">
   <header class="mast">
     <div class="brand">
@@ -418,8 +469,8 @@ body[data-screen="home"][data-portal-view="home"] #portal{padding-bottom:calc(42
 <script src="./assets/thunderbirds.js?v=5" defer></script>
 <script src="./assets/thunder-god-drums.js?v=1" defer></script>
 <script src="./assets/magnetic-pulse.js?v=3" defer></script>
-<script src="./assets/short-circuit.js?v=3" defer></script>
-<script src="./arena.js?v=0.354.22" defer></script>
+<script src="./assets/short-circuit.js?v=4" defer></script>
+<script src="./arena.js?v=0.354.23" defer></script>
 <script src="./assets/menu-music.js?v=0.341.0" defer></script>
 <script src="./assets/wizard-home-v135.js?v=0.346.0" defer></script>
 <script src="./assets/audio-settings.js?v=0.341.0" defer></script>

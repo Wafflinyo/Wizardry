@@ -155,27 +155,10 @@ function impact(g,s){
    g.fillStyle=k%3?"#5fdcff":"#e9ffff";g.beginPath();g.moveTo(l,0);g.lineTo(-l*.4,-l*.17);g.lineTo(-l*.72,0);g.lineTo(-l*.4,l*.17);g.closePath();g.fill();g.restore();
  }
 }
-function drawTally(g,t){
- if(!t.counting)return;
- // Central counter stays away from the target's HP and rune row.
- const x=500,y=103,w=242,h=91;
- const pulse=t.counted>0&&t.counted<t.goal?1-ease((t.elapsed%t.stepMs)/t.stepMs):0;
- g.save();g.translate(x,y);
- g.fillStyle="rgba(5,21,34,.93)";g.strokeStyle="#61c8ee";g.lineWidth=1.8;
- g.beginPath();g.moveTo(-w/2+9,-h/2);g.lineTo(w/2-9,-h/2);g.lineTo(w/2,-h/2+9);g.lineTo(w/2,h/2-9);g.lineTo(w/2-9,h/2);g.lineTo(-w/2+9,h/2);g.lineTo(-w/2,h/2-9);g.lineTo(-w/2,-h/2+9);g.closePath();g.fill();g.stroke();
- g.textAlign="center";g.textBaseline="middle";
- g.font="700 15px system-ui,sans-serif";g.fillStyle="#b8edff";
- g.fillText("MANA COUNT  "+t.counted+" / "+t.goal,0,-27);
- g.font="800 20px system-ui,sans-serif";g.fillStyle="#7ce7ff";
- g.fillText("BONUS  +"+t.bonus,0,-5);
- g.font="900 "+(25+2*pulse)+"px system-ui,sans-serif";
- g.fillStyle="#f1fcff";g.fillText(t.total+" BASE DMG",0,23);
- g.restore();
-}
 function portrait(g,w,h){
  if(!ready())return;
  const size=Math.min(w,h)*1.04;
  tile(g,body,14,(w-size)/2,(h-size)/2,size,size);
 }
-window.ShortCircuit={ensure,ready,error:()=>lastError,scene,draw,charge,discharge,impact,drawTally,portrait};ensure();
+window.ShortCircuit={ensure,ready,error:()=>lastError,scene,draw,charge,discharge,impact,portrait};ensure();
 })();

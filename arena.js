@@ -272,7 +272,7 @@
   const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.30,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 30% chance to Stun."};
   const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:400,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4780,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 400 base damage to that enemy."};
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
-  const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Deals 350 base damage plus 10 damage per mana the target currently has at impact, up to 15 mana counted (+150 maximum bonus damage)."};
+  const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
@@ -285,7 +285,7 @@
     thunderbirds:"530 base damage. 30% Stun chance.",
     thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
-    shortcircuit:"+10 base damage per enemy mana (max 15 mana / +150).",
+    shortcircuit:"Then +10 damage per enemy mana (max +150).",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
@@ -2870,7 +2870,7 @@
     return {enemy,reflected};
   }
 
-  function damage(source,target,base,card,spell=null){
+  function damage(source,target,base,card,spell=null,flatManaBonus=false){
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
       const mark=source.statuses.find(st=>st.kind==="crystal_ice_mirrors"&&state.round<st.expiresRound);
@@ -2896,7 +2896,7 @@
     // Estimate the original hit while leaving the intended target’s runes intact.
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
-    let raw=base*spellPower(source,card,spell),notes=reduction?["DECAY OF STRENGTH −25%"]:[];
+    let raw=base*(flatManaBonus?1:spellPower(source,card,spell)),notes=reduction?["DECAY OF STRENGTH −25%"]:[];
     const fieldBoost=environmentDamageMultiplier(card?.school);
     if(base>0&&fieldBoost>1){
       raw*=fieldBoost;
@@ -3550,29 +3550,55 @@
     const t=a.shortCircuitTally;
     if(!t)return null;
     const elapsed=Math.max(0,a.elapsed-t.startAt);
-    const counted=Math.min(t.goal,Math.floor(elapsed/SHORT_CIRCUIT_TICK_MS));
     const counting=a.elapsed<t.impactAt;
     const visualProgress=counting?a.card.hit-.00001:clamp(a.card.hit+(a.elapsed-t.impactAt)/a.card.duration,0,1);
-    return {counted,goal:t.goal,bonus:counted*a.card.manaDamage,
-      total:a.card.damage+counted*a.card.manaDamage,counting,visualProgress,
+    return {counted:t.counted,goal:t.goal,bonus:t.counted*a.card.manaDamage,
+      total:a.card.damage+t.counted*a.card.manaDamage,counting,visualProgress,
       elapsed,stepMs:SHORT_CIRCUIT_TICK_MS,clockMs:a.elapsed};
   }
+  function beginShortCircuit(a,c,target){
+    if(a.shortCircuitStarted)return;
+    a.shortCircuitStarted=true;
+    a.shortCircuitMana=Math.max(0,Number(target.mana)||0);
+    a.shortCircuitBase=a.card.damage;
+    damage(c,target,a.card.damage,a.card,a);
+    a.shortCircuitBlocked=preventsHitEffects(a,target);
+  }
+  function shortCircuitBonus(a,c,target){
+    if(!c?.hp||!target?.hp||a.shortCircuitBlocked)return false;
+    // Same cast/number accumulator as Wind Fist Barrage. The added ten
+    // is not a new base damage roll; defenses and combat modifiers still apply.
+    damage(c,target,a.card.manaDamage,a.card,a,true);
+    a.shortCircuitBase+=a.card.manaDamage;
+    return true;
+  }
   function advanceShortCircuit(a){
-    if(a.applied||a.runeResult!=="success")return;
+    if(a.applied||a.runeResult!=="success"||state.mode!=="tester")return;
     const arrival=a.card.duration*a.card.hit;
+    const c=getUnit(a.source??a.action?.casterId),target=getUnit(a.target??a.action?.targetId);
     if(!a.shortCircuitTally){
       if(a.elapsed<arrival)return;
-      const target=getUnit(a.target??a.action?.targetId);
-      if(!target||target.hp<=0){a.applied=true;return;}
-      // Snapshot current mana when electricity first reaches the enemy.
-      // This is before the eventual damage can trigger Electrical Charge.
-      a.shortCircuitMana=Math.max(0,Number(target.mana)||0);
-      const goal=shortCircuitCount(a.card,a.shortCircuitMana);
-      const startAt=a.elapsed,impactAt=startAt+goal*SHORT_CIRCUIT_TICK_MS+SHORT_CIRCUIT_HOLD_MS;
-      a.shortCircuitTally={goal,startAt,impactAt};
+      if(!c?.hp||!target?.hp||target.team===c.team){a.applied=true;return;}
+      const startAt=a.elapsed;
+      beginShortCircuit(a,c,target);
+      const goal=c.hp&&target.hp&&!a.shortCircuitBlocked?shortCircuitCount(a.card,a.shortCircuitMana):0;
+      const impactAt=startAt+goal*SHORT_CIRCUIT_TICK_MS+SHORT_CIRCUIT_HOLD_MS;
+      a.shortCircuitTally={goal,counted:0,startAt,impactAt};
       a.duration=impactAt+(a.card.duration-arrival);
+      paintUI();
     }
-    if(a.elapsed>=a.shortCircuitTally.impactAt)applySpell(a);
+    const t=a.shortCircuitTally;
+    const due=Math.min(t.goal,Math.floor(Math.max(0,a.elapsed-t.startAt)/SHORT_CIRCUIT_TICK_MS));
+    while(t.counted<due){
+      if(!shortCircuitBonus(a,c,target))break;
+      t.counted++;
+      paintUI();
+    }
+    if((!c?.hp||!target?.hp||a.shortCircuitBlocked)&&t.counted<t.goal){
+      t.goal=t.counted;t.impactAt=a.elapsed+SHORT_CIRCUIT_HOLD_MS;
+      a.duration=t.impactAt+(a.card.duration-arrival);
+    }
+    if(a.elapsed>=t.impactAt)a.applied=true;
   }
   function applySpell(anim){
     if(anim.applied||state.phase==="ending"||state.phase==="finished")return;
@@ -3589,12 +3615,12 @@
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
     }else if(card.kind==="shortcircuit"){
       if(!t||t.hp<=0||t.team===c.team)return;
-      // Use the mana snapshot that drove the visible counter.
-      // Direct/headless casts without a tally still sample current mana.
-      anim.shortCircuitMana??=Math.max(0,Number(t.mana)||0);
-      anim.shortCircuitBase=shortCircuitBase(card,anim.shortCircuitMana);
-      damage(c,t,anim.shortCircuitBase,card,anim);
-      anim.shortCircuitBlocked=preventsHitEffects(anim,t);
+      // Direct test calls use the same sequence without a rendering clock.
+      if(!anim.shortCircuitStarted){
+        beginShortCircuit(anim,c,t);
+        const goal=shortCircuitCount(card,anim.shortCircuitMana);
+        for(let i=0;i<goal;i++)if(!shortCircuitBonus(anim,c,t))break;
+      }
     }else if(card.kind==="magneticpulse"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
@@ -6927,10 +6953,6 @@
     }
     // Keep side plates readable on top without blocking the models.
     for(const u of sorted)drawUnitPlate(u);
-    if(action?.stage==="summon"&&action.card.kind==="shortcircuit"){
-      const tally=shortCircuitTally(action);
-      if(tally?.counting)window.ShortCircuit?.drawTally(g,tally);
-    }
     drawZenCast(state.animation);
     if(action?.stage==="summon"&&action.card.kind==="magneticpulse"&&action.magneticRune){
       const r=action.magneticRune,target=getUnit(r.targetId);

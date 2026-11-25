@@ -1,4 +1,4 @@
-/* 32 illustrated frames per spell. Furnace is aligned with the original arena background, never drawn as a central summon. */
+/* Illustrated target effects and a fully opaque Furnace environment with separate authored flame sprites. */
 (()=>{
 "use strict";
 const clamp=p=>Math.max(0,Math.min(1,p));
@@ -34,16 +34,57 @@ function make(name,C,R,peak){
    targetFrame(g,u,n,factor,layer,.92);
  }
  function portrait(g,w,h){const width=Math.min(w*.99,h*C/R),height=width*R/C;tile(g,peak,(w-width)/2,(h-height)/2,width,height);}
- function landscape(g,{x,y,width,height,time,strength,progress}){
-   if(!ready())return;
-   const beat=Math.floor(time/115)%18;
-   const n=progress==null||progress>=.55?10+(beat<=9?beat:18-beat):Math.floor(clamp(progress/.55)*10);
-   // Match the stage-wide painted floor, retaining the original architecture.
-   // The atlas contains spread-out vents and molten cracks, with no characters.
-   g.save();g.globalAlpha*=Math.min(1,strength+.18);
-   tile(g,n,x-width*.015,y+height*.24,width*1.03,height*.76);g.restore();
- }
- ensure();return {ensure,ready,error:()=>error,draw,idle,portrait,landscape};
+ ensure();return {ensure,ready,error:()=>error,draw,idle,portrait};
 }
-window.FireTestArt={ringoffire:make("ring",224,224,14),backdraft:make("backdraft",224,224,19),furnace:make("furnace",256,160,16)};
+// Full opaque environment artwork, with the same authored flame atlas used by Flashover.
+function makeFurnace(){
+ const ground=new Image(),flames=new Image();let pending=null,error="";
+ const ready=()=>ground.complete&&ground.naturalWidth===1000&&ground.naturalHeight===620&&flames.complete&&flames.naturalWidth===512&&flames.naturalHeight===256;
+ function ensure(){
+   if(ready())return Promise.resolve(true);if(pending)return pending;
+   pending=new Promise(resolve=>{
+     let done=false;
+     const finish=ok=>{if(done)return;done=true;clearTimeout(timer);error=ok?"":"Unable to load Furnace landscape or flame artwork";resolve(ok);if(ok){try{window.WIZARDRY_ARENA_TEST?.drawCardArts();}catch(e){}}};
+     const check=()=>{if(ready())finish(true);};
+     const timer=setTimeout(()=>finish(false),12000);
+     ground.onload=flames.onload=check;
+     ground.onerror=flames.onerror=()=>finish(false);
+     ground.src="./assets/furnace-arena-v3.webp?v=1";
+     flames.src="./assets/flashover-flames.webp?v=0.305.2";
+     check();
+   }).finally(()=>{pending=null;});
+   return pending;
+ }
+ // Fractional positions on the entire painted floor, behind the live fighter layer.
+ // Small, staggered vents leave the middle and the unit silhouettes readable.
+ const vents=[[.16,.57,.070],[.34,.45,.049],[.53,.44,.047],[.72,.47,.058],[.85,.58,.073],
+              [.10,.69,.072],[.29,.73,.072],[.51,.66,.052],[.72,.76,.084],[.89,.70,.065],[.48,.83,.065]];
+ const sequence=[0,1,2,3,4,5,6,7,6,5,4,3,2,1];
+ function flame(g,index,x,y,w,h){
+   g.drawImage(flames,index%4*128,Math.floor(index/4)*128,128,128,x-w/2,y-h*.91,w,h);
+ }
+ function landscape(g,{x,y,width,height,time,strength=1}){
+   if(!ready())return;
+   const intensity=clamp(strength);
+   if(intensity<=0)return;
+   g.save();g.globalAlpha*=intensity;
+   // The active field replaces the background completely, just as Groveland does.
+   // No alpha mask on the volcanic ground; no floor from the previous arena leaks through.
+   g.drawImage(ground,x,y,width,height);
+   const beat=Math.floor(time/105);
+   for(const [i,[u,v,size]] of vents.entries()){
+     const pose=sequence[(beat+i*5)%sequence.length],w=width*size,h=w*(1.06+(i%3)*.12);
+     flame(g,pose,x+u*width,y+v*height,w,h);
+   }
+   g.restore();
+ }
+ function portrait(g,w,h){
+   if(!ready())return;
+   g.drawImage(ground,85,240,830,350,0,0,w,h);
+   const size=Math.min(w*.28,h*.44);
+   for(let i=0;i<3;i++)flame(g,[3,5,7][i],w*(.24+.26*i),h*(.69+.06*(i%2)),size,size*1.1);
+ }
+ ensure();return {ensure,ready,error:()=>error,landscape,portrait};
+}
+window.FireTestArt={ringoffire:make("ring",224,224,14),backdraft:make("backdraft",224,224,19),furnace:makeFurnace()};
 })();

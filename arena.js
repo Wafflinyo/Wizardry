@@ -5729,7 +5729,7 @@
     if(impactShake)g.translate(impactShake.x,impactShake.y);
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
-    if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:96,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
+    if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:0,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
     if(floorIntro){drawFloorIntro(time);return;}
     if(fieldId&&fieldId!=="groveland"){
       const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];

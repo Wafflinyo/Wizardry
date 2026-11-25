@@ -269,15 +269,17 @@
   const TEST_RING_OF_FIRE={id:"ringoffire",name:"Ring of Fire",school:"fire",cost:3,target:"enemy",kind:"ringoffire",accuracy:.90,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,rounds:3,description:"Attach a negative Fire rune for 3 rounds. Every time the enemy actually recovers HP, they take 100 damage."};
   const TEST_BACKDRAFT={id:"backdraft",name:"Backdraft",school:"fire",cost:3,target:"enemy",kind:"backdraft",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.45,damage:180,description:"Deals 180 base damage. If the enemy was burning, spreads that Burn to one random adjacent living enemy, preserving its normal or extreme tier."};
   const TEST_FURNACE={id:"furnace",name:"Furnace",school:"fire",cost:5,target:"team",kind:"furnace",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,fieldRounds:5,fieldBoost:.10,description:"Environmental rune for 5 rounds: Fire damage +10% and Fire spells with Burn chances gain 10 percentage points."};
+  const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.20,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 20% chance to Stun."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
     hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
+    thunderbirds:"530 base damage. 20% Stun chance.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
@@ -357,7 +359,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=["thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -2712,7 +2714,7 @@
     return true;
   }
   function attemptVoltStun(source,target,card,roll=Math.random()){
-    if(!["volt","zeus","wickedwitch","electriceel","landray"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
+    if(!["volt","zeus","wickedwitch","electriceel","landray","thunderbirds"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
       return false;
     // If the target is still due to act this round, cancel that cast;
     // otherwise reserve the stun for their next round. Never double-skip.
@@ -3476,6 +3478,10 @@
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
     if(card.kind==="hellhound"){
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
+    }else if(card.kind==="thunderbirds"){
+      if(!t||t.hp<=0||t.team===c.team)return;
+      damage(c,t,card.damage,card,anim);
+      if(t.hp>0&&!preventsHitEffects(anim,t))attemptVoltStun(c,t,card,anim.stunRoll??Math.random());
     }else if(card.kind==="infernotitan"){
       if(!t||t.hp<=0||t.team===c.team)return;
       damage(c,t,card.damage,card,anim);
@@ -4172,7 +4178,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5299,6 +5305,7 @@
       else if(card.id==="flamingflamingo")window.FlamingFlamingo?.portrait(c,width,height);
       else if(card.id==="hellhound")window.HellhoundArt?.portrait(c,width,height);
       else if(card.id==="infernotitan")window.InfernoTitan?.portrait(c,width,height);
+      else if(card.id==="thunderbirds")window.Thunderbirds?.portrait(c,width,height);
       else if(EXTRA_FIRE_TEST.some(spell=>spell.id===card.id))window.FireTestArt?.[card.id]?.portrait(c,width,height);
       else if(card.id==="razorang")window.Razorang?.portrait(c,width,height);
       else if(card.id==="chainedjavelin")window.ChainedJavelin?.portrait(c,width,height);
@@ -5724,6 +5731,7 @@
       g.drawImage(background,x,y,width,height);
       if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
        if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
+      if(state.mode==="tester"&&state.animation?.card.id==="thunderbirds"&&state.animation.stage==="summon")window.Thunderbirds?.sky(g,{x,y,width,height,time,p:clamp(state.animation.elapsed/state.animation.duration,0,1)});
       g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
     if(impactShake)g.translate(impactShake.x,impactShake.y);
@@ -5766,7 +5774,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -5801,6 +5809,13 @@
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thunderbirds"&&window.Thunderbirds){
+      const target=getUnit(action.target);
+      if(target){const scene=window.Thunderbirds.scene(target,clamp(action.elapsed/action.duration,0,1));
+        renderables.push({type:"thunderbirds-falcons",depthY:target.y+.1,priority:2,draw:()=>window.Thunderbirds.draw(g,scene)});
+        renderables.push({type:"thunderbirds-impact",depthY:target.y+.2,priority:2,draw:()=>window.Thunderbirds.impact(g,scene)});
+      }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="infernotitan"&&window.InfernoTitan){
       const source=getUnit(action.source),target=getUnit(action.target);
@@ -6963,7 +6978,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

@@ -5757,7 +5757,7 @@
     if(state.mode==="tester"&&window.WizardryFireTestArt?.ready()){
       const art=window.WizardryFireTestArt;
       if(state.environment?.id==="furnace"&&!(action?.stage==="summon"&&action.card.id==="furnace"))
-        renderables.push({type:"furnace-loop",depthY:500,priority:0,draw:()=>art.frame(g,"furnace",24+Math.floor(time/140)%8,500,510,260,1)});
+        renderables.push({type:"furnace-loop",depthY:500,priority:0,draw:()=>art.frame(g,"furnace",Math.floor(time/140),500,510,260,1,"loop")});
       if(action?.stage==="summon"&&action.card.testOnly){
         const source=getUnit(action.source),target=getUnit(action.target),p=clamp(action.elapsed/action.duration,0,1),frame=Math.min(31,Math.floor(p*32));
         if(source&&action.card.id==="furnace"){

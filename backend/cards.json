@@ -1955,14 +1955,14 @@
     "cost": 4,
     "target": "ally",
     "kind": "faultlinebulwark",
-    "shieldHp": 350,
-    "retaliation": 120,
+    "shieldHp": 400,
+    "retaliation": 150,
     "accuracy": 1,
     "icon": "◆",
     "rarity": "RARE",
     "duration": 1950,
     "hit": 0.75,
-    "description": "Priority 1. Raise a wall that absorbs up to 350 damage from the next damaging spell. If it breaks, shards deal 120 damage to the attacker."
+    "description": "Priority 1. Raise a wall that absorbs up to 400 damage from the next damaging spell. If it breaks, shards deal 150 damage to the attacker."
   },
   {
     "id": "livewire",

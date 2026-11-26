@@ -251,7 +251,7 @@
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
   CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back for 140 against a random living enemy directly above or below them. With no living neighbor, hit the same enemy again."});
-  CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":350,"retaliation":120,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a wall that absorbs up to 350 damage from the next damaging spell. If it breaks, shards deal 120 damage to the attacker."});
+  CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":400,"retaliation":150,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a wall that absorbs up to 400 damage from the next damaging spell. If it breaks, shards deal 150 damage to the attacker."});
   CARDS.push({"id":"livewire","name":"Live Wire","school":"lightning","cost":2,"target":"ally","kind":"livewire","boost":0.25,"accuracy":1,"icon":"ϟ","rarity":"RARE","duration":1850,"hit":0.73,"description":"Charge yourself or one ally. Every hit of their next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -344,7 +344,7 @@
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
     electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
-    faultlinebulwark:"Priority 1. Absorb up to 350 from the next damaging spell. Shatter for 120 retaliation.",
+    faultlinebulwark:"Priority 1. Absorb up to 400 from the next damaging spell. Shatter for 150 retaliation.",
     sandwarrior:"Guard yourself or an ally. Absorbs up to 250 damage.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
@@ -5281,7 +5281,7 @@
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
         Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
       case "faultline_bulwark":return {title:"Faultline Bulwark · Priority 1",detail:
-        st.value+" shield HP for the next damaging spell. Shatters for 120 damage to the attacker."};
+        st.value+" shield HP for the next damaging spell. Shatters for "+BY_ID.faultlinebulwark.retaliation+" damage to the attacker."};
       case "sand_warrior":return {title:"Sand Warrior · Earth barrier",detail:
         st.value+" / "+BY_ID.sandwarrior.shieldHp+" shield HP. Excess damage reaches the protected wizard."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};

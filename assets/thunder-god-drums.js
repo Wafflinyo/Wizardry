@@ -26,7 +26,8 @@ const LEFT_AGAIN=[18,19,20,21,7,16,9,10];
 // The artwork remains front-facing, rather than flipping the whole character.
 const STEP=100, LEAD=STEP*3;
 function scene(ms,duration,targets){
- const x=500,y=415,w=370,h=w*R/C,top=y-h;
+ // Ground the summon on the arena's central diamond (world y=510).
+ const x=500,y=510,w=370,h=w*R/C,top=y-h;
  let frame=3,alpha=1;
  if(ms<800){frame=Math.min(3,Math.floor(ms/200));alpha=clamp(ms/160);}
  const last=targets.at(-1);

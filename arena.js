@@ -274,7 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
-  const TEST_QUICKSILVER={id:"quicksilver",name:"Quicksilver",school:"earth",cost:4,target:"enemy",kind:"damage",damage:380,barrierBonus:.50,accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3600,hit:.73,description:"A pool of liquid metal surges toward one enemy and hardens into sharp spikes for 380 base Earth damage. Deals 50% extra damage to HP-based barriers; excess normal damage carries through."};
+  const TEST_QUICKSILVER={id:"quicksilver",name:"Quicksilver",school:"earth",cost:4,target:"enemy",kind:"damage",damage:380,barrierBonus:.50,accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3600,hit:.73,description:"A pool of liquid metal surges toward one enemy, climbs around their entire body and hardens into spikes for 380 base Earth damage. Deals 50% extra damage to HP-based barriers; excess normal damage carries through."};
   const TEST_CRYSTAL_CAVERN={id:"crystalcavern",name:"Crystal Cavern",school:"earth",cost:5,target:"team",kind:"crystalcavern",accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3400,hit:.75,fieldRounds:5,fieldBoost:.10,barrierBoost:.15,description:"Environmental rune for 5 rounds. Earth spell damage +10%; newly summoned Sand Warriors and Faultline Bulwarks have 15% more shield HP. Affects both teams."};
   const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Priority 2 (stackable). Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act. Each locked turn counts as a Skip for mana regeneration. Restores 200 HP at the end of each of those rounds."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
@@ -5114,6 +5114,9 @@
   function drawUnit(u,time){
     const sandTime=time;
     const stone=petrifyProgress(u),stasis=petrified(u);
+    const metalCast=state.animation;
+    const metal=metalCast?.card?.id==="quicksilver"&&metalCast.stage==="summon"&&metalCast.target===u.id&&!preventsHitEffects(metalCast,u)?window.Quicksilver?.coverage(metalCast.elapsed/metalCast.duration,metalCast.card.hit):null;
+    const paintBody=(ctx,paint,rect,allowStone=true)=>metal?.active?window.Quicksilver.coat(ctx,metal,paint,rect):stone>0&&allowStone&&window.Petrify?window.Petrify.statue(ctx,u,stone,paint,rect):paint(ctx);
     const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
     if(frozen||stasis)time=0;
     // Physical depth scale from the same arena floor, not separate
@@ -5184,7 +5187,7 @@
         const rect=grelusDrawRect(minion,row);
         if(row!==2)window.ThunderMine?.registerPose(u,minion.art,frame.col,frame.row,cell,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});
         const paint=ctx=>ctx.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
-        if(stone>0&&row!==2&&window.Petrify)window.Petrify.statue(g,u,stone,paint,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});else paint(g);
+        paintBody(g,paint,{x:rect.x,y:rect.y,w:rect.size,h:rect.size},row!==2);
         const runeElapsed=elapsed-ARM_RAISE_MS;
         if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
           window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{school:u.masteries?.[0]||"dark",elapsed:runeElapsed,duration:AUTO_TRACE_MS,centerX:-size*.52,centerY:-size*.57,scale:3.3});
@@ -5220,7 +5223,7 @@
       if(row!==2)window.ThunderMine?.registerPose(u,source,sourceCol,sourceRow,cell,{x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size});
       const rect={x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size};
       const paint=ctx=>ctx.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,rect.x,rect.y,rect.w,rect.h);
-      if(stone>0&&row!==2&&window.Petrify)window.Petrify.statue(g,u,stone,paint,rect);else paint(g);
+      paintBody(g,paint,rect,row!==2);
       const runeElapsed=guardian?elapsed-ARM_RAISE_MS:elapsed;
       if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
@@ -5230,7 +5233,7 @@
       g.restore();return;
     }
     if(u.dummy&&!u.wizardDummy){
-      if(stone>0&&window.Petrify)window.Petrify.statue(g,u,stone,ctx=>drawTrainingDummy(ctx,u),{x:-105,y:-200,w:210,h:220});else drawTrainingDummy(g,u);
+      paintBody(g,ctx=>drawTrainingDummy(ctx,u),{x:-105,y:-200,w:210,h:220});
       window.BoulderWeight?.equip(g,armorProgress(u),31,-128,43,-118,61,-119,31);
       g.restore();return;
     }
@@ -5261,7 +5264,7 @@
     g.save();
     if(u.team===1)g.scale(-1,1);
     const paintWizard=ctx=>drawWizardSprite(ctx,visualStage,visualProgress,action?.traceMs||0,idleTime,action?.lowerFromFrame,u);
-    const spriteDrawn=u.hp<=0?drawDefeatSprite(g,u.defeatElapsedMs||0,u):approvedWizard&&wizardAtlasReady()&&(stone>0&&window.Petrify?window.Petrify.statue(g,u,stone,paintWizard,{x:-110,y:-240,w:220,h:260}):paintWizard(g));
+    const spriteDrawn=u.hp<=0?drawDefeatSprite(g,u.defeatElapsedMs||0,u):approvedWizard&&wizardAtlasReady()&&paintBody(g,paintWizard,{x:-110,y:-240,w:220,h:260});
     g.restore();
     if(spriteDrawn){
       // All sprites stay in the same depth-sorted scene and use the
@@ -5272,7 +5275,7 @@
       const side=u.team?-1:1;
       g.transform(.79,0,-side*.11,1,0,0);
       const paint=ctx=>u.team&&state.mode==="story"?drawEnemy(ctx,u,time*.001):drawWizard(ctx,u,time*.001);
-      if(stone>0&&window.Petrify)window.Petrify.statue(g,u,stone,paint,{x:-130,y:-250,w:260,h:270});else paint(g);
+      paintBody(g,paint,{x:-130,y:-250,w:260,h:270});
     }
     g.restore();
   }
@@ -6262,8 +6265,7 @@
       const source=getUnit(action.source),target=getUnit(action.target),art=window.Quicksilver;
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
-        if(scene.p<scene.hit)renderables.push({type:"quicksilver-surge",depthY:scene.y+.08,priority:2,draw:()=>art.draw(g,scene)});
-        else renderables.push({type:"quicksilver-impact",depthY:target.y+.19,priority:2,draw:()=>art.impact(g,scene)});
+        renderables.push({type:"quicksilver-liquid",depthY:scene.p<scene.arrival?scene.y+.04:target.y-.14,priority:0,draw:()=>art.draw(g,scene)});
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="giantarmadillo"&&window.GiantArmadillo){

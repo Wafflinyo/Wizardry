@@ -6056,7 +6056,8 @@
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target));
         renderables.push({type:"killer-bees-summon",depthY:scene.origin.y-.12,priority:0,draw:()=>art.summon(g,scene)});
-        renderables.push({type:"killer-bees-swarm",depthY:scene.depth,priority:2,draw:()=>art.draw(g,scene)});
+        renderables.push({type:"killer-bees-swarm-back",depthY:target.y-.13,priority:0,draw:()=>art.draw(g,scene,"back")});
+        renderables.push({type:"killer-bees-swarm-front",depthY:scene.depth+.13,priority:2,draw:()=>art.draw(g,scene,"front")});
         renderables.push({type:"killer-bees-impact",depthY:target.y+.18,priority:2,draw:()=>art.impact(g,scene)});
       }
     }

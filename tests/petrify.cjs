@@ -8,5 +8,15 @@ const u={hp:100,statuses:[{kind:'petrify',value:200,appliedRound:1,expiresRound:
 assert.equal(c.petrified(u),true);c.tickPetrify(u);assert.equal(healed,0);
 for(const round of [2,3]){c.state.round=round;c.tickPetrify(u);c.tickPetrify(u);assert.equal(c.petrified(u),true);}
 assert.equal(healed,400);c.state.round=5;assert.equal(c.petrified(u),false);
-assert.ok(a.includes('if(amount>0&&petrified(target))'));assert.ok(a.includes('if(petrified(c)){c.passedRound=null'));assert.ok(a.includes('stasis?0:'));assert.ok(a.includes('if(r&&state.round>=r.expiresRound)consumeStatus(u,"petrify")'));
+assert.ok(a.includes('if(amount>0&&petrified(target))'));assert.ok(a.includes('if(petrified(c)){c.passedRound=state.round'));assert.ok(a.includes('stasis?0:'));assert.ok(a.includes('if(r&&state.round>=r.expiresRound)consumeStatus(u,"petrify")'));
 console.log('Petrify: exact alpha silhouette, two healing ticks, immunity and action lock.');
+// Forced stone skips use exactly the regular consecutive-Skip mana path.
+{const u={hp:100,maxMana:20,mana:5,statuses:[{kind:'petrify',value:200,appliedRound:1,expiresRound:4,lastTickRound:1}],passStreak:0};
+ const c={state:{round:1,units:[u]},MAX_MANA:20,healingSuppressed:()=>false,getUnit:()=>null,restoreHp:()=>200,flash:()=>({}),consumeStatus:()=>null};
+ for(const name of ['tickPetrify','grantTurnMana']){const start=a.indexOf('  function '+name+'('),end=a.indexOf('\n  }',start)+4;vm.runInNewContext(a.slice(start,end),c);}
+ c.tickPetrify(u);assert.equal(u.passedRound,undefined,'casting does not count as a skip');
+ c.state.round=2;c.tickPetrify(u);assert.equal(u.passedRound,2);
+ c.state.round=3;c.grantTurnMana();assert.equal(u.mana,7);assert.equal(u.passStreak,1);
+ c.tickPetrify(u);u.statuses=[];c.state.round=4;c.grantTurnMana();assert.equal(u.mana,10);assert.equal(u.passStreak,2);
+ c.state.round=5;c.grantTurnMana();assert.equal(u.mana,11);assert.equal(u.passStreak,0);
+}

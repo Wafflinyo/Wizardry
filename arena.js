@@ -274,7 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
-  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act or voluntarily pass. Restores 200 HP at the end of each of those rounds."};
+  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act. Each locked turn counts as a Skip for mana regeneration. Restores 200 HP at the end of each of those rounds."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
   const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
@@ -1772,7 +1772,7 @@
       const bonus=flow&&flow.remaining>0&&flow.appliedRound<state.round&&flow.lastTickRound!==state.round?1:0;
       // Guard repeated entry to this turn against duplicate mana awards.
       if(u.lastManaRound===state.round)continue;
-      const passed=!petrified(u)&&u.passedRound===state.round-1;
+      const passed=u.passedRound===state.round-1;
       u.passStreak=passed?(u.passStreak||0)+1:0;
       const base=passed?1+u.passStreak:1,gain=base+bonus;
       u.lastManaRound=state.round;
@@ -2384,7 +2384,7 @@
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
       if(checkBattleEnd())return;
       if(!c||c.hp<=0)continue;
-      if(petrified(c)){c.passedRound=null;flash(c,"PETRIFIED · SKIP","#c4b5a4");recordBattleEvent(c.name+" cannot act while petrified.");continue;}
+      if(petrified(c)){c.passedRound=state.round;flash(c,"PETRIFIED · SKIP","#c4b5a4");recordBattleEvent(c.name+" cannot act while petrified.");continue;}
       if(action.pass){
         const photo=triggerPhotosynthesis(c);
         state.skipCue={source:c.id,remaining:photo?1400:900,photosynthesis:photo};
@@ -2943,6 +2943,9 @@
     const r=u.statuses.find(st=>st.kind==="petrify");
     if(!r||!u.hp||state.round<=r.appliedRound||state.round>=r.expiresRound||r.lastTickRound===state.round)return;
     r.lastTickRound=state.round;
+    // Stasis counts as a skipped turn for escalating mana regeneration,
+    // even if the unit had no queued action this round.
+    u.passedRound=state.round;
     if(!healingSuppressed("earth")){
       const healed=restoreHp(getUnit(r.sourceId)||u,u,r.value);
       if(healed)flash(u,"PETRIFY · +"+healed+" HP","#cde89e");
@@ -3749,7 +3752,7 @@
     }else if(card.kind==="petrify"){
       if(!t||t.hp<=0||t.team!==c.team||petrified(t)||addStatus(t,"petrify",null,card.heal,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="petrify"),{sourceId:c.id,appliedRound:state.round,expiresRound:state.round+card.rounds+1,lastTickRound:state.round});
-      t.passedRound=null;t.armRaise=0;
+      t.armRaise=0;
       flash(t,"PETRIFY · 2 ROUNDS","#d5bb97");
     }else if(card.kind==="guardianroots"){
       if(!t||t.hp<=0||t.team!==c.team)return;
@@ -5313,7 +5316,7 @@
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
-      case "petrify":return {title:"Petrify · Stone stasis",detail:"Invulnerable. Cannot act. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
+      case "petrify":return {title:"Petrify · Stone stasis",detail:"Invulnerable. Cannot act; counts as a Skip for mana regeneration. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};

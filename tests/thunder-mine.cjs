@@ -36,14 +36,21 @@ console.log('Thunder Mine: initial damage, four-rune cap, successful-cast reacti
  for(const model of [{},{dummy:true},{minionId:'scribe'},{minionId:'acolyte'},{minionId:'pageguard'},{minionId:'magistrate'},{minionId:'inkbinder'},{minionId:'warden'},{bossId:'abyssal'},{bossId:'gale'},{bossId:'briar'},{bossId:'glacial'},{bossId:'grelus'}]){
   const l={...model,team:0,x:250,y:450},r={...model,team:1,x:750,y:450};
   const a=art.mount(l),b=art.mount(r);
-  assert.ok(a.x<l.x&&b.x>r.x&&a.depth<l.y&&b.depth<r.y);
-  assert.equal(l.x-a.x,b.x-r.x);
+  if(model.bossId){
+   assert.equal(b.kind,"leg");assert.ok(b.depth>r.y&&b.y>r.y-35);
+  }else{
+   assert.ok(a.x<l.x&&b.x>r.x&&a.depth<l.y&&b.depth<r.y);
+   assert.ok(Math.abs((l.x-a.x)-(b.x-r.x))<1e-8);
+  }
+  assert.equal(Math.abs(b.angle),Math.PI/2);
   assert.equal(a.y,b.y);
   const leap=art.scene(l,r,.779999);
   assert.ok(Math.abs(leap.x-b.x)<.1&&Math.abs(leap.y-b.y)<.1);
  }
  const u={x:750,y:450,team:1},wizard=art.mount(u),page=art.mount({...u,minionId:'pageguard'}),guardian=art.mount({...u,bossId:'glacial'});
- assert.ok(page.y>wizard.y&&guardian.y<wizard.y&&guardian.size>wizard.size);
+ assert.ok(page.y>wizard.y&&guardian.y>wizard.y&&guardian.size>wizard.size);
+ assert.equal(art.mount({...u,bossId:'grelus'}).kind,'leg');
+ assert.ok(art.mount({...u,bossId:'grelus'}).x<u.x);
 }
 
 {
@@ -55,4 +62,14 @@ console.log('Thunder Mine: initial damage, four-rune cap, successful-cast reacti
  assert.equal(art.torsoEdge(pixels,cell,32,-1),22);
  const u={x:750,y:450,team:1},m=art.mount(u);
  assert.ok(m.y>u.y-70&&m.size<45);
+}
+
+// The leg sampler stays on the chosen shin, ignoring a separate cape edge.
+{
+ const artCtx={window:{},Image:class{},setTimeout:()=>0,clearTimeout(){}};
+ vm.runInNewContext(fs.readFileSync('assets/thunder-mine.js','utf8'),artCtx);
+ const art=artCtx.window.ThunderMine,cell=64,pixels=new Uint8ClampedArray(cell*cell*4);
+ for(let y=44;y<62;y++)for(let x=0;x<cell;x++)if((x>=17&&x<=25)||(x>=34&&x<=42)||(x>=52&&x<=61))pixels[(y*cell+x)*4+3]=255;
+ assert.equal(art.legCenter(pixels,cell,53,20),20);
+ assert.equal(art.legCenter(pixels,cell,53,38),38);
 }

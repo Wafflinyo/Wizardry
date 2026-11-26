@@ -26,10 +26,15 @@ function tile(g,img,n,x,y,size,alpha=1,dir=1){
 // [fallback rear edge, torso height, compact mounted mine size].
 const BACK={
  wizard:[35,70,48],dummy:[36,91,49],
- scribe:[39,63,46],acolyte:[40,65,47],pageguard:[49,47,52],
- magistrate:[47,76,55],inkbinder:[46,79,54],warden:[55,65,58],
- abyssal:[66,108,68],gale:[60,108,64],briar:[72,102,70],
- glacial:[76,102,74],grelus:[53,86,58]
+ scribe:[39,63,46],acolyte:[40,65,47],pageguard:[55,37,49],
+ magistrate:[47,76,55],inkbinder:[46,79,54],warden:[58,57,55]
+};
+// Lower leg anchors use local boot/shin coordinates, never cape edges.
+// [leg center X in the unmirrored atlas, height above sole, mine size,
+// outward side of the leg]. Grelus uses the exposed forward leg.
+const LEGS={
+ abyssal:[28,32,55,1],gale:[24,28,51,1],briar:[33,34,56,1],
+ glacial:[36,36,60,1],grelus:[-22,25,47,-1]
 };
 const poses=new WeakMap(),silhouettes=new WeakMap();
 function modelId(u){return u.bossId||u.minionId||(u.dummy&&!u.wizardDummy?"dummy":"wizard");}
@@ -51,25 +56,43 @@ function torsoEdge(pixels,cell,row,dir){
  edges.sort((a,b)=>a-b);
  return edges.length?edges[Math.floor(edges.length/2)]:null;
 }
+// Select a solid part of the shin near its authored center; do not
+// search to the outer edge of the entire lower silhouette (cape).
+function legCenter(pixels,cell,row,wanted){
+ const samples=[];
+ const range=Math.max(4,Math.round(cell*.095));
+ for(let yy=Math.max(0,row-3);yy<=Math.min(cell-1,row+3);yy++){
+   let best=-1,dist=Infinity;
+   for(let xx=Math.max(1,wanted-range);xx<=Math.min(cell-2,wanted+range);xx++){
+     if(pixels[(yy*cell+xx)*4+3]<190||pixels[(yy*cell+xx-1)*4+3]<150||pixels[(yy*cell+xx+1)*4+3]<150)continue;
+     const d=Math.abs(xx-wanted);if(d<dist){best=xx;dist=d;}
+   }
+   if(best>=0)samples.push(best);
+ }
+ samples.sort((a,b)=>a-b);
+ return samples.length?samples[Math.floor(samples.length/2)]:null;
+}
 function registerPose(u,img,col,row,cell,rect,flip=1){
  if(!u||!Number.isFinite(u.x)||!Number.isFinite(u.y)||!img||!img.width||!rect||!Number.isFinite(rect.y)||rect.h<=0||!u.hp)return;
- const id=modelId(u),profile=BACK[id]||BACK.wizard;
- const [,height,size]=profile;
+ const id=modelId(u),leg=LEGS[id],profile=leg||BACK[id]||BACK.wizard;
+ const [center,height,size]=profile;
  // Ordinary wizards are mirrored by drawUnit. Authored tower creature
  // atlases are not mirrored; their visible front faces the left.
- const rear=id==="wizard"?(u.team===1?1:-1):id==="dummy"?(u.team===1?1:-1):1;
+ const rear=leg?leg[3]:id==="wizard"?(u.team===1?1:-1):id==="dummy"?(u.team===1?1:-1):1;
  const localDir=rear*flip;
+ const wanted=Math.round(clamp((center/flip-rect.x)/rect.w)*(cell-1));
  const sampleRow=Math.round(clamp((-height-rect.y)/rect.h)*(cell-1));
  let cached=silhouettes.get(img);
  if(!cached){cached=new Map();silhouettes.set(img,cached);}
- const key=[col,row,cell,sampleRow,localDir].join("/");
+ const key=[col,row,cell,sampleRow,localDir,leg?wanted:"back"].join("/");
  let edge=cached.get(key);
  if(edge===undefined){
    try{
      const canvas=document.createElement("canvas");canvas.width=cell;canvas.height=cell;
      const ctx=canvas.getContext("2d",{willReadFrequently:true});
      ctx.drawImage(img,col*cell,row*cell,cell,cell,0,0,cell,cell);
-     edge=torsoEdge(ctx.getImageData(0,0,cell,cell).data,cell,sampleRow,localDir);
+     const pixels=ctx.getImageData(0,0,cell,cell).data;
+     edge=leg?legCenter(pixels,cell,sampleRow,wanted):torsoEdge(pixels,cell,sampleRow,localDir);
    }catch(e){edge=null;}
    cached.set(key,edge);
  }
@@ -77,19 +100,22 @@ function registerPose(u,img,col,row,cell,rect,flip=1){
    const localX=(rect.x+(edge+.5)/cell*rect.w)*flip;
    // The edge of the mine intersects the body, while its core sits
    // outside the rear silhouette and cannot cover eyes or the face.
-   poses.set(u,{x:localX+rear*size*.24,y:-height,size,dir:rear});
+   poses.set(u,{x:localX+rear*size*(leg?.18:.26),y:-height,size,dir:rear});
  }
 }
 function mount(u,scale=1){
  const depth=.60+.30*clamp((u.y-288)/235);
  const id=modelId(u);
- const [edge,height,size]=BACK[id]||BACK.wizard;
- const rear=u.team===1?1:-1;
- const pose=poses.get(u)||{x:rear*(edge+size*.24),y:-height,size,dir:rear};
+ const leg=LEGS[id];
+ const [edge,height,size]=leg||BACK[id]||BACK.wizard;
+ const rear=leg?leg[3]:u.team===1?1:-1;
+ const pose=poses.get(u)||{x:leg?edge+rear*size*.18:rear*(edge+size*.26),y:-height,size,dir:rear};
  const sand=u.statuses?.find(st=>st.kind==="quick_sand");
  const sink=(sand?.sinks||0)*45*depth;
  return {x:u.x+pose.x*depth,y:u.y+pose.y*depth+sink,
-   size:pose.size*depth,scale:pose.size/75*depth,dir:pose.dir,depth:u.y-.035,model:id};
+   size:pose.size*depth,scale:pose.size/75*depth,dir:pose.dir,
+   depth:u.y+(leg?.11:-.035),model:id,kind:leg?"leg":"back",
+   angle:pose.dir*Math.PI/2};
 }
 function scene(source,target,p,scale=1){
  const m=mount(target,scale),rear=m.dir;
@@ -115,7 +141,18 @@ function scene(source,target,p,scale=1){
  else alpha=0;
  return {x,y,depth,frame,dir,size,alpha,p,m};
 }
-function draw(g,s){tile(g,body,s.frame,s.x,s.y,s.size,s.alpha,s.dir);}
+// Turn the mount onto its side and narrow the face so it reads as a
+// device clamped to the side surface, not a front-facing medallion.
+function sideMount(g,frame,x,y,size,dir,angle,amount=1,alpha=1){
+ g.save();g.translate(x,y);g.scale(1-.30*amount,1);g.rotate(angle*amount);
+ tile(g,body,frame,0,0,size,alpha,dir);g.restore();
+}
+function draw(g,s){
+ if(s.p>=.63&&s.p<.78){
+   const t=ease((s.p-.63)/.15);
+   sideMount(g,t>.82?12:s.frame,s.x,s.y,s.size,s.dir,s.m.angle,t,s.alpha);
+ }else tile(g,body,s.frame,s.x,s.y,s.size,s.alpha,s.dir);
+}
 function castFx(g,s){
  if(s.p>=.13&&s.p<.32){const t=(s.p-.13)/.19;tile(g,fx,Math.min(2,Math.floor(t*3)),500,493,172,1-ease(t));}
  if(s.p>=.78&&s.p<.96){const t=(s.p-.78)/.18;tile(g,fx,Math.min(7,3+Math.floor(t*5)),s.m.x,s.m.y,135*s.m.scale,1-ease(t));}
@@ -124,7 +161,7 @@ function attached(g,u,time,scale=1){
  const m=mount(u,scale),frame=12+Math.floor((Number(time)||0)/170)%4;
  // The same mounted pose is mirrored for each team; the depth pass
  // lets the shoulder/robe cover the inner edge of the mine.
- tile(g,body,frame,m.x,m.y,m.size,1,-m.dir);
+ sideMount(g,frame,m.x,m.y,m.size,-m.dir,m.angle);
 }
 function explode(g,u,ms,scale=1){
  const m=mount(u,scale);
@@ -142,5 +179,5 @@ function shake(ms){
  const a=(1-t/160)**1.5;return {x:Math.sin(t*.13)*8*a,y:Math.cos(t*.17)*5*a};
 }
 function portrait(g,w,h){tile(g,body,6,w/2,h/2,Math.min(w,h)*1.12);}
-window.ThunderMine={ensure,ready,error:()=>err,registerPose,torsoEdge,mount,scene,draw,castFx,attached,explode,shake,portrait};ensure();
+window.ThunderMine={ensure,ready,error:()=>err,registerPose,torsoEdge,legCenter,mount,scene,draw,castFx,attached,explode,shake,portrait};ensure();
 })();

@@ -6235,7 +6235,7 @@
       }
       if(window.ThunderMine&&u.statuses.some(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound)){
         const mineMount=window.ThunderMine.mount(u,unitSlotFactor(u));
-        renderables.push({type:"thunder-mine-attached",depthY:mineMount.depth,priority:0,
+        renderables.push({type:"thunder-mine-attached",depthY:mineMount.depth,priority:mineMount.kind==="leg"?2:0,
           draw:()=>window.ThunderMine.attached(g,u,time,unitSlotFactor(u))});
       }
       if(u.statuses.some(st=>st.kind==="gunpowder_coat"&&state.round<st.expiresRound))renderables.push({type:"gunpowder-coat",depthY:u.y+.12,priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_GUNPOWDER_V120?.drawCoat(g,{target:u,time}))});

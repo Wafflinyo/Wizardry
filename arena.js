@@ -6175,6 +6175,7 @@
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit);
         renderables.push({type:"armadillo-dust",depthY:scene.y-.12,priority:0,draw:()=>art.trail(g,scene)});
         renderables.push({type:"giant-armadillo",depthY:scene.y+.08,priority:2,draw:()=>art.draw(g,scene)});
+        renderables.push({type:"armadillo-dust-front",depthY:scene.y+.13,priority:2,draw:()=>art.trail(g,scene,"front")});
         if(!preventsHitEffects(action,target))renderables.push({type:"armadillo-impact",depthY:target.y+.19,priority:2,draw:()=>fitUnitEffect(g,target,()=>art.impact(g,scene,target))});
       }
     }

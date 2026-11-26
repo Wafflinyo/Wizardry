@@ -34,53 +34,91 @@ function scene(source,target,p,hit=.68){
  else frame=Math.min(31,24+Math.floor((p-.80)/.20*8));
  const x=L(origin.x,contactX,run),y=L(origin.y,target.y+8,E(u));
  // Last eight frames are the authored rock-and-dust aftermath, not a repeated hit.
- return {x,y,dir,frame,p,hit,scale,origin,spinStart,dashStart,spinning:p>=spinStart&&p<hit,angle,spinStrength:C(spinTime/.12),speed:C(u*3.2),alpha:1-E((p-.93)/.07)};
+ return {x,y,dir,frame,p,hit,scale,origin,contactX,contactY:target.y+8,spinStart,dashStart,spinning:p>=spinStart&&p<hit,angle,spinStrength:C(spinTime/.12),speed:C(u*3.2),alpha:1-E((p-.93)/.07)};
 }
 function polygon(g,pts,color){g.fillStyle=color;g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();}
 function draw(g,s){
  g.save();g.globalAlpha*=s.alpha;g.translate(s.x,s.y);g.scale(s.dir,1);
  // Rotate only the cropped armored ball, not the painted dust or motion trail.
  if(s.spinning&&ready()){
-  const r=78*s.scale;
-  g.translate(0,-r);g.rotate(s.angle);
+  const r=78*s.scale,opacity=g.globalAlpha;
+  g.translate(0,-r);
+  // Angular shutter samples blend the actual shell texture, not its dust.
+  // Draw the sharpest sample last; preserve the armored silhouette and
+  // avoid a hard on/off jump as the blur builds with angular velocity.
   g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
-  g.drawImage(atlas,5*W+75,H+18,156,156,-r,-r,r*2,r*2);
+  const shutter=.48+1.05*s.spinStrength;
+  for(let i=8;i>=0;i--){
+    g.save();g.rotate(s.angle-shutter*i/8);
+    g.globalAlpha=opacity*(i===8?1:i===0?.46:.18+.10*(1-i/8));
+    g.drawImage(atlas,5*W+75,H+18,156,156,-r,-r,r*2,r*2);
+    g.restore();
+  }
+  // Curved highlights give a continuous rotational smear between poses.
+  g.lineCap="round";
+  for(let i=0;i<5;i++){
+    const a=s.angle*.28+i*TAU/5;
+    g.globalAlpha=opacity*(.18+.20*s.spinStrength);
+    g.strokeStyle=i%2?'#f6d593':'#b69b75';g.lineWidth=(i%2?3:7)*s.scale;
+    g.beginPath();g.arc(0,0,r*(.67+i%3*.11),a,a+.72+s.spinStrength*.46);g.stroke();
+  }
  }else tile(g,s.frame,-155*s.scale,-169*s.scale,s.scale);
  g.restore();
 }
-function trail(g,s){
- if(!s.spinning)return;
- g.save();g.translate(s.x,s.y);g.scale(s.dir,1);
- const k=s.spinStrength,travel=s.speed,t=(s.p-s.spinStart)*4;
- // Continuous ground-level dust spray: a burnout before the dash.
+// Sample the shell's earlier ground position so dust remains in the
+// arena instead of sticking to the moving ball. Deterministic per-frame
+// particles are safe for seeking, both team directions and every target.
+function groundAt(s,p){
+ const u=C((p-s.dashStart)/(s.hit-s.dashStart)),run=u*u*(2-u);
+ return {x:L(s.origin.x,s.contactX,run),y:L(s.origin.y,s.contactY,E(u))};
+}
+function trail(g,s,layer="back"){
+ if(s.p<s.spinStart||s.p>=s.hit+.095)return;
+ const front=layer==="front",t=(s.p-s.spinStart)*4,tail=1-E((s.p-s.hit)/.095);
+ const intensity=(.55+.45*s.spinStrength)*tail;
+ g.save();
+ // Emission starts immediately on spin-up. The short residual tail blends
+ // into the impact cloud rather than suddenly vanishing at contact.
+ for(let i=0;i<48;i++){
+  if((i%3===0)!==front)continue;
+  const q=(t*(2.1+i%4*.17)+i*.137)%1,age=q*.115;
+  const birth=Math.min(s.hit,Math.max(s.spinStart,s.p-age));
+  const o=groundAt(s,birth),a=i*2.399,side=Math.cos(a),spread=19+q*(60+i%6*13);
+  const x=o.x+side*spread-s.dir*q*28*s.speed,y=o.y+(front?7:-6)-Math.sin(q*Math.PI)*(12+i%5*7)+Math.sin(a)*10;
+  const r=(17+i%5*5)*(.56+.55*q);
+  const glow=g.createRadialGradient(x,y,0,x,y,r);
+  glow.addColorStop(0,i%2?'rgba(192,159,111,.65)':'rgba(128,99,66,.62)');
+  glow.addColorStop(.55,'rgba(178,146,103,.35)');glow.addColorStop(1,'rgba(159,128,92,0)');
+  g.globalAlpha=intensity*(1-q)*.78;g.fillStyle=glow;
+  g.beginPath();g.ellipse(x,y,r,r*.55,0,0,TAU);g.fill();
+  g.globalAlpha=intensity*(1-q)*.22;
+  polygon(g,[[x-r*.65,y],[x-r*.43,y-r*.45],[x+r*.12,y-r*.59],[x+r*.7,y-r*.12],[x+r*.56,y+r*.23],[x-r*.31,y+r*.31]],i%2?'#c5a87f':'#917453');
+ }
+ // Faceted stone chips arc up from the contact patch and fall back down.
  for(let i=0;i<34;i++){
-  const q=(t*(2.3+i%3*.21)+i*.139)%1,a=i*2.399;
-  const side=Math.cos(a),spread=24+q*(78+i%5*12);
-  const x=side*spread-travel*q*175,y=-4-Math.sin(q*Math.PI)*(22+i%6*12)+Math.sin(a)*13;
-  const r=(6+i%5*3)*(1-q);
-  g.globalAlpha=k*(1-q)*.58;
-  polygon(g,[[x-r,y],[x-r*.5,y-r],[x+r*.7,y-r*.65],[x+r,y+3]],i%2?'#c0a17a':'#80664d');
+  if((i%3===0)!==front)continue;
+  const q=(t*(1.75+i%3*.14)+i*.173)%1;
+  const o=groundAt(s,Math.min(s.hit,Math.max(s.spinStart,s.p-q*.14)));
+  const side=i%2?1:-1,x=o.x+side*(23+q*(50+i%5*13))-s.dir*q*38*s.speed;
+  const y=o.y+(front?8:-4)-4*q*(1-q)*(35+i%6*15),r=(4+i%5*2)*(1-q*.42);
+  const a=i*1.7+t*(4+i%3);
+  g.save();g.translate(x,y);g.rotate(a);
+  g.globalAlpha=intensity*(1-q)*.96;
+  polygon(g,[[-r,0],[-r*.4,-r*1.35],[r,-r*.35],[r*.55,r*.7]],i%2?'#a17b53':'#76583c');
+  polygon(g,[[-r,0],[-r*.4,-r*1.35],[r,-r*.35]],'#d6b387');g.restore();
  }
- // Distinct heavy stone chips kicked upward and outward by the shell.
- for(let i=0;i<24;i++){
-  const q=(t*1.8+i*.177)%1,side=i%2?1:-1;
-  const x=side*(30+q*(60+i%5*15))-travel*q*145;
-  const y=-5-4*q*(1-q)*(37+i%6*14),r=(4+i%4*2)*(1-q*.45);
-  g.globalAlpha=k*(1-q)*.92;
-  polygon(g,[[x-r,y],[x-r*.35,y-r*1.6],[x+r,y-r*.4],[x+r*.5,y+r*.6]],i%2?'#ac8860':'#70563f');
-  polygon(g,[[x-r,y],[x-r*.35,y-r*1.6],[x+r,y-r*.4]],'#ddbb8a');
- }
- // Short grounded skid crescents while spinning in place.
- for(let i=0;i<3;i++){
-  const q=(t*2+i*.33)%1;g.globalAlpha=k*(1-q)*.52*(1-travel*.65);
-  g.strokeStyle='#d4aa70';g.lineWidth=2+3*(1-q);g.beginPath();g.ellipse(0,0,40+q*60,7+q*13,0,.1,Math.PI-.1);g.stroke();
- }
- // Long directional golden streaks only once the ball launches.
- for(let i=0;i<5;i++){
-  const y=-24-i*23,len=95+i*19;
-  g.globalAlpha=travel*.72;
-  const grad=g.createLinearGradient(-len-65,y,-24,y);grad.addColorStop(0,'rgba(226,167,64,0)');grad.addColorStop(1,'rgba(255,220,129,.9)');
-  polygon(g,[[-len-65,y+3],[-35,y-5],[-12,y],[-35,y+5]],grad);
+ if(!front){
+  g.translate(s.x,s.y);g.scale(s.dir,1);
+  for(let i=0;i<4;i++){
+   const q=(t*2.2+i*.25)%1;g.globalAlpha=intensity*(1-q)*.48;
+   g.strokeStyle='#d4aa70';g.lineWidth=2+3*(1-q);g.beginPath();g.ellipse(0,0,39+q*72,7+q*13,0,.1,Math.PI-.1);g.stroke();
+  }
+  for(let i=0;i<5;i++){
+   const y=-24-i*23,len=95+i*19;
+   g.globalAlpha=s.speed*tail*.68;
+   const grad=g.createLinearGradient(-len-65,y,-24,y);grad.addColorStop(0,'rgba(226,167,64,0)');grad.addColorStop(1,'rgba(255,220,129,.9)');
+   polygon(g,[[-len-65,y+3],[-35,y-5],[-12,y],[-35,y+5]],grad);
+  }
  }
  g.restore();
 }

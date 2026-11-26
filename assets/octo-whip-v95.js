@@ -3,7 +3,7 @@
 (function(root){'use strict';
 const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2;
 const smooth=p=>{p=C(p);return p*p*(3-2*p);};
-const W=200,H=264,S=1.65,AX=70,AY=224,CONTACT_X=178;
+const W=200,H=264,S=1.65,AX=70,AY=224,CONTACT_X=189;
 const image=new Image(),listeners=[];let ready=false;
 image.onload=()=>{ready=image.naturalWidth===1600&&image.naturalHeight===1056;if(ready)listeners.forEach(fn=>fn());};
 image.src='./assets/octo-submerged-v99.webp';
@@ -31,19 +31,46 @@ function sprite(c,frame,x,y,scale=S){
  c.drawImage(image,frame%8*W,Math.floor(frame/8)*H,W,H,x-AX*scale,y-AY*scale,W*scale,H*scale);
 }
 function polygon(c,pts,color){c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();}
+// Separate target-centered low-poly impact: fast whitewater crown,
+// outward pressure rings, and heavy angular spray that falls back down.
 function splash(c,x,y,q){
  if(q<0||q>1)return;
- c.save();c.globalAlpha*=Math.sin(Math.PI*Math.min(1,q*1.7))*(1-q*.6);
- c.strokeStyle='#a4edff';c.lineWidth=5*(1-q)+1;
- for(let j=0;j<3;j++){c.beginPath();c.ellipse(x,y,Math.max(1,25+q*110+j*12),Math.max(1,6+q*20+j*4),0,0,T);c.stroke();}
- for(let i=0;i<34;i++){const a=i*2.399,r=25+q*(65+i%6*12),xx=x+Math.cos(a)*r,yy=y+Math.sin(a)*r*.22-Math.sin(q*Math.PI)*(35+i%7*13),s=(3+i%4)*(1-q*.65);
- polygon(c,[[xx-s,yy+s],[xx-s*.7,yy-s*2.3],[xx,yy-s*3.5],[xx+s,yy]],i%3?'#56b9e8':'#d1faff');}
+ const burst=1-smooth(q),spread=smooth(q/.68);
+ c.save();c.globalAlpha*=1-smooth((q-.58)/.42);
+ // Two staggered ground shockwaves, brightest just after contact.
+ for(let j=0;j<3;j++){
+  const t=(q-j*.075)/.85;if(t<0||t>1)continue;
+  c.save();c.globalAlpha*=1-t;c.strokeStyle=j===0?'#d9fcff':'#61d9ff';c.lineWidth=2+6*(1-t);
+  c.beginPath();c.ellipse(x,y,18+155*t,5+36*t,0,0,T);c.stroke();c.restore();
+ }
+ // The initial impact flashes at the target rather than at the octopus.
+ if(q<.18){c.save();c.globalAlpha*=(1-q/.18)*.85;c.fillStyle='#e5fdff';c.beginPath();c.ellipse(x,y-4,38+q*90,10+q*36,0,0,T);c.fill();c.restore();}
+ const rise=Math.sin(Math.PI*Math.min(1,.16+q*1.35));
+ for(let i=0;i<13;i++){
+  const a=i*2.399,dx=Math.cos(a),dy=Math.sin(a);
+  const r=12+spread*(62+i%4*13),xx=x+dx*r,yy=y+dy*r*.23;
+  const height=(82+i%5*17)*rise,wide=(8+i%4*3)*(1-q*.55);
+  polygon(c,[[xx-wide,yy],[xx+dx*height*.48,yy-height],[xx+wide,yy-5],[xx+wide*.36,yy+4]],i%3?'#299fd9':'#75dcf9');
+  polygon(c,[[xx-wide*.25,yy-2],[xx+dx*height*.48,yy-height],[xx+wide*.4,yy-7]],i%2?'#a8eeff':'#ebffff');
+ }
+ for(let i=0;i<48;i++){
+  const a=i*2.399,r=18+q*(92+i%7*15),xx=x+Math.cos(a)*r;
+  const yy=y+Math.sin(a)*r*.24-Math.max(0,4*q*(1-q))*(55+i%7*19);
+  const s=(3+i%4)*(1-q*.7);
+  polygon(c,[[xx-s,yy+s],[xx-s*.8,yy-s*2.3],[xx,yy-s*3.7],[xx+s,yy]],i%3?'#56b9e8':'#e1fcff');
+ }
  c.restore();
+}
+function shake(p,dir=1,duration=4400){
+ const dt=(p-.70)*duration;
+ if(dt<0||dt>=240)return {x:0,y:0};
+ const a=(1-dt/240)**2;
+ return {x:dir*Math.sin(dt*.115)*7*a,y:Math.cos(dt*.09)*10*a};
 }
 function draw(c,{progress:p,target,layer='body'}){
  if(!target)return;const b=pose(p,target);
  if(layer==='ground')return; // Water is already part of the authored transparent poses.
- if(layer==='whip'){splash(c,target.x,target.y-8,(p-.70)/.16);return;}
+ if(layer==='whip'){splash(c,target.x,target.y-8,(p-.70)/.20);return;}
  c.save();c.globalAlpha*=b.alpha;c.translate(b.x,b.y);c.scale(b.dir,1);
  sprite(c,b.frame,0,0);c.restore();
 }
@@ -61,5 +88,5 @@ function orderRenderables(entries,casterTeam){
  return entries.map(e=>selected(e)?ordered[i++]:e);
 }
 
-root.WIZARDRY_OCTO_V95={draw,portrait,pose,orderRenderables,onReady:fn=>listeners.push(fn)};
+root.WIZARDRY_OCTO_V95={draw,portrait,pose,shake,orderRenderables,onReady:fn=>listeners.push(fn)};
 })(window);

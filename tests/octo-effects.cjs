@@ -12,7 +12,7 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(fx.pose(.43,target).x,fx.pose(.7,target).x,'stops before the wind-up');
  assert.ok(fx.pose(.65,target).frame<16,'holds overhead before fast strike');
  assert.ok(fx.pose(.67,target).frame>=16,'downward snap begins near impact');
- assert.ok(Math.abs(fx.pose(.7,target).x+fx.pose(.7,target).dir*108*1.65-target.x)<1e-8);
+ assert.ok(Math.abs(fx.pose(.7,target).x+fx.pose(.7,target).dir*119*1.65-target.x)<1e-8);
  const frames=new Set();
  for(let i=0;i<=1000;i++){
   const p=i/1000,b=fx.pose(p,target);frames.add(b.frame);
@@ -31,3 +31,7 @@ for(const team of [0,1]){
  assert.deepEqual(Array.from(order.slice(1),e=>e.type==='wizard'?e.unitTeam===team?'ally':'enemy':e.type),['enemy','enemy','octo-body','octo-whip','ally','ally']);
 }
 console.log('32 submerged frames, mirrored contact, stable waterline and team layering passed.');
+
+assert.equal(fx.shake(.69).y,0);assert.ok(fx.shake(.70).y>0);assert.equal(fx.shake(.80).y,0);
+const impactCalls=[],impactCtx=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...a)=>impactCalls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});
+fx.draw(impactCtx,{progress:.75,target:{x:775,y:500},layer:'whip'});assert.ok(impactCalls.filter(c=>c[0]==='fill').length>=60,'strong angular splash');assert.ok(impactCalls.some(c=>c[0]==='ellipse'&&c[1]===775&&c[2]===492),'target-centered impact rings');

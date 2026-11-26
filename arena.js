@@ -6010,7 +6010,8 @@
       ?clamp(state.animation.elapsed/state.animation.duration,0,1):null;
     const drumCast=state.mode==="tester"&&state.animation?.card?.id==="thundergoddrums"&&state.animation.stage==="summon"?state.animation:null;
     const mineShake=state.animation?.stage==="mine-detonation"?window.ThunderMine?.shake(state.animation.elapsed):null;
-    const impactShake=mineShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const octoShake=state.animation?.card?.id==="octo"&&state.animation.stage==="summon"?window.WIZARDRY_OCTO_V95?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.duration):null;
+    const impactShake=mineShake??octoShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);

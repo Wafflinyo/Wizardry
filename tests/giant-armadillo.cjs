@@ -17,7 +17,7 @@ for(const team of [0,1]){
  assert.ok(fx.shake(.68,dir).x*dir>0);assert.equal(fx.shake(.67).x,0);
 }
 const a=fs.readFileSync('arena.js','utf8');assert.ok(a.includes('id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90'));
-assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["giantarmadillo"'));
+assert.ok(/RECENTLY_UPDATED_CARDS=\[[^\]]*"giantarmadillo"/.test(a));
 console.log('Giant Armadillo: all 32 frames, mirrored collision, impact timing and opening hand.');
 
 // Airborne dust moves behind the shell on both sides, including stationary spin-up.

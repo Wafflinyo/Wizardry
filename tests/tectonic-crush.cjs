@@ -24,6 +24,20 @@ for(const team of [0,1])for(const factor of [1,1.4,2]){
  art.draw(g,s,"back");art.draw(g,s,"front");art.impact(g,s);
  assert.equal(calls.length,3);assert.ok(calls[0][1]!==calls[1][1]);assert.ok(calls[0][5]!==calls[1][5]);
 }
+// Check the actual raster destination bottom anchor, including perspective
+// and larger guardian/boss scale. Every resting rubble frame uses the feet.
+const fxBases=[256,259,262,265,267,266,264,264,266,266,265,265,263,263,263,264];
+for(const team of [0,1])for(const factor of [1,1.4,2])for(const y of [320,450,540]){
+ const t={x:team?800:200,y,team};
+ for(let n=38;n<48;n++){
+  const s=art.scene(t,(n+.01)/48,factor),calls=[];
+  const g={globalAlpha:1,save(){},restore(){},drawImage(...args){calls.push(args);}};
+  art.impact(g,s);assert.equal(calls.length,1);
+  const d=calls[0],k=d[7]/310;
+  assert.ok(Math.abs(d[6]+fxBases[s.pose.fx]*k-y)<1e-7);
+  assert.ok(Math.abs(d[5]+d[7]/2-t.x)<1e-7);
+ }
+}
 for(const p of ['assets/tectonic-rocks.webp','assets/tectonic-impact.webp']){
  const b=fs.readFileSync(p);assert.equal(b.toString('ascii',0,4),'RIFF');assert.equal(b.toString('ascii',8,12),'WEBP');
 }

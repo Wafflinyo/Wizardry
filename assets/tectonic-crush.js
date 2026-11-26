@@ -42,7 +42,7 @@ function poseAt(n){
 function scene(target,p,factor=1){
  const f=frameAt(p),pose=poseAt(f);
  const depth=.60+.30*C((target.y-288)/235),k=depth*Math.max(1,factor)*1.13;
- return {x:target.x,y:target.y,k,team:target.team,frame:f,pose,p:C(p),contactX:target.x,contactY:target.y-82*k,
+ return {x:target.x,y:target.y,groundY:target.y,k,team:target.team,frame:f,pose,p:C(p),contactX:target.x,contactY:target.y-82*k,
   leftX:target.x-pose.offset*k,rightX:target.x+pose.offset*k};
 }
 function stoneTile(g,pair,side,x,y,k,alpha){
@@ -61,10 +61,20 @@ function draw(g,s,layer){
  // Facing the enemy team determines which independent formation is near.
  // The back rock sits just behind the unit; the opposite face closes in front.
  const side=layer==="back"?(s.team===0?0:1):(s.team===0?1:0);
- stoneTile(g,s.pose.pair,side,side===0?s.leftX:s.rightX,s.y+(layer==="back"?-9:8)*s.k,s.k,s.pose.opacity);
+ // The collapse frames settle on the floor directly at the fighter’s feet.
+ const collapse=E((s.frame-33)/7),footX=L(side===0?s.leftX:s.rightX,s.x,collapse*.70);
+ const footY=L(s.y+(layer==="back"?-9:8)*s.k,s.groundY,collapse);
+ stoneTile(g,s.pose.pair,side,footX,footY,s.k,s.pose.opacity);
 }
 function fissure(g,s){if(s.pose.crack>0)fxTile(g,0,s.x,s.y+1,s.k*.92,s.pose.crack*.8);}
-function impact(g,s){if(s.pose.fx>=0)fxTile(g,s.pose.fx,s.x,s.y-28*s.k,s.k*1.09,1);}
+function impact(g,s){
+ if(s.pose.fx<0)return;
+ // The flash starts at the crush, then the debris descends to the target’s
+ // ground anchor. The dust/rubble frames (8–15) remain planted there.
+ const settle=E(s.pose.fx/7);
+ const y=L(s.groundY-28*s.k,s.groundY,settle);
+ fxTile(g,s.pose.fx,s.x,y,s.k*1.09,1);
+}
 function shake(p){
  const hitAge=(p-HIT)*4320;
  const rise=Math.sin(Math.PI*C(p/(18/48)))*2.8;

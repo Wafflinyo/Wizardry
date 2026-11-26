@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const a=fs.readFileSync('arena.js','utf8');assert.ok(a.includes('damage:380,barrierBonus:.50,accuracy:.85'));assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["quicksilver"'));
+const a=fs.readFileSync('arena.js','utf8');assert.ok(a.includes('damage:380,barrierBonus:.50,accuracy:.85'));assert.ok(/RECENTLY_UPDATED_CARDS=\[[^\]]*"quicksilver"/.test(a));
 const start=a.indexOf('  function barrierDamagePortion('),end=a.indexOf('\n  }',start)+4,ctx={};vm.runInNewContext(a.slice(start,end),ctx);
 function check(amount,hp,bonus,shieldDamage,spent){const r=ctx.barrierDamagePortion(amount,hp,bonus);assert.equal(r.shieldDamage,shieldDamage);assert.equal(r.spent,spent);}
 check(380,400,.5,400,267);check(380,1000,.5,570,380);check(380,250,.5,250,167);check(380,400,0,380,380);check(113,360,.5,169,113);

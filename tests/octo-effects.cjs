@@ -6,7 +6,7 @@ const fx=ctx.window.WIZARDRY_OCTO_V95;
 assert.equal(images.length,1);assert.ok(images[0].src.includes('octo-submerged-v99'));
 for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(fx.pose(0,target).x,500);
- assert.equal(fx.pose(.7,target).groundY,target.y);
+ assert.equal(fx.pose(.7,target).groundY,target.y+26);
  assert.equal(fx.pose(.7,target).frame,20);
  assert.notEqual(fx.pose(.34,target).x,fx.pose(.43,target).x,'still swimming at the previous arrival time');
  assert.equal(fx.pose(.43,target).x,fx.pose(.7,target).x,'stops before the wind-up');

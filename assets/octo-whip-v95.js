@@ -13,7 +13,7 @@ function pose(p,target){
  // The pool approaches before the long tentacle rises. Contact is aligned
  // to the far side of the authored splash, not to the submerged head.
  // Swim for 35% of the cast, then stop farther from the victim.
- const reach=smooth((p-.08)/.35),floor=L(510,target.y,reach);
+ const reach=smooth((p-.08)/.35),floor=L(510,target.y+26,reach);
  const contactX=target.x-dir*(CONTACT_X-AX)*S;
  let frame;
  if(p<.43)frame=Math.min(2,Math.floor(p/.43*3));

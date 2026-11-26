@@ -388,7 +388,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["colossalgolem","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["sentinelfissure","colossalgolem","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){

@@ -134,9 +134,10 @@
     }
     g.restore();
   }
-  function entries(target,dir,hitAt){
+  function entries(targets,dir,hitAt){
+    const list=Array.isArray(targets)?targets:[targets].filter(Boolean);
     return [...rubble.map(entry=>({...entry,x:500+dir*(entry.x-500)})),
-      {x:target.x,y:target.y,at:hitAt,size:107,spire:true,big:true}];
+      ...list.map(t=>({x:t.x,y:t.y,at:hitAt,size:107*(t.factor||1),spire:true,big:true}))];
   }
   function portrait(g,w,h){
     if(!atlas.naturalWidth)return;

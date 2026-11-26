@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const a=fs.readFileSync('arena.js','utf8'),b=JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c.id==='sentinelfissure');
+assert.equal(b.cost,7);assert.equal(b.damage,550);assert.equal(b.target,'all_enemies');assert.equal(b.disableChance,.25);
+assert.ok(a.includes('id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:7,target:"all_enemies"'));
+const units=[{id:'a',team:1,hp:1000},{id:'b',team:1,hp:1000},{id:'c',team:1,hp:1000},{id:'d',team:1,hp:1000},{id:'dead',team:1,hp:0}];
+const rolls=[.1,.3,.2],hits=[],disabled=[];
+const ctx={getUnit:id=>units.find(u=>u.id===id),alive:()=>units.filter(u=>u.hp),damage:(_c,t,n)=>{hits.push(t.id);t.hp-=n;},preventsHitEffects:(_a,t)=>t.id==='d',state:{sequence:units.map(u=>({casterId:u.id})),queueAt:0},Math:{random:()=>rolls.shift()},addStatus:t=>{disabled.push(t.id);return true;},flash:()=>{}};
+const s=a.indexOf('  function applySentinelFissure('),e=a.indexOf('  function applyColossalBoulder(',s);
+vm.runInNewContext(a.slice(s,e),ctx);
+ctx.applySentinelFissure({team:0},{school:'earth',damage:550,disableChance:.25},{sentinelTargets:units.map(u=>({id:u.id}))});
+assert.equal(hits.join(','),'a,b,c,d');assert.equal(disabled.join(','),'a,c');assert.equal(units[0].hp,450);
+const art={window:{},Image:class{}};vm.runInNewContext(fs.readFileSync('assets/sentinel-fissure.js','utf8'),art);
+const entries=art.window.SentinelFissure.entries([{x:1,y:2,factor:1},{x:3,y:4,factor:2}],1,4352);
+assert.equal(entries.filter(e=>e.big).length,2);assert.equal(entries.length,18);assert.equal(entries.at(-1).size,214);
+console.log('Sentinel Fissure: AoE, independent disable rolls, one spire per victim, backend sync.');

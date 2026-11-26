@@ -142,9 +142,9 @@
   CARDS.push({id:"wynzor",name:"Wynzor",school:"wind",cost:8,target:"enemy",kind:"damage",
     damage:910,accuracy:.80,icon:"≋",rarity:"EPIC",duration:4700,hit:.875,short:"80% ACCURACY",
     description:"A bat-winged wyvern lands, roars, and charges a wind blast in its jaws. The blast deals 910 base Wind damage to one enemy."});
-  CARDS.push({id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:8,target:"enemy",kind:"damage",
-    damage:910,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:6340,hit:4352/6340,short:"80% ACCURACY",
-    description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 910 base Earth damage, with a 25% chance to disable its pending action this round."});
+  CARDS.push({id:"sentinelfissure",name:"Sentinel Fissure",school:"earth",cost:7,target:"all_enemies",kind:"damage",
+    damage:550,disableChance:.25,accuracy:.80,icon:"◆",rarity:"EPIC",duration:6340,hit:4352/6340,short:"80% ACCURACY",
+    description:"A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and a massive stone spire hits each living enemy for 550 base Earth damage. Each enemy independently has a 25% chance to lose its pending action this round."});
   CARDS.push({id:"rogginbowler",name:"Roggin’ Bowler",school:"earth",cost:5,target:"enemy",kind:"damage",
     damage:560,accuracy:.85,icon:"◆",rarity:"RARE",duration:4490,hit:3510/4490,short:"85% ACCURACY",
     description:"An ogre hefts a bowling boulder onto its shoulder, points at the enemy, then winds up and rolls it into them for 560 base Earth damage."});
@@ -357,7 +357,7 @@
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
     frozentouch:"Adds 25 Freeze chance points to the next damaging Ice spell that hits the marked enemy.",
-    sentinelfissure:"25% chance to cancel the target’s pending action.",
+    sentinelfissure:"25% chance per enemy to cancel their pending action.",
     doublepick:"Two hits of 220. Second pick retargets if the first defeats its enemy.",
     landray:"20% Shock · skips the target’s pending action this round.",
     sunfire:"45% Extreme Burn · 100 per turn for 5 turns.",
@@ -1841,6 +1841,9 @@
   function startStage(a,stage,duration){
     a.stage=stage;a.elapsed=0;a.duration=duration;
     if(stage==="summon"&&a.card.id==="quicksilver")initQuicksilver(a);
+    if(stage==="summon"&&a.card.id==="sentinelfissure"){
+      const c=getUnit(a.source);a.sentinelTargets=c?alive(1-c.team).map(u=>({id:u.id,x:u.x,y:u.y,factor:unitEffectFactor(u)})):[];
+    }
   }
   // All wizards AND enemies automatically trace the same rune.
   // Accuracy is a separate per-cast random roll, independent of user input.
@@ -3343,6 +3346,19 @@
 
   function sandGripShake(p){return window.WIZARDRY_KINETIC_SAND_V112?.shake(p)||{x:0,y:0};}
   function drawKineticSand(c,p,target,time,layer){window.WIZARDRY_KINETIC_SAND_V112?.draw(c,{progress:p,target,layer});}
+  function applySentinelFissure(c,card,anim){
+    const entries=anim.sentinelTargets??alive(1-c.team).map(u=>({id:u.id}));
+    for(const entry of entries){
+      const t=getUnit(entry.id);
+      if(!t?.hp||t.team===c.team)continue;
+      damage(c,t,card.damage,card,anim);
+      if(t.hp>0&&!preventsHitEffects(anim,t)&&
+        state.sequence.slice(state.queueAt).some(action=>action.casterId===t.id)&&Math.random()<card.disableChance&&
+        addStatus(t,"fissure_disable",null,1,card.school)!==false){
+        flash(t,"DISABLED · THIS ROUND","#f1cf96");
+      }
+    }
+  }
   function applyColossalBoulder(t,roll,chance=.25){
     if(!t?.hp||roll>=chance||!canReceiveDebuff(t,"boulder_weight"))return false;
     const boulder=BY_ID.boulderweight;
@@ -3995,14 +4011,7 @@
       if(bonus)t.mana++;
       if(rune||bonus)flash(t,rune&&bonus?"RUNE CLEANSED · +1 MANA":rune?"RUNE CLEANSED":"+1 MANA","#e1f6a5");
     }else if(card.id==="sentinelfissure"){
-      if(t?.hp>0&&t.team!==c.team){
-        damage(c,t,card.damage,card,anim);
-        if(t.hp>0&&!preventsHitEffects(anim,t)&&
-          state.sequence.slice(state.queueAt).some(action=>action.casterId===t.id)&&Math.random()<card.disableChance&&
-          addStatus(t,"fissure_disable",null,1,card.school)!==false){
-          flash(t,"DISABLED · THIS ROUND","#f1cf96");
-        }
-      }
+      applySentinelFissure(c,card,anim);
     }else if(card.kind==="heizmann"){
       if(anim.runeResult==="success"&&t&&t.hp>0&&t.team!==c.team){
         damage(c,t,card.damage,card,anim);
@@ -6956,13 +6965,14 @@
       }
     }
     if(action?.card?.id==="sentinelfissure"&&action.stage==="summon"){
-      const fx=window.SentinelFissure,target=getUnit(action.target),caster=getUnit(action.source);
-      if(fx&&target&&caster){
+      const fx=window.SentinelFissure,caster=getUnit(action.source);
+      if(fx&&caster){
         const dir=caster.team===0?1:-1;
         const opts={x:500-dir*105,y:501,dir,elapsed:action.elapsed};
         fx.fissures(g,opts);
         renderables.push({type:"earth-sentinel",depthY:opts.y,priority:2,draw:()=>fx.actor(g,opts)});
-        for(const entry of fx.entries(target,dir,action.duration*action.card.hit)){
+        const targets=action.sentinelTargets??alive(1-caster.team).map(u=>({x:u.x,y:u.y,factor:unitEffectFactor(u)}));
+        for(const entry of fx.entries(targets,dir,action.duration*action.card.hit)){
           renderables.push({type:"fissure-debris",depthY:entry.y+.12,priority:2,
             draw:()=>fx.debris(g,entry,action.elapsed,dir)});
         }

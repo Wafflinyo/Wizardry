@@ -1328,10 +1328,10 @@
     "id": "sentinelfissure",
     "name": "Sentinel Fissure",
     "school": "earth",
-    "cost": 8,
-    "target": "enemy",
+    "cost": 7,
+    "target": "all_enemies",
     "kind": "damage",
-    "damage": 910,
+    "damage": 550,
     "disableChance": 0.25,
     "accuracy": 0.8,
     "icon": "◆",
@@ -1339,7 +1339,7 @@
     "duration": 6340,
     "hit": 0.6864353312302839,
     "short": "80% ACCURACY",
-    "description": "A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and one enormous stone spire hits the selected enemy for 910 base Earth damage, with a 25% chance to disable its pending action this round."
+    "description": "A towering stone sentinel rises and stomps once, cracking the arena. Debris falls across the field, and a massive stone spire hits each living enemy for 550 base Earth damage. Each enemy independently has a 25% chance to lose its pending action this round."
   },
   {
     "id": "rogginbowler",

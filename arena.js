@@ -376,7 +376,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["octo","crabgiant","guardianroots","thundergoddrums"];
+  const RECENTLY_UPDATED_CARDS=["crabgiant","octo","guardianroots","thundergoddrums"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -6011,7 +6011,9 @@
     const drumCast=state.mode==="tester"&&state.animation?.card?.id==="thundergoddrums"&&state.animation.stage==="summon"?state.animation:null;
     const mineShake=state.animation?.stage==="mine-detonation"?window.ThunderMine?.shake(state.animation.elapsed):null;
     const octoShake=state.animation?.card?.id==="octo"&&state.animation.stage==="summon"?window.WIZARDRY_OCTO_V95?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.duration):null;
-    const impactShake=mineShake??octoShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const crabCast=state.animation?.card?.id==="crabgiant"&&state.animation.stage==="summon"?state.animation:null;
+    const crabShake=crabCast?window.CrabGiant?.shake(crabCast.elapsed/crabCast.duration,getUnit(crabCast.target)?.x>=500?1:-1,crabCast.card.hit,crabCast.duration):null;
+    const impactShake=mineShake??octoShake??crabShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);

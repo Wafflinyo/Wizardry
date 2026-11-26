@@ -19,3 +19,8 @@ for(const team of [0,1]){
 const a=fs.readFileSync('arena.js','utf8');assert.ok(a.includes('id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90'));
 assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["giantarmadillo"'));
 console.log('Giant Armadillo: all 32 frames, mirrored collision, impact timing and opening hand.');
+
+// Foreground burnout clouds reach into the middle and upper shell from spin start.
+{const s=fx.scene({team:0},{x:800,y:430},.50),calls=[];
+ const g=new Proxy({globalAlpha:1,createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});
+ fx.trail(g,s,'front');assert.ok(calls.filter(a=>a[0]==='ellipse'&&a[2]<s.y-80&&a[3]>=48).length>=4,'high billows obscure most of the shell');}

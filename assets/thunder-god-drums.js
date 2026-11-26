@@ -37,8 +37,10 @@ function scene(ms,duration,targets){
      frame=sequence[Math.min(sequence.length-1,Math.floor(dt/STEP))];
    }
  }
- if(last&&ms>=last.strikeAt+500){
-   const end=clamp((ms-(last.strikeAt+500))/Math.max(1,duration-last.strikeAt-500));
+ // Let the final blow land and the god finish his recovery before fading.
+ if(last&&ms>=last.hitAt+700){
+   const fadeAt=last.hitAt+700;
+   const end=clamp((ms-fadeAt)/Math.max(1,duration-fadeAt));
    frame=end<.33?22:end<.66?23:24;alpha=1-end;
  }
  const pulses=targets.filter(t=>ms>=t.strikeAt&&ms<t.hitAt+180).map(t=>{

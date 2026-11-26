@@ -270,7 +270,7 @@
   const TEST_BACKDRAFT={id:"backdraft",name:"Backdraft",school:"fire",cost:3,target:"enemy",kind:"backdraft",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.45,damage:180,description:"Deals 180 base damage. If the enemy was burning, spreads that Burn to one random adjacent living enemy, preserving its normal or extreme tier."};
   const TEST_FURNACE={id:"furnace",name:"Furnace",school:"fire",cost:5,target:"team",kind:"furnace",accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:3200,hit:.55,fieldRounds:5,fieldBoost:.10,description:"Environmental rune for 5 rounds: Fire damage +10% and Fire spells with Burn chances gain 10 percentage points."};
   const TEST_THUNDERBIRDS={id:"thunderbirds",name:"Thunderbirds",school:"lightning",cost:5,target:"enemy",kind:"thunderbirds",damage:530,stunChance:.30,accuracy:.75,icon:"ϟ",rarity:"TEST",testOnly:true,duration:6400,hit:.73,description:"Two falcons soar through a thunderous sky, hover and fire converging electrical beams at one enemy for 530 base damage, with a 30% chance to Stun."};
-  const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:400,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4780,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 400 base damage to that enemy."};
+  const TEST_THUNDER_DRUMS={id:"thundergoddrums",name:"Thunder God Drums",school:"lightning",cost:7,target:"all_enemies",kind:"thundergoddrums",damage:480,accuracy:.80,icon:"ϟ",rarity:"TEST",testOnly:true,duration:5480,hit:.32,description:"Summon a storm god who alternates drum strikes, one per living enemy (up to four). Each strike sends an expanding electric shockwave from its own drumhead, dealing 480 base damage to that enemy."};
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
@@ -288,7 +288,7 @@
     hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
     thunderbirds:"530 base damage. 30% Stun chance.",
-    thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
+    thundergoddrums:"480 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
     shortcircuit:"Then +10 damage per enemy mana (max +150).",
     guardianroots:"3 rounds: retaliate for 100 damage once per round when hit by a direct enemy spell.",
@@ -376,7 +376,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["crabgiant","octo","guardianroots","thundergoddrums"];
+  const RECENTLY_UPDATED_CARDS=["thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -2036,7 +2036,7 @@
       // the HP change is delayed until the orb reaches the ally.
       if(a.card.kind==="thundergoddrums"){
         a.drumTargets=drumTargets(caster);
-        startStage(a,"summon",(a.drumTargets.at(-1)?.hitAt??1530)+700);
+        startStage(a,"summon",(a.drumTargets.at(-1)?.hitAt??1530)+1400);
       }else if(a.card.kind==="hellhound"){
         a.houndTargets=hellhoundTargets(getUnit(a.target),caster);
         startStage(a,"summon",a.card.duration);

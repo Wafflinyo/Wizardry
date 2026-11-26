@@ -77,51 +77,55 @@ function trail(g,s,layer="back"){
  const front=layer==="front",t=(s.p-s.spinStart)*4,tail=1-E((s.p-s.hit)/.095);
  const intensity=(.78+.22*s.spinStrength)*tail;
  g.save();
- // Emission starts immediately on spin-up. The short residual tail blends
- // into the impact cloud rather than suddenly vanishing at contact.
- for(let i=0;i<72;i++){
-  if((i%2===0)!==front)continue;
-  const q=(t*(2.1+i%4*.17)+i*.137)%1,age=q*.115;
+ // Continuous backward-ejected dust. The age of each puff determines its
+ // actual world position, so the burnout flows even while the shell is still.
+ for(let i=0;i<60;i++){
+  if((i%3===0)!==front)continue;
+  const q=(t*(1.55+i%4*.13)+i*.137)%1,age=q*.145;
   const birth=Math.min(s.hit,Math.max(s.spinStart,s.p-age));
-  const o=groundAt(s,birth),a=i*2.399,side=Math.cos(a),spread=16+q*(79+i%6*15);
-  const x=o.x+side*spread-s.dir*q*28*s.speed,y=o.y+(front?-14:-10)-Math.sin(q*Math.PI)*(35+i%5*15)+Math.sin(a)*12;
-  const r=(32+i%5*9)*(.72+.48*q);
-  const glow=g.createRadialGradient(x,y,0,x,y,r);
-  glow.addColorStop(0,i%2?'rgba(192,159,111,.94)':'rgba(128,99,66,.90)');
-  glow.addColorStop(.55,'rgba(178,146,103,.72)');glow.addColorStop(1,'rgba(159,128,92,0)');
-  g.globalAlpha=intensity*(1-q)*.94;g.fillStyle=glow;
-  g.beginPath();g.ellipse(x,y,r,r*.83,0,0,TAU);g.fill();
-  g.globalAlpha=intensity*(1-q)*.22;
-  polygon(g,[[x-r*.65,y],[x-r*.43,y-r*.45],[x+r*.12,y-r*.59],[x+r*.7,y-r*.12],[x+r*.56,y+r*.23],[x-r*.31,y+r*.31]],i%2?'#c5a87f':'#917453');
+  const o=groundAt(s,birth),a=i*2.399;
+  const drift=12+q*(140+i%6*17);
+  const x=o.x-s.dir*drift+Math.cos(a)*24*(1-q*.5);
+  const y=o.y-9-q*(34+i%5*10)+Math.sin(a+t*2.1)*13;
+  const r=(27+i%5*7)*(.68+.66*q);
+  const glow=g.createRadialGradient(0,0,0,0,0,r);
+  glow.addColorStop(0,i%2?'rgba(192,159,111,.78)':'rgba(128,99,66,.73)');
+  glow.addColorStop(.5,'rgba(178,146,103,.42)');
+  glow.addColorStop(1,'rgba(159,128,92,0)');
+  g.save();g.translate(x,y);g.scale(1.35+.40*q,.72+.16*q);
+  g.globalAlpha=intensity*(1-q)* (front?.43:.72);
+  g.fillStyle=glow;g.beginPath();g.ellipse(0,0,r,r,0,0,TAU);g.fill();
+  g.restore();
+  g.globalAlpha=intensity*(1-q)* (front?.085:.13);
+  polygon(g,[[x-r*.85,y],[x-r*.44,y-r*.41],[x+r*.15,y-r*.48],[x+r*.75,y-r*.12],[x+r*.50,y+r*.23],[x-r*.36,y+r*.28]],i%2?'#c5a87f':'#917453');
  }
- // Dense billowing burnout cloud over the shell itself. The front layer
- // reaches almost to the top of the ball, with irregular soft edges and
- // moving gaps that still reveal a hint of the spinning armor.
- const cloudStrength=(.62+.38*s.spinStrength)*tail;
- for(let i=0;i<12;i++){
-  const a=i*2.399+t*3.4,cycle=(t*1.8+i*.191)%1;
-  const column=i%4,row=Math.floor(i/4);
-  const x=s.x+(column-1.5)*43+Math.cos(a)*19-s.dir*s.speed*(12+cycle*24);
-  const y=s.y-26-row*43+Math.sin(a)*13-cycle*8;
-  const r=48+(i%3)*12+cycle*9;
-  const glow=g.createRadialGradient(x,y,0,x,y,r);
-  glow.addColorStop(0,i%3?'rgba(185,153,110,.98)':'rgba(124,99,73,.96)');
-  glow.addColorStop(.48,'rgba(180,150,112,.91)');
-  glow.addColorStop(.77,'rgba(167,139,103,.59)');
+ // Soft overlapping wisps drift up and back, never forming an opaque
+ // blanket over the armor. Most of their volume stays behind the ball.
+ for(let i=0;i<(front?5:10);i++){
+  const q=(t*1.35+i*.173)%1,a=i*2.399+t*2;
+  const o=groundAt(s,Math.min(s.hit,Math.max(s.spinStart,s.p-q*.13)));
+  const x=o.x-s.dir*(20+q*160)+Math.cos(a)*17;
+  const y=o.y-22-q*(front?53:90)+Math.sin(a)*10;
+  const r=36+q*25;
+  const glow=g.createRadialGradient(0,0,0,0,0,r);
+  glow.addColorStop(0,'rgba(185,153,110,.62)');
+  glow.addColorStop(.48,'rgba(180,150,112,.39)');
   glow.addColorStop(1,'rgba(167,139,103,0)');
-  g.globalAlpha=cloudStrength*(front?.91:.67)*(row===2?.75:1);
-  g.fillStyle=glow;g.beginPath();g.ellipse(x,y,r,r*.91,0,0,TAU);g.fill();
+  g.save();g.translate(x,y);g.scale(1.55,.78);
+  g.globalAlpha=tail*(.68+.32*s.spinStrength)*(1-q*.65)*(front?.28:.48);
+  g.fillStyle=glow;g.beginPath();g.ellipse(0,0,r,r,0,0,TAU);g.fill();g.restore();
  }
- // Faceted stone chips arc up from the contact patch and fall back down.
- for(let i=0;i<44;i++){
+ // The spinning shell throws rock chips primarily backward, with
+ // a smaller sideways spread, until the existing contact burst takes over.
+ for(let i=0;i<36;i++){
   if((i%3===0)!==front)continue;
   const q=(t*(1.75+i%3*.14)+i*.173)%1;
   const o=groundAt(s,Math.min(s.hit,Math.max(s.spinStart,s.p-q*.14)));
-  const side=i%2?1:-1,x=o.x+side*(23+q*(50+i%5*13))-s.dir*q*38*s.speed;
-  const y=o.y+(front?8:-4)-4*q*(1-q)*(48+i%6*19),r=(5+i%5*2.3)*(1-q*.42);
+  const x=o.x-s.dir*(17+q*(85+i%5*18))+Math.cos(i*2.399)*30;
+  const y=o.y+(front?8:-4)-4*q*(1-q)*(40+i%6*16),r=(4+i%5*2)*(1-q*.42);
   const a=i*1.7+t*(4+i%3);
   g.save();g.translate(x,y);g.rotate(a);
-  g.globalAlpha=intensity*(1-q)*.96;
+  g.globalAlpha=intensity*(1-q)*.86;
   polygon(g,[[-r,0],[-r*.4,-r*1.35],[r,-r*.35],[r*.55,r*.7]],i%2?'#a17b53':'#76583c');
   polygon(g,[[-r,0],[-r*.4,-r*1.35],[r,-r*.35]],'#d6b387');g.restore();
  }

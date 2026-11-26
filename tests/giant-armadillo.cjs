@@ -20,7 +20,13 @@ const a=fs.readFileSync('arena.js','utf8');assert.ok(a.includes('id:"giantarmadi
 assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["giantarmadillo"'));
 console.log('Giant Armadillo: all 32 frames, mirrored collision, impact timing and opening hand.');
 
-// Foreground burnout clouds reach into the middle and upper shell from spin start.
-{const s=fx.scene({team:0},{x:800,y:430},.50),calls=[];
- const g=new Proxy({globalAlpha:1,createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});
- fx.trail(g,s,'front');assert.ok(calls.filter(a=>a[0]==='ellipse'&&a[2]<s.y-80&&a[3]>=48).length>=4,'high billows obscure most of the shell');}
+// Airborne dust moves behind the shell on both sides, including stationary spin-up.
+for(const team of [0,1]){
+ const dir=team===0?1:-1,s=fx.scene({team},{x:500+dir*300,y:430},.50),calls=[];
+ let current=1;const g=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k==='globalAlpha'?current:k in o?o[k]:(...a)=>calls.push([k,...a,current]),set:(o,k,v)=>{if(k==='globalAlpha')current=v;else o[k]=v;return true;}});
+ fx.trail(g,s,'front');
+ const origins=calls.filter(a=>a[0]==='translate');
+ assert.ok(origins.length>15);
+ assert.ok(origins.filter(a=>(s.x-a[1])*dir>0).length/origins.length>.85,'dust and debris flow backward');
+ assert.ok(calls.filter(a=>a[0]==='ellipse').every(a=>a.at(-1)<=.43),'foreground dust remains translucent');
+}

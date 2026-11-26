@@ -251,7 +251,7 @@
     description:"Compress air around one enemy and implode for 310 base damage. Applies Decay of Strength, reducing all hits of their next damaging spell by 25%."});
   CARDS.push({"id":"chainedjavelin","name":"Chained Javelin","school":"lightning","cost":4,"target":"enemy","kind":"chainedjavelin","damage":320,"manaSteal":2,"accuracy":0.9,"icon":"ϟ","rarity":"RARE","duration":3700,"hit":0.4,"siphonAt":0.88,"description":"Pierce one enemy for 320 base damage, then siphon up to 2 of their remaining mana back to yourself."});
   CARDS.push({"id":"razorang","name":"Razorang","school":"wind","cost":3,"target":"enemy","kind":"razorang","damage":260,"returnDamage":140,"accuracy":0.85,"icon":"≋","rarity":"RARE","duration":2950,"hit":0.46,"returnAt":0.79,"description":"Slice one enemy for 260 base damage, then hook back for 140 against a random living enemy directly above or below them. With no living neighbor, hit the same enemy again."});
-  CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":400,"retaliation":150,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a wall that absorbs up to 400 damage from the next damaging spell. If it breaks, shards deal 150 damage to the attacker."});
+  CARDS.push({"id":"faultlinebulwark","name":"Faultline Bulwark","school":"earth","cost":4,"target":"ally","kind":"faultlinebulwark","shieldHp":400,"retaliation":150,"accuracy":1,"icon":"◆","rarity":"RARE","duration":1950,"hit":0.75,"description":"Priority 1. Raise a persistent 400 HP wall that absorbs incoming direct spell damage until destroyed. Excess damage reaches the next protection layer. When it breaks, shards deal 150 damage to the attacker."});
   CARDS.push({"id":"livewire","name":"Live Wire","school":"lightning","cost":2,"target":"ally","kind":"livewire","boost":0.25,"accuracy":1,"icon":"ϟ","rarity":"RARE","duration":1850,"hit":0.73,"description":"Charge yourself or one ally. Every hit of their next successful damaging Lightning spell deals 25% more damage. Misses leave the charge ready."});
   for(const card of CARDS)if(['static','soul','freezing','scorpion','bloom','gunpowderkiss','thornwrap','blizzard','penguins','frosty','jack','dragon','arrows','grillmaster','reaper','turbulence'].includes(card.id)){
     card.description=card.description.replace(/Reapplying refreshes[^.]*\.|Refreshes[^.]*\./g,'');
@@ -274,7 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
-  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act. Each locked turn counts as a Skip for mana regeneration. Restores 200 HP at the end of each of those rounds."};
+  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Priority 2 (stackable). Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act. Each locked turn counts as a Skip for mana regeneration. Restores 200 HP at the end of each of those rounds."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
   const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
@@ -292,7 +292,7 @@
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
     thunderbirds:"530 base damage. 30% Stun chance.",
     stampede:"380 damage to each living enemy.",
-    petrify:"Invulnerable and unable to act for 2 rounds. Heal 200 HP each round.",
+    petrify:"Priority 2 (stackable). Immune for 2 rounds; cannot act. Heal 200 HP each round.",
     giantarmadillo:"350 Earth damage to one enemy.",
     thundergoddrums:"450 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
@@ -346,7 +346,7 @@
     reikel:"30% chance to destroy one beneficial rune.",crystalicemirrors:"40% chance to reflect own damage for 3 rounds.",
     electriceel:"25% Stun chance if the target has yet to act.",growth:"Next direct Nature heal or damaging spell gains 25%.",
     sticksandstones:"15% damage vulnerability per enemy.",darksorcerer:"20% curse per enemy: 50 × 3 rounds.",
-    faultlinebulwark:"Priority 1. Absorb up to 400 from the next damaging spell. Shatter for 150 retaliation.",
+    faultlinebulwark:"Priority 1. 400 HP barrier persists until broken. Shatter for 150 retaliation.",
     sandwarrior:"Guard yourself or an ally. Absorbs up to 250 damage.",
     bubbleshield:"Absorbs up to 360 damage.",drowzyflowers:"Sleep up to 3 rounds, with increasing wake chances.",
     volcaniceruption:"First target certain; later targets 80%, 60%, 40%. 30% extreme burn.",
@@ -2569,14 +2569,14 @@
   }
   const BARRIER_SPELLS={
     winddome:"wind_dome",sandwarrior:"sand_warrior",faultlinebulwark:"faultline_bulwark",
-    bubbleshield:"bubble_shield",reflectiveice:"reflective_ice"
+    bubbleshield:"bubble_shield",reflectiveice:"reflective_ice",petrify:"petrify"
   };
-  const BARRIER_PRIORITY={wind_dome:1,sand_warrior:1,faultline_bulwark:1,bubble_shield:2,reflective_ice:2};
+  const BARRIER_PRIORITY={wind_dome:1,sand_warrior:1,faultline_bulwark:1,bubble_shield:2,reflective_ice:2,petrify:2};
   const BARRIER_RUNES=new Set(Object.keys(BARRIER_PRIORITY));
   function barrierConflict(target,kind){
     const priority=BARRIER_PRIORITY[kind];
-    if(!target||!priority)return null;
-    return target.statuses.find(st=>st.kind!==kind&&BARRIER_PRIORITY[st.kind]===priority&&
+    if(!target||!priority||kind==="petrify")return null;
+    return target.statuses.find(st=>st.kind!==kind&&st.kind!=="petrify"&&BARRIER_PRIORITY[st.kind]===priority&&
       (st.expiresRound==null||state.round<st.expiresRound));
   }
   function barrierNotice(target,card){
@@ -2837,13 +2837,13 @@
   }
   function absorbFaultlineDamage(target,amount,source,spell){
     if(amount<=0||!spell||source.team===target.team)return amount;
-    const wall=spell.faultlineWalls?.[target.id]??consumeStatus(target,"faultline_bulwark");
+    const wall=target.statuses.find(st=>st.kind==="faultline_bulwark");
     if(!wall?.value)return amount;
-    (spell.faultlineWalls??={})[target.id]=wall;
     const absorbed=Math.min(amount,wall.value);
     wall.value-=absorbed;
     tally(target,"tanked",absorbed);
     const broken=wall.value===0;
+    if(broken)consumeStatus(target,"faultline_bulwark");
     flash(target,"FAULTLINE BULWARK −"+absorbed,"#edd1a7").faultline={
       targetId:target.id,attacker:{x:source.x,y:source.y-85},broken,
       stress:1-wall.value/BY_ID.faultlinebulwark.shieldHp
@@ -2860,9 +2860,8 @@
     }
     return amount-absorbed;
   }
-  function absorbBarrierDamage(target,amount){
+  function absorbBarrierDamage(target,amount,deferPetrify=false){
     if(amount<=0)return amount;
-    if(petrified(target)){petrifyBlock(target,amount);return 0;}
     for(const kind of ["sand_warrior","bubble_shield"]){
       const shield=target.statuses.find(st=>st.kind===kind);
       if(!shield)continue;
@@ -2881,6 +2880,10 @@
       if(!shield.value)consumeStatus(target,shield.kind);
       if(!amount)break;
     }
+    return deferPetrify?amount:absorbPetrifyDamage(target,amount);
+  }
+  function absorbPetrifyDamage(target,amount){
+    if(amount>0&&petrified(target)){petrifyBlock(target,amount);return 0;}
     return amount;
   }
   function preventsHitEffects(spell,target){
@@ -2952,7 +2955,6 @@
     }
   }
   function damage(source,target,base,card,spell=null,flatManaBonus=false){
-    if(base>0&&petrified(target)){petrifyBlock(target,base*spellPower(source,card,spell));return 0;}
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
       const mark=source.statuses.find(st=>st.kind==="crystal_ice_mirrors"&&state.round<st.expiresRound);
@@ -3045,7 +3047,7 @@
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
-    let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell));
+    let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell),!reflected);
     if(reflected){
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
@@ -3059,6 +3061,7 @@
       amount-=split.reflected;
       notes.push("REFLECTIVE ICE");
     }
+    amount=absorbPetrifyDamage(target,amount);
     const oldHp=target.hp,wasAlive=target.hp>0;
     loseHp(source,target,amount);
     if(split){
@@ -5316,7 +5319,7 @@
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
-      case "petrify":return {title:"Petrify · Stone stasis",detail:"Invulnerable. Cannot act; counts as a Skip for mana regeneration. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
+      case "petrify":return {title:"Petrify · Priority 2",detail:"Stackable with other Priority 2 barriers. Other barriers resolve first; remaining damage is blocked. Invulnerable. Cannot act; counts as a Skip for mana regeneration. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
@@ -5326,7 +5329,7 @@
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
         Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
       case "faultline_bulwark":return {title:"Faultline Bulwark · Priority 1",detail:
-        st.value+" shield HP for the next damaging spell. Shatters for "+BY_ID.faultlinebulwark.retaliation+" damage to the attacker."};
+        st.value+" / "+BY_ID.faultlinebulwark.shieldHp+" shield HP. Persists until destroyed. Shatters for "+BY_ID.faultlinebulwark.retaliation+" damage to the attacker."};
       case "sand_warrior":return {title:"Sand Warrior · Earth barrier",detail:
         st.value+" / "+BY_ID.sandwarrior.shieldHp+" shield HP. Excess damage reaches the protected wizard."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
@@ -6440,11 +6443,11 @@
     }
     for(const u of sorted){
       const forming=action?.card.id==="faultlinebulwark"&&action.stage==="summon"&&action.target===u.id;
-      const wall=u.statuses.find(st=>st.kind==="faultline_bulwark")??action?.faultlineWalls?.[u.id];
+      const wall=u.statuses.find(st=>st.kind==="faultline_bulwark");
       const hit=state.flashes.findLast(f=>f.faultline?.targetId===u.id);
       if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
         const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
-        const impact=hit&&{...hit.faultline,age:hit.age};
+        const impact=hit&&(!hit.faultline.broken||!wall)?{...hit.faultline,age:hit.age}:wall&&wall.value<BY_ID.faultlinebulwark.shieldHp?{age:1,broken:false,stress:1-wall.value/BY_ID.faultlinebulwark.shieldHp}:null;
         for(const layer of ["back","front"]){
           const depth=u.y+(layer==="back"?-.145:.145),factor=unitEffectFactor(u);
           if(forming&&layer==="back")renderables.push({type:"faultline-rise-back",depthY:depth-.01,priority:1,draw:()=>window.FaultlineBulwark?.riseFx(g,u,action.elapsed/(action.duration*action.card.hit),layer,factor)});

@@ -1962,7 +1962,7 @@
     "rarity": "RARE",
     "duration": 1950,
     "hit": 0.75,
-    "description": "Priority 1. Raise a wall that absorbs up to 400 damage from the next damaging spell. If it breaks, shards deal 150 damage to the attacker."
+    "description": "Priority 1. Raise a persistent 400 HP wall that absorbs incoming direct spell damage until destroyed. Excess damage reaches the next protection layer. When it breaks, shards deal 150 damage to the attacker."
   },
   {
     "id": "livewire",

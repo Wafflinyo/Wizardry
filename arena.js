@@ -644,6 +644,7 @@
     ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
     const art=appearanceAtlas(wizardAtlas,"wizard",look);
     const top=-220+footPadding(wizardAtlas,i)+7;
+    window.ThunderMine?.registerPose(look,wizardAtlas,i%4,Math.floor(i/4),128,{x:-74,y:top,w:148,h:220},look.team===1?-1:1);
     drawDressedFrame(ctx,art,"wizard",i,top,look);
     drawHeadHair(ctx,look,"wizard",i,top,time);
     const armor=armorProgress(look);
@@ -5038,6 +5039,7 @@
         const frame=grelusFrame(row,pose),cell=minion.cell,size=minion.size;
         g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
         const rect=grelusDrawRect(minion,row);
+        if(row!==2)window.ThunderMine?.registerPose(u,minion.art,frame.col,frame.row,cell,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});
         g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
         const runeElapsed=elapsed-ARM_RAISE_MS;
         if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
@@ -5071,6 +5073,7 @@
       const top=-anchor*minion.size/160+(guardian?2:0);
       const cell=minion.cell||160;
       if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
+      if(row!==2)window.ThunderMine?.registerPose(u,source,sourceCol,sourceRow,cell,{x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size});
       g.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
       const runeElapsed=guardian?elapsed-ARM_RAISE_MS:elapsed;
       if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS){

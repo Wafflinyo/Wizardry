@@ -45,3 +45,14 @@ console.log('Thunder Mine: initial damage, four-rune cap, successful-cast reacti
  const u={x:750,y:450,team:1},wizard=art.mount(u),page=art.mount({...u,minionId:'pageguard'}),guardian=art.mount({...u,bossId:'glacial'});
  assert.ok(page.y>wizard.y&&guardian.y<wizard.y&&guardian.size>wizard.size);
 }
+
+{
+ const artCtx={window:{},Image:class{},setTimeout:()=>0,clearTimeout(){}};
+ vm.runInNewContext(fs.readFileSync('assets/thunder-mine.js','utf8'),artCtx);
+ const art=artCtx.window.ThunderMine,cell=64,pixels=new Uint8ClampedArray(cell*cell*4);
+ for(let y=20;y<44;y++)for(let x=0;x<cell;x++)if((x>=22&&x<=40)||(x>=54&&x<=57))pixels[(y*cell+x)*4+3]=255;
+ assert.equal(art.torsoEdge(pixels,cell,32,1),40);
+ assert.equal(art.torsoEdge(pixels,cell,32,-1),22);
+ const u={x:750,y:450,team:1},m=art.mount(u);
+ assert.ok(m.y>u.y-70&&m.size<45);
+}

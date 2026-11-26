@@ -22,27 +22,74 @@ function tile(g,img,n,x,y,size,alpha=1,dir=1){
  g.save();g.globalAlpha*=alpha;g.translate(x,y);g.scale(dir,1);
  g.drawImage(img,(n%4)*C,Math.floor(n/4)*C,C,C,-size/2,-size/2,size,size);g.restore();
 }
-// Local coordinates in each model's unscaled sprite space, measured
-// relative to the floor anchor. Back faces AWAY from the opposing team.
-// [rear offset, upper/mid-back height, mine size].
+// Torso-level anchor (well below the face and hat) in local model space.
+// [fallback rear edge, torso height, compact mounted mine size].
 const BACK={
- wizard:[45,103,66],dummy:[42,108,64],
- scribe:[44,91,59],acolyte:[48,91,62],pageguard:[55,74,68],
- magistrate:[55,108,75],inkbinder:[53,111,72],warden:[64,91,78],
- abyssal:[83,149,96],gale:[70,153,88],briar:[86,147,98],
- glacial:[94,145,104],grelus:[63,123,80]
+ wizard:[35,70,48],dummy:[36,91,49],
+ scribe:[39,63,46],acolyte:[40,65,47],pageguard:[49,47,52],
+ magistrate:[47,76,55],inkbinder:[46,79,54],warden:[55,65,58],
+ abyssal:[66,108,68],gale:[60,108,64],briar:[72,102,70],
+ glacial:[76,102,74],grelus:[53,86,58]
 };
+const poses=new WeakMap(),silhouettes=new WeakMap();
+function modelId(u){return u.bossId||u.minionId||(u.dummy&&!u.wizardDummy?"dummy":"wizard");}
+// Read the same source cell that drawUnit renders. Use the thick
+// connected torso span, not the bounding box of the hat, weapon or arms.
+function torsoEdge(pixels,cell,row,dir){
+ const edges=[];
+ for(let yy=Math.max(0,row-3);yy<=Math.min(cell-1,row+3);yy++){
+   const runs=[];let start=-1;
+   for(let xx=0;xx<=cell;xx++){
+     const solid=xx<cell&&pixels[(yy*cell+xx)*4+3]>=170;
+     if(solid&&start<0)start=xx;
+     if(!solid&&start>=0){if(xx-start>=Math.max(3,cell*.06))runs.push([start,xx-1]);start=-1;}
+   }
+   // Prefer a substantial central body segment to disconnected props.
+   runs.sort((a,b)=>((b[1]-b[0])-Math.abs((b[0]+b[1])/2-cell/2)*.55)-((a[1]-a[0])-Math.abs((a[0]+a[1])/2-cell/2)*.55));
+   if(runs.length)edges.push(dir>0?runs[0][1]:runs[0][0]);
+ }
+ edges.sort((a,b)=>a-b);
+ return edges.length?edges[Math.floor(edges.length/2)]:null;
+}
+function registerPose(u,img,col,row,cell,rect,flip=1){
+ if(!u||!Number.isFinite(u.x)||!Number.isFinite(u.y)||!img||!img.width||!rect||!Number.isFinite(rect.y)||rect.h<=0||!u.hp)return;
+ const id=modelId(u),profile=BACK[id]||BACK.wizard;
+ const [,height,size]=profile;
+ // Ordinary wizards are mirrored by drawUnit. Authored tower creature
+ // atlases are not mirrored; their visible front faces the left.
+ const rear=id==="wizard"?(u.team===1?1:-1):id==="dummy"?(u.team===1?1:-1):1;
+ const localDir=rear*flip;
+ const sampleRow=Math.round(clamp((-height-rect.y)/rect.h)*(cell-1));
+ let cached=silhouettes.get(img);
+ if(!cached){cached=new Map();silhouettes.set(img,cached);}
+ const key=[col,row,cell,sampleRow,localDir].join("/");
+ let edge=cached.get(key);
+ if(edge===undefined){
+   try{
+     const canvas=document.createElement("canvas");canvas.width=cell;canvas.height=cell;
+     const ctx=canvas.getContext("2d",{willReadFrequently:true});
+     ctx.drawImage(img,col*cell,row*cell,cell,cell,0,0,cell,cell);
+     edge=torsoEdge(ctx.getImageData(0,0,cell,cell).data,cell,sampleRow,localDir);
+   }catch(e){edge=null;}
+   cached.set(key,edge);
+ }
+ if(edge!==null){
+   const localX=(rect.x+(edge+.5)/cell*rect.w)*flip;
+   // The edge of the mine intersects the body, while its core sits
+   // outside the rear silhouette and cannot cover eyes or the face.
+   poses.set(u,{x:localX+rear*size*.24,y:-height,size,dir:rear});
+ }
+}
 function mount(u,scale=1){
- // Match drawUnit's perspective projection exactly. The model-specific
- // local dimensions already include each creature's authored size.
  const depth=.60+.30*clamp((u.y-288)/235);
- const id=u.bossId||u.minionId||(u.dummy&&!u.wizardDummy?"dummy":"wizard");
- const profile=BACK[id]||BACK.wizard.map(n=>n*Math.max(.75,Math.min(1.8,scale||1)));
- const [rear,height,size]=profile,dir=u.team===1?1:-1;
+ const id=modelId(u);
+ const [edge,height,size]=BACK[id]||BACK.wizard;
+ const rear=u.team===1?1:-1;
+ const pose=poses.get(u)||{x:rear*(edge+size*.24),y:-height,size,dir:rear};
  const sand=u.statuses?.find(st=>st.kind==="quick_sand");
  const sink=(sand?.sinks||0)*45*depth;
- return {x:u.x+dir*rear*depth,y:u.y-height*depth+sink,
-   size:size*depth,scale:size/75*depth,dir,depth:u.y-.035,model:id};
+ return {x:u.x+pose.x*depth,y:u.y+pose.y*depth+sink,
+   size:pose.size*depth,scale:pose.size/75*depth,dir:pose.dir,depth:u.y-.035,model:id};
 }
 function scene(source,target,p,scale=1){
  const m=mount(target,scale),rear=m.dir;
@@ -95,5 +142,5 @@ function shake(ms){
  const a=(1-t/160)**1.5;return {x:Math.sin(t*.13)*8*a,y:Math.cos(t*.17)*5*a};
 }
 function portrait(g,w,h){tile(g,body,6,w/2,h/2,Math.min(w,h)*1.12);}
-window.ThunderMine={ensure,ready,error:()=>err,mount,scene,draw,castFx,attached,explode,shake,portrait};ensure();
+window.ThunderMine={ensure,ready,error:()=>err,registerPose,torsoEdge,mount,scene,draw,castFx,attached,explode,shake,portrait};ensure();
 })();

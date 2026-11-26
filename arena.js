@@ -3012,7 +3012,7 @@
       if(kind!=="body")s.broken=!target.statuses.some(r=>r.kind===kind);
       if(kind==="body"||amount<=0){q.step=null;q.next=null;return finish(amount,split);}
       const next=quicksilverSurface(target,q.used);
-      q.next={...next,from:kind,startAt:s.hitAt+440,hitAt:s.hitAt+1370};
+      q.next={...next,from:kind,startAt:s.hitAt+580,hitAt:s.hitAt+1650};
       spell.duration=Math.max(spell.duration,q.next.hitAt+760);
       return 0;
     };
@@ -6328,7 +6328,7 @@
         const v=quicksilverVisual(action,target);
         if(v){
           const factor=unitEffectFactor(target),s=art.surfaceScene(source,target,action.elapsed,v.stage,factor);
-          if(action.elapsed<v.stage.hitAt+410)renderables.push({type:"quicksilver-liquid",depthY:s.y-.14,priority:0,draw:()=>art.draw(g,s)});
+          if(action.elapsed<v.stage.hitAt+560)renderables.push({type:"quicksilver-liquid",depthY:s.y-.14,priority:0,draw:()=>art.draw(g,s)});
           const kind=v.kind,ph=v.phase,snap=v.stage.snapshot;
           if(ph.active&&snap&&!["body","petrify"].includes(kind)){
             const rect={x:target.x-220*factor,y:target.y-300*factor,w:440*factor,h:360*factor};

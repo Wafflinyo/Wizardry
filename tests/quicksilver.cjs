@@ -8,7 +8,7 @@ const fx=art.window.Quicksilver;assert.ok(fx.ready());
 for(const team of [0,1]){
  const s={team},target={x:team?200:800,y:450};
  const at=fx.scene(s,target,.5);assert.equal(at.x,target.x);assert.equal(at.y,target.y+4);assert.equal(at.dir,team?-1:1);
- for(let i=0;i<=100;i++){const frame=fx.scene(s,target,i/100).frame;assert.ok(frame>=0&&frame<12,'never use spear tiles');}
+ for(let i=0;i<=100;i++){const frame=fx.scene(s,target,i/100).frame;assert.ok(frame>=0&&frame<16,'never use spear tiles');}
 }
 assert.equal(fx.coverage(.2).active,false);assert.ok(fx.coverage(.55).rise>0&&fx.coverage(.55).rise<1);
 assert.equal(fx.coverage(.73).rise,1);assert.equal(fx.coverage(.73).hard,1);assert.equal(fx.coverage(.73).breakup,0);
@@ -40,3 +40,6 @@ run([{kind:"bubble_shield",value:1000}],0,[]);
 run([{kind:"sand_warrior",value:250}],213,["body"]);
 run([{kind:"faultline_bulwark",value:350},{kind:"bubble_shield",value:100}],79,["bubble_shield","body"]);
 run([],380,[]);
+
+assert.equal(fx.frameCounts.travel,16);assert.equal(fx.frameCounts.formation,16);assert.equal(fx.frameCounts.impact,16);
+assert.equal(fx.stagePhase(2627,stage).burst,0);assert.equal(fx.stagePhase(2628,stage).impactIndex,4);assert.equal(fx.stagePhase(2628+42*11,stage).impactIndex,15);

@@ -3,7 +3,7 @@
 (function(root){'use strict';
 const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2;
 const smooth=p=>{p=C(p);return p*p*(3-2*p);};
-const W=200,H=264,S=1.65,AX=70,AY=224,CONTACT_X=152;
+const W=200,H=264,S=1.65,AX=70,AY=224,CONTACT_X=178;
 const image=new Image(),listeners=[];let ready=false;
 image.onload=()=>{ready=image.naturalWidth===1600&&image.naturalHeight===1056;if(ready)listeners.forEach(fn=>fn());};
 image.src='./assets/octo-submerged-v99.webp';
@@ -12,13 +12,15 @@ function pose(p,target){
  const dir=target.x>=500?1:-1;
  // The pool approaches before the long tentacle rises. Contact is aligned
  // to the far side of the authored splash, not to the submerged head.
- const reach=smooth((p-.12)/.22),floor=L(510,target.y,reach);
+ // Swim for 35% of the cast, then stop farther from the victim.
+ const reach=smooth((p-.08)/.35),floor=L(510,target.y,reach);
  const contactX=target.x-dir*(CONTACT_X-AX)*S;
  let frame;
- if(p<.24)frame=Math.floor(p/.24*3);
- else if(p<.43)frame=3+Math.floor((p-.24)/.19*5);
- else if(p<.61)frame=8+Math.floor((p-.43)/.18*8);
- else if(p<.70)frame=16+Math.floor((p-.61)/.09*4);
+ if(p<.43)frame=Math.min(2,Math.floor(p/.43*3));
+ else if(p<.53)frame=3+Math.floor((p-.43)/.10*5);
+ else if(p<.66)frame=8+Math.floor((p-.53)/.13*8);
+ // Fast downward snap, keeping the existing damage contact at 70%.
+ else if(p<.70)frame=16+Math.floor((p-.66)/.04*4);
  else if(p<.90)frame=20+Math.floor((p-.70)/.20*10);
  else frame=Math.min(31,30+Math.floor((p-.90)/.05));
  const exit=smooth((p-.90)/.10);

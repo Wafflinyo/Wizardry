@@ -8,7 +8,11 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  assert.equal(fx.pose(0,target).x,500);
  assert.equal(fx.pose(.7,target).groundY,target.y);
  assert.equal(fx.pose(.7,target).frame,20);
- assert.ok(Math.abs(fx.pose(.7,target).x+fx.pose(.7,target).dir*82*1.65-target.x)<1e-8);
+ assert.notEqual(fx.pose(.34,target).x,fx.pose(.43,target).x,'still swimming at the previous arrival time');
+ assert.equal(fx.pose(.43,target).x,fx.pose(.7,target).x,'stops before the wind-up');
+ assert.ok(fx.pose(.65,target).frame<16,'holds overhead before fast strike');
+ assert.ok(fx.pose(.67,target).frame>=16,'downward snap begins near impact');
+ assert.ok(Math.abs(fx.pose(.7,target).x+fx.pose(.7,target).dir*108*1.65-target.x)<1e-8);
  const frames=new Set();
  for(let i=0;i<=1000;i++){
   const p=i/1000,b=fx.pose(p,target);frames.add(b.frame);

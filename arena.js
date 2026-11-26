@@ -6074,15 +6074,20 @@
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="photosynthesis"&&window.Photosynthesis){
       const target=getUnit(action.target),art=window.Photosynthesis;
       if(target){
-        const s=art.scene(target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target));
+        const s=art.scene(target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target),-camera.y/camera.scale-80);
         renderables.push({type:"photo-sunlight",depthY:s.y-.12,priority:0,draw:()=>art.sun(g,s)});
+        renderables.push({type:"photo-receiver-sun",depthY:target.y-.12,priority:0,draw:()=>art.receiveSun(g,s)});
         renderables.push({type:"photo-flower",depthY:s.y,priority:2,draw:()=>art.flower(g,s)});
         renderables.push({type:"photo-transfer",depthY:target.y+.12,priority:2,draw:()=>art.transfer(g,s)});
       }
     }
     if(state.skipCue?.photosynthesis&&window.Photosynthesis){
       const u=getUnit(state.skipCue.source);
-      if(u)renderables.push({type:"photo-pass-heal",depthY:u.y+.15,priority:2,draw:()=>window.Photosynthesis.activate(g,u,clamp(1-state.skipCue.remaining/1400,0,1),unitSlotFactor(u))});
+      if(u){
+        const progress=clamp(1-state.skipCue.remaining/1400,0,1),factor=unitSlotFactor(u);
+        renderables.push({type:"photo-pass-sun",depthY:u.y-.12,priority:0,draw:()=>window.Photosynthesis.activateSun(g,u,progress,factor,-camera.y/camera.scale-80)});
+        renderables.push({type:"photo-pass-heal",depthY:u.y+.15,priority:2,draw:()=>window.Photosynthesis.activate(g,u,progress,factor)});
+      }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="mothernature"&&window.MotherNature){
       const source=getUnit(action.source),art=window.MotherNature;

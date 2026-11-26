@@ -11,6 +11,6 @@ for(let n=1;n<=4;n++){
  assert.equal(fx.scene(duration,duration,targets).alpha,0);
 }
 const arena=fs.readFileSync('arena.js','utf8');
-assert.match(arena,/kind:"thundergoddrums",damage:480,accuracy:\.80/);
+assert.match(arena,/kind:"thundergoddrums",damage:450,accuracy:\.80/);
 assert.match(arena,/startStage\(a,"summon",\(a\.drumTargets\.at\(-1\)\?\.hitAt\?\?1530\)\+1400\)/);
-console.log('Thunder God Drums: 480 base damage, final-impact hold and fade for one to four targets.');
+console.log('Thunder God Drums: 450 base damage, final-impact hold and fade for one to four targets.');

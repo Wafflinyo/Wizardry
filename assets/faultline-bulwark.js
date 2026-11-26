@@ -82,10 +82,62 @@
       const [p,q,r,s]=broad,P=(u,v)=>mix(mix(p,q,u),mix(s,r,u),v);
       fissure(g,[P(.69,0),P(.47,.26),P(.65,.45),P(.39,.68),P(.53,.94)],stress);
     }
-    if(lift<1){
-      g.save();g.translate((a[0]+b[0])/2,(a[1]+b[1])/2);g.scale(.50,.56);
-      dust(g,lift);g.restore();
+    // Rising dust is drawn separately so it does not inherit wall geometry.
+  }
+  function riseFx(g,target,p,layer="front",factor=1){
+    if(p<0||p>=1.30)return;
+    const front=layer==="front",dir=target.team?-1:1;
+    g.save();g.translate(target.x,target.y+3);g.scale(dir*factor,factor);
+    for(const [idx,{a,b,delay}] of slabs.entries()){
+      const age=p-delay;
+      if(age<0||age>=.85)continue;
+      const fade=1-clamp((age-.42)/.43);
+      const mid=mix(a,b,.5);
+      // Ground fractures open just where this segment rises.
+      if(!front){
+        const spread=clamp(age/.18);
+        for(let k=0;k<3;k++){
+          const theta=(k-1)*.9+(idx<3?-1:1)*.6,len=(24+k*10)*spread;
+          const x=mid[0]+Math.cos(theta)*len,y=mid[1]+Math.sin(theta)*len*.52;
+          poly(g,"#514038",[[mid[0],mid[1]],[x-4,y+2],[x+3,y-3]]);
+        }
+      }
+      // Continuous clouds roll out from the base as the stone pushes up.
+      for(let k=0;k<12;k++){
+        const birth=(k%4)*.075,life=(age-birth)/.55;
+        if(life<0||life>=1||((k%2===0)!==front))continue;
+        const n=idx*71+k*13,side=k%3===0?-1:1;
+        const x=mid[0]+side*(8+life*(29+noise(n)*44));
+        const y=mid[1]-Math.sin(life*Math.PI)*(12+noise(n+1)*24)+(front?10:-8);
+        const r=(15+noise(n+2)*17)*(1+life*.65);
+        const glow=g.createRadialGradient(0,0,0,0,0,r);
+        glow.addColorStop(0,"rgba(177,145,111,.83)");
+        glow.addColorStop(.48,"rgba(157,128,99,.51)");
+        glow.addColorStop(1,"rgba(157,128,99,0)");
+        g.save();g.translate(x,y);g.scale(1.25,.68);g.globalAlpha*=fade*Math.sin(life*Math.PI)*.78;
+        g.fillStyle=glow;g.beginPath();g.ellipse(0,0,r,r,0,0,Math.PI*2);g.fill();g.restore();
+      }
+      // Solid stone chips shoot outward and upward, then fall to the floor.
+      for(let k=0;k<9;k++){
+        const life=(age-(k%3)*.055)/.48;
+        if(life<0||life>=1||((k%2===0)!==front))continue;
+        const n=idx*131+k*17,side=k%2?1:-1;
+        const x=mid[0]+side*(9+life*(27+noise(n)*55));
+        const y=mid[1]-4*life*(1-life)*(35+noise(n+1)*65)+(front?8:-5);
+        const r=3+noise(n+2)*6;
+        g.save();g.translate(x,y);g.rotate(n+life*7);g.globalAlpha*=fade*(1-clamp((life-.8)/.2));
+        poly(g,"#806b59",[[-r,0],[-r*.3,-r],[r,-r*.2],[r*.3,r*.7]]);
+        poly(g,"#c5a789",[[-r,0],[-r*.3,-r],[r,-r*.2]]);g.restore();
+      }
     }
+    g.restore();
+  }
+  function shake(p){
+    if(p<0||p>=1.18)return {x:0,y:0};
+    const envelope=clamp(p/.045)*(1-clamp((p-.94)/.24));
+    let kicks=0;
+    for(const {delay} of slabs){const d=p-delay;if(d>=0&&d<.17)kicks+=Math.sin(d*55)*Math.exp(-d*20);}
+    return {x:envelope*(Math.sin(p*111)*3.5+Math.sin(p*53)*2.5),y:envelope*(Math.cos(p*139)*4.5+kicks*3.8)};
   }
   function fissure(g,points,progress){
     const extent=clamp(progress)*(points.length-1);
@@ -168,5 +220,5 @@
     wall(g,1,null,"all");
     g.restore();
   }
-  window.FaultlineBulwark={draw,portrait};
+  window.FaultlineBulwark={draw,portrait,riseFx,shake};
 })();

@@ -6046,7 +6046,9 @@
     const stampedeShake=stampedeCast?window.Stampede?.shake(stampedeCast.elapsed,stampedeCast.duration,stampedeCast.stampedeTargets||[],getUnit(stampedeCast.source)?.team===0?1:-1):null;
     const armadilloCast=state.animation?.card?.id==="giantarmadillo"&&state.animation.stage==="summon"?state.animation:null;
     const armadilloShake=armadilloCast?window.GiantArmadillo?.shake(armadilloCast.elapsed/armadilloCast.duration,getUnit(armadilloCast.source)?.team===0?1:-1,armadilloCast.card.hit,armadilloCast.duration):null;
-    const impactShake=mineShake??octoShake??crabShake??stampedeShake??armadilloShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const bulwarkCast=state.animation?.card?.id==="faultlinebulwark"&&state.animation.stage==="summon"?state.animation:null;
+    const bulwarkShake=bulwarkCast?window.FaultlineBulwark?.shake(bulwarkCast.elapsed/(bulwarkCast.duration*bulwarkCast.card.hit)):null;
+    const impactShake=mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
@@ -6388,8 +6390,12 @@
       if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
         const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         const impact=hit&&{...hit.faultline,age:hit.age};
-        for(const layer of ["back","front"])renderables.push({type:"faultline-bulwark-"+layer,depthY:u.y+(layer==="back"?-.145:.145),priority:2,
-          draw:()=>window.FaultlineBulwark?.draw(g,u,growth,impact,layer,unitEffectFactor(u))});
+        for(const layer of ["back","front"]){
+          const depth=u.y+(layer==="back"?-.145:.145),factor=unitEffectFactor(u);
+          if(forming&&layer==="back")renderables.push({type:"faultline-rise-back",depthY:depth-.01,priority:1,draw:()=>window.FaultlineBulwark?.riseFx(g,u,action.elapsed/(action.duration*action.card.hit),layer,factor)});
+          renderables.push({type:"faultline-bulwark-"+layer,depthY:depth,priority:2,draw:()=>window.FaultlineBulwark?.draw(g,u,growth,impact,layer,factor)});
+          if(forming&&layer==="front")renderables.push({type:"faultline-rise-front",depthY:depth+.01,priority:3,draw:()=>window.FaultlineBulwark?.riseFx(g,u,action.elapsed/(action.duration*action.card.hit),layer,factor)});
+        }
       }
     }
     for(const u of sorted){

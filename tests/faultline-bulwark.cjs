@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync('assets/faultline-bulwark.js','utf8'),ctx);
 const fx=ctx.window.FaultlineBulwark;
-function record(){const calls=[];const g=new Proxy({globalAlpha:1,createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});return {calls,g};}
+function record(){const calls=[];const g=new Proxy({globalAlpha:1,createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});return {calls,g};}
 for(const team of [0,1]){
  const {g,calls}=record(),u={x:500,y:500,team};
  fx.draw(g,u,1,null,'back',1);const back=calls.filter(a=>a[0]==='fill').length;
@@ -19,3 +19,5 @@ const backend=JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c
 
 // Both V branches must expose a thick top and an end face.
 {const u={x:0,y:0,team:0};for(const layer of ['back','front']){const {g,calls}=record();fx.draw(g,u,1,null,layer,1);const points=calls.filter(a=>a[0]==='lineTo');assert.ok(points.length>100);const xs=points.map(a=>a[1]);assert.ok(Math.max(...xs)>130,'outward depth visible in '+layer);}}
+
+{const u={x:500,y:500,team:0},{g,calls}=record();fx.riseFx(g,u,.25,'front');assert.ok(calls.some(a=>a[0]==='ellipse'));assert.ok(calls.some(a=>a[0]==='rotate'));calls.length=0;fx.riseFx(g,u,1.3,'front');assert.equal(calls.length,0);assert.ok(Math.hypot(fx.shake(.35).x,fx.shake(.35).y)>0);assert.equal(fx.shake(1.2).x,0);}

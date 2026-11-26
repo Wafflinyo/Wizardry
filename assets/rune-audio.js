@@ -98,6 +98,29 @@
     }
   }
 
+  function beginBulwark(cast){
+    const duration=cast.duration/1000,elapsed=cast.elapsed/1000,span=duration*cast.card.hit*1.18;
+    const remaining=span-elapsed;if(remaining<=.03)return null;
+    const start=audio.currentTime+.006,end=start+remaining,gain=audio.createGain();
+    gain.gain.value=1;gain.connect(master);
+    // Filtered gravel noise with a low earth tremor underneath.
+    const frames=Math.ceil(audio.sampleRate*remaining),buffer=audio.createBuffer(1,frames,audio.sampleRate),data=buffer.getChannelData(0);
+    let low=0;
+    for(let i=0;i<frames;i++){
+      low=.87*low+.13*(Math.random()*2-1);
+      const p=(elapsed+i/audio.sampleRate)/(duration*cast.card.hit);
+      const fade=Math.max(0,Math.min(1,p/.05,(1.18-p)/.24));
+      let thud=0;
+      for(const d of [0,.05,.17,.23,.34,.40]){
+        const t=(p-d)*duration*cast.card.hit;if(t>=0)thud+=Math.exp(-t*17);
+      }
+      data[i]=(low*(.65+.28*Math.min(thud,2))+Math.sin(i/audio.sampleRate*2*Math.PI*55)*.20)*fade*.55;
+    }
+    const source=audio.createBufferSource();source.buffer=buffer;
+    const filter=audio.createBiquadFilter();filter.type="lowpass";filter.frequency.value=330;
+    source.connect(filter).connect(gain);source.start(start);source.stop(end);
+    return {gain,end};
+  }
   function follow(cast,round){
     const stage=cast?.stage;
     const key=cast&&[round,cast.source,cast.card?.id].join("|");
@@ -119,7 +142,11 @@
       }
       flow=null;lastStage=stage;lastCast=key;
     }
-    if(flow||stage!=="tracing-auto"||audio?.state!=="running")return;
+    if(flow||audio?.state!=="running")return;
+    if(stage==="summon"&&cast.card?.id==="faultlinebulwark"){
+      flow=beginBulwark(cast);return;
+    }
+    if(stage!=="tracing-auto")return;
     const remaining=(cast.duration-cast.elapsed)/1000;
     if(remaining>.12)flow=begin(cast);
   }

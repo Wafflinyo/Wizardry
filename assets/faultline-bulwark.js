@@ -18,40 +18,43 @@
     g.fillStyle=color;
     g.fill();
   }
-  // Hand-hewn courses on the existing six wall panels. All coordinates
-  // stay inside the original silhouette, including during ground emergence.
-  const stone=["#94745e","#a7886c","#b59a7b","#876b59","#bca080","#9f8168","#aa8b70"];
-  const sideStone=["#634d44","#745b4c","#846756","#695247","#8b6e5a"];
+  // Extrude each panel perpendicular to its own ground edge, retaining the
+  // original six centerlines, heights, delays and front/back layering.
   const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+  const add=(a,b)=>[a[0]+b[0],a[1]+b[1]];
   const noise=n=>{const f=Math.sin(n*127.1+311.7)*43758.5453;return f-Math.floor(f);};
-  function stoneFace(g,quad,rows,seed,side=false){
-    const [tl,tr,br,bl]=quad,point=(u,v)=>mix(mix(tl,tr,u),mix(bl,br,u),v);
-    poly(g,side?"#453a35":"#514239",quad);
+  const palette={
+    inner:["#88766a","#a18c77","#98816c","#b09a83"],
+    outer:["#77675b","#94806d","#897461","#a38a71"],
+    end:["#5b4e47","#6d5c50","#786354","#89735f"],
+    cap:["#b4a08a","#c5ae92","#a9957e","#d2ba9c"]
+  };
+  function face(g,quad,rows,seed,kind){
+    const [tl,tr,br,bl]=quad;
+    const P=(u,v)=>mix(mix(tl,tr,u),mix(bl,br,u),v);
+    const colors=palette[kind];
+    poly(g,kind==="cap"?"#8c7967":"#4f443e",quad);
     for(let row=0;row<rows;row++){
       const v0=row/rows,v1=(row+1)/rows;
-      // Stagger horizontal joints; keep broad rectangular ashlar blocks.
-      const split=row%2===0?.62:.36;
-      const cuts=side?[0,1]:[0,split,1];
+      const split=.38+noise(seed+row*13)*.24;
+      const cuts=(kind==="end"||kind==="cap"||row%3===1)?[0,1]:[0,split,1];
       for(let k=0;k<cuts.length-1;k++){
-        const n=seed*73+row*11+k*5,rand=noise(n),gap=side?.035:.025;
-        const u0=cuts[k]+gap,u1=cuts[k+1]-gap;
-        const top=v0+.024,bottom=v1-.017;
-        if(bottom<=top||u1<=u0)continue;
-        const corner=.09*(u1-u0),chamfer=Math.min(.014,(bottom-top)*.11);
-        const p=(x,y)=>point(x,y);
-        const block=[p(u0+corner,top),p(u1-corner*.6,top),p(u1,top+chamfer),p(u1,bottom-chamfer),p(u1-corner,bottom),p(u0+corner*.55,bottom),p(u0,bottom-chamfer),p(u0,top+chamfer)];
-        const colors=side?sideStone:stone;
-        poly(g,colors[Math.floor(rand*colors.length)],block);
-        // Recessed mortar, chipped edges and a shallow bevel on each stone.
-        const inset=(u1-u0)*.11,bevel=Math.min(.025,(bottom-top)*.22);
-        poly(g,side?"#a18569":"#d4b791",[block[0],block[1],block[2],p(u1-inset,top+bevel),p(u0+inset,top+bevel)]);
-        poly(g,side?"#4d3b34":"#735847",[block[2],block[3],block[4],block[5],p(u0+inset,bottom-bevel),p(u1-inset,bottom-bevel),p(u1-inset,top+bevel)]);
-        // Subtle flat planes and small weathered chips, rather than large
-        // triangular facets crossing the entire wall.
-        if(!side&&rand>.28){
-          const mid=(u0+u1)/2,cy=(top+bottom)/2;
-          poly(g,rand>.68?"#c3a483":"#8c705a",[p(u0+inset,top+bevel),p(mid,top+bevel),p(mid+(u1-u0)*.12,cy),p(u0+inset,cy+(bottom-top)*.15)]);
-        }
+        const n=seed*73+row*19+k*7,r=noise(n);
+        const u0=cuts[k]+.018,u1=cuts[k+1]-.018;
+        const t=v0+.012,b=v1-.012,w=u1-u0,h=b-t;
+        const p=(u,v)=>P(u0+w*u,t+h*v);
+        const a=p(.12,.02),c=p(.87,.04+noise(n+1)*.06),
+              d=p(.99,.19),e=p(.96,.79),f=p(.79,.97),
+              m=p(.13,.94),l=p(.01,.76),z=p(.02,.19);
+        poly(g,colors[Math.floor(r*colors.length)],[a,c,d,e,f,m,l,z]);
+        const A=p(.18,.18),B=p(.81,.19),D=p(.83,.72),E=p(.2,.76);
+        const hi=kind==="end"?"#aa937b":kind==="cap"?"#e3cdb0":"#c5ac8d";
+        const shade=kind==="end"?"#4b403a":kind==="cap"?"#8b7562":"#66564b";
+        poly(g,hi,[a,c,d,B,A,z]);
+        poly(g,shade,[d,e,f,m,E,D,B]);
+        poly(g,colors[Math.floor(noise(n+3)*colors.length)],[A,B,D,E]);
+        if(r>.36)poly(g,kind==="end"?"#605249":"#8b7563",[A,p(.49,.23),p(.6,.51),E]);
+        if(r>.71)poly(g,shade,[p(.69,.28),p(.77,.35),p(.72,.58),p(.65,.46)]);
       }
     }
   }
@@ -59,31 +62,29 @@
     const lift=clamp((growth-delay)/.55);
     if(!lift)return;
     const height=h*(1-(1-lift)**3);
-    const tip=[a[0]-5,a[1]-height*.94],peak=[b[0]-5,b[1]-height];
-    const shoulders=[tip[0]+12,tip[1]-7],cap=[peak[0]+13,peak[1]-6];
-    const foot=[b[0]+13,b[1]-6];
-    const seam=[(a[0]+b[0])/2-4,(a[1]+b[1])/2-height*.49];
-    const lower=[(a[0]+b[0])/2+3,(a[1]+b[1])/2-height*.16];
-    // Identical panel dimensions, apex, thickness, and growth animation.
-    const rows=Math.max(3,Math.round(h/23));
-    const seed=Math.round(a[0]*3+a[1]*7);
-    stoneFace(g,[tip,peak,b,a],rows,seed);
-    stoneFace(g,[peak,cap,foot,b],rows,seed+19,true);
-    // A continuous dressed coping course follows each panel's original cap.
-    poly(g,"#d1b18b",[tip,shoulders,cap,peak]);
-    const capMid=mix(shoulders,cap,.55),faceMid=mix(tip,peak,.55);
-    poly(g,"#9b7b5d",[faceMid,capMid,mix(shoulders,cap,.59),mix(tip,peak,.59)]);
-    poly(g,"#ead0a8",[tip,shoulders,mix(shoulders,cap,.32),mix(tip,peak,.32)]);
+    const dx=b[0]-a[0],dy=(b[1]-a[1])/.62,length=Math.hypot(dx,dy)||1;
+    const d=[dy/length*28,-dx/length*28*.62];
+    const A=a,B=b,C=add(b,d),D=add(a,d);
+    const ta=[A[0]-3,A[1]-height*.94],tb=[B[0]-3,B[1]-height],tc=add(tb,d),td=add(ta,d);
+    const near=dx<0,seed=Math.round(a[0]*3+a[1]*7);
+    const rows=Math.max(3,Math.round(h/27));
+    // Near walls expose the outer broad face, far walls the inner broad face.
+    // Unlike the previous uniform skew, neither branch collapses into a plane.
+    const broad=near?[tc,td,D,C]:[ta,tb,B,A];
+    face(g,broad,rows,seed,near?"outer":"inner");
+    face(g,[tb,tc,C,B],rows,seed+19,"end");
+    face(g,[ta,tb,tc,td],2,seed+37,"cap");
+    const edge=near?[tc,td]:[ta,tb];
+    poly(g,"#d2bb9e",[edge[0],edge[1],add(edge[1],[0,3]),add(edge[0],[0,3])]);
+    poly(g,"#59493f",[B,C,add(C,[0,-4]),add(B,[0,-4])]);
     if(impact){
-      const growth=clamp((impact.age-delay*.09)/.12)*(impact.broken?1:impact.stress);
-      fissure(g,[peak,[seam[0]+4,seam[1]-17],seam,[lower[0]-4,lower[1]-5],lower],growth);
+      const stress=clamp((impact.age-delay*.09)/.12)*(impact.broken?1:impact.stress);
+      const [p,q,r,s]=broad,P=(u,v)=>mix(mix(p,q,u),mix(s,r,u),v);
+      fissure(g,[P(.69,0),P(.47,.26),P(.65,.45),P(.39,.68),P(.53,.94)],stress);
     }
     if(lift<1){
-      g.save();
-      g.translate((a[0]+b[0])/2,(a[1]+b[1])/2);
-      g.scale(.50,.56);
-      dust(g,lift);
-      g.restore();
+      g.save();g.translate((a[0]+b[0])/2,(a[1]+b[1])/2);g.scale(.50,.56);
+      dust(g,lift);g.restore();
     }
   }
   function fissure(g,points,progress){
@@ -161,8 +162,8 @@
     g.fillStyle=bg;g.fillRect(0,0,w,h);
     // Show the same six masonry panels in the same V formation as combat.
     // Frame the complete wall, not unrelated background spikes.
-    const scale=Math.min(w/132,h/211);
-    g.save();g.translate(w*.5-82*scale,h*.5+36*scale);g.scale(scale,scale);
+    const scale=Math.min(w/132,h/230);
+    g.save();g.translate(w*.5-87*scale,h*.5+38*scale);g.scale(scale,scale);
     g.globalAlpha=.42;poly(g,"#2e2523",[[12,-48],[93,-14],[141,7],[53,84],[10,81],[79,0]]);g.globalAlpha=1;
     wall(g,1,null,"all");
     g.restore();

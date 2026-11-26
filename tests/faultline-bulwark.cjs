@@ -16,3 +16,6 @@ const arena=fs.readFileSync('arena.js','utf8');assert.ok(arena.includes('"shield
 console.log('Faultline Bulwark: masonry on both depth layers, mirrored growth and shatter, matching card art.');
 
 const backend=JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c.id==='faultlinebulwark');assert.equal(backend.shieldHp,400);assert.equal(backend.retaliation,150);
+
+// Both V branches must expose a thick top and an end face.
+{const u={x:0,y:0,team:0};for(const layer of ['back','front']){const {g,calls}=record();fx.draw(g,u,1,null,layer,1);const points=calls.filter(a=>a[0]==='lineTo');assert.ok(points.length>100);const xs=points.map(a=>a[1]);assert.ok(Math.max(...xs)>130,'outward depth visible in '+layer);}}

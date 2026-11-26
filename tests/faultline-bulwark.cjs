@@ -12,7 +12,7 @@ for(const team of [0,1]){
  calls.length=0;fx.draw(g,u,1,{age:.14,stress:1,broken:true,attacker:{x:750,y:500}},'all',1);assert.ok(calls.some(a=>a[0]==='stroke'));
 }
 const {g,calls}=record();fx.portrait(g,160,160);assert.ok(calls.filter(a=>a[0]==='fill').length>160,'portrait uses the same masonry wall');
-const arena=fs.readFileSync('arena.js','utf8');assert.ok(arena.includes('"shieldHp":400,"retaliation":150'));assert.ok(arena.includes('RECENTLY_UPDATED_CARDS=["faultlinebulwark"'));
+const arena=fs.readFileSync('arena.js','utf8');assert.ok(arena.includes('"shieldHp":400,"retaliation":150'));assert.ok(/RECENTLY_UPDATED_CARDS=\[[^\]]*"faultlinebulwark"/.test(arena));
 console.log('Faultline Bulwark: masonry on both depth layers, mirrored growth and shatter, matching card art.');
 
 const backend=JSON.parse(fs.readFileSync('backend/cards.json','utf8')).find(c=>c.id==='faultlinebulwark');assert.equal(backend.shieldHp,400);assert.equal(backend.retaliation,150);

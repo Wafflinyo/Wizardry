@@ -274,6 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
+  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",reduction:.20,rounds:3,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Stone armor forms over yourself or an ally, reducing incoming direct spell damage that reaches their HP by 20% for 3 rounds. Does not reduce periodic damage. Reapplying refreshes the duration."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
   const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
@@ -281,9 +282,9 @@
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -291,6 +292,7 @@
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
     thunderbirds:"530 base damage. 30% Stun chance.",
     stampede:"380 damage to each living enemy.",
+    petrify:"20% less direct spell damage for 3 rounds.",
     giantarmadillo:"350 Earth damage to one enemy.",
     thundergoddrums:"450 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
@@ -380,7 +382,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -661,6 +663,8 @@
     window.ThunderMine?.registerPose(look,wizardAtlas,i%4,Math.floor(i/4),128,{x:-74,y:top,w:148,h:220},look.team===1?-1:1);
     drawDressedFrame(ctx,art,"wizard",i,top,look);
     drawHeadHair(ctx,look,"wizard",i,top,time);
+    const petrify=petrifyProgress(look);
+    if(petrify>0){ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);window.Petrify?.wizard(ctx,petrify,i);ctx.restore();}
     const armor=armorProgress(look);
     if(armor>0){
       ctx.translate(-74,-220+footPadding(wizardAtlas,i)+7);ctx.scale(148/128,220/128);
@@ -2528,7 +2532,7 @@
   const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
-  const BENEFICIAL_RUNES=new Set(["guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
+  const BENEFICIAL_RUNES=new Set(["petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
@@ -2541,7 +2545,7 @@
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||runeCount(u)<MAX_RUNES);
   }
-  const RUNE_CAST_KINDS={guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
+  const RUNE_CAST_KINDS={petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
     drowzyflowers:"sleep",crystalicemirrors:"crystal_ice_mirrors",frozentouch:"frozen_touch",
     quicksand:"quick_sand",manascourge:"mana_scourge",gunpowder:"gunpowder_coat",decaystrength:"decay_mark",
     acidair:"decaying_strength",boulderweight:"boulder_weight",thornwrap:"thorny_wrap",
@@ -2607,7 +2611,7 @@
   function loseHp(source,target,amount){
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
-    if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");consumeStatus(target,"thunder_mine");consumeStatus(target,"guardian_roots");}
+    if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");consumeStatus(target,"thunder_mine");consumeStatus(target,"guardian_roots");consumeStatus(target,"petrify");}
     if(target.hp<=0){consumeStatus(target,"aromatherapy");consumeStatus(target,"reflective_ice");consumeStatus(target,"sand_warrior");consumeStatus(target,"faultline_bulwark");consumeStatus(target,"lifevine");}
     if(target.hp<=0&&state.environment?.ownerId===target.id)consumeStatus(target,ENVIRONMENT_RUNE);
     trackDamage(source,target,lost);
@@ -2728,6 +2732,7 @@
       recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
       state.environment=null;
     }
+    if(kind==="petrify"&&u.hp>0)flash(u,"PETRIFY · EXPIRED","#c8b29a").petrifyCrumbles=true;
     if(kind==="water_prison")(state.waterPrisonBursts??=[]).push({targetId:u.id,age:0});
     return status;
   }
@@ -2925,6 +2930,13 @@
     if(source.hp<=0){source.defeatElapsedMs=0;flash(source,"DEFEATED","#ffd5b0");}
     return true;
   }
+  function applyPetrifyReduction(u,amount){
+    const rune=u.statuses.find(st=>st.kind==="petrify"&&state.round<st.expiresRound);
+    if(!rune||amount<=0)return amount;
+    const reduced=Math.floor(amount*(1-rune.value)),saved=amount-reduced;
+    if(saved>0){tally(u,"tanked",saved);flash(u,"PETRIFY · −"+saved+" DAMAGE","#c9b298").petrifyHit=true;}
+    return reduced;
+  }
   function damage(source,target,base,card,spell=null,flatManaBonus=false){
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
@@ -3020,6 +3032,7 @@
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
     let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell));
     if(reflected){
+      amount=applyPetrifyReduction(recipient,amount);
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
       recordBattleEvent(source.name+" takes "+amount+" reflected damage.");
@@ -3032,6 +3045,7 @@
       amount-=split.reflected;
       notes.push("REFLECTIVE ICE");
     }
+    if(source.team!==target.team)amount=applyPetrifyReduction(target,amount);
     const oldHp=target.hp,wasAlive=target.hp>0;
     loseHp(source,target,amount);
     if(split){
@@ -3476,7 +3490,7 @@
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
-    for(const u of state.units)for(const kind of ["guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
+    for(const u of state.units)for(const kind of ["petrify","guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
       const status=u.statuses.find(st=>st.kind===kind);
       if(status&&(u.hp<=0||state.round>=status.expiresRound))consumeStatus(u,kind);
     }
@@ -3722,6 +3736,10 @@
       for(const entry of anim.drumTargets??drumTargets(c))applyDrumHit(anim,entry);
     }else if(card.kind==="hellhound"){
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
+    }else if(card.kind==="petrify"){
+      if(!t||t.hp<=0||t.team!==c.team||addStatus(t,"petrify",null,card.reduction,card.school)===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="petrify"),{sourceId:c.id,expiresRound:state.round+card.rounds});
+      flash(t,"PETRIFY · 3 ROUNDS","#d5bb97");
     }else if(card.kind==="guardianroots"){
       if(!t||t.hp<=0||t.team!==c.team)return;
       const lastTriggerRound=t.statuses.find(st=>st.kind==="guardian_roots")?.lastTriggerRound??null;
@@ -4470,7 +4488,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4910,6 +4928,7 @@
       [el[0]+8,el[1]+9],[sh[0]+9,sh[1]+10]],primary,dark,1.6);
     pathPoly(ctx,[[el[0]-7,el[1]-9],[hand[0]-7,hand[1]-6],
       [hand[0]+7,hand[1]+7],[el[0]+9,el[1]+8]],light,dark,1.6);
+    window.Petrify?.rig(ctx,petrifyProgress(u),side,sh,el,hand);
     window.BoulderWeight?.equip(ctx,armorProgress(u),...sh,...el,...hand,30);
     ellipse(ctx,hand[0],hand[1],9,8,skin,shadeColor(skin,-35),1);
     // One single solid wand, rigid and aimed with the entire arm.
@@ -5041,6 +5060,14 @@
     ellipse(ctx,1,-105,7,7,"#9c422f","#6c342c",1);
     for(const x of [-61,61])line(ctx,x-4,-124,x+2,-110,"#cfaa74",3);
   }
+  function petrifyProgress(u){
+    if(!u?.statuses||u.hp<=0)return 0;
+    const armor=u.statuses.some(st=>st.kind==="petrify"&&state.round<st.expiresRound);
+    const cast=state.animation;
+    if(!armor&&cast?.card?.id==="petrify"&&cast.stage==="summon"&&cast.target===u.id&&canReceiveDebuff(u,"petrify"))
+      return clamp(cast.elapsed/(cast.duration*cast.card.hit),0,1);
+    return armor?1:0;
+  }
   function armorProgress(u){
     if(!u?.statuses||u.hp<=0)return 0;
     const a=state?.animation;
@@ -5120,6 +5147,7 @@
         const rect=grelusDrawRect(minion,row);
         if(row!==2)window.ThunderMine?.registerPose(u,minion.art,frame.col,frame.row,cell,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});
         g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
+        if(row!==2)window.Petrify?.creature(g,petrifyProgress(u),rect.x,rect.y,rect.size,rect.size);
         const runeElapsed=elapsed-ARM_RAISE_MS;
         if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
           window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{school:u.masteries?.[0]||"dark",elapsed:runeElapsed,duration:AUTO_TRACE_MS,centerX:-size*.52,centerY:-size*.57,scale:3.3});
@@ -5154,6 +5182,7 @@
       if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
       if(row!==2)window.ThunderMine?.registerPose(u,source,sourceCol,sourceRow,cell,{x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size});
       g.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
+      if(row!==2)window.Petrify?.creature(g,petrifyProgress(u),castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
       const runeElapsed=guardian?elapsed-ARM_RAISE_MS:elapsed;
       if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
@@ -5164,6 +5193,7 @@
     }
     if(u.dummy&&!u.wizardDummy){
       drawTrainingDummy(g,u);
+      window.Petrify?.creature(g,petrifyProgress(u),-70,-155,140,155);
       window.BoulderWeight?.equip(g,armorProgress(u),31,-128,43,-118,61,-119,31);
       g.restore();return;
     }
@@ -5272,6 +5302,7 @@
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
+      case "petrify":return {title:"Petrify · Earth armor",detail:"Reduces direct spell damage reaching HP by 20%. "+Math.max(0,st.expiresRound-state.round)+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
@@ -5379,7 +5410,7 @@
     thunder_mine:"lightning",burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
     water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
-    guardian_roots:"nature",photosynthesis:"nature",growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
+    petrify:"earth",guardian_roots:"nature",photosynthesis:"nature",growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",live_wire:"lightning",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
     recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
@@ -5615,6 +5646,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
+      else if(card.id==="petrify")window.Petrify?.portrait(c,width,height);
       else if(card.id==="giantarmadillo")window.GiantArmadillo?.portrait(c,width,height);
       else if(card.id==="stampede")window.Stampede?.portrait(c,width,height);
       else if(card.id==="guardianroots")window.GuardianRoots?.portrait(c,width,height);
@@ -6101,7 +6133,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6136,6 +6168,15 @@
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
+    if(window.Petrify){
+      const art=window.Petrify;
+      for(const u of sorted){
+        const forming=action?.stage==="summon"&&action.card.id==="petrify"&&action.target===u.id;
+        if(forming&&u.hp>0){const p=clamp(action.elapsed/action.duration,0,1);for(const layer of ["back","front"])renderables.push({type:"petrify-"+layer,depthY:u.y+(layer==="back"?-.13:.13),priority:2,draw:()=>art.cast(g,u,p,unitSlotFactor(u),layer)});}
+        const hit=state.flashes.findLast(f=>f.unit===u.id&&(f.petrifyHit||f.petrifyCrumbles));
+        if(hit)renderables.push({type:"petrify-chips",depthY:u.y+.18,priority:2,draw:()=>art.chips(g,u,hit.age,unitSlotFactor(u),hit.petrifyCrumbles)});
+      }
     }
     if(window.GuardianRoots){
       const art=window.GuardianRoots;
@@ -7450,7 +7491,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

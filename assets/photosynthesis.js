@@ -39,7 +39,8 @@ function drawFlower(g,s){
 function shaft(g,x,y,k,dir,top,t,strength=1){
  if(t<=0||t>=1||y<=top)return;
  const a=Math.min(1,t*7,(1-t)*6)*strength,h=y-top;
- const drift=dir*Math.min(105*k,h*.14),sx=x+drift;
+ // Keep the beam axis fixed directly above the bloom or recipient.
+ const sx=x;
  g.save();
  // Narrow layered rays with no disc, visible emitter or hard upper cap.
  for(let j=0;j<5;j++){
@@ -47,18 +48,19 @@ function shaft(g,x,y,k,dir,top,t,strength=1){
    const grad=g.createLinearGradient(0,top,0,y);
    grad.addColorStop(0,"rgba(231,183,65,"+(.12*a)+")");
    grad.addColorStop(.68,"rgba(248,211,99,"+(.19*a)+")");
-   grad.addColorStop(1,"rgba(238,196,66,0)");
+   grad.addColorStop(.94,"rgba(248,211,99,"+(.23*a)+")");
+   grad.addColorStop(1,"rgba(238,196,66,"+(.04*a)+")");
    g.fillStyle=grad;g.beginPath();
    g.moveTo(sx+offset-wide,top);g.lineTo(sx+offset+wide,top);
-   g.lineTo(x+offset*.42+wide*.30,y);g.lineTo(x+offset*.42-wide*.30,y);
+   g.lineTo(x,y);
    g.closePath();g.fill();
  }
- // Extend the authored ray frames over the same full height. Their bottom
- // is anchored at the recipient, never scaled with a screen-space offset.
- tile(g,"sun",t,x,y,220*k,h,dir,.38*a);
+ // Do not stretch or mirror the original cropped ray tile: its internal
+ // diagonal and transparent margins made the light appear to move away.
+ // The fixed shaft and downward-moving particles share the bloom endpoint.
  for(let j=0;j<13;j++){
    const q=t*1.8-j*.055;if(q<=0||q>=1)continue;
-   const px=mix(sx,x,q)+Math.sin(j*7.2+q*4)*34*k;
+   const px=x+Math.sin(j*7.2+q*4)*42*k*(1-q);
    const py=mix(top,y,q),r=(1.8+j%3)*k;
    g.globalAlpha=a*Math.min(1,q*8,(1-q)*8)*.78;
    g.fillStyle=j%2?"#efd078":"#dbb348";
@@ -67,16 +69,24 @@ function shaft(g,x,y,k,dir,top,t,strength=1){
  g.restore();
 }
 function drawSun(g,s){
- if(s.p<.23||s.p>.76)return;
- shaft(g,s.x,s.y-88*s.k,s.k,s.dir,s.top,(s.p-.23)/.53);
+ if(s.p<.23||s.p>.63)return;
+ // Measured sunflower disc centers in the actual 240x160 atlas cells.
+ // Frames 10–19 hold the same fully open bloom. Use the exact sprite
+ // transform, including horizontal mirroring, to anchor the shaft.
+ const n=Math.min(N-1,Math.round(s.p*(N-1)));
+ const centers={7:[123.8,61.3],8:[122.8,64.6],9:[124.1,69.9],20:[119.5,81.1]};
+ const [cx,cy]=centers[n]||[122.4,69.4];
+ const bx=s.x+s.dir*(cx-C/2)*(252*s.k/C);
+ const by=s.y+7*s.k+(cy-R)*(168*s.k/R);
+ shaft(g,bx,by,s.k,s.dir,s.top,(s.p-.23)/.40);
 }
 function drawReceiveSun(g,s){
- if(s.p<.47||s.p>.95)return;
- shaft(g,s.u.x,s.u.y-34*s.k,s.k,s.dir,s.top,(s.p-.47)/.48,.82);
+ if(s.p<.64||s.p>.95)return;
+ shaft(g,s.u.x,s.u.y-34*s.k,s.k,s.dir,s.top,(s.p-.64)/.31,.82);
 }
 function drawTransfer(g,s){
- if(s.p<.47||s.p>.96||!valid(sheets.heal))return;
- const t=(s.p-.47)/.49;
+ if(s.p<.64||s.p>.96||!valid(sheets.heal))return;
+ const t=(s.p-.64)/.32;
  // Falling illustrated leaf fragments originate above the visible screen.
  // Their endpoint is the selected wizard, not a mid-air point.
  for(let i=0;i<11;i++){

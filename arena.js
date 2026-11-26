@@ -274,7 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
-  const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.60,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
+  const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
   const TEST_GUARDIAN_ROOTS={id:"guardianroots",name:"Guardian Roots",school:"nature",cost:4,target:"ally",kind:"guardianroots",retaliation:100,rounds:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:3200,hit:.61,description:"A beneficial rune lasts 3 rounds. When its bearer takes direct spell damage from an enemy, roots strike the attacker for 100 damage, once per round. Reapplication refreshes the rune."};
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
@@ -3343,7 +3343,7 @@
   function stampedeTargets(caster){
     if(!caster)return [];
     return alive(1-caster.team).slice().sort((a,b)=>a.y-b.y||a.index-b.index).map((u,i)=>({
-      id:u.id,x:u.x,y:u.y,hitAt:.60+i*.045,hit:false
+      id:u.id,x:u.x,y:u.y,hitAt:.48+i*.045,hit:false
     }));
   }
   function applyStampedeHit(a,entry){
@@ -6039,7 +6039,9 @@
     const octoShake=state.animation?.card?.id==="octo"&&state.animation.stage==="summon"?window.WIZARDRY_OCTO_V95?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.duration):null;
     const crabCast=state.animation?.card?.id==="crabgiant"&&state.animation.stage==="summon"?state.animation:null;
     const crabShake=crabCast?window.CrabGiant?.shake(crabCast.elapsed/crabCast.duration,getUnit(crabCast.target)?.x>=500?1:-1,crabCast.card.hit,crabCast.duration):null;
-    const impactShake=mineShake??octoShake??crabShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const stampedeCast=state.animation?.card?.id==="stampede"&&state.animation.stage==="summon"?state.animation:null;
+    const stampedeShake=stampedeCast?window.Stampede?.shake(stampedeCast.elapsed,stampedeCast.duration,stampedeCast.stampedeTargets||[],getUnit(stampedeCast.source)?.team===0?1:-1):null;
+    const impactShake=mineShake??octoShake??crabShake??stampedeShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);

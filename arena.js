@@ -1838,6 +1838,7 @@
   }
   function startStage(a,stage,duration){
     a.stage=stage;a.elapsed=0;a.duration=duration;
+    if(stage==="summon"&&a.card.id==="quicksilver")initQuicksilver(a);
   }
   // All wizards AND enemies automatically trace the same rune.
   // Accuracy is a separate per-cast random roll, independent of user input.
@@ -1995,6 +1996,7 @@
     if(a.stage==="summon"&&a.card.kind==="shortcircuit")advanceShortCircuit(a);
     if(a.stage==="summon"&&a.card.kind!=="shortcircuit"&&a.card.kind!=="stampede"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
+    if(a.stage==="summon"&&a.card.id==="quicksilver")advanceQuicksilver(a);
     if(a.stage==="summon"&&a.card.kind==="magneticpulse")advanceMagneticRune(a);
     if(a.stage==="summon"&&a.card.kind==="soulghoul"&&a.runeResult==="success"&&p>=a.card.healAt)
       deliverGhoulSoul(a,caster);
@@ -2871,9 +2873,10 @@
     }
     return amount-spent;
   }
-  function absorbBarrierDamage(target,amount,deferPetrify=false,barrierBonus=0){
+  function absorbBarrierDamage(target,amount,deferPetrify=false,barrierBonus=0,onlyKind=null){
     if(amount<=0)return amount;
     for(const kind of ["sand_warrior","bubble_shield"]){
+      if(onlyKind&&kind!==onlyKind)continue;
       const shield=target.statuses.find(st=>st.kind===kind);
       if(!shield)continue;
       const {shieldDamage:absorbed,spent}=barrierDamagePortion(amount,shield.value,barrierBonus);
@@ -2965,6 +2968,56 @@
       if(healed)flash(u,"PETRIFY · +"+healed+" HP","#cde89e");
     }
   }
+  // A single damage roll is distributed across sequential physical surfaces.
+  function quicksilverSurface(target,used=[]){
+    for(const kind of ["wind_dome","faultline_bulwark","sand_warrior","bubble_shield","reflective_ice","petrify"]){
+      if(used.includes(kind))continue;
+      const st=target?.statuses.find(r=>r.kind===kind);
+      if(!st)continue;
+      if(["faultline_bulwark","sand_warrior","bubble_shield"].includes(kind)&&!(st.value>0))continue;
+      if(kind==="reflective_ice"&&state.round>=st.expiresRound)continue;
+      if(kind==="petrify"&&!petrified(target))continue;
+      return {kind,snapshot:{...st}};
+    }
+    return {kind:"body",snapshot:null};
+  }
+  function initQuicksilver(a){
+    const surface=quicksilverSurface(getUnit(a.target));
+    a.quicksilver={targetId:a.target,used:[],current:{...surface,startAt:0,hitAt:a.card.duration*a.card.hit,from:null},next:null,step:null};
+  }
+  function quicksilverVisual(a,u){
+    const q=a?.quicksilver;
+    if(a?.stage!=="summon"||!q||q.targetId!==u.id||a.mirrorTarget)return null;
+    const s=q.next&&a.elapsed>=q.next.startAt?q.next:q.current;
+    if(!s)return null;
+    const phase=window.Quicksilver?.stagePhase(a.elapsed,s);
+    return phase?{kind:s.kind,stage:s,phase}:null;
+  }
+  function advanceQuicksilver(a){
+    const q=a.quicksilver;if(!q?.step)return;
+    while(q.next&&a.elapsed>=q.next.hitAt){
+      q.current=q.next;q.next=null;q.step(q.current);paintUI();
+    }
+  }
+  function resolveQuicksilver(source,target,amount,spell,finish){
+    if(!spell.quicksilver)initQuicksilver(spell);
+    const q=spell.quicksilver,bonus=spell.card.barrierBonus||0;
+    let split=null;
+    q.step=s=>{
+      const kind=s.kind;q.used.push(kind);s.struck=true;
+      if(kind==="faultline_bulwark")amount=absorbFaultlineDamage(target,amount,source,spell);
+      else if(kind==="sand_warrior"||kind==="bubble_shield")amount=absorbBarrierDamage(target,amount,true,bonus,kind);
+      else if(kind==="reflective_ice"){split=splitReflectiveIce(target,amount,spell);if(split)amount-=split.reflected;}
+      else if(kind==="petrify")amount=absorbPetrifyDamage(target,amount);
+      if(kind!=="body")s.broken=!target.statuses.some(r=>r.kind===kind);
+      if(kind==="body"||amount<=0){q.step=null;q.next=null;return finish(amount,split);}
+      const next=quicksilverSurface(target,q.used);
+      q.next={...next,from:kind,startAt:s.hitAt+440,hitAt:s.hitAt+1370};
+      spell.duration=Math.max(spell.duration,q.next.hitAt+760);
+      return 0;
+    };
+    return q.step(q.current);
+  }
   function damage(source,target,base,card,spell=null,flatManaBonus=false){
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
@@ -3014,7 +3067,7 @@
     if(aura&&aura.turns>0){raw*=1+aura.value;notes.push("AURA");}
     if(!reflected){
       gainElectricalChargeMana(target,card,spell);
-      if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));return 0;}
+      if(blockWithWindDome(source,target,base,spell)){tally(target,"tanked",Math.floor(raw));if(spell?.quicksilver){spell.quicksilver.current.struck=true;spell.quicksilver.current.broken=true;}return 0;}
     }
     if(base>0&&card?.school==="lightning"&&spell&&!reflected&&source.team!==target.team){
       if(spell.liveWireBonus===undefined){
@@ -3058,6 +3111,39 @@
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
+    const finish=(amount,split)=>{
+      const oldHp=target.hp,wasAlive=target.hp>0;
+      loseHp(source,target,amount);
+      if(split){
+        const enemy=split.enemy;
+        const reflected=enemy.hp>0?absorbBarrierDamage(enemy,split.reflected):0;
+        if(reflected>0){
+          loseHp(target,enemy,reflected);
+          recordBattleEvent(target.name+"’s Reflective Ice returns "+reflected+" damage to "+enemy.name+".");
+          if(enemy.hp<=0){
+            enemy.defeatElapsedMs=0;
+            flash(enemy,"DEFEATED","#ffd5b0");
+          }
+        }
+        flash(enemy,"REFLECTIVE ICE −"+reflected,"#b8f7ff").iceReflection={x:target.x,y:target.y-85};
+      }
+      if(wasAlive&&target.hp===0){
+        // Start the one-shot defeat animation at the exact lethal hit.
+        // This remains independent of the attacker's ongoing summon/trace.
+        target.defeatElapsedMs=0;
+      }
+      if(amount>0||card?.id!=="quicksilver")flashSpellDamage(target,amount,notes.includes("BLOCK")?"#8df2f5":"#f8c49c",spell);
+      recordBattleEvent(source.name+" → "+target.name+": "+amount+" damage"+
+        (notes.length?" ["+notes.join(", ")+"]":""));
+      if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
+      if(base>0&&source.team!==target.team)attemptMarkedFreeze(target,card,spell);
+      const directDamage=oldHp-target.hp;
+      healFromLightningRod(rodOwners,redirected,recipient);
+      triggerGuardianRoots(source,target,directDamage,spell);
+      triggerGunpowderCoat(target,card,spell);
+      return directDamage;
+    };
+    if(card?.id==="quicksilver"&&spell&&!reflected)return resolveQuicksilver(source,target,impact-redirected,spell,(amount,split)=>{if(split)notes.push("REFLECTIVE ICE");return finish(amount,split);});
     let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell),!reflected,reflected?0:(card?.barrierBonus||0));
     if(reflected){
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
@@ -3073,36 +3159,7 @@
       notes.push("REFLECTIVE ICE");
     }
     amount=absorbPetrifyDamage(target,amount);
-    const oldHp=target.hp,wasAlive=target.hp>0;
-    loseHp(source,target,amount);
-    if(split){
-      const enemy=split.enemy;
-      const reflected=enemy.hp>0?absorbBarrierDamage(enemy,split.reflected):0;
-      if(reflected>0){
-        loseHp(target,enemy,reflected);
-        recordBattleEvent(target.name+"’s Reflective Ice returns "+reflected+" damage to "+enemy.name+".");
-        if(enemy.hp<=0){
-          enemy.defeatElapsedMs=0;
-          flash(enemy,"DEFEATED","#ffd5b0");
-        }
-      }
-      flash(enemy,"REFLECTIVE ICE −"+reflected,"#b8f7ff").iceReflection={x:target.x,y:target.y-85};
-    }
-    if(wasAlive&&target.hp===0){
-      // Start the one-shot defeat animation at the exact lethal hit.
-      // This remains independent of the attacker's ongoing summon/trace.
-      target.defeatElapsedMs=0;
-    }
-    flashSpellDamage(target,amount,notes.includes("BLOCK")?"#8df2f5":"#f8c49c",spell);
-    recordBattleEvent(source.name+" → "+target.name+": "+amount+" damage"+
-      (notes.length?" ["+notes.join(", ")+"]":""));
-    if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
-    if(base>0&&source.team!==target.team)attemptMarkedFreeze(target,card,spell);
-    const directDamage=oldHp-target.hp;
-    healFromLightningRod(rodOwners,redirected,recipient);
-    triggerGuardianRoots(source,target,directDamage,spell);
-    triggerGunpowderCoat(target,card,spell);
-    return directDamage;
+    return finish(amount,split);
   }
   function deliverGhoulSoul(cast,caster){
     if(cast.soulDelivered)return;
@@ -5114,9 +5171,12 @@
   function drawUnit(u,time){
     const sandTime=time;
     const stone=petrifyProgress(u),stasis=petrified(u);
-    const metalCast=state.animation;
-    const metal=metalCast?.card?.id==="quicksilver"&&metalCast.stage==="summon"&&metalCast.target===u.id&&!preventsHitEffects(metalCast,u)?window.Quicksilver?.coverage(metalCast.elapsed/metalCast.duration,metalCast.card.hit):null;
-    const paintBody=(ctx,paint,rect,allowStone=true)=>metal?.active?window.Quicksilver.coat(ctx,metal,paint,rect):stone>0&&allowStone&&window.Petrify?window.Petrify.statue(ctx,u,stone,paint,rect):paint(ctx);
+    const visual=quicksilverVisual(state.animation,u);
+    const metal=visual&&["body","petrify"].includes(visual.kind)?visual.phase:null;
+    const paintBody=(ctx,paint,rect,allowStone=true)=>{
+      const original=c=>stone>0&&allowStone&&window.Petrify?window.Petrify.statue(c,u,stone,paint,rect):paint(c);
+      return metal?.active?window.Quicksilver.coat(ctx,metal,original,rect):original(ctx);
+    };
     const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
     if(frozen||stasis)time=0;
     // Physical depth scale from the same arena floor, not separate
@@ -5264,7 +5324,7 @@
     g.save();
     if(u.team===1)g.scale(-1,1);
     const paintWizard=ctx=>drawWizardSprite(ctx,visualStage,visualProgress,action?.traceMs||0,idleTime,action?.lowerFromFrame,u);
-    const spriteDrawn=u.hp<=0?drawDefeatSprite(g,u.defeatElapsedMs||0,u):approvedWizard&&wizardAtlasReady()&&paintBody(g,paintWizard,{x:-110,y:-240,w:220,h:260});
+    const spriteDrawn=u.hp<=0?(metal?.active?paintBody(g,ctx=>drawDefeatSprite(ctx,u.defeatElapsedMs||0,u),{x:-110,y:-240,w:220,h:260},false):drawDefeatSprite(g,u.defeatElapsedMs||0,u)):approvedWizard&&wizardAtlasReady()&&paintBody(g,paintWizard,{x:-110,y:-240,w:220,h:260});
     g.restore();
     if(spriteDrawn){
       // All sprites stay in the same depth-sorted scene and use the
@@ -6124,7 +6184,8 @@
     const cavernCast=state.animation?.card?.id==="crystalcavern"&&state.animation.stage==="summon"?state.animation:null;
     const cavernShake=cavernCast?window.CrystalCavern?.shake(cavernCast.elapsed/cavernCast.duration):null;
     const quicksilverCast=state.animation?.card?.id==="quicksilver"&&state.animation.stage==="summon"?state.animation:null;
-    const quicksilverShake=quicksilverCast?window.Quicksilver?.shake(quicksilverCast.elapsed/quicksilverCast.duration,quicksilverCast.card.hit):null;
+    const qsStage=quicksilverCast?.quicksilver?.current;
+    const quicksilverShake=qsStage?window.Quicksilver?.shake((quicksilverCast.elapsed-qsStage.hitAt)/1000,0):null;
     const impactShake=quicksilverShake??cavernShake??mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
@@ -6264,8 +6325,28 @@
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="quicksilver"&&window.Quicksilver){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.Quicksilver;
       if(source&&target){
-        const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
-        renderables.push({type:"quicksilver-liquid",depthY:scene.p<scene.arrival?scene.y+.04:target.y-.14,priority:0,draw:()=>art.draw(g,scene)});
+        const v=quicksilverVisual(action,target);
+        if(v){
+          const factor=unitEffectFactor(target),s=art.surfaceScene(source,target,action.elapsed,v.stage,factor);
+          if(action.elapsed<v.stage.hitAt+410)renderables.push({type:"quicksilver-liquid",depthY:s.y-.14,priority:0,draw:()=>art.draw(g,s)});
+          const kind=v.kind,ph=v.phase,snap=v.stage.snapshot;
+          if(ph.active&&snap&&!["body","petrify"].includes(kind)){
+            const rect={x:target.x-220*factor,y:target.y-300*factor,w:440*factor,h:360*factor};
+            for(const layer of kind==="sand_warrior"?["front"]:["back","front"]){
+              const drawSurface=ctx=>{
+                if(kind==="faultline_bulwark")window.FaultlineBulwark?.draw(ctx,target,1,{age:1,broken:false,stress:1-snap.value/(snap.maxValue??BY_ID.faultlinebulwark.shieldHp)},layer,factor);
+                else fitUnitEffect(ctx,target,()=>{
+                  if(kind==="sand_warrior")window.SandWarrior?.draw(ctx,target,{growth:1,time,broken:false});
+                  else if(kind==="bubble_shield")window.BubbleShield?.draw(ctx,{target,time,growth:1,hp:snap.value,maxHp:BY_ID.bubbleshield.shieldHp},layer);
+                  else if(kind==="reflective_ice")window.ReflectiveIce?.shell(ctx,target,1,time,layer);
+                  else if(kind==="wind_dome")window.WIZARDRY_WIND_DOME_V101?.draw(ctx,{target,time,mode:"active",progress:1,layer});
+                });
+              };
+              const phase={...ph,surface:kind==="bubble_shield"||kind==="wind_dome",broken:v.stage.broken,burst:layer==="back"?0:ph.burst};
+              renderables.push({type:"quicksilver-coated-"+kind+"-"+layer,depthY:target.y+(layer==="back"?-.145:.155),priority:3,draw:()=>art.coat(g,phase,drawSurface,rect)});
+            }
+          }
+        }
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="giantarmadillo"&&window.GiantArmadillo){
@@ -6480,11 +6561,12 @@
             draw:()=>fitUnitEffect(g,unit,()=>window.Lifevine.drawCoil(g,scene,unit,layer))});
       }
     }
+    const metalOn=(u,kind)=>{const v=quicksilverVisual(action,u);return v?.kind===kind&&v.phase.active;};
     for(const u of sorted){
       const forming=action?.card.id==="faultlinebulwark"&&action.stage==="summon"&&action.target===u.id;
       const wall=u.statuses.find(st=>st.kind==="faultline_bulwark");
       const hit=state.flashes.findLast(f=>f.faultline?.targetId===u.id);
-      if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
+      if(!metalOn(u,"faultline_bulwark")&&((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken)){
         const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         const impact=hit&&(!hit.faultline.broken||!wall)?{...hit.faultline,age:hit.age}:wall&&wall.value<(wall.maxValue??BY_ID.faultlinebulwark.shieldHp)?{age:1,broken:false,stress:1-wall.value/(wall.maxValue??BY_ID.faultlinebulwark.shieldHp)}:null;
         for(const layer of ["back","front"]){
@@ -6539,7 +6621,7 @@
       }
       const formingIce=action?.card?.id==="reflectiveice"&&action.stage==="summon"&&action.target===u.id;
       const iced=u.statuses.some(st=>st.kind==="reflective_ice");
-      if(u.hp>0&&(formingIce||iced)){
+      if(!metalOn(u,"reflective_ice")&&u.hp>0&&(formingIce||iced)){
         const growth=formingIce&&!iced?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         for(const layer of ["back","front"])renderables.push({type:"reflective-ice-"+layer,
           depthY:u.y+(layer==="back"?-.055:.055),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.ReflectiveIce?.shell(g,u,growth,time,layer))});
@@ -6547,7 +6629,7 @@
       const formingSand=action?.card?.id==="sandwarrior"&&action.stage==="summon"&&action.target===u.id;
       const guarding=u.statuses.some(st=>st.kind==="sand_warrior");
       const sandHit=state.flashes.findLast(f=>f.sandWarrior?.targetId===u.id);
-      if((u.hp>0&&(formingSand||guarding))||sandHit?.sandWarrior.broken){
+      if(!metalOn(u,"sand_warrior")&&((u.hp>0&&(formingSand||guarding))||sandHit?.sandWarrior.broken)){
         const effect=window.SandWarrior;
         const opts={growth:formingSand&&!guarding?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1,
           time,age:sandHit?.age,broken:!guarding&&sandHit?.sandWarrior.broken};
@@ -6555,13 +6637,13 @@
       }
       const bubble=u.statuses.find(st=>st.kind==="bubble_shield");
       const formingBubble=action?.card?.id==="bubbleshield"&&action.stage==="summon"&&action.target===u.id;
-      if(u.hp>0&&(bubble||formingBubble)){
+      if(!metalOn(u,"bubble_shield")&&u.hp>0&&(bubble||formingBubble)){
         const growth=formingBubble&&!bubble?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
         const opts={target:u,time,growth,hp:bubble?.value??BY_ID.bubbleshield.shieldHp,maxHp:BY_ID.bubbleshield.shieldHp};
         for(const layer of ["back","front"])renderables.push({type:"bubble-shield-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.BubbleShield?.draw(g,opts,layer))});
       }
       const cast=action?.card?.id==="winddome"&&action.stage==="summon"&&action.target===u.id;
-      if(cast||u.statuses.some(st=>st.kind==="wind_dome")){
+      if(!metalOn(u,"wind_dome")&&(cast||u.statuses.some(st=>st.kind==="wind_dome"))){
         const opts={target:u,time,mode:cast?"cast":"active",progress:cast?clamp(action.elapsed/action.duration,0,1):1};
         for(const layer of ["back","front"])renderables.push({type:"wind-dome-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{...opts,layer}))});
       }
@@ -6578,10 +6660,10 @@
     }
     for(const ripple of state.bubbleShieldRipples||[]){
       const target=getUnit(ripple.targetId);
-      if(target)renderables.push({type:"bubble-ripple",depthY:target.y+.09,priority:2,
+      if(target&&!metalOn(target,"bubble_shield"))renderables.push({type:"bubble-ripple",depthY:target.y+.09,priority:2,
         draw:()=>fitUnitEffect(g,target,()=>window.BubbleShield?.ripple(g,target,ripple))});
     }
-    for(const burst of state.windDomeBursts||[]){const u=getUnit(burst.targetId);if(!u||u.hp<=0)continue;
+    for(const burst of state.windDomeBursts||[]){const u=getUnit(burst.targetId);if(!u||u.hp<=0||metalOn(u,"wind_dome"))continue;
       for(const layer of ["back","front"])renderables.push({type:"wind-dome-block-"+layer,depthY:u.y+(layer==="back"?-.05:.05),priority:2,draw:()=>fitUnitEffect(g,u,()=>window.WIZARDRY_WIND_DOME_V101?.draw(g,{target:u,time,mode:"block",age:burst.age,layer}))});
     }
     if(action?.stage==="summon"&&action.card.id==="ragingwaters"){

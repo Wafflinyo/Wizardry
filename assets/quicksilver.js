@@ -13,7 +13,7 @@ function coverage(p,hit=.73){
  const frame=Math.min(47,Math.floor(p*48)),q=p===1?1:frame/48;
  const rise=smooth((q-arrival)/(full-arrival)),breakup=smooth((q-release)/(1-release));
  const hard=smooth((q-full+.08)/.08);
- return {active:p>=arrival&&p<1,rise,hard,breakup,frame,p,arrival,hit};
+ return {active:p>=arrival&&p<1,rise,hard,breakup,burst:p>=hit?1-breakup:0,frame,p,arrival,hit};
 }
 function scene(source,target,p,hit=.73,factor=1){
  p=C(p);const dir=source.team===0?1:-1,arrival=hit*.56,start=.13;
@@ -22,8 +22,27 @@ function scene(source,target,p,hit=.73,factor=1){
  const frame=p<arrival?Math.min(11,Math.floor(p/arrival*12)):Math.max(0,Math.floor(3*(1-smooth((p-arrival)/(1-arrival)))));
  return {p,hit,arrival,dir,x:L(origin.x,endX,travel),y:L(origin.y,endY,travel),endX,endY,targetX:target.x,targetY:target.y,frame,factor};
 }
+function stagePhase(ms,s){
+ const hit=s.hitAt,start=s.startAt,arrival=start+(s.from?190:(hit-start)*.56);
+ const q=Math.floor(ms/20)*20;
+ const rise=smooth((q-arrival)/Math.max(1,hit-100-arrival));
+ const hard=smooth((q-hit+220)/220),breakup=smooth((ms-hit-130)/260);
+ const burst=ms<hit?0:(.76+.24*smooth((ms-hit)/65))*(1-breakup);
+ return {active:ms>=arrival&&ms<hit+410,rise,hard,breakup,burst,frame:Math.floor(ms/20),arrival,hit};
+}
+function anchor(target,kind,factor){
+ const side=target.team===0?1:-1;
+ return {x:target.x+side*factor*(kind==="sand_warrior"?106:kind==="faultline_bulwark"?91:0),y:target.y+4};
+}
+function surfaceScene(source,target,ms,stage,factor){
+ const phase=stagePhase(ms,stage),end=anchor(target,stage.kind,factor),dir=source.team===0?1:-1;
+ const origin=stage.from?anchor(target,stage.from,factor):{x:500-dir*76,y:510};
+ const p=C((ms-stage.startAt)/Math.max(1,phase.arrival-stage.startAt)),travel=smooth(p),approach=ms<phase.arrival;
+ const frame=approach?Math.min(11,Math.floor(p*12)):Math.floor(3*(1-phase.breakup));
+ return {p,hit:1,arrival:1,approach,phase,dir,x:L(origin.x,end.x,travel),y:L(origin.y,end.y,travel),frame,factor};
+}
 function draw(g,s){
- const q=coverage(s.p,s.hit),approach=s.p<s.arrival;
+ const q=s.phase||coverage(s.p,s.hit),approach=s.approach??s.p<s.arrival;
  const size=approach?L(182,180*s.factor,smooth(s.p/s.arrival)):185*s.factor;
  g.save();g.translate(s.x,s.y);
  if(approach)g.scale(s.dir,1);
@@ -56,23 +75,31 @@ function metalPixels(data,w,h,phase,bounds=silhouette(data,w,h)){
   data[j]=L(data[j],Math.max(0,Math.min(255,v-7)),alpha);
   data[j+1]=L(data[j+1],Math.max(0,Math.min(255,v+2)),alpha);
   data[j+2]=L(data[j+2],Math.max(0,Math.min(255,v+10)),alpha);
+  if(phase.surface&&data[j+3]>12)data[j+3]=L(data[j+3],255,alpha);
  }
  return bounds;
 }
 function polygon(g,pts,fill){g.beginPath();for(let i=0;i<pts.length;i++)i?g.lineTo(...pts[i]):g.moveTo(...pts[i]);g.closePath();g.fillStyle=fill;g.fill();}
 function spikes(g,p,b,data,w,x,y){
- if(!b||p.hard<=0||p.rise<.80||p.breakup>=1)return;
- const H=Math.max(1,b.bottom-b.top),B=Math.max(1,b.right-b.left),a=p.hard*(1-p.breakup);
+ if(!b||!(p.burst>0)||p.rise<.80||p.breakup>=1)return;
+ const H=Math.max(1,b.bottom-b.top),B=Math.max(1,b.right-b.left),a=1-p.breakup;
  g.save();g.translate(x,y);g.globalAlpha*=a;
  for(let i=0;i<8;i++){
   const row=Math.round(b.top+H*(.16+i*.095)),side=i%2?1:-1;
   let edge=side<0?b.left:b.right;
   while(edge>=b.left&&edge<=b.right&&data[(row*w+edge)*4+3]<128)edge-=side;
   if(edge<b.left||edge>b.right)continue;
-  const length=Math.min(H*.14,B*.24)*(1+i%3*.17)*p.hard,base=Math.max(2,H*.026);
+  const length=Math.min(H*.25,B*.38)*(1+i%3*.17)*p.burst,base=Math.max(3,H*.043);
   const drift=p.breakup*H*.16,dx=side*drift,dy=drift*.5;
   const root=[edge+dx,row+dy],upper=[root[0]-side*base,root[1]-base],lower=[root[0]-side*base,root[1]+base],tip=[root[0]+side*length,root[1]-length*.38];
   polygon(g,[upper,tip,root],"#d6e1e8");polygon(g,[root,tip,lower],"#697882");
+ }
+ for(let i=0;i<6;i++){
+  const row=Math.round(b.top+H*(.23+i*.115)),cx=Math.round(b.left+B*(.34+(i%3)*.16));
+  if(data[(row*w+cx)*4+3]<128)continue;
+  const len=H*.13*p.burst,side=i%2?1:-1,base=H*.034;
+  polygon(g,[[cx-base,row],[cx+side*len*.55,row-len],[cx,row+base]],"#e3ebef");
+  polygon(g,[[cx,row+base],[cx+side*len*.55,row-len],[cx+base,row]],"#586976");
  }
  g.restore();
 }
@@ -84,15 +111,16 @@ function coat(g,phase,paint,rect){
  const ctx=scratch.getContext("2d",{willReadFrequently:true});ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cw,ch);
  ctx.save();ctx.translate(-x,-y);const result=paint(ctx);ctx.restore();
  if(result===false)return false;
- const im=ctx.getImageData(0,0,cw,ch),bounds=metalPixels(im.data,cw,ch,phase);
+ const im=ctx.getImageData(0,0,cw,ch),bounds=metalPixels(im.data,cw,ch,phase.broken?{...phase,breakup:0}:phase);
  ctx.putImageData(im,0,0);
  // The mask comes from the current, dressed target pose, so every body,
  // cape, staff and creature has the correct outline without a dummy asset.
+ g.save();if(phase.broken)g.globalAlpha*=1-phase.breakup;
  g.drawImage(scratch,x,y,cw,ch);
- spikes(g,phase,bounds,im.data,cw,x,y);
+ spikes(g,phase,bounds,im.data,cw,x,y);g.restore();
  return result===undefined?true:result;
 }
 function shake(p,hit=.73){const q=(p-hit)/.085;if(q<0||q>=1)return{x:0,y:0};const f=(1-q)**2;return{x:Math.sin(q*35)*7*f,y:Math.cos(q*31)*4*f};}
 function portrait(g,w,h){const size=Math.min(w,h)*1.13;tile(g,9,(w-size)/2,(h-size)/2,size,size);}
-window.Quicksilver={ensure,ready,error:()=>lastError,scene,draw,coverage,coat,metalPixels,silhouette,shake,portrait};ensure();
+window.Quicksilver={ensure,ready,error:()=>lastError,scene,draw,coverage,stagePhase,surfaceScene,coat,metalPixels,silhouette,shake,portrait};ensure();
 })();

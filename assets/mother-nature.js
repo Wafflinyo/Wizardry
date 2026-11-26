@@ -27,7 +27,8 @@ function tile(g,name,n,x,y,w,h,alpha=1){
 }
 function frame(t){return Math.min(N-1,Math.floor(clamp(t)*N));}
 function scene(source,allies,p){
- p=clamp(p);const x=500,y=405;
+ // The rendered arena diamond is at world (500, 510) on every viewport.
+ p=clamp(p);const x=500,y=510;
  // Hold mature tree for the team healing, then play all retreat frames.
  const treePose=p<.44?mix(0,15,ease(p/.44)):p<.74?15+Math.floor((p-.44)/.30*5):mix(20,31,ease((p-.74)/.26));
  return {p,x,y,treePose,allies};

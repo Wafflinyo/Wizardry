@@ -6077,7 +6077,7 @@
     }
     const sorted=[...state.units].sort((a,b)=>a.y-b.y);
     const renderables=sorted.map(u=>({
-      type:"wizard",depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
+      type:"wizard",unitTeam:u.team,depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
     if(state.mode==="tester"&&window.FireTestArt){
       const fire=window.FireTestArt;
@@ -6894,7 +6894,7 @@
     }
     if(action?.card?.id==="octo"&&action.stage==="summon"){
       const octo=window.WIZARDRY_OCTO_V95,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
-      if(octo)for(const layer of ["ground","body","whip"])renderables.push({type:"octo-"+layer,depthY:layer==="ground"?200:layer==="whip"?opts.target.y+.1:opts.target.y-.1,priority:2,draw:()=>octo.draw(g,{...opts,layer})});
+      if(octo&&opts.target)for(const layer of ["ground","body","whip"])renderables.push({type:"octo-"+layer,depthY:layer==="ground"?200:layer==="whip"?opts.target.y+.1:opts.target.y-.1,priority:2,draw:()=>octo.draw(g,{...opts,layer})});
     }
     if(action?.card?.id==="scorpion"&&action.stage==="summon"){
       const scorpion=window.WIZARDRY_SCORPION_V94,opts={progress:clamp(action.elapsed/action.duration,0,1),target:getUnit(action.target)};
@@ -7081,7 +7081,10 @@
       }
     }
     renderables.sort((a,b)=>a.depthY-b.depthY||a.priority-b.priority);
-    for(const entry of renderables)entry.draw();
+    const octoCaster=action?.card?.id==="octo"&&action.stage==="summon"?getUnit(action.source):null;
+    const drawOrder=octoCaster&&window.WIZARDRY_OCTO_V95?.orderRenderables
+      ?window.WIZARDRY_OCTO_V95.orderRenderables(renderables,octoCaster.team):renderables;
+    for(const entry of drawOrder)entry.draw();
     // Only the bottom portion of the 8-frame impact atlas overlays the
     // target's boots. The full effect stays behind the wizard model.
     if(state.animation?.stage==="golem-impact")

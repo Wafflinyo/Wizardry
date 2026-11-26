@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const images=[];const ctx={window:{},Image:class{constructor(){images.push(this);}}};vm.runInNewContext(fs.readFileSync('assets/octo-whip-v95.js','utf8'),ctx);
-for(const im of images){im.naturalWidth=1280;im.naturalHeight=im.src.includes('slam')?1280:1240;im.onload();}
+for(const im of images){im.naturalWidth=1280;im.naturalHeight=im.src.includes('slam')?1760:1240;im.onload();}
 const fx=ctx.window.WIZARDRY_OCTO_V95;
 for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  const root=fx.pose(.2,target);
@@ -13,7 +13,7 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
   const calls=[],c=new Proxy({globalAlpha:1},{get:(o,k)=>k in o?o[k]:(...a)=>calls.push([k,...a]),set:(o,k,v)=>(o[k]=v,true)});
   fx.draw(c,{progress:p,target,layer:'whip'});
   const draws=calls.filter(x=>x[0]==='drawImage');assert.equal(draws.length,1,'one complete rendered pose, no arm strips');
-  const d=draws[0];assert(d[1].src.includes('octo-slam-v97'));assert(Math.abs(d[8]/d[4]-d[9]/d[5])<1e-9,'equal X and Y scale: no stretch');
+  const d=draws[0];assert(d[1].src.includes('octo-slam-v98'));assert(Math.abs(d[8]/d[4]-d[9]/d[5])<1e-9,'equal X and Y scale: no stretch');
   sourceFrames.push(d[2]+','+d[3]);
   const pose=fx.pose(p,target);assert(calls.some(x=>x[0]==='translate'&&x[1]===pose.x&&x[2]===pose.y),'whip atlas stays on the sliding actor anchor');
  }
@@ -25,3 +25,11 @@ for(const target of [{x:175,y:340},{x:341,y:508},{x:667,y:315},{x:831,y:488}]){
  fx.draw(c,{progress:.98,target,layer:'body'});assert(calls.some(x=>x[0]==='clip'),'dive clips at water surface');
 }
 console.log('Eight full rendered slam frames, uniform scale, rooted body, hit timing and underwater exit passed.');
+
+// Both team orientations: every enemy is behind the octopus, every ally in front.
+for(const team of [0,1]){
+ const entries=[{type:"ground"},{type:"wizard",unitTeam:team},{type:"octo-body"},{type:"wizard",unitTeam:1-team},{type:"octo-whip"},{type:"wizard",unitTeam:team},{type:"wizard",unitTeam:1-team}];
+ const order=fx.orderRenderables(entries,team);assert.equal(order[0].type,"ground");
+ assert.deepEqual(Array.from(order.slice(1),e=>e.type==="wizard"?e.unitTeam===team?"ally":"enemy":e.type),["enemy","enemy","octo-body","octo-whip","ally","ally"]);
+}
+console.log("Octo Whip fixed team-layer ordering passed.");

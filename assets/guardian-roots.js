@@ -5,7 +5,7 @@
 (()=>{
 "use strict";
 const C=192,N=32,clamp=p=>Math.max(0,Math.min(1,p));
-const img=new Image();let pending=null,lastError="";
+const img=new Image(),lash=new Image();lash.src="./assets/guardian-roots-lash-v4.webp";let pending=null,lastError="";
 const ready=()=>img.complete&&img.naturalWidth===C*8&&img.naturalHeight===C*8;
 function ensure(){
  if(ready())return Promise.resolve(true);
@@ -34,15 +34,15 @@ function cast(g,u,p,factor=1,layer){
  tile(g,Math.round(clamp(p)*31),u.x,u.y+16*k,260*k,260*k,layer);
 }
 function strike(g,u,p,factor=1){
+ if(!lash.complete||lash.naturalWidth!==2560||lash.naturalHeight!==1024)return;
  const k=Math.max(.7,Math.min(2.3,factor));
- // Spawn on the arena-facing side of the victim, in the foreground.
- // The authored lash points left: mirror it for right-side victims.
+ // New 32-frame rooted lash: coil away, whip across the victim, recoil.
+ // Native art points right. Fixed ground anchor, mirrored per enemy side.
  const dir=u.team===0?-1:1;
- const x=u.x-dir*88*k,y=u.y+28*k;
- g.save();
- g.translate(x,y);
- g.scale(-dir,1);
- tile(g,N+Math.round(clamp(p)*31),0,0,245*k,245*k);
+ const x=u.x-dir*150*k,y=u.y+20*k;
+ const n=Math.round(clamp(p)*31),w=320,h=256;
+ g.save();g.translate(x,y);g.scale(dir,1);
+ g.drawImage(lash,n%8*w,Math.floor(n/8)*h,w,h,-104*k,-222*k,w*k,h*k);
  g.restore();
 }
 function portrait(g,w,h){const size=Math.min(w*1.06,h*1.05);tile(g,16,w*.5,h*.98,size,size);}

@@ -3,8 +3,8 @@
 const C=x=>Math.max(0,Math.min(1,x)),L=(a,b,p)=>a+(b-a)*p,T=Math.PI*2;
 const image=new Image(),slam=new Image(),listeners=[];let ready=false,slamReady=false;const feet=[235,269,289,291,285,284,285,285,281,281,282,285,287,285,286,286];
 image.onload=()=>{ready=true;listeners.forEach(fn=>fn());};image.src='./assets/octo-whip-v96.webp';
-slam.onload=()=>{slamReady=true;listeners.forEach(fn=>fn());};slam.src='./assets/octo-slam-v97.webp';
-const slamFeet=[298, 298, 299, 300, 274, 274, 270, 270],SLAM_SCALE=300/420;
+slam.onload=()=>{slamReady=true;listeners.forEach(fn=>fn());};slam.src='./assets/octo-slam-v98.webp';
+const slamFeet=[410,410,410,410,410,410,410,410],SLAM_SCALE=300/420;
 function pose(p,target){
  const dir=target.x>=500?1:-1,land=C(p/.20),exit=C((p-.87)/.11),reach=C((p-.40)/.10)*(1-C((p-.82)/.06)),floor=L(510,target.y,reach);
  const frame=p<.20?Math.min(3,Math.floor(p/.20*4)):p<.45?4+Math.min(3,Math.floor((p-.20)/.25*4)):15;
@@ -39,5 +39,14 @@ function draw(c,{progress:p,target,layer='body'}){if(!target)return;const b=pose
  splash(c,b.x,b.groundY+5,(p-.88)/.12,1.15);
 }
 function portrait(c,w,h){c.save();const k=Math.min(w/280,h/280);c.translate(w/2,h*.98);c.scale(k,k);sprite(c,5,0,0);c.restore();}
-root.WIZARDRY_OCTO_V95={draw,portrait,pose,onReady:fn=>listeners.push(fn)};
+// Maintain the normal depth sort for unrelated effects. Reorder only the
+// fighter models and Octo's body/whip slots as enemy -> Octo -> ally.
+function orderRenderables(entries,casterTeam){
+ const rank=e=>e.type==="wizard"?(e.unitTeam===casterTeam?2:0):1;
+ const selected=e=>e.type==="wizard"||e.type==="octo-body"||e.type==="octo-whip";
+ const ordered=entries.filter(selected).sort((a,b)=>rank(a)-rank(b));
+ let i=0;
+ return entries.map(e=>selected(e)?ordered[i++]:e);
+}
+root.WIZARDRY_OCTO_V95={draw,portrait,pose,orderRenderables,onReady:fn=>listeners.push(fn)};
 })(window);

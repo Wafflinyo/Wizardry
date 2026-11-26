@@ -275,10 +275,11 @@
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
+  const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -288,6 +289,7 @@
     thundergoddrums:"400 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
     shortcircuit:"Then +10 damage per enemy mana (max +150).",
+    mothernature:"Restores 550 base HP per living ally.",
     killerbees:"35% Poison chance: 50 × 3 rounds.",
     thundermine:"3 rounds: next successful damaging cast triggers 300 damage.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
@@ -369,7 +371,7 @@
   }
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
-  const TEST_CARD_ORDER=["killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
+  const TEST_CARD_ORDER=["mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
     const result=[...cards];
@@ -4400,7 +4402,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5543,6 +5545,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
+      else if(card.id==="mothernature")window.MotherNature?.portrait(c,width,height);
       else if(card.id==="killerbees")window.KillerBees?.portrait(c,width,height);
       else if(card.id==="thundermine")window.ThunderMine?.portrait(c,width,height);
       else if(EXTRA_FIRE_TEST.some(spell=>spell.id===card.id))window.FireTestArt?.[card.id]?.portrait(c,width,height);
@@ -6015,7 +6018,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6050,6 +6053,19 @@
       }
       const now=performance.now();state.fireRingHits=(state.fireRingHits||[]).filter(e=>now-e.time<800);
       for(const hit of state.fireRingHits){const u=getUnit(hit.id);if(u)renderables.push({type:"fire-ring-hit",depthY:u.y+.2,priority:2,draw:()=>fire.ringoffire.draw(g,u,(now-hit.time)/800,unitSlotFactor(u))});}
+    }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="mothernature"&&window.MotherNature){
+      const source=getUnit(action.source),art=window.MotherNature;
+      if(source){
+        const allies=alive(source.team),scene=art.scene(source,allies,clamp(action.elapsed/action.duration,0,1));
+        renderables.push({type:"mother-nature-roots",depthY:-1000,priority:0,draw:()=>art.roots(g,scene)});
+        renderables.push({type:"mother-nature-pollen",depthY:scene.y-.12,priority:0,draw:()=>art.pollen(g,scene)});
+        renderables.push({type:"mother-nature-tree",depthY:scene.y,priority:2,draw:()=>art.tree(g,scene)});
+        for(const ally of allies){
+          renderables.push({type:"mother-nature-travel",depthY:ally.y+.10,priority:2,draw:()=>art.travel(g,scene,ally)});
+          renderables.push({type:"mother-nature-heal",depthY:ally.y+.20,priority:2,draw:()=>art.heal(g,scene,ally,unitSlotFactor(ally))});
+        }
+      }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="killerbees"&&window.KillerBees){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.KillerBees;
@@ -7285,7 +7301,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

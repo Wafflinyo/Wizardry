@@ -2732,7 +2732,7 @@
       recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
       state.environment=null;
     }
-    if(kind==="petrify"&&u.hp>0)flash(u,"PETRIFY · EXPIRED","#c8b29a").petrifyCrumbles=true;
+    if(kind==="petrify"&&u.hp>0)Object.assign(flash(u,"PETRIFY · EXPIRED","#c8b29a"),{petrifyCrumbles:true,petrifyUnit:u.id});
     if(kind==="water_prison")(state.waterPrisonBursts??=[]).push({targetId:u.id,age:0});
     return status;
   }
@@ -2934,7 +2934,7 @@
     const rune=u.statuses.find(st=>st.kind==="petrify"&&state.round<st.expiresRound);
     if(!rune||amount<=0)return amount;
     const reduced=Math.floor(amount*(1-rune.value)),saved=amount-reduced;
-    if(saved>0){tally(u,"tanked",saved);flash(u,"PETRIFY · −"+saved+" DAMAGE","#c9b298").petrifyHit=true;}
+    if(saved>0){tally(u,"tanked",saved);Object.assign(flash(u,"PETRIFY · −"+saved+" DAMAGE","#c9b298"),{petrifyHit:true,petrifyUnit:u.id});}
     return reduced;
   }
   function damage(source,target,base,card,spell=null,flatManaBonus=false){
@@ -6174,7 +6174,7 @@
       for(const u of sorted){
         const forming=action?.stage==="summon"&&action.card.id==="petrify"&&action.target===u.id;
         if(forming&&u.hp>0){const p=clamp(action.elapsed/action.duration,0,1);for(const layer of ["back","front"])renderables.push({type:"petrify-"+layer,depthY:u.y+(layer==="back"?-.13:.13),priority:2,draw:()=>art.cast(g,u,p,unitSlotFactor(u),layer)});}
-        const hit=state.flashes.findLast(f=>f.unit===u.id&&(f.petrifyHit||f.petrifyCrumbles));
+        const hit=state.flashes.findLast(f=>f.petrifyUnit===u.id&&(f.petrifyHit||f.petrifyCrumbles));
         if(hit)renderables.push({type:"petrify-chips",depthY:u.y+.18,priority:2,draw:()=>art.chips(g,u,hit.age,unitSlotFactor(u),hit.petrifyCrumbles)});
       }
     }

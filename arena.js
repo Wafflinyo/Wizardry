@@ -5663,7 +5663,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
-      else if(card.id==="petrify")window.Petrify?.portrait(c,width,height);
+      else if(card.id==="petrify")window.Petrify?.portrait(c,width,height,wizardAtlas);
       else if(card.id==="giantarmadillo")window.GiantArmadillo?.portrait(c,width,height);
       else if(card.id==="stampede")window.Stampede?.portrait(c,width,height);
       else if(card.id==="guardianroots")window.GuardianRoots?.portrait(c,width,height);
@@ -5781,6 +5781,7 @@
     }
   }
   function setupSprites(){
+    if(!wizardAtlasReady())wizardAtlas.addEventListener?.("load",drawCardArts,{once:true});
     window.MeteorShower?.onReady(drawCardArts);
     window.SentinelFissure?.onReady(drawCardArts);
     window.RogginBowler?.onReady(drawCardArts);

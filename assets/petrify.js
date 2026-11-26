@@ -63,6 +63,39 @@ function chips(g,u,age,f,expired=false){
  }
  g.restore();
 }
-function portrait(g,w,h){const k=Math.min(w/128,h/128);g.save();g.translate(w/2-64*k,h/2-64*k);g.scale(k,k);piece(g,2,63,87,65,62);piece(g,1,62,56,71,58);piece(g,0,34,40,47,44);piece(g,0,94,40,45,43);g.restore();}
+// Card-only illustration: the actual approved wizard silhouette, turned
+// entirely to stone, with mineral fissures and fallen rubble at its feet.
+let portraitStone=null,portraitSource=null;
+function portrait(g,w,h,wizard){
+ if(!wizard||wizard.naturalWidth!==512||wizard.naturalHeight!==896)return;
+ if(!portraitStone||portraitSource!==wizard){
+  const c=document.createElement("canvas");c.width=128;c.height=128;
+  const ctx=c.getContext("2d",{willReadFrequently:true});
+  ctx.drawImage(wizard,0,0,128,128,0,0,128,128);
+  const pixels=ctx.getImageData(0,0,128,128);
+  stonePixels(pixels.data,128,128);ctx.putImageData(pixels,0,0);
+  // Dark fractured veins with narrow lit edges, clipped to the statue.
+  ctx.globalCompositeOperation="source-atop";
+  const cracks=[[[49,14],[54,22],[50,27],[58,34]],[[48,56],[43,65],[51,73],[47,80],[55,89]],[[43,65],[37,68],[34,75]],[[65,86],[62,96],[68,101],[66,113]],[[92,44],[98,48],[94,54]]];
+  for(const points of cracks){
+   ctx.beginPath();points.forEach(([x,y],j)=>j?ctx.lineTo(x,y):ctx.moveTo(x,y));
+   ctx.strokeStyle="#4a4038";ctx.lineWidth=1.25;ctx.stroke();
+   ctx.save();ctx.translate(.8,.65);ctx.strokeStyle="#c1ac93";ctx.lineWidth=.65;ctx.stroke();ctx.restore();
+  }
+  portraitStone=c;portraitSource=wizard;
+ }
+ const k=Math.min(w/128,h/128);
+ g.save();g.translate(w/2-64*k,h/2-64*k);g.scale(k,k);
+ // A broken stone plinth and loose chips reinforce the stasis concept.
+ g.fillStyle="#55463e";g.beginPath();g.ellipse(64,116,45,7,0,0,TAU);g.fill();
+ const rubble=[[24,112,12,9],[35,118,11,8],[85,117,12,8],[99,112,10,10],[109,119,9,6]];
+ for(const [x,y,r,z] of rubble){
+  g.fillStyle="#79685a";g.beginPath();g.moveTo(x-r/2,y);g.lineTo(x-r*.3,y-z);g.lineTo(x+r*.3,y-z*.8);g.lineTo(x+r*.55,y);g.closePath();g.fill();
+  g.fillStyle="#b09a80";g.beginPath();g.moveTo(x-r/2,y);g.lineTo(x-r*.3,y-z);g.lineTo(x+r*.3,y-z*.8);g.lineTo(x,y-z*.35);g.closePath();g.fill();
+ }
+ g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+ g.drawImage(portraitStone,0,0,128,128);
+ g.restore();
+}
 window.Petrify={ensure,ready,statue,stonePixels,cast,chips,portrait};ensure();
 })();

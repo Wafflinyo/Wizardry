@@ -20,3 +20,7 @@ console.log('Petrify: exact alpha silhouette, two healing ticks, immunity and ac
  c.tickPetrify(u);u.statuses=[];c.state.round=4;c.grantTurnMana();assert.equal(u.mana,10);assert.equal(u.passStreak,2);
  c.state.round=5;c.grantTurnMana();assert.equal(u.mana,11);assert.equal(u.passStreak,0);
 }
+
+// Petrify's card shows the approved complete wizard, not detached armor.
+assert.ok(a.includes('window.Petrify?.portrait(c,width,height,wizardAtlas)'));
+assert.ok(fs.readFileSync('assets/petrify.js','utf8').includes('ctx.drawImage(wizard,0,0,128,128,0,0,128,128)'));

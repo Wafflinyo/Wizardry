@@ -75,7 +75,7 @@
     {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."},
     {id:"scorpion",name:"Scorpion Sting",school:"earth",cost:3,target:"enemy",kind:"scorpion",damage:310,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.85,icon:"◆",rarity:"RARE",duration:4700,hit:3108/4700,short:"85% ACCURACY",description:"A giant orange scorpion rolls down curled into an armored ball, unfolds, pauses, winds up its tail and stings one enemy for 310 damage. 30% chance to poison for 50 HP per turn for 3 turns, then digs and burrows beneath the arena."}
 ,
-    {id:"octo",name:"Octo Whip",school:"water",cost:2,target:"enemy",kind:"octo",damage:230,flinchChance:.15,accuracy:.85,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"85% ACCURACY",description:"A large blue octopus slams down, flails angrily and whips one enemy for 230 damage. 15% chance to flinch: skips their action this turn only if they have not acted yet. No carryover to the next turn."}
+    {id:"octo",name:"Octo Whip",school:"water",cost:4,target:"enemy",kind:"octo",damage:440,stunChance:.20,accuracy:.80,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"80% ACCURACY",description:"A submerged blue octopus raises a long tentacle and slams it down for 440 Water damage to one enemy. 20% chance to Stun, skipping their next eligible action."}
 ,
     {id:"devil",name:"Devil Boy",school:"fire",cost:2,target:"enemy",kind:"damage",damage:250,accuracy:.85,icon:"♨",rarity:"RARE",duration:3800,hit:.60,short:"85% ACCURACY",description:"A small red demon appears in a burst of flames, aims his musket-style pistol and fires a glowing volcanic rock at one enemy for 250 Fire damage, then disappears in another burst of flames."}
 ,
@@ -118,7 +118,7 @@
   CARDS.push({"id":"wickedwitch","name":"Wicked Witch","school":"dark","cost":5,"target":"enemy","kind":"wickedwitch","damage":350,"accuracy":0.85,"icon":"☠","rarity":"RARE","duration":4650,"hit":0.64,"burnDamage":50,"burnTurns":3,"frostDamage":50,"frostTurns":3,"poisonDamage":50,"poisonTurns":3,"stunChance":0.3,"short":"85% ACCURACY","description":"350 Dark damage. Fire, Ice, Poison, and Lightning beams each have a 25% chance. Each has a 30% chance of its matching status: Burn, Frostbite, Poison, or skip this round."});
   CARDS.push({"id":"kamikaze","name":"Kamikaze?","school":"fire","cost":5,"target":"enemy","kind":"damage","damage":470,"accuracy":0.9,"icon":"♨","rarity":"RARE","duration":7850,"hit":7034/7850,"short":"90% ACCURACY","description":"A gremlin plants a bomb, then picks it back up after the fuse goes dark. The explosion hits one enemy for 470 Fire damage."});
   CARDS.push({"id":"ragingwaters","name":"Raging Waters","school":"water","cost":2,"target":"ally","kind":"ragingwaters","boost":0.25,"accuracy":1,"icon":"≈","rarity":"RARE","duration":1700,"hit":0.72,"short":"100% ACCURACY","description":"Place a rune on yourself or a living ally. Their next damaging Water spell that lands deals 25% more damage on every hit. Does not stack."});
-  CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":4,"target":"enemy","kind":"damage","damage":360,"accuracy":0.8,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"80% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 360 Water damage to one enemy."});
+  CARDS.push({"id":"crabgiant","name":"Crab Giant","school":"water","cost":2,"target":"enemy","kind":"damage","damage":240,"accuracy":0.85,"icon":"≈","rarity":"RARE","duration":3800,"hit":0.72,"short":"85% ACCURACY","description":"A giant crab flexes both pincers, then lunges and clamps one claw shut for 240 Water damage to one enemy."});
   CARDS.push({"id":"meteorshower","name":"Meteor Shower","school":"earth","cost":8,"target":"all_enemies","kind":"meteorshower","damage":420,"decayChance":0.25,"decayBoost":0.2,"accuracy":0.8,"icon":"◆","rarity":"EPIC","duration":2880,"hit":0.73,"short":"80% ACCURACY","description":"A staggered meteor barrage deals 420 Earth damage to each enemy. Each meteor has a 25% chance to apply Decay of Strength (+20% damage taken from the next damaging spell)."});
   CARDS.push({"id":"manascourge","name":"Mana Scourge","school":"dark","cost":2,"target":"enemy","kind":"manascourge","accuracy":1,"icon":"☠","rarity":"RARE","duration":2100,"hit":0.723,"short":"100% ACCURACY","description":"Mark one enemy until the rune blocks a round-end mana gain. Full mana preserves the rune."});
   CARDS.push({"id":"soulharvest","name":"Soul Harvest","school":"dark","cost":7,"target":"enemy","kind":"soulharvest","damage":540,"soullessDamage":250,"soullessRounds":3,"accuracy":0.85,"icon":"☠","rarity":"EPIC","duration":4300,"hit":0.56,"short":"85% ACCURACY","description":"Hook one enemy for 540 base damage and trap their soul in a lantern. Soulless deals 250 damage after 3 rounds."});
@@ -318,7 +318,7 @@
     rage:"Next damaging Fire cast gains 25%.",turbulence:"Next cast loses 50 accuracy points.",
     soul:"Drains 100 HP per round for 3 rounds and heals the caster.",healingaura:"200 HP per ally per round for 3 rounds.",
     freezing:"Next Ice hit has a 50% freeze chance.",scorpion:"30% poison: 50 × 3 rounds.",
-    octo:"15% flinch if the target has yet to act.",bloom:"30% poison per enemy: 50 × 3 rounds.",
+    octo:"20% chance to Stun for one action.",bloom:"30% poison per enemy: 50 × 3 rounds.",
     rod:"Turns 20% of Lightning spell damage into self-healing for 3 rounds.",
     undead:"10% chance to skip the target’s pending action.",winddome:"Blocks the next incoming damaging spell.",
     penguins:"Three hits of 100. Each can inflict Frostbite (15%).",blizzard:"60% extreme frostbite per enemy: 100 × 5 rounds.",
@@ -376,7 +376,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["octo","guardianroots","thundergoddrums"];
+  const RECENTLY_UPDATED_CARDS=["octo","crabgiant","guardianroots","thundergoddrums"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -2786,7 +2786,7 @@
     return true;
   }
   function attemptVoltStun(source,target,card,roll=Math.random()){
-    if(!["volt","zeus","wickedwitch","electriceel","landray","thunderbirds"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
+    if(!["volt","zeus","wickedwitch","electriceel","landray","thunderbirds","octo"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
       return false;
     // If the target is still due to act this round, cancel that cast;
     // otherwise reserve the stun for their next round. Never double-skip.
@@ -4103,7 +4103,7 @@
         }
       }
     }else if(card.kind==="octo"){
-      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
+      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptVoltStun(c,t,card,anim.stunRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
         if(canReceiveDebuff(t,"poison")&&t.hp>0&&!preventsHitEffects(anim,t)&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",card);}}

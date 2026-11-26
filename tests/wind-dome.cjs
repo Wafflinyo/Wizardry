@@ -36,8 +36,9 @@ battle();dome(s.units[1]);s.units[0].hp=1000;const vampire=action('vampire');tes
 battle();s.animation=action('winddome','a','a');api.advanceAction(card('winddome').duration*card('winddome').hit-1);assert.equal(has(s.units[0]),false);api.advanceAction(1);assert.ok(has(s.units[0]));api.advanceAction(5000);assert.equal(s.animation,null);assert.match(test.describeStatus(s.units[0],s.units[0].statuses[0]).detail,/debuffs/);
 console.log('Wind Dome: self and ally targeting, one whole spell/multi-hit block, AoE isolation, debuff bypass, misses, on-hit prevention, lifesteal, other wards and cast completion passed.');
 
-// Water rebalance: Octo has ordinary one-action Stun, Crab is damage only.
-assert.equal(card('octo').damage,440);assert.equal(card('octo').cost,4);assert.equal(card('octo').accuracy,.80);assert.equal(card('octo').stunChance,.20);assert.equal(card('octo').flinchChance,undefined);
+// Water rebalance: Octo has same-round Flinch only, Crab is damage only.
+assert.equal(card('octo').damage,440);assert.equal(card('octo').cost,4);assert.equal(card('octo').accuracy,.80);assert.equal(card('octo').stunChance,undefined);assert.equal(card('octo').flinchChance,.20);
 assert.equal(card('crabgiant').damage,240);assert.equal(card('crabgiant').cost,2);assert.equal(card('crabgiant').accuracy,.85);assert.equal(card('crabgiant').stunChance,undefined);assert.equal(card('crabgiant').flinchChance,undefined);
-for(const [pending,roll,expected] of [[true,.19,1],[false,.19,2],[true,.20,undefined]]){battle();s.sequence=pending?[{casterId:'b',cardId:'crabgiant'}]:[];const a=action('octo');a.stunRoll=roll;api.applySpell(a);assert.equal(s.units[1].stunRound,expected);assert.equal(s.units[1].flinchRound,undefined);}
+for(const [pending,roll,expected] of [[true,.19,1],[false,.19,undefined],[true,.20,undefined]]){battle();s.sequence=pending?[{casterId:'b',cardId:'crabgiant'}]:[];const a=action('octo');a.flinchRoll=roll;api.applySpell(a);assert.equal(s.units[1].flinchRound,expected);assert.equal(s.units[1].stunRound,undefined);}
+battle();s.sequence=[{casterId:'b',cardId:'crabgiant'},{casterId:'a',cardId:'octo'}];s.queueAt=1;const alreadyActed=action('octo');alreadyActed.flinchRoll=0;api.applySpell(alreadyActed);assert.equal(s.units[1].flinchRound,undefined);assert.equal(s.units[1].stunRound,undefined);
 battle();s.sequence=[{casterId:'b',cardId:'octo'}];math.random=()=>0;const crab=action('crabgiant');crab.stunRoll=0;crab.flinchRoll=0;api.applySpell(crab);assert.equal(s.units[1].stunRound,undefined);assert.equal(s.units[1].flinchRound,undefined);

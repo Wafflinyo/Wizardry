@@ -75,7 +75,7 @@
     {id:"freezing",name:"Freezing Temps",school:"ice",cost:3,target:"enemy",kind:"freezing",accuracy:1,icon:"❄",rarity:"RARE",duration:1900,hit:.72,short:"100% ACCURACY",description:"Marks one enemy. The next successful damaging Ice spell consumes the mark for a 50% chance to freeze them for up to 3 turns. Before each frozen turn, thaw chances rise from 20% to 40% to 60%. Failed thaw rolls skip the turn; automatically unfreezes after the third turn. Misses and other elements preserve the mark."},
     {id:"scorpion",name:"Scorpion Sting",school:"earth",cost:3,target:"enemy",kind:"scorpion",damage:310,poisonChance:.30,poisonDamage:50,poisonTurns:3,accuracy:.85,icon:"◆",rarity:"RARE",duration:4700,hit:3108/4700,short:"85% ACCURACY",description:"A giant orange scorpion rolls down curled into an armored ball, unfolds, pauses, winds up its tail and stings one enemy for 310 damage. 30% chance to poison for 50 HP per turn for 3 turns, then digs and burrows beneath the arena."}
 ,
-    {id:"octo",name:"Octo Whip",school:"water",cost:4,target:"enemy",kind:"octo",damage:440,stunChance:.20,accuracy:.80,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"80% ACCURACY",description:"A submerged blue octopus raises a long tentacle and slams it down for 440 Water damage to one enemy. 20% chance to Stun, skipping their next eligible action."}
+    {id:"octo",name:"Octo Whip",school:"water",cost:4,target:"enemy",kind:"octo",damage:440,flinchChance:.20,accuracy:.80,icon:"♆",rarity:"RARE",duration:4400,hit:.70,short:"80% ACCURACY",description:"A submerged blue octopus raises a long tentacle and slams it down for 440 Water damage to one enemy. 20% chance to Flinch, skipping the enemy’s action only if they have not acted this round. No carryover."}
 ,
     {id:"devil",name:"Devil Boy",school:"fire",cost:2,target:"enemy",kind:"damage",damage:250,accuracy:.85,icon:"♨",rarity:"RARE",duration:3800,hit:.60,short:"85% ACCURACY",description:"A small red demon appears in a burst of flames, aims his musket-style pistol and fires a glowing volcanic rock at one enemy for 250 Fire damage, then disappears in another burst of flames."}
 ,
@@ -318,7 +318,7 @@
     rage:"Next damaging Fire cast gains 25%.",turbulence:"Next cast loses 50 accuracy points.",
     soul:"Drains 100 HP per round for 3 rounds and heals the caster.",healingaura:"200 HP per ally per round for 3 rounds.",
     freezing:"Next Ice hit has a 50% freeze chance.",scorpion:"30% poison: 50 × 3 rounds.",
-    octo:"20% chance to Stun for one action.",bloom:"30% poison per enemy: 50 × 3 rounds.",
+    octo:"20% chance to Flinch if the target has yet to act this round.",bloom:"30% poison per enemy: 50 × 3 rounds.",
     rod:"Turns 20% of Lightning spell damage into self-healing for 3 rounds.",
     undead:"10% chance to skip the target’s pending action.",winddome:"Blocks the next incoming damaging spell.",
     penguins:"Three hits of 100. Each can inflict Frostbite (15%).",blizzard:"60% extreme frostbite per enemy: 100 × 5 rounds.",
@@ -2778,7 +2778,7 @@
     return true;
   }
   function attemptOctoFlinch(target,roll=Math.random()){
-    if(!target||target.hp<=0||roll>=.15||state.phase!=="resolving")return false;
+    if(!target||target.hp<=0||roll>=BY_ID.octo.flinchChance||state.phase!=="resolving")return false;
     if(!state.sequence.slice(state.queueAt).some(a=>a.casterId===target.id))return false;
     if(!canReceiveDebuff(target))return false;
     target.flinchRound=state.round;
@@ -2786,7 +2786,7 @@
     return true;
   }
   function attemptVoltStun(source,target,card,roll=Math.random()){
-    if(!["volt","zeus","wickedwitch","electriceel","landray","thunderbirds","octo"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
+    if(!["volt","zeus","wickedwitch","electriceel","landray","thunderbirds"].includes(card?.id)||!target||target.hp<=0||roll>=card.stunChance)
       return false;
     // If the target is still due to act this round, cancel that cast;
     // otherwise reserve the stun for their next round. Never double-skip.
@@ -4103,7 +4103,7 @@
         }
       }
     }else if(card.kind==="octo"){
-      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptVoltStun(c,t,card,anim.stunRoll??Math.random());}
+      if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);if(!preventsHitEffects(anim,t))attemptOctoFlinch(t,anim.flinchRoll??Math.random());}
     }else if(card.kind==="scorpion"){
       if(t&&t.hp>0&&t.team!==c.team){damage(c,t,card.damage,card,anim);
         if(canReceiveDebuff(t,"poison")&&t.hp>0&&!preventsHitEffects(anim,t)&&(anim.poisonRoll??Math.random())<card.poisonChance){applyPeriodicStatus(t,"poison",card);}}

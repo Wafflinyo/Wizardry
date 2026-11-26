@@ -20,36 +20,67 @@ function tile(g,n,x,y,scale){if(ready())g.drawImage(atlas,n%8*W,Math.floor(n/8)*
 function scene(source,target,p,hit=.68){
  p=C(p);
  const dir=source.team===0?1:-1,scale=1.22,origin={x:500-dir*100,y:510};
- const u=C((p-.43)/(hit-.43)),run=u*u*(2-u);
+ const spinStart=.39,dashStart=.55;
+ const u=C((p-dashStart)/(hit-dashStart)),run=u*u*(2-u);
+ const spinTime=Math.max(0,(p-spinStart)*4),ramp=Math.min(spinTime,.12);
+ // Continuous clockwise rotation in local right-facing space; mirror for left.
+ const angle=TAU*(3*ramp+((7-3)/.24)*ramp*ramp+7*Math.max(0,spinTime-.12));
  const contactX=target.x-dir*90;
  let frame;
  if(p<.29)frame=Math.min(7,Math.floor(p/.29*8));
- else if(p<.43)frame=8+Math.floor((p-.29)/.14*6);
- else if(p<hit)frame=14+Math.floor((p-.43)/(hit-.43)*6);
+ else if(p<spinStart)frame=8+Math.min(5,Math.floor((p-.29)/(spinStart-.29)*6));
+ else if(p<hit)frame=14+Math.min(5,Math.floor((p-spinStart)/(hit-spinStart)*6));
  else if(p<.80)frame=20+Math.floor((p-hit)/(.80-hit)*4);
  else frame=Math.min(31,24+Math.floor((p-.80)/.20*8));
  const x=L(origin.x,contactX,run),y=L(origin.y,target.y+8,E(u));
  // Last eight frames are the authored rock-and-dust aftermath, not a repeated hit.
- return {x,y,dir,frame,p,hit,scale,origin,speed:C(u*2.8),alpha:1-E((p-.93)/.07)};
+ return {x,y,dir,frame,p,hit,scale,origin,spinStart,dashStart,spinning:p>=spinStart&&p<hit,angle,spinStrength:C(spinTime/.12),speed:C(u*3.2),alpha:1-E((p-.93)/.07)};
 }
 function polygon(g,pts,color){g.fillStyle=color;g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();}
 function draw(g,s){
  g.save();g.globalAlpha*=s.alpha;g.translate(s.x,s.y);g.scale(s.dir,1);
- tile(g,s.frame,-155*s.scale,-169*s.scale,s.scale);g.restore();
+ // Rotate only the cropped armored ball, not the painted dust or motion trail.
+ if(s.spinning&&ready()){
+  const r=78*s.scale;
+  g.translate(0,-r);g.rotate(s.angle);
+  g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
+  g.drawImage(atlas,5*W+75,H+18,156,156,-r,-r,r*2,r*2);
+ }else tile(g,s.frame,-155*s.scale,-169*s.scale,s.scale);
+ g.restore();
 }
 function trail(g,s){
- if(s.p<.43||s.p>=s.hit)return;
+ if(!s.spinning)return;
  g.save();g.translate(s.x,s.y);g.scale(s.dir,1);
- for(let i=0;i<22;i++){
-  const q=((s.p-.43)*10+i*.139)%1,x=-30-q*165,y=-6-Math.sin(q*Math.PI)*(9+i%5*10),r=(4+i%4*2)*(1-q);
-  g.globalAlpha=s.speed*(1-q)*.65;
-  polygon(g,[[x-r,y],[x-r*.4,y-r],[x+r*.8,y-r*.6],[x+r,y+3]],i%2?'#b69a72':'#7d674d');
+ const k=s.spinStrength,travel=s.speed,t=(s.p-s.spinStart)*4;
+ // Continuous ground-level dust spray: a burnout before the dash.
+ for(let i=0;i<34;i++){
+  const q=(t*(2.3+i%3*.21)+i*.139)%1,a=i*2.399;
+  const side=Math.cos(a),spread=24+q*(78+i%5*12);
+  const x=side*spread-travel*q*175,y=-4-Math.sin(q*Math.PI)*(22+i%6*12)+Math.sin(a)*13;
+  const r=(6+i%5*3)*(1-q);
+  g.globalAlpha=k*(1-q)*.58;
+  polygon(g,[[x-r,y],[x-r*.5,y-r],[x+r*.7,y-r*.65],[x+r,y+3]],i%2?'#c0a17a':'#80664d');
  }
- for(let i=0;i<4;i++){
-  const y=-26-i*18,len=85+i*15;
-  g.globalAlpha=s.speed*.6;
-  const grad=g.createLinearGradient(-len-65,y,-24,y);grad.addColorStop(0,'rgba(226,167,64,0)');grad.addColorStop(1,'rgba(255,220,129,.85)');
-  polygon(g,[[-len-65,y+3],[-35,y-4],[-12,y],[-35,y+4]],grad);
+ // Distinct heavy stone chips kicked upward and outward by the shell.
+ for(let i=0;i<24;i++){
+  const q=(t*1.8+i*.177)%1,side=i%2?1:-1;
+  const x=side*(30+q*(60+i%5*15))-travel*q*145;
+  const y=-5-4*q*(1-q)*(37+i%6*14),r=(4+i%4*2)*(1-q*.45);
+  g.globalAlpha=k*(1-q)*.92;
+  polygon(g,[[x-r,y],[x-r*.35,y-r*1.6],[x+r,y-r*.4],[x+r*.5,y+r*.6]],i%2?'#ac8860':'#70563f');
+  polygon(g,[[x-r,y],[x-r*.35,y-r*1.6],[x+r,y-r*.4]],'#ddbb8a');
+ }
+ // Short grounded skid crescents while spinning in place.
+ for(let i=0;i<3;i++){
+  const q=(t*2+i*.33)%1;g.globalAlpha=k*(1-q)*.52*(1-travel*.65);
+  g.strokeStyle='#d4aa70';g.lineWidth=2+3*(1-q);g.beginPath();g.ellipse(0,0,40+q*60,7+q*13,0,.1,Math.PI-.1);g.stroke();
+ }
+ // Long directional golden streaks only once the ball launches.
+ for(let i=0;i<5;i++){
+  const y=-24-i*23,len=95+i*19;
+  g.globalAlpha=travel*.72;
+  const grad=g.createLinearGradient(-len-65,y,-24,y);grad.addColorStop(0,'rgba(226,167,64,0)');grad.addColorStop(1,'rgba(255,220,129,.9)');
+  polygon(g,[[-len-65,y+3],[-35,y-5],[-12,y],[-35,y+5]],grad);
  }
  g.restore();
 }

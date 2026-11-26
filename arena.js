@@ -274,6 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
+  const TEST_CRYSTAL_CAVERN={id:"crystalcavern",name:"Crystal Cavern",school:"earth",cost:5,target:"team",kind:"crystalcavern",accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3400,hit:.75,fieldRounds:5,fieldBoost:.10,barrierBoost:.15,description:"Environmental rune for 5 rounds. Earth spell damage +10%; newly summoned Sand Warriors and Faultline Bulwarks have 15% more shield HP. Affects both teams."};
   const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Priority 2 (stackable). Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act. Each locked turn counts as a Skip for mana regeneration. Restores 200 HP at the end of each of those rounds."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
   const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
@@ -282,9 +283,9 @@
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -304,6 +305,7 @@
     thundermine:"3 rounds: next successful damaging cast triggers 300 damage.",
     ringoffire:"3 rounds: 100 damage every time the target recovers HP.",
     backdraft:"Spreads existing Burn to one adjacent living enemy.",
+    crystalcavern:"5 rounds. +10% Earth spell damage; new Earth barriers +15% HP.",
     furnace:"+10% Fire damage. +10 percentage points to Fire Burn chances.",
     livewire:"Boost every hit of the next successful damaging Lightning spell by 25%.",
     razorang:"140 base damage to a random adjacent living enemy, or the same target if neither neighbor is alive.",
@@ -382,7 +384,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -2630,6 +2632,7 @@
   function grovelandGuarantees(card){
     return grovelandMultiplier(card.school)>1&&(towerHealing.has(card.kind)||DEBUFF_SPELLS.has(card.kind));
   }
+  function earthBarrierHp(card){return Math.floor(card.shieldHp*(state.environment?.id==="crystalcavern"?1+BY_ID.crystalcavern.barrierBoost:1)+1e-8);}
   function environmentDamageMultiplier(school){
     const field=BY_ID[state.environment?.id];
     return field?.id!=="groveland"&&field?.school===school&&field?.fieldBoost?1+field.fieldBoost:1;
@@ -2718,6 +2721,7 @@
     const owner=getUnit(state.environment.ownerId);
     if(owner)consumeStatus(owner,ENVIRONMENT_RUNE);
     if(state.environment){
+      if(state.environment.id==="crystalcavern")state.crystalCavernExit=performance.now();
       recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
       state.environment=null;
     }
@@ -2732,6 +2736,7 @@
       if(partner?.statuses.some(st=>st.kind==="lifevine"&&st.partnerId===u.id))consumeStatus(partner,kind);
     }
     if(kind===ENVIRONMENT_RUNE&&state.environment?.ownerId===u.id){
+      if(state.environment.id==="crystalcavern")state.crystalCavernExit=performance.now();
       recordBattleEvent(BY_ID[state.environment.id].name+" dissipates.");
       state.environment=null;
     }
@@ -2846,7 +2851,7 @@
     if(broken)consumeStatus(target,"faultline_bulwark");
     flash(target,"FAULTLINE BULWARK −"+absorbed,"#edd1a7").faultline={
       targetId:target.id,attacker:{x:source.x,y:source.y-85},broken,
-      stress:1-wall.value/BY_ID.faultlinebulwark.shieldHp
+      stress:1-wall.value/(wall.maxValue??BY_ID.faultlinebulwark.shieldHp)
     };
     recordBattleEvent(target.name+"’s Faultline Bulwark absorbs "+absorbed+" damage"+(broken?" and shatters.":"."));
     if(broken&&source.hp>0){
@@ -4004,11 +4009,15 @@
       t.statuses.find(st=>st.kind==="reflective_ice").expiresRound=state.round+card.wardRounds;
       flash(t,"REFLECTIVE ICE · 3 ROUNDS","#b8f7ff");
     }else if(card.kind==="faultlinebulwark"){
-      if(addStatus(t,"faultline_bulwark",null,card.shieldHp,card.school)===false)return;
-      flash(t,"FAULTLINE BULWARK · "+card.shieldHp+" HP","#e9c49a");
+      const hp=earthBarrierHp(card);
+      if(addStatus(t,"faultline_bulwark",null,hp,card.school)===false)return;
+      t.statuses.find(st=>st.kind==="faultline_bulwark").maxValue=hp;
+      flash(t,"FAULTLINE BULWARK · "+hp+" HP","#e9c49a");
     }else if(card.kind==="sandwarrior"){
-      if(addStatus(t,"sand_warrior",null,card.shieldHp,card.school)===false)return;
-      flash(t,"SAND WARRIOR · "+card.shieldHp+" HP","#f3cb87");
+      const hp=earthBarrierHp(card);
+      if(addStatus(t,"sand_warrior",null,hp,card.school)===false)return;
+      t.statuses.find(st=>st.kind==="sand_warrior").maxValue=hp;
+      flash(t,"SAND WARRIOR · "+hp+" HP","#f3cb87");
     }else if(card.kind==="bubbleshield"){
       if(addStatus(t,"bubble_shield",null,card.shieldHp,card.school)===false)return;
       flash(t,"BUBBLE SHIELD · "+card.shieldHp+" HP","#a6f2ff");
@@ -4232,6 +4241,8 @@
     } else if(card.fieldRounds){
       if(!canReceiveDebuff(c,ENVIRONMENT_RUNE))return;
       const previous=BY_ID[state.environment?.id],previousOwner=getUnit(state.environment?.ownerId);
+      if(previous?.id==="crystalcavern"&&card.id!=="crystalcavern")state.crystalCavernExit=performance.now();
+      if(card.id==="crystalcavern")state.crystalCavernExit=null;
       state.environment=null;
       if(previousOwner)consumeStatus(previousOwner,ENVIRONMENT_RUNE);
       const expiresRound=state.round+card.fieldRounds;
@@ -4507,7 +4518,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4815,7 +4826,7 @@
         bg.save();bg.setTransform(1,0,0,1,0,0);
         bg.clearRect(0,0,W,H);
         bg.drawImage(concept,0,0,W,H);
-        bg.restore();
+        bg.restore();window.CrystalCavern?.invalidate();if(state)drawCardArts();
       }catch(err){
         console.warn("Wizardry: concept image draw failed, retaining fallback",err);
         fallback();
@@ -5329,9 +5340,9 @@
       case "reflective_ice":return {title:"Reflective Ice · Ice barrier",detail:
         Math.max(0,st.expiresRound-state.round)+" rounds left. The first damaging spell that reaches you is split evenly with a random living enemy."};
       case "faultline_bulwark":return {title:"Faultline Bulwark · Priority 1",detail:
-        st.value+" / "+BY_ID.faultlinebulwark.shieldHp+" shield HP. Persists until destroyed. Shatters for "+BY_ID.faultlinebulwark.retaliation+" damage to the attacker."};
+        st.value+" / "+(st.maxValue??BY_ID.faultlinebulwark.shieldHp)+" shield HP. Persists until destroyed. Shatters for "+BY_ID.faultlinebulwark.retaliation+" damage to the attacker."};
       case "sand_warrior":return {title:"Sand Warrior · Earth barrier",detail:
-        st.value+" / "+BY_ID.sandwarrior.shieldHp+" shield HP. Excess damage reaches the protected wizard."};
+        st.value+" / "+(st.maxValue??BY_ID.sandwarrior.shieldHp)+" shield HP. Excess damage reaches the protected wizard."};
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks the next incoming damaging spell, then disappears. Against Double Pick, it blocks the first pick and the second can hit. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
@@ -5663,6 +5674,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
+      else if(card.id==="crystalcavern")window.CrystalCavern?.portrait(c,width,height,background);
       else if(card.id==="petrify")window.Petrify?.portrait(c,width,height,wizardAtlas);
       else if(card.id==="giantarmadillo")window.GiantArmadillo?.portrait(c,width,height);
       else if(card.id==="stampede")window.Stampede?.portrait(c,width,height);
@@ -5922,6 +5934,7 @@
       target=getUnit(anim.target),card=anim.card;
     if(!caster)return;
     const baseX=500,baseY=510;
+    if(card.id==="crystalcavern")return;
     g.save();
     if(card.id==="dragon"){
       window.WIZARDRY_BABY_DRAGON_V61?.draw(g,{
@@ -6098,14 +6111,19 @@
     const armadilloShake=armadilloCast?window.GiantArmadillo?.shake(armadilloCast.elapsed/armadilloCast.duration,getUnit(armadilloCast.source)?.team===0?1:-1,armadilloCast.card.hit,armadilloCast.duration):null;
     const bulwarkCast=state.animation?.card?.id==="faultlinebulwark"&&state.animation.stage==="summon"?state.animation:null;
     const bulwarkShake=bulwarkCast?window.FaultlineBulwark?.shake(bulwarkCast.elapsed/(bulwarkCast.duration*bulwarkCast.card.hit)):null;
-    const impactShake=mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const cavernCast=state.animation?.card?.id==="crystalcavern"&&state.animation.stage==="summon"?state.animation:null;
+    const cavernShake=cavernCast?window.CrystalCavern?.shake(cavernCast.elapsed/cavernCast.duration):null;
+    const impactShake=cavernShake??mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
+    const cavernExit=state.crystalCavernExit==null?null:clamp((time-state.crystalCavernExit)/1000,0,1);
     const strength=!fieldId?0:state.environment?.id===fieldId?1:clamp(formingField.elapsed/(formingField.duration*formingField.card.hit),0,1);
     if(background){const diamondY=camera.y+510*fit,cover=Math.max(vw/W,vh/H,diamondY/414,(vh-diamondY)/(H-414));const dx=(impactShake?.x||0)*fit,dy=(impactShake?.y||0)*fit;
       g.save();g.translate(dx,dy);
       const x=(vw-W*cover)/2,y=diamondY-414*cover,width=W*cover,height=H*cover;
       g.drawImage(background,x,y,width,height);
+      if(fieldId==="crystalcavern")window.CrystalCavern?.landscape(g,{x,y,width,height,time,strength,background});
+      else if(cavernExit!==null&&cavernExit<1)window.CrystalCavern?.landscape(g,{x,y,width,height,time,strength:1-cavernExit,exit:cavernExit,background,exitOnly:!!fieldId});
       if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
        if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
       if(state.mode==="tester"&&state.animation?.card.id==="thunderbirds"&&state.animation.stage==="summon")window.Thunderbirds?.sky(g,{x,y,width,height,time,p:clamp(state.animation.elapsed/state.animation.duration,0,1)});
@@ -6115,6 +6133,7 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
     if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:0,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
+    if(!background&&fieldId==="crystalcavern")window.CrystalCavern?.landscape(g,{x:0,y:0,width:W,height:H,time,strength});
     if(floorIntro){drawFloorIntro(time);return;}
     if(fieldId&&fieldId!=="groveland"){
       const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];
@@ -6448,7 +6467,7 @@
       const hit=state.flashes.findLast(f=>f.faultline?.targetId===u.id);
       if((u.hp>0&&(forming||wall?.value))||hit?.faultline.broken){
         const growth=forming&&!wall?clamp(action.elapsed/(action.duration*action.card.hit),0,1):1;
-        const impact=hit&&(!hit.faultline.broken||!wall)?{...hit.faultline,age:hit.age}:wall&&wall.value<BY_ID.faultlinebulwark.shieldHp?{age:1,broken:false,stress:1-wall.value/BY_ID.faultlinebulwark.shieldHp}:null;
+        const impact=hit&&(!hit.faultline.broken||!wall)?{...hit.faultline,age:hit.age}:wall&&wall.value<(wall.maxValue??BY_ID.faultlinebulwark.shieldHp)?{age:1,broken:false,stress:1-wall.value/(wall.maxValue??BY_ID.faultlinebulwark.shieldHp)}:null;
         for(const layer of ["back","front"]){
           const depth=u.y+(layer==="back"?-.145:.145),factor=unitEffectFactor(u);
           if(forming&&layer==="back")renderables.push({type:"faultline-rise-back",depthY:depth-.01,priority:1,draw:()=>window.FaultlineBulwark?.riseFx(g,u,action.elapsed/(action.duration*action.card.hit),layer,factor)});
@@ -7509,7 +7528,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

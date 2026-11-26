@@ -1,0 +1,11 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('arena.js','utf8');
+assert.ok(source.includes('fieldRounds:5,fieldBoost:.10,barrierBoost:.15'));
+assert.ok(source.includes('TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN'));
+const begin=source.indexOf('  function earthBarrierHp('),end=source.indexOf('\n',begin);
+const context={state:{environment:{id:'crystalcavern'}},BY_ID:{crystalcavern:{barrierBoost:.15}}};vm.runInNewContext(source.slice(begin,end),context);
+assert.equal(context.earthBarrierHp({shieldHp:250}),287);assert.equal(context.earthBarrierHp({shieldHp:400}),460);context.state.environment=null;assert.equal(context.earthBarrierHp({shieldHp:400}),400);
+const fx={window:{},Image:class{constructor(){this.complete=true;this.naturalWidth=1536;this.naturalHeight=768;}}};vm.runInNewContext(fs.readFileSync('assets/crystal-cavern.js','utf8'),fx);
+assert.equal(fx.window.CrystalCavern.ready(),true);assert.equal(fx.window.CrystalCavern.shake(1).x,0);
+assert.ok(fs.existsSync('assets/crystal-cavern-frames.webp'));
+console.log('Crystal Cavern: field card, transparent 32-frame asset, barrier durability and shake.');

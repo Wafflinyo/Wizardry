@@ -35,7 +35,15 @@ function cast(g,u,p,factor=1,layer){
 }
 function strike(g,u,p,factor=1){
  const k=Math.max(.7,Math.min(2.3,factor));
- tile(g,N+Math.round(clamp(p)*31),u.x,u.y+12*k,245*k,245*k);
+ // Spawn on the arena-facing side of the victim, in the foreground.
+ // The authored lash points left: mirror it for right-side victims.
+ const dir=u.team===0?-1:1;
+ const x=u.x-dir*88*k,y=u.y+28*k;
+ g.save();
+ g.translate(x,y);
+ g.scale(-dir,1);
+ tile(g,N+Math.round(clamp(p)*31),0,0,245*k,245*k);
+ g.restore();
 }
 function portrait(g,w,h){const size=Math.min(w*1.06,h*1.05);tile(g,16,w*.5,h*.98,size,size);}
 window.GuardianRoots={ensure,ready,error:()=>lastError,cast,strike,portrait};ensure();

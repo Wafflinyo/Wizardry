@@ -1,7 +1,7 @@
-/* Guardian Roots: original illustrated transparent root atlas.
-   64 timeline slots (32 cast, 32 retaliation), arranged in 8x8 cells.
-   Source art contains 48 poses; held/reversed poses complete both timelines.
-   No character or arena background is baked into any frame. */
+/* Guardian Roots: revised hand-illustrated low-poly root atlas.
+   64 timeline slots (32 cast, 32 retaliation), in 8x8 padded cells.
+   Source poses share a stable baseline and transparent backgrounds.
+   No characters, arena background, or dummy are baked into any frame. */
 (()=>{
 "use strict";
 const C=192,N=32,clamp=p=>Math.max(0,Math.min(1,p));
@@ -15,7 +15,7 @@ function ensure(){
  const timer=setTimeout(()=>{lastError="Guardian Roots artwork timed out";resolve(false);},12000);
  img.onload=()=>{clearTimeout(timer);if(!ready())lastError="Guardian Roots atlas dimensions invalid";resolve(ready());};
  img.onerror=()=>{clearTimeout(timer);lastError="Guardian Roots artwork failed to load";resolve(false);};
- img.src="./assets/guardian-roots-atlas.webp?v=1";
+ img.src="./assets/guardian-roots-atlas.webp?v=2";
  }).then(ok=>{if(ok)try{window.WIZARDRY_ARENA_TEST?.drawCardArts();}catch(e){}return ok;}).finally(()=>pending=null);
  return pending;
 }

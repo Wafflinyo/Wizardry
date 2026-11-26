@@ -12,30 +12,35 @@ function piece(g,i,x,y,w,h,p=1,angle=0){
  g.save();g.translate(x+(1-v)*14,y+(1-v)*27);g.rotate(angle+(1-v)*.5);g.globalAlpha*=C(p*2);
  g.drawImage(atlas,i*64,0,64,64,-w/2,-h/2,w,h);g.restore();
 }
-const idleY=[0,-1,-1,-3,-4,-3,-1,1,1,1,2,2];
-const arm=[[57,65,62,76,71,74],[57,65,62,76,71,74],[57,65,63,76,73,74],[56,65,66,75,82,67],[57,66,71,76,85,72],[57,66,72,74,86,66],[57,66,69,69,82,58],[57,65,69,65,79,52],[58,65,70,63,81,48],[58,65,70,65,79,53],[57,66,69,70,81,60],[57,66,71,76,85,70],[56,66,68,76,80,74],[57,65,63,76,73,74],[57,65,62,76,71,74],[57,65,62,76,71,74]];
-const phase=(p,d)=>C((Math.floor(p*32)/32-d)/.30);
-function wizard(g,p,i){
- const y=idleY[i]||0,pose=i<12?[66,64+y,73,75+y,84,72+y]:arm[i-12]||arm[0];
- const [sx,sy,ex,ey,wx,wy]=pose;
- // Keep face, hat, staff, hands and lower robe visible; small fitted plates.
- piece(g,2,49,87+y,28,28,phase(p,.10),-.1);
- piece(g,1,53,74+y,27,25,phase(p,.28),.12);
- piece(g,0,sx-4,sy-1,23,20,phase(p,.52),.12);
- piece(g,3,ex+(wx-ex)*.32,ey+(wy-ey)*.32,16,19,phase(p,.67),Math.atan2(wy-ey,wx-ex)-Math.PI/2);
+const cache=new WeakMap();
+function stonePixels(data,w,h){
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const j=(y*w+x)*4;if(!data[j+3])continue;
+  const lum=data[j]*.299+data[j+1]*.587+data[j+2]*.114;
+  const grain=Math.sin(x*1.71+y*2.37)*Math.sin(x*.83-y*1.37)*7;
+  const mineral=Math.sin(x*.18+y*.11+Math.sin(y*.19)*1.7)*4;
+  const v=34+lum*.78+grain+mineral;
+  data[j]=C((v+11)/255)*255;data[j+1]=C((v+5)/255)*255;data[j+2]=C((v-5)/255)*255;
+ }
+ return data;
 }
-function rig(g,p,side,sh,el,hand){
- if(!p)return;
- piece(g,2,0,-66,46,48,phase(p,.1));
- piece(g,1,0,-94,50,43,phase(p,.28));
- piece(g,0,sh[0],sh[1],38,31,phase(p,.52),side*.15);
- piece(g,3,el[0]+(hand[0]-el[0])*.32,el[1]+(hand[1]-el[1])*.32,24,30,phase(p,.67),Math.atan2(hand[1]-el[1],hand[0]-el[0])-Math.PI/2);
-}
-function creature(g,p,x,y,w,h){
- if(!p)return;
- piece(g,2,x+w*.48,y+h*.69,w*.20,h*.23,phase(p,.1));
- piece(g,1,x+w*.48,y+h*.50,w*.25,h*.22,phase(p,.28));
- piece(g,0,x+w*.37,y+h*.44,w*.16,h*.15,phase(p,.52));
+function statue(g,u,p,paint,rect){
+ if(p<=0)return paint(g);
+ const {x,y,w,h}=rect,W=Math.ceil(w),H=Math.ceil(h);
+ let entry=cache.get(u);
+ // Full stasis uses a stable idle pose; cache only when fully stone.
+ const key=[x,y,W,H,u.hat,u.robe,u.skinColor,u.robeColor,u.hatColor,u.hair,u.beard].join("|");
+ if(p<1||!entry||entry.key!==key){
+  const canvas=document.createElement("canvas");canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  ctx.translate(-x,-y);paint(ctx);
+  const image=ctx.getImageData(0,0,W,H);
+  stonePixels(image.data,W,H);ctx.putImageData(image,0,0);
+  entry={canvas,key};if(p>=1)cache.set(u,entry);else cache.delete(u);
+ }
+ if(p<1){paint(g);g.save();g.globalAlpha*=E(p);g.drawImage(entry.canvas,x,y,w,h);g.restore();}
+ else g.drawImage(entry.canvas,x,y,w,h);
+ return true;
 }
 function cast(g,u,p,f,layer){
  if(p<=0||p>.9)return;
@@ -59,5 +64,5 @@ function chips(g,u,age,f,expired=false){
  g.restore();
 }
 function portrait(g,w,h){const k=Math.min(w/128,h/128);g.save();g.translate(w/2-64*k,h/2-64*k);g.scale(k,k);piece(g,2,63,87,65,62);piece(g,1,62,56,71,58);piece(g,0,34,40,47,44);piece(g,0,94,40,45,43);g.restore();}
-window.Petrify={ensure,ready,wizard,rig,creature,cast,chips,portrait};ensure();
+window.Petrify={ensure,ready,statue,stonePixels,cast,chips,portrait};ensure();
 })();

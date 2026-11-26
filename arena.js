@@ -274,7 +274,7 @@
   const TEST_MAGNETIC_PULSE={id:"magneticpulse",name:"Magnetic Pulse",school:"lightning",cost:3,target:"enemy",kind:"magneticpulse",damage:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:3600,hit:16/24,description:"An electrically charged magnetic ring releases a pulse at one enemy for 150 base damage. On an unblocked hit, destroys one random beneficial rune if present."};
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
-  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",reduction:.20,rounds:3,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Stone armor forms over yourself or an ally, reducing incoming direct spell damage that reaches their HP by 20% for 3 rounds. Does not reduce periodic damage. Reapplying refreshes the duration."};
+  const TEST_PETRIFY={id:"petrify",name:"Petrify",school:"earth",cost:4,target:"ally",kind:"petrify",heal:200,rounds:2,accuracy:1,icon:"◆",rarity:"TEST",testOnly:true,duration:2800,hit:.72,description:"Encases yourself or an ally in solid stone. Invulnerable immediately and for the next 2 full rounds; cannot act or voluntarily pass. Restores 200 HP at the end of each of those rounds."};
   const TEST_ARMADILLO={id:"giantarmadillo",name:"Giant Armadillo",school:"earth",cost:3,target:"enemy",kind:"damage",damage:350,accuracy:.90,icon:"◆",rarity:"TEST",testOnly:true,duration:4000,hit:.68,description:"A giant stone-armored armadillo emerges, curls up and spins rapidly in place before rocketing into one enemy for 350 base Earth damage."};
   const TEST_STAMPEDE={id:"stampede",name:"Stampede",school:"nature",cost:6,target:"all_enemies",kind:"stampede",damage:380,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:4500,hit:.48,description:"A herd of woodland spirit stags bursts from a Nature portal and charges through every living enemy, dealing 380 base Nature damage to each."};
   const TEST_KILLER_BEES={id:"killerbees",name:"Killer Bees",school:"nature",cost:3,target:"enemy",kind:"killerbees",damage:300,poisonChance:.35,poisonDamage:50,poisonTurns:3,accuracy:.90,icon:"❀",rarity:"TEST",testOnly:true,duration:4400,hit:.64,description:"Summon a swirling swarm of killer bees that rushes one enemy for 300 base Nature damage, with a 35% chance to Poison for 50 damage per round for 3 rounds."};
@@ -292,7 +292,7 @@
     infernotitan:"30% Extreme Burn: 100 × 5 rounds.",
     thunderbirds:"530 base damage. 30% Stun chance.",
     stampede:"380 damage to each living enemy.",
-    petrify:"20% less direct spell damage for 3 rounds.",
+    petrify:"Invulnerable and unable to act for 2 rounds. Heal 200 HP each round.",
     giantarmadillo:"350 Earth damage to one enemy.",
     thundergoddrums:"450 damage per living enemy. One alternating drum strike each.",
     magneticpulse:"Destroys one random beneficial rune on an unblocked hit.",
@@ -663,8 +663,7 @@
     window.ThunderMine?.registerPose(look,wizardAtlas,i%4,Math.floor(i/4),128,{x:-74,y:top,w:148,h:220},look.team===1?-1:1);
     drawDressedFrame(ctx,art,"wizard",i,top,look);
     drawHeadHair(ctx,look,"wizard",i,top,time);
-    const petrify=petrifyProgress(look);
-    if(petrify>0){ctx.save();ctx.translate(-74,top);ctx.scale(148/128,220/128);window.Petrify?.wizard(ctx,petrify,i);ctx.restore();}
+
     const armor=armorProgress(look);
     if(armor>0){
       ctx.translate(-74,-220+footPadding(wizardAtlas,i)+7);ctx.scale(148/128,220/128);
@@ -1517,8 +1516,9 @@
     flash(target,"FEAR · 3 ROUNDS","#dfb7f1");
     recordBattleEvent(target.name+" is haunted by Jack the Lantern: 30% chance to skip each of 3 turns.");
   }
+  function petrified(u){return !!u?.hp&&u.statuses.some(st=>st.kind==="petrify"&&state.round<=st.expiresRound);}
   function requiresRest(u){
-    return !!u&&u.hp>0&&(sleepingThisRound(u)||isFrozen(u)||isStunned(u)||(isRecharging(u)&&!alive(u.team).some(ally=>ally.id!==u.id&&turnOrder().findIndex(v=>v.id===ally.id)<turnOrder().findIndex(v=>v.id===u.id)))||
+    return !!u&&u.hp>0&&(petrified(u)||sleepingThisRound(u)||isFrozen(u)||isStunned(u)||(isRecharging(u)&&!alive(u.team).some(ally=>ally.id!==u.id&&turnOrder().findIndex(v=>v.id===ally.id)<turnOrder().findIndex(v=>v.id===u.id)))||
       !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
   }
   const BRIAR_EFFECTS=new Set(["burn","poison","frostbite"]);
@@ -1526,6 +1526,7 @@
     return unit.statuses.filter(status=>BRIAR_EFFECTS.has(status.kind)&&status.remaining!==0);
   }
   function targetNotice(target,card){
+    if(target&&card?.kind==="petrify"&&petrified(target))return target.name+" is already petrified.";
     if(target&&card?.kind==="briarremedy"&&!briarEffects(target).length)
       return target.name+" has no Burn, Poison, or Frostbite to cleanse.";
     if(target&&card?.kind==="coldstorage"&&!canReceiveDebuff(target,"cold_storage"))
@@ -1693,7 +1694,7 @@
   function autoFill(team){
     if(state.phase!=="planning"||(state.mode==="tester"&&!state.testerBattle))return;
     for(const u of alive(team)){
-      if(u.dummy||(window.WizardrySession?.active?u.isHuman:u.id===state.humanByTeam[team])||state.plans[u.id])continue;
+      if(u.dummy||petrified(u)||(window.WizardrySession?.active?u.isHuman:u.id===state.humanByTeam[team])||state.plans[u.id])continue;
       const p=autoPlan(u);
       if(p&&playHandCard(u,p.cardId))state.plans[u.id]=p;
       else if(!requiresRest(u)||state.testerBattle){
@@ -1748,7 +1749,7 @@
   }
   function discardSelected(){
     if(floorIntro)return;
-    const u=caster();if(state.phase!=="planning"||!u||state.plans[u.id]||!state.selectedCard)return false;
+    const u=caster();if(state.phase!=="planning"||!u||petrified(u)||state.plans[u.id]||!state.selectedCard)return false;
     const ok=u.testerDeck?playHandCard(u,state.selectedCard):discardFromHand(u,state.selectedCard);
     if(ok){
       if(u.testerDeck)drawCard(u);
@@ -1759,7 +1760,7 @@
   function passTurn(){
     if(floorIntro)return;
     if(window.WizardrySession?.active){window.WizardrySession.plan({pass:true,round:state.round});return;}
-    const c=caster();if(state.phase!=="planning"||!c||state.plans[c.id])return;
+    const c=caster();if(state.phase!=="planning"||!c||petrified(c)||state.plans[c.id])return;
     c.passedRound=state.round;
     state.plans[c.id]={casterId:c.id,cardId:null,targetId:null,team:c.team,pass:true};
     clearSelection();resolvePressed();
@@ -1771,7 +1772,7 @@
       const bonus=flow&&flow.remaining>0&&flow.appliedRound<state.round&&flow.lastTickRound!==state.round?1:0;
       // Guard repeated entry to this turn against duplicate mana awards.
       if(u.lastManaRound===state.round)continue;
-      const passed=u.passedRound===state.round-1;
+      const passed=!petrified(u)&&u.passedRound===state.round-1;
       u.passStreak=passed?(u.passStreak||0)+1:0;
       const base=passed?1+u.passStreak:1,gain=base+bonus;
       u.lastManaRound=state.round;
@@ -2383,6 +2384,7 @@
       const action=state.sequence[state.queueAt++],c=getUnit(action.casterId),card=BY_ID[action.cardId];
       if(checkBattleEnd())return;
       if(!c||c.hp<=0)continue;
+      if(petrified(c)){c.passedRound=null;flash(c,"PETRIFIED · SKIP","#c4b5a4");recordBattleEvent(c.name+" cannot act while petrified.");continue;}
       if(action.pass){
         const photo=triggerPhotosynthesis(c);
         state.skipCue={source:c.id,remaining:photo?1400:900,photosynthesis:photo};
@@ -2609,6 +2611,7 @@
     }
   }
   function loseHp(source,target,amount){
+    if(amount>0&&petrified(target)){petrifyBlock(target,amount);return 0;}
     const lost=Math.min(target.hp,amount);
     target.hp-=lost;
     if(target.hp<=0){consumeStatus(target,"blood_debt");consumeStatus(target,"cold_storage");consumeStatus(target,"thunder_mine");consumeStatus(target,"guardian_roots");consumeStatus(target,"petrify");}
@@ -2859,6 +2862,7 @@
   }
   function absorbBarrierDamage(target,amount){
     if(amount<=0)return amount;
+    if(petrified(target)){petrifyBlock(target,amount);return 0;}
     for(const kind of ["sand_warrior","bubble_shield"]){
       const shield=target.statuses.find(st=>st.kind===kind);
       if(!shield)continue;
@@ -2880,7 +2884,7 @@
     return amount;
   }
   function preventsHitEffects(spell,target){
-    return !!(spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
+    return !!(petrified(target)||spell?.mirrorTarget||spell?.windDomeTargets?.[target.id]);
   }
 
   function growthBonus(source,spell){
@@ -2930,14 +2934,22 @@
     if(source.hp<=0){source.defeatElapsedMs=0;flash(source,"DEFEATED","#ffd5b0");}
     return true;
   }
-  function applyPetrifyReduction(u,amount){
-    const rune=u.statuses.find(st=>st.kind==="petrify"&&state.round<st.expiresRound);
-    if(!rune||amount<=0)return amount;
-    const reduced=Math.floor(amount*(1-rune.value)),saved=amount-reduced;
-    if(saved>0){tally(u,"tanked",saved);Object.assign(flash(u,"PETRIFY · −"+saved+" DAMAGE","#c9b298"),{petrifyHit:true,petrifyUnit:u.id});}
-    return reduced;
+  function petrifyBlock(u,amount){
+    if(amount<=0)return;
+    tally(u,"tanked",Math.floor(amount));
+    Object.assign(flash(u,"PETRIFY · IMMUNE","#c9b298"),{petrifyHit:true,petrifyUnit:u.id});
+  }
+  function tickPetrify(u){
+    const r=u.statuses.find(st=>st.kind==="petrify");
+    if(!r||!u.hp||state.round<=r.appliedRound||state.round>=r.expiresRound||r.lastTickRound===state.round)return;
+    r.lastTickRound=state.round;
+    if(!healingSuppressed("earth")){
+      const healed=restoreHp(getUnit(r.sourceId)||u,u,r.value);
+      if(healed)flash(u,"PETRIFY · +"+healed+" HP","#cde89e");
+    }
   }
   function damage(source,target,base,card,spell=null,flatManaBonus=false){
+    if(base>0&&petrified(target)){petrifyBlock(target,base*spellPower(source,card,spell));return 0;}
     if(spell&&base>0&&source.team!==target.team&&!spell.mirrorChecked){
       spell.mirrorChecked=true;
       const mark=source.statuses.find(st=>st.kind==="crystal_ice_mirrors"&&state.round<st.expiresRound);
@@ -3032,7 +3044,6 @@
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
     let amount=absorbBarrierDamage(recipient,reflected?impact-redirected:absorbFaultlineDamage(recipient,impact-redirected,source,spell));
     if(reflected){
-      amount=applyPetrifyReduction(recipient,amount);
       loseHp(getUnit(source.statuses.find(st=>st.kind==="crystal_ice_mirrors")?.sourceId)||target,source,amount);
       flashSpellDamage(source,amount,"#a7eaff",spell);
       recordBattleEvent(source.name+" takes "+amount+" reflected damage.");
@@ -3045,7 +3056,6 @@
       amount-=split.reflected;
       notes.push("REFLECTIVE ICE");
     }
-    if(source.team!==target.team)amount=applyPetrifyReduction(target,amount);
     const oldHp=target.hp,wasAlive=target.hp>0;
     loseHp(source,target,amount);
     if(split){
@@ -3490,7 +3500,7 @@
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
-    for(const u of state.units)for(const kind of ["petrify","guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
+    for(const u of state.units)for(const kind of ["guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
       const status=u.statuses.find(st=>st.kind===kind);
       if(status&&(u.hp<=0||state.round>=status.expiresRound))consumeStatus(u,kind);
     }
@@ -3737,9 +3747,10 @@
     }else if(card.kind==="hellhound"){
       for(const entry of anim.houndTargets??hellhoundTargets(t,c))applyHellhoundHit(anim,entry);
     }else if(card.kind==="petrify"){
-      if(!t||t.hp<=0||t.team!==c.team||addStatus(t,"petrify",null,card.reduction,card.school)===false)return;
-      Object.assign(t.statuses.find(st=>st.kind==="petrify"),{sourceId:c.id,expiresRound:state.round+card.rounds});
-      flash(t,"PETRIFY · 3 ROUNDS","#d5bb97");
+      if(!t||t.hp<=0||t.team!==c.team||petrified(t)||addStatus(t,"petrify",null,card.heal,card.school)===false)return;
+      Object.assign(t.statuses.find(st=>st.kind==="petrify"),{sourceId:c.id,appliedRound:state.round,expiresRound:state.round+card.rounds+1,lastTickRound:state.round});
+      t.passedRound=null;t.armRaise=0;
+      flash(t,"PETRIFY · 2 ROUNDS","#d5bb97");
     }else if(card.kind==="guardianroots"){
       if(!t||t.hp<=0||t.team!==c.team)return;
       const lastTriggerRound=t.statuses.find(st=>st.kind==="guardian_roots")?.lastTriggerRound??null;
@@ -4267,6 +4278,7 @@
       }
     }
     if(state.environment&&state.round>=state.environment.expiresRound)clearEnvironment();
+    for(const u of state.units)tickPetrify(u);
     state.round++;
     for(const unit of state.units){const ring=unit.statuses.find(st=>st.kind==="ring_of_fire");if(ring&&(unit.hp<=0||state.round>=ring.expiresRound))consumeStatus(unit,"ring_of_fire");}
     for(const unit of state.units){
@@ -4276,6 +4288,7 @@
     for(const u of state.units)if(u.statuses.some(st=>st.kind==="lifevine")&&!lifevinePartner(u))consumeStatus(u,"lifevine");
     releaseColdStorage();
     tickBurnsForRound();
+    for(const u of state.units){const r=u.statuses.find(st=>st.kind==="petrify");if(r&&state.round>=r.expiresRound)consumeStatus(u,"petrify");}
     if(checkBattleEnd())return;
     if(state.mode==="tester"&&!state.testerBattle){
       for(const dummy of sideUnits(1))if(dummy.hp<=0)Object.assign(dummy,{hp:dummy.maxHp,statuses:[],defeatElapsedMs:null,stunRound:null,fearRound:null,flinchRound:null});
@@ -4291,7 +4304,7 @@
     nearestAvailableCaster();
     recordBattleEvent("Choose a spell and target.");
     ui.status.textContent="Round "+state.round+": "+
-      (sleepingThisRound(caster())?"Asleep — your wizard skips this round.":isFrozen(caster())?"Frozen — your wizard skips this turn.":isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
+      (petrified(caster())?"Petrified — invulnerable and unable to act.":sleepingThisRound(caster())?"Asleep — your wizard skips this round.":isFrozen(caster())?"Frozen — your wizard skips this turn.":isStunned(caster())?"Stunned — your wizard loses this action; CPU continues.":
        isRecharging(caster())?"Recharge — an earlier ally can remove it before your action.":
        "Choose a card in hand, tap a target, and confirm.");
     paintUI();
@@ -4369,7 +4382,7 @@
     ui.queueCount.textContent=planning?(c?"YOUR TURN":"CPU PLAYING"):
       state.phase==="resolving"?"ACTION "+state.queueAt+" / "+state.sequence.length:state.phase==="ending"?"FINAL DEFEAT":"FINISHED";
     if(planning)ui.hint.textContent=c?
-      (sleepingThisRound(c)?"Asleep · skips this round.":isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
+      (petrified(c)?"PETRIFIED · Cannot act.":sleepingThisRound(c)?"Asleep · skips this round.":isFrozen(c)?"FROZEN: skips this turn unless thawed.":isStunned(c)?"STUNNED: "+c.name+" skips this one action.":
        isRecharging(c)?"RECHARGING: "+c.name+" can act if an earlier ally destroys Recharge.":
        card?(card.fieldRounds?"Confirm "+card.name+" across the entire battlefield.":card.selfOnly?"Confirm "+card.name+" on your wizard.":card.target==="team"?"Cast "+card.name+" on your entire team; no target selection.":card.target==="all_enemies"?
          "Cast "+card.name+" on all enemies; no target selection.":
@@ -4928,7 +4941,7 @@
       [el[0]+8,el[1]+9],[sh[0]+9,sh[1]+10]],primary,dark,1.6);
     pathPoly(ctx,[[el[0]-7,el[1]-9],[hand[0]-7,hand[1]-6],
       [hand[0]+7,hand[1]+7],[el[0]+9,el[1]+8]],light,dark,1.6);
-    window.Petrify?.rig(ctx,petrifyProgress(u),side,sh,el,hand);
+
     window.BoulderWeight?.equip(ctx,armorProgress(u),...sh,...el,...hand,30);
     ellipse(ctx,hand[0],hand[1],9,8,skin,shadeColor(skin,-35),1);
     // One single solid wand, rigid and aimed with the entire arm.
@@ -5062,7 +5075,7 @@
   }
   function petrifyProgress(u){
     if(!u?.statuses||u.hp<=0)return 0;
-    const armor=u.statuses.some(st=>st.kind==="petrify"&&state.round<st.expiresRound);
+    const armor=petrified(u);
     const cast=state.animation;
     if(!armor&&cast?.card?.id==="petrify"&&cast.stage==="summon"&&cast.target===u.id&&canReceiveDebuff(u,"petrify"))
       return clamp(cast.elapsed/(cast.duration*cast.card.hit),0,1);
@@ -5077,8 +5090,9 @@
   }
   function drawUnit(u,time){
     const sandTime=time;
+    const stone=petrifyProgress(u),stasis=petrified(u);
     const frozen=u.hp>0&&u.statuses.some(st=>st.kind==="frozen");
-    if(frozen)time=0;
+    if(frozen||stasis)time=0;
     // Physical depth scale from the same arena floor, not separate
     // front/back teams. Lower Y sits nearer the 3/4 camera.
     const scale=lerp(.60,.90,clamp((u.y-288)/235,0,1));
@@ -5124,19 +5138,19 @@
     if(minion?.art.naturalWidth){
       const guardian=!!minion.feet;
       const elapsed=time-(u.minionPreview??-Infinity);
-      const current=!frozen&&state.animation?.source===u.id?state.animation:null;
+      const current=!frozen&&!stasis&&state.animation?.source===u.id?state.animation:null;
       const previewDuration=guardian?ARM_RAISE_MS+AUTO_TRACE_MS+WIZARD_RECOVERY_MS:AUTO_TRACE_MS;
-      const preview=u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<previewDuration;
+      const preview=!stasis&&u.hp>0&&state.phase==="planning"&&elapsed>=0&&elapsed<previewDuration;
       const tracing=current?.stage==="tracing-auto";
       const recovering=guardian&&current&&Number.isFinite(current.visualRecoveryMs)&&current.visualRecoveryMs<WIZARD_RECOVERY_MS;
       const casting=preview||tracing||current?.stage==="raising"||(!guardian&&current?.stage==="lowering")||recovering;
       const defeatElapsed=time-(u.defeatPreview??-Infinity);
-      const previewDefeat=u.hp>0&&state.phase==="planning"&&defeatElapsed>=0&&defeatElapsed<DEFEAT_HOLD_MS+850;
+      const previewDefeat=!stasis&&u.hp>0&&state.phase==="planning"&&defeatElapsed>=0&&defeatElapsed<DEFEAT_HOLD_MS+850;
       const row=u.hp<=0||previewDefeat?2:casting?1:0;
       if(minion.grelus){
         let pose;
         if(row===2)pose=Math.min(7,Math.floor(7*(previewDefeat?defeatElapsed:(u.defeatElapsedMs||0))/DEFEAT_HOLD_MS));
-        else if(row===0)pose=Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%8;
+        else if(row===0)pose=stasis?0:Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%8;
         else if(preview){
           if(elapsed<ARM_RAISE_MS)pose=grelusPose("raising",elapsed,ARM_RAISE_MS);
           else if(elapsed<ARM_RAISE_MS+AUTO_TRACE_MS)pose=grelusPose("tracing-auto",elapsed-ARM_RAISE_MS,AUTO_TRACE_MS);
@@ -5146,8 +5160,8 @@
         g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
         const rect=grelusDrawRect(minion,row);
         if(row!==2)window.ThunderMine?.registerPose(u,minion.art,frame.col,frame.row,cell,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});
-        g.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
-        if(row!==2)window.Petrify?.creature(g,petrifyProgress(u),rect.x,rect.y,rect.size,rect.size);
+        const paint=ctx=>ctx.drawImage(minion.art,frame.col*cell,frame.row*cell,cell,cell,rect.x,rect.y,rect.size,rect.size);
+        if(stone>0&&row!==2&&window.Petrify)window.Petrify.statue(g,u,stone,paint,{x:rect.x,y:rect.y,w:rect.size,h:rect.size});else paint(g);
         const runeElapsed=elapsed-ARM_RAISE_MS;
         if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS)
           window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{school:u.masteries?.[0]||"dark",elapsed:runeElapsed,duration:AUTO_TRACE_MS,centerX:-size*.52,centerY:-size*.57,scale:3.3});
@@ -5157,7 +5171,7 @@
         ?MINION_GESTURE_FRAMES[Math.floor((preview?elapsed:current.elapsed)/MINION_GESTURE_FRAME_MS)%MINION_GESTURE_FRAMES.length]
         :current?.stage==="lowering"?5:0;
       let frame=row===2?Math.min(5,Math.floor(5*(previewDefeat?defeatElapsed:(u.defeatElapsedMs||0))/DEFEAT_HOLD_MS)):
-        casting?gestureFrame:guardian?GUARDIAN_IDLE_FRAMES[Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%GUARDIAN_IDLE_FRAMES.length]:Math.floor((time+u.index*160)/160)%6;
+        casting?gestureFrame:stasis?0:guardian?GUARDIAN_IDLE_FRAMES[Math.floor((time+u.index*235)/GUARDIAN_IDLE_FRAME_MS)%GUARDIAN_IDLE_FRAMES.length]:Math.floor((time+u.index*160)/160)%6;
       let source=minion.cleaned||minion.art,sourceRow=row,sourceCol=frame,castRect=null;
       let anchor=guardian?minion.feet[row][frame]:153;
       if(guardian&&row===1){
@@ -5181,8 +5195,9 @@
       const cell=minion.cell||160;
       if(guardian){g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";}
       if(row!==2)window.ThunderMine?.registerPose(u,source,sourceCol,sourceRow,cell,{x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size});
-      g.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
-      if(row!==2)window.Petrify?.creature(g,petrifyProgress(u),castRect?.x??-minion.size/2,castRect?.y??top,castRect?.size??minion.size,castRect?.size??minion.size);
+      const rect={x:castRect?.x??-minion.size/2,y:castRect?.y??top,w:castRect?.size??minion.size,h:castRect?.size??minion.size};
+      const paint=ctx=>ctx.drawImage(source,sourceCol*cell,sourceRow*cell,cell,cell,rect.x,rect.y,rect.w,rect.h);
+      if(stone>0&&row!==2&&window.Petrify)window.Petrify.statue(g,u,stone,paint,rect);else paint(g);
       const runeElapsed=guardian?elapsed-ARM_RAISE_MS:elapsed;
       if(preview&&runeElapsed>=0&&runeElapsed<AUTO_TRACE_MS){
         window.WIZARDRY_ELEMENT_TRACE_V45?.draw(g,{
@@ -5192,8 +5207,7 @@
       g.restore();return;
     }
     if(u.dummy&&!u.wizardDummy){
-      drawTrainingDummy(g,u);
-      window.Petrify?.creature(g,petrifyProgress(u),-70,-155,140,155);
+      if(stone>0&&window.Petrify)window.Petrify.statue(g,u,stone,ctx=>drawTrainingDummy(ctx,u),{x:-105,y:-200,w:210,h:220});else drawTrainingDummy(g,u);
       window.BoulderWeight?.equip(g,armorProgress(u),31,-128,43,-118,61,-119,31);
       g.restore();return;
     }
@@ -5202,7 +5216,7 @@
     // Palette swaps use the approved full-body frames; only changing
     // silhouettes uses the existing geometry-based model fallback.
     const approvedWizard=["pointed","hood","top","round"].includes(u.hat)&&u.robe==="classic";
-    const action=!frozen&&state.animation?.source===u.id?state.animation:null;
+    const action=!frozen&&!stasis&&state.animation?.source===u.id?state.animation:null;
     let visualStage=action?.stage||"idle";
     let visualProgress=action?.duration?action.elapsed/action.duration:0;
     if(action&&["rune-success","rune-fail","summon","fizzle","lowering","golem-slam",
@@ -5220,25 +5234,22 @@
     // Stagger each unit's breathing loop so eight identical wizards
     // don't bob in perfect synchronization. Casting uses each unit's
     // own action state and returns to idle after rune success/failure.
-    const idleTime=time+u.index*235+u.team*437;
+    const idleTime=stasis?0:time+u.index*235+u.team*437;
     g.save();
     if(u.team===1)g.scale(-1,1);
-    const spriteDrawn=u.hp<=0
-      ? drawDefeatSprite(g,u.defeatElapsedMs||0,u)
-      : approvedWizard&&drawWizardSprite(g,
-          visualStage,visualProgress,
-          action?.traceMs||0,idleTime,action?.lowerFromFrame,u);
+    const paintWizard=ctx=>drawWizardSprite(ctx,visualStage,visualProgress,action?.traceMs||0,idleTime,action?.lowerFromFrame,u);
+    const spriteDrawn=u.hp<=0?drawDefeatSprite(g,u.defeatElapsedMs||0,u):approvedWizard&&wizardAtlasReady()&&(stone>0&&window.Petrify?window.Petrify.statue(g,u,stone,paintWizard,{x:-110,y:-240,w:220,h:260}):paintWizard(g));
     g.restore();
     if(spriteDrawn){
       // All sprites stay in the same depth-sorted scene and use the
       // original world-space HP/status plates and target hit testing.
     }else{
-      const bob=(u.hp>0?Math.sin(time*.002*2+u.index*2)*2:0);
+      const bob=(u.hp>0&&!stasis?Math.sin(time*.002*2+u.index*2)*2:0);
       g.translate(0,bob);
       const side=u.team?-1:1;
       g.transform(.79,0,-side*.11,1,0,0);
-      if(u.team&&state.mode==="story")drawEnemy(g,u,time*.001);
-      else drawWizard(g,u,time*.001);
+      const paint=ctx=>u.team&&state.mode==="story"?drawEnemy(ctx,u,time*.001):drawWizard(ctx,u,time*.001);
+      if(stone>0&&window.Petrify)window.Petrify.statue(g,u,stone,paint,{x:-130,y:-250,w:260,h:270});else paint(g);
     }
     g.restore();
   }
@@ -5302,7 +5313,7 @@
       case "sleep":return {title:"Sleep · Drowzy Flowers",detail:"Skips up to 3 rounds. Wake chance is 20%, 30%, then 40%. Wakes automatically on round four."};
       case "fear":return {title:"Fear · Jack the Lantern",detail:"30% chance to skip each turn for 3 rounds. "+Math.max(0,st.expiresRound-Math.max(state.round,st.startRound))+" rounds remain. One independent roll per turn. A successful reapplication resets the duration."};
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
-      case "petrify":return {title:"Petrify · Earth armor",detail:"Reduces direct spell damage reaching HP by 20%. "+Math.max(0,st.expiresRound-state.round)+" rounds remain."};
+      case "petrify":return {title:"Petrify · Stone stasis",detail:"Invulnerable. Cannot act. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};

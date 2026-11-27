@@ -45,27 +45,50 @@ function poseAt(p){
  const impact=p<HIT?-1:16+Math.min(7,Math.floor((p-HIT)/(1-HIT)*8));
  return {frame,alpha,beam,impact};
 }
+// Screen-space barrel-axis slopes measured from the existing raster
+// poses. Positive means down toward the floor. Use the least-pitched
+// pose whose actual barrel ray reaches the opponent's body.
+const aimSlopes=[-.15,-.10,.04,.12,.17,.25,.32,.43,.48,.53,.58,.62,.65,.68,.70,.72];
+function aimFor(target,dir,k,targetK){
+ const desired=target.y-85*targetK,top=target.y-125*targetK,bottom=target.y-45*targetK;
+ let best=null;
+ for(let n=0;n<aimSlopes.length;n++){
+  const m=muzzles[n],base=bases[n];
+  const mx=500+dir*((m[0]+m[2])/2-CW/2)*k;
+  const my=510+((m[1]+m[3])/2-base)*k;
+  const reach=Math.max(1,(target.x-mx)*dir);
+  const projected=my+reach*aimSlopes[n];
+  // Prefer hitting the center of the body with the shallowest lean.
+  const outside=Math.max(0,top-projected,projected-bottom);
+  const score=Math.abs(projected-desired)+outside*3+n*1.5;
+  if(!best||score<best.score)best={frame:n,score,projected};
+ }
+ return best;
+}
 function scene(source,target,p,factor=1){
+ p=C(p);
  const dir=target.x===500?(source.team===1?-1:1):target.x>500?1:-1,x=500,y=510,k=1.22,pose=poseAt(p);
  const targetK=(.60+.30*C((target.y-288)/235))*Math.max(1,factor);
- // Upper-row opponents need a shallower barrel pose. Select a rendered
- // aiming pose, not a rotation of the creature, for those positions.
- const nominalContact=target.y-85*targetK;
- if(p>=.38&&p<=.81&&nominalContact<y-124&&pose.frame>=11)pose.frame=4+Math.min(2,Math.floor((p-.38)/.15));
+ const aim=aimFor(target,dir,k,targetK);
+ // Rise normally, lower only as far as required, hold that exact
+ // rendered stance for the whole blast, then lift back to neutral.
+ if(p<.20)pose.frame=0;
+ else if(p<.36)pose.frame=Math.min(2,aim.frame);
+ else if(p<FIRE)pose.frame=Math.round(L(Math.min(2,aim.frame),aim.frame,C((p-.36)/(FIRE-.36))));
+ else if(p<=.81)pose.frame=aim.frame;
+ else if(p<.94)pose.frame=Math.round(L(aim.frame,0,C((p-.81)/.13)));
+ else pose.frame=0;
  const m=muzzles[pose.frame],base=bases[pose.frame];
  const point=(px,py)=>({x:x+dir*(px-CW/2)*k,y:y+(py-base)*k});
  const near=point(m[0],m[1]),far=point(m[2],m[3]);
  const mx=(near.x+far.x)/2,my=(near.y+far.y)/2;
- // Aim along the barrel's downward pitch when possible, landing within
- // the target's torso rather than forcing the stream toward its feet.
- const preferred=my+Math.abs(target.x-mx)*(pose.frame>=11&&pose.frame<=19?.27:.04);
- const contactY=Math.max(target.y-125*targetK,Math.min(target.y-45*targetK,preferred));
+ // Keep the water ray within the body; when the pose is aligned, its
+ // continuation follows the actual cannon pitch rather than a fixed angle.
+ const contactY=Math.max(target.y-125*targetK,Math.min(target.y-45*targetK,aim.projected));
  const merge={x:L(mx,target.x,.36),y:L(my,contactY,.36)};
- // Use one continuous thick core which starts BEFORE the visible junction.
- // The individual muzzle jets overlap the core, never meet edge-to-edge.
  const coreStart={x:L(mx,target.x,.18),y:L(my,contactY,.18)};
  const branchEnd={x:L(mx,target.x,.45),y:L(my,contactY,.45)};
- return {x,y,k,dir,p:C(p),pose,near,far,merge,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK};
+ return {x,y,k,dir,p,pose,near,far,merge,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK,aimFrame:aim.frame,barrelSlope:aimSlopes[aim.frame]};
 }
 function tile(g,im,n,cols,w,h,dx,dy,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,dx,dy,dw,dh);}
 function actor(g,s){
@@ -137,6 +160,6 @@ function portrait(g,w,h){
  g.save();g.translate(w/2,h*.95);g.scale(k,k);
  tile(g,turtle,5,8,CW,CH,-CW/2,-bases[5],CW,CH);g.restore();
 }
-window.HydroCannon={frameCount:32,effectFrameCount:24,hit:HIT,ensure,ready,error:()=>lastError,poseAt,scene,actor,summon,beam,impact,portrait};
+window.HydroCannon={frameCount:32,effectFrameCount:24,hit:HIT,aimFor,ensure,ready,error:()=>lastError,poseAt,scene,actor,summon,beam,impact,portrait};
 ensure();
 })();

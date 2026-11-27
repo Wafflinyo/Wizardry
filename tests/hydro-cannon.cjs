@@ -24,5 +24,21 @@ for(const x of [200,800])for(const y of [320,540])for(const factor of [1,1.5,2])
  assert.ok(Math.abs(s.branchEnd.x-s.coreStart.x)>Math.abs(s.tx-s.mx)*.26);
  calls.length=0;art.impact(g,s);assert.equal(calls.length,1);assert.ok(calls[0][0].path.includes('hydro-crisp-water'));
 }
-assert.ok(art.poseAt(.58).frame>=16);assert.ok(art.poseAt(.80).frame<=19);assert.ok(art.poseAt(.82).frame>=20);
+// Aim is selected from the actual rendered barrel pitch and held steady.
+for(const x of [200,800])for(const y of [320,420,500,540])for(const factor of [1,1.5,2]){
+ const t={x,y},src={x:1000-x},s=art.scene(src,t,.70,factor);
+ assert.equal(s.pose.frame,s.aimFrame);
+ assert.equal(art.scene(src,t,.58,factor).pose.frame,s.aimFrame);
+ assert.equal(art.scene(src,t,.80,factor).pose.frame,s.aimFrame);
+ assert.equal(art.scene(src,t,.98,factor).pose.frame,0);
+ assert.ok(s.contactY>=y-125*s.targetK-1e-8&&s.contactY<=y-45*s.targetK+1e-8);
+ const mirror=art.scene({x}, {x:1000-x,y},.70,factor);
+ assert.equal(s.aimFrame,mirror.aimFrame);
+ assert.ok(Math.abs(s.contactY-mirror.contactY)<1e-8);
+}
+for(const x of [250,750]){
+ const s=art.scene({x:1000-x},{x,y:500},.70,1);
+ assert.ok(s.aimFrame<=7);
+ assert.ok(Math.abs((s.contactY-s.my)/Math.abs(s.tx-s.mx)-s.barrelSlope)<.15);
+}
 console.log('Hydro Cannon: dry turtle atlas, center diamond, separate twin muzzle streams and convergence, unchanged hit timing.');

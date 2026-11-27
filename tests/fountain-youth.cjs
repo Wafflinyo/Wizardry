@@ -1,0 +1,23 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const a=fs.readFileSync('arena.js','utf8');
+assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["fountainofyouth","hydrocannon"'));
+assert.ok(a.includes('healFraction:.25,rounds:3,accuracy:.90'));
+const u={id:'u',team:0,hp:1000,maxHp:2000,statuses:[]},c={id:'c',team:0,hp:2000,statuses:[]},state={round:1};
+let suppressed=false,full=false;
+const ctx={state,performance:{now:()=>0},getUnit:id=>id==='c'?c:u,flash:()=>{},recordBattleEvent:()=>{},healingSuppressed:()=>suppressed,restoreHp:(_c,t,n)=>{n=Math.min(t.maxHp-t.hp,n);t.hp+=n;return n;},consumeStatus:(t,k)=>{t.statuses=t.statuses.filter(r=>r.kind!==k)},addStatus:(t,k,_i,v,school)=>{let r=t.statuses.find(r=>r.kind===k);if(!r&&full)return false;if(!r)t.statuses.push(r={kind:k});Object.assign(r,{value:v,school});}};
+const src=a.slice(a.indexOf('  function applyFountainYouth('),a.indexOf('  function tickBurnsForRound('));
+vm.runInNewContext(src,ctx);
+const card={healFraction:.25,school:'water',rounds:3};
+assert.ok(ctx.applyFountainYouth(c,u,card));ctx.tickFountainYouth(u);assert.equal(u.hp,1000);
+state.round=2;ctx.tickFountainYouth(u);assert.equal(u.hp,1250);ctx.tickFountainYouth(u);assert.equal(u.hp,1250);
+state.round=3;ctx.tickFountainYouth(u);assert.equal(u.hp,1437);
+state.round=4;ctx.tickFountainYouth(u);assert.equal(u.hp,1577);assert.equal(u.statuses.length,0);
+full=true;assert.equal(ctx.applyFountainYouth(c,u,card),false);full=false;
+assert.ok(ctx.applyFountainYouth(c,u,card));state.round=5;suppressed=true;ctx.tickFountainYouth(u);assert.equal(u.hp,1577);assert.equal(u.statuses[0].remaining,2);
+suppressed=false;assert.ok(ctx.applyFountainYouth(c,u,card));assert.equal(u.statuses.length,1);assert.equal(u.statuses[0].remaining,3);
+u.hp=0;state.round=6;ctx.tickFountainYouth(u);assert.equal(u.hp,0);assert.equal(u.statuses.length,0);
+const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=s.includes('effects')?432:784;this.naturalHeight=s.includes('effects')?336:864;this.onload?.();}}};
+vm.runInNewContext(fs.readFileSync('assets/fountain-youth.js','utf8'),visual);
+const art=visual.window.FountainYouth;assert.ok(art.ready());
+for(let n=0;n<=100;n++){let s=art.scene({x:750,y:500},n/100);assert.equal(s.x,500);assert.equal(s.y,510);assert.ok(art.frame(s.p)>=0&&art.frame(s.p)<42);}
+console.log('Fountain of Youth: three dynamic ticks, refresh, cap, suppression, no revival, and sprite bounds.');

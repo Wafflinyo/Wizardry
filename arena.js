@@ -275,6 +275,7 @@
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const TEST_TECTONIC_CRUSH={id:"tectoniccrush",name:"Tectonic Crush",school:"earth",cost:6,target:"enemy",kind:"damage",damage:780,accuracy:.85,boulderChance:.25,icon:"◆",rarity:"TEST",testOnly:true,duration:4320,hit:28/48,description:"Two massive jagged rock formations erupt on either side of one enemy and crush them between their stone faces for 780 base Earth damage. A damaging hit has a 25% chance to inflict Boulder Weight (−30 accuracy points for 3 turns)."};
+  const TEST_FOUNTAIN_YOUTH={id:"fountainofyouth",name:"Fountain of Youth",school:"water",cost:4,target:"ally",kind:"fountainofyouth",healFraction:.25,rounds:3,accuracy:.90,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.70,description:"Bless yourself or an ally with a Water rune. At the start of each of the next 3 rounds, restore 25% of their missing HP. Reapplication refreshes the duration; cannot revive."};
   const TEST_HYDRO_CANNON={id:"hydrocannon",name:"Hydro Cannon",school:"water",cost:4,target:"enemy",kind:"damage",damage:460,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"An armored sea turtle emerges in a surge of water, charges both coral-stone cannons and fires two separate water blasts at one enemy for a combined 460 base Water damage."};
   const TEST_QUICKSILVER={id:"quicksilver",name:"Quicksilver",school:"earth",cost:4,target:"enemy",kind:"damage",damage:380,barrierBonus:.50,accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3600,hit:.73,description:"A pool of liquid metal surges toward one enemy, climbs around their entire body and hardens into spikes for 380 base Earth damage. Deals 50% extra damage to HP-based barriers; excess normal damage carries through."};
   const TEST_CRYSTAL_CAVERN={id:"crystalcavern",name:"Crystal Cavern",school:"earth",cost:5,target:"team",kind:"crystalcavern",accuracy:.85,icon:"◆",rarity:"TEST",testOnly:true,duration:3400,hit:.75,fieldRounds:5,fieldBoost:.10,barrierBoost:.15,description:"Environmental rune for 5 rounds. Earth spell damage +10%; newly summoned Sand Warriors and Faultline Bulwarks have 15% more shield HP. Affects both teams."};
@@ -286,9 +287,9 @@
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -298,6 +299,7 @@
     stampede:"380 damage to each living enemy.",
     petrify:"Priority 2 (stackable). Immune for 2 rounds; cannot act. Heal 200 HP each round.",
     tectoniccrush:"780 Earth damage. 25% Boulder Weight chance (−30 accuracy, 3 turns).",
+    fountainofyouth:"3 rounds: restore 25% of missing HP at each round start.",
     hydrocannon:"Twin water cannons deal 460 base Water damage.",
     quicksilver:"380 Earth damage. +50% damage to HP-based barriers.",
     giantarmadillo:"350 Earth damage to one enemy.",
@@ -390,7 +392,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -1541,7 +1543,7 @@
       return target.name+" already has four runes.";
     return barrierNotice(target,card);
   }
-  const towerHealing=new Set(["heal","teamheal","regen","teamregen","aromatherapy"]);
+  const towerHealing=new Set(["fountainofyouth","heal","teamheal","regen","teamregen","aromatherapy"]);
   const towerBarriers=new Set(["faultlinebulwark","sandwarrior","reflectiveice","winddome","bubbleshield","shield"]);
   function towerControl(card){
     return card.stunChance||card.disableChance||card.flinchChance||
@@ -2547,7 +2549,7 @@
   const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
-  const BENEFICIAL_RUNES=new Set(["petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
+  const BENEFICIAL_RUNES=new Set(["fountain_youth","petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
@@ -2560,7 +2562,7 @@
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||runeCount(u)<MAX_RUNES);
   }
-  const RUNE_CAST_KINDS={petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
+  const RUNE_CAST_KINDS={fountainofyouth:"fountain_youth",petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
     drowzyflowers:"sleep",crystalicemirrors:"crystal_ice_mirrors",frozentouch:"frozen_touch",
     quicksand:"quick_sand",manascourge:"mana_scourge",gunpowder:"gunpowder_coat",decaystrength:"decay_mark",
     acidair:"decaying_strength",boulderweight:"boulder_weight",thornwrap:"thorny_wrap",
@@ -3591,7 +3593,31 @@
     if(!rune.remaining)consumeStatus(caster,"aromatherapy");
   }
 
+  function applyFountainYouth(c,t,card){
+    if(!t?.hp||t.team!==c.team||addStatus(t,"fountain_youth",null,card.healFraction,card.school)===false)return false;
+    Object.assign(t.statuses.find(st=>st.kind==="fountain_youth"),{sourceId:c.id,remaining:card.rounds,appliedRound:state.round,lastTickRound:state.round});
+    flash(t,"FOUNTAIN OF YOUTH · 3 ROUNDS","#a5f7ef");
+    return true;
+  }
+  function tickFountainYouth(u){
+    const r=u.statuses.find(st=>st.kind==="fountain_youth");
+    if(!r)return;
+    if(u.hp<=0){consumeStatus(u,r.kind);return;}
+    if(r.appliedRound>=state.round||r.lastTickRound>=state.round)return;
+    r.lastTickRound=state.round;
+    r.remaining--;
+    if(!healingSuppressed("water")){
+      const amount=restoreHp(getUnit(r.sourceId)||u,u,Math.floor(Math.max(0,u.maxHp-u.hp)*r.value));
+      if(amount>0){
+        (state.fountainYouthBursts??=[]).push({targetId:u.id,time:performance.now()});
+        flash(u,"FOUNTAIN OF YOUTH · +"+amount+" HP","#a5f7ef");
+        recordBattleEvent(u.name+" restores "+amount+" HP from Fountain of Youth ("+r.remaining+" rounds remaining).");
+      }
+    }
+    if(r.remaining<=0)consumeStatus(u,r.kind);
+  }
   function tickBurnsForRound(){
+    for(const u of state.units)tickFountainYouth(u);
     for(const u of state.units){
       const ward=u.statuses.find(st=>st.kind==="reflective_ice");
       if(ward&&state.round>=ward.expiresRound){
@@ -3860,6 +3886,8 @@
       if(addStatus(t,"guardian_roots",null,card.retaliation,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="guardian_roots"),{sourceId:c.id,expiresRound:state.round+card.rounds,lastTriggerRound});
       flash(t,"GUARDIAN ROOTS · 3 ROUNDS","#c3da80");
+    }else if(card.kind==="fountainofyouth"){
+      applyFountainYouth(c,t,card);
     }else if(card.kind==="photosynthesis"){
       if(!t||t.hp<=0||t.team!==c.team||addStatus(t,"photosynthesis",null,card.passHeal,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="photosynthesis"),{sourceId:c.id,appliedRound:state.round,expiresRound:state.round+card.rounds+1,lastTriggerRound:null});
@@ -4604,7 +4632,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5424,6 +5452,7 @@
       case "electrical_charge":return {title:"ϟ Electrical Charge · Lightning rune",detail:"Gain 1 mana per Lightning spell that reaches you, up to your mana capacity. "+Math.min(BY_ID.electricalcharge.chargeTurns,Math.max(0,st.expiresRound-state.round))+" rounds remain. Multiple hits from one cast grant mana once."};
       case "petrify":return {title:"Petrify · Priority 2",detail:"Stackable with other Priority 2 barriers. Other barriers resolve first; remaining damage is blocked. Invulnerable. Cannot act; counts as a Skip for mana regeneration. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
+      case "fountain_youth":return {title:"Fountain of Youth · Water blessing",detail:"Restores 25% of missing HP at the start of each of the next "+st.remaining+" rounds. Cannot revive."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "thunder_mine":return {title:"Thunder Mine · Cast trigger",detail:"After the next successful damaging spell, detonates for 300 damage and disappears. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Passing, healing and missed spells do not trigger it. Cleansing removes it harmlessly."};
@@ -5533,7 +5562,7 @@
     petrify:"earth",guardian_roots:"nature",photosynthesis:"nature",growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",live_wire:"lightning",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
-    recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
+    fountain_youth:"water",recharge:"water",tidal_echo:"water",raging_waters:"water",calming_waters:"water",flow_state:"water"
   };
   function statusSchool(st,u){
     if(st.school)return st.school;
@@ -5769,6 +5798,7 @@
       else if(card.id==="crystalcavern")window.CrystalCavern?.portrait(c,width,height,background);
       else if(card.id==="petrify")window.Petrify?.portrait(c,width,height,wizardAtlas);
       else if(card.id==="tectoniccrush")window.TectonicCrush?.portrait(c,width,height);
+      else if(card.id==="fountainofyouth")window.FountainYouth?.portrait(c,width,height);
       else if(card.id==="hydrocannon")window.HydroCannon?.portrait(c,width,height);
       else if(card.id==="quicksilver")window.Quicksilver?.portrait(c,width,height);
       else if(card.id==="giantarmadillo")window.GiantArmadillo?.portrait(c,width,height);
@@ -6270,7 +6300,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6386,6 +6416,24 @@
         renderables.push({type:"tectonic-crush-back",depthY:target.y-.15,priority:2,draw:()=>art.draw(g,s,"back")});
         renderables.push({type:"tectonic-crush-front",depthY:target.y+.15,priority:2,draw:()=>art.draw(g,s,"front")});
         renderables.push({type:"tectonic-crush-impact",depthY:target.y+.19,priority:2,draw:()=>art.impact(g,s)});
+      }
+    }
+    if(state.mode==="tester"&&window.FountainYouth){
+      const art=window.FountainYouth;
+      if(action?.stage==="summon"&&action.card.id==="fountainofyouth"){
+        const u=getUnit(action.target);
+        if(u){
+          const s=art.scene(u,clamp(action.elapsed/action.duration,0,1),unitEffectFactor(u));
+          renderables.push({type:"fountain-youth",depthY:s.y,priority:2,draw:()=>art.fountain(g,s)});
+          renderables.push({type:"fountain-stream",depthY:Math.max(s.y,u.y)+.1,priority:2,draw:()=>art.transfer(g,s)});
+          renderables.push({type:"fountain-blessing",depthY:u.y+.2,priority:2,draw:()=>art.receive(g,s)});
+        }
+      }
+      const now=performance.now();
+      state.fountainYouthBursts=(state.fountainYouthBursts||[]).filter(e=>now-e.time<1250);
+      for(const e of state.fountainYouthBursts){
+        const u=getUnit(e.targetId);
+        if(u?.hp>0)renderables.push({type:"fountain-round-heal",depthY:u.y+.2,priority:2,draw:()=>art.activate(g,u,clamp((now-e.time)/1250,0,1),unitEffectFactor(u))});
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="hydrocannon"&&window.HydroCannon){
@@ -7675,11 +7723,11 @@
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
-    drawCardArts,cardInfo,attachThunderMine,thunderMineTriggerable,beginThunderMineDetonation,applyThunderMineDetonation,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
+    drawCardArts,cardInfo,applyFountainYouth,tickFountainYouth,attachThunderMine,thunderMineTriggerable,beginThunderMineDetonation,applyThunderMineDetonation,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

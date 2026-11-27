@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const a=fs.readFileSync('arena.js','utf8');
 assert.ok(a.includes('id:"hydrocannon",name:"Hydro Cannon",school:"water",cost:4,target:"enemy",kind:"damage",damage:460,accuracy:.85'));
-assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["hydrocannon","tectoniccrush","sentinelfissure"'));
+assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["jellyshock","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure"'));
 const ctx={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.path=s;this.naturalWidth=s.includes('turtle')?1776:1536;this.naturalHeight=s.includes('turtle')?888:1024;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync('assets/hydro-cannon.js','utf8'),ctx);
 const art=ctx.window.HydroCannon;

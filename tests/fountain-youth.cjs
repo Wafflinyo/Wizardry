@@ -20,4 +20,14 @@ const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s)
 vm.runInNewContext(fs.readFileSync('assets/fountain-youth.js','utf8'),visual);
 const art=visual.window.FountainYouth;assert.ok(art.ready());
 for(let n=0;n<=100;n++){let s=art.scene({x:750,y:500},n/100);assert.equal(s.x,500);assert.equal(s.y,510);assert.ok(art.frame(s.p)>=0&&art.frame(s.p)<42);}
-console.log('Fountain of Youth: three dynamic ticks, refresh, cap, suppression, no revival, and sprite bounds.');
+// Every sprite places the measured center of the basin on the center
+// diamond, not its bottom edge. Reduced scale avoids excessive blur.
+const centersX=[59.5,59,60,60.5,59,59.5,61,59,59,59.5,58,57,55.5,55.5,61.5,60,60.5,60.5,60,60.5,60,59.5,58.5,58.5,57,57,56,56,54.5,53.5,52.5,53.5,56.5,58.5,59.5,59,58.5,59,59,56.5,55.5,56];
+const centersY=[130,130,130,130,127,127,127,126,126,126,125,126,126,126,127,127,126,126,126,127,127,127,126,126,126,127,127,127,126,126,126,127,126,126,126,126,126,125,125,128,129,129];
+for(const x of [200,800])for(const factor of [1,2])for(let n=0;n<=1000;n++){
+ const s=art.scene({x,y:540},n/1000,factor),d=art.placement(s);
+ assert.ok(Math.abs(d.x+centersX[d.n]*d.w/112-500)<1e-8);
+ assert.ok(Math.abs(d.y+centersY[d.n]*d.h/144-510)<1e-8);
+ assert.ok(d.w<180&&d.h<225&&d.y>300);
+}
+console.log('Fountain of Youth: three dynamic ticks, refresh, cap, suppression, no revival, and centered lower sprite placement.');

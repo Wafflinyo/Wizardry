@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const a=fs.readFileSync('arena.js','utf8');
 assert.ok(a.includes('id:"tectoniccrush",name:"Tectonic Crush",school:"earth",cost:6,target:"enemy",kind:"damage",damage:780,accuracy:.85,boulderChance:.25'));
-assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["tectoniccrush","sentinelfissure"'));
+assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["hydrocannon","tectoniccrush","sentinelfissure"'));
 assert.ok(a.includes('card.id==="tectoniccrush"&&dealt>0&&t.hp>0'));
 assert.ok(a.includes('type:"tectonic-crush-back",depthY:target.y-.15'));
 assert.ok(a.includes('type:"tectonic-crush-front",depthY:target.y+.15'));

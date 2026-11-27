@@ -9,21 +9,23 @@ const isProtected=(kind,value,expiresRound,round=2)=>context.hydroSerpentProtect
 for(const kind of ["sand_warrior","faultline_bulwark","bubble_shield"]){assert.equal(isProtected(kind,1),true);assert.equal(isProtected(kind,0),false);}
 assert.equal(isProtected("wind_dome"),true);assert.equal(isProtected("reflective_ice",1,3),true);assert.equal(isProtected("reflective_ice",1,2),false);
 assert.equal(isProtected("petrify",1,2),true);assert.equal(isProtected("petrify",1,1),false);assert.equal(isProtected("burn",1,3),false);
-const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){const sizes=s.includes("-body")?[2560,2048]:[2560,768];[this.naturalWidth,this.naturalHeight]=sizes;this.onload?.();}}};
+const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){assert.ok(s.includes("hydro-serpent-v4.webp"));this.naturalWidth=1792;this.naturalHeight=1120;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync("assets/hydro-serpent.js","utf8"),visual);
-const art=visual.window.HydroSerpent;assert.equal(art.hit,.67);assert.equal(art.frameCount,112);assert.ok(art.ready());
-for(const x of [200,300,700,800])for(const y of [320,420,540])for(const f of [1,1.5,2]){
- const target={x,y},source={x:1000-x};const hit=art.scene(source,target,.67,f);
- assert.equal(hit.x,500);assert.equal(hit.y,510);assert.equal(hit.dir,x>500?1:-1);assert.equal(hit.head.x,x);assert.ok(Math.abs(hit.head.y-hit.end.y)<1e-8);
- const before=art.scene(source,target,.459999,f),after=art.scene(source,target,.460001,f);assert.ok(Math.hypot(before.head.x-after.head.x,before.head.y-after.head.y)<.1);
- const exit=art.scene(source,target,.84,f);assert.ok((exit.head.x-x)*hit.dir>0);
- const blocked=art.scene(source,target,.8,f,true);assert.equal(blocked.head.x,x);
- for(let i=0;i<=100;i++){
-  const s=art.scene(source,target,i/100,f),calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...args){calls.push(args);}};
-  art.pool(g,s);art.actor(g,s);art.travel(g,s);art.impact(g,s);
-  for(const c of calls)assert.ok(c[1]>=0&&c[2]>=0&&c[1]+c[3]<=c[0].naturalWidth&&c[2]+c[4]<=c[0].naturalHeight);
+const art=visual.window.HydroSerpent;assert.equal(art.hit,.67);assert.equal(art.frameCount,40);assert.ok(art.ready());
+const reached=new Set();
+for(const x of [400,450,200,300,550,600,700,800])for(const y of [320,420,540])for(const f of [1,1.5,2])for(const blocked of [false,true]){
+ const target={x,y},source={x:1000-x},hit=art.scene(source,target,.67,f,blocked);
+ assert.equal(hit.x,500);assert.equal(hit.y,510);assert.equal(hit.dir,x>500?1:-1);assert.equal(hit.n,29);assert.equal(hit.head.x,x);assert.ok(Math.abs(hit.head.y-hit.end.y)<1e-8);
+ const before=art.scene(source,target,.469999,f,blocked),after=art.scene(source,target,.470001,f,blocked);assert.ok(Math.hypot(before.head.x-after.head.x,before.head.y-after.head.y)<.1);
+ const tail=art.scene(source,target,.671,f,blocked);assert.equal(tail.n,30);assert.equal(tail.head.x,x);assert.equal(tail.head.y,hit.end.y);
+ for(let i=0;i<=1000;i++){const s=art.scene(source,target,i/1000,f,blocked),calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...args){calls.push(args);}};
+ art.pool(g,s);art.actor(g,s);art.travel(g,s);art.impact(g,s);
+ assert.ok(calls.length<=1,"only one illustrated sprite per tick");
+ if(calls.length){const c=calls[0];assert.ok(c[1]>=0&&c[2]>=0&&c[1]+c[3]<=c[0].naturalWidth&&c[2]+c[4]<=c[0].naturalHeight);assert.equal(s.n,c[1]/224+c[2]/224*8);if(!blocked)reached.add(s.n);}
+ if(i>670)assert.equal(s.head.x,x);
  }
 }
-console.log("Hydro Serpent: protection eligibility, continuous 112-frame sequence, directional impact and tester isolation.");
-assert.equal(art.bodyFrameCount,64);assert.equal(art.effectFrameCount,48);
-for(const [name,count] of [['body',64],['pool',24],['impact',24]]){const svg=fs.readFileSync('assets/hydro-serpent-v3-'+name+'.svg','utf8');assert.equal((svg.match(/id="frame-/g)||[]).length,count);assert.ok(!/<rect|<image|<filter/.test(svg));}
+assert.equal(reached.size,40);
+const asset=fs.readFileSync("assets/hydro-serpent-v4.webp");assert.equal(asset.subarray(0,4).toString(),"RIFF");assert.equal(asset.subarray(8,12).toString(),"WEBP");assert.equal(asset.length,441612);
+const pkg=JSON.parse(fs.readFileSync("package.json","utf8")),html=fs.readFileSync("arena.html","utf8"),index=fs.readFileSync("index.html","utf8");assert.ok(html.includes('aria-label="Game version '+pkg.version+'">v'+pkg.version));assert.ok(html.includes("hydro-serpent.js?v="+pkg.version));assert.ok(index.includes("arena.html?v="+pkg.version));
+console.log("Hydro Serpent: 40 original frames, single sprite per tick, target-aligned strike and tail dissolve, verified release label.");

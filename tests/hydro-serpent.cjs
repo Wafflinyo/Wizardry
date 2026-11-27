@@ -10,6 +10,6 @@ vm.runInNewContext(fs.readFileSync("assets/hydro-serpent.js","utf8"),visual);
 const art=visual.window.HydroSerpent;assert.equal(art.hit,.72);assert.equal(art.frameCount,32);
 (async()=>{await art.ensure();assert.ok(art.ready());for(const team of [0,1])for(let count=1;count<=4;count++){
  const targets=Array.from({length:count},(_,i)=>({x:500+(team===0?1:-1)*(120+i*36),y:320+i*65,factor:1,id:i}));
- for(let i=0;i<1000;i++){const s=art.scene({team},targets,i/1000);assert.equal(s.x,500);assert.equal(s.y,510);assert.equal(s.targets.length,count);assert.ok(s.n>=0&&s.n<32);let calls=0;const g={globalAlpha:1,save(){},restore(){},translate(){},scale(){},rotate(){},drawImage(im,x,y,w,h){assert.ok(x>=0&&y>=0&&x+w<=im.naturalWidth&&y+h<=im.naturalHeight);calls++;}};
+ for(let i=0;i<1000;i++){const s=art.scene({team},targets,i/1000);assert.equal(s.x,500);assert.equal(s.y,510);assert.equal(s.targets.length,count);assert.ok(s.n>=0&&s.n<32);assert.ok(s.targets.every(u=>u.contact.y===u.y+4));assert.ok((s.launch.x-s.mouth.x)*s.dir>0);if(s.shot)assert.ok(s.n<16||s.n>21);let calls=0;const g={globalAlpha:1,save(){},restore(){},translate(){},scale(){},rotate(){},drawImage(im,x,y,w,h){assert.ok(x>=0&&y>=0&&x+w<=im.naturalWidth&&y+h<=im.naturalHeight);calls++;}};
  art.actor(g,s);art.blast(g,s);for(const u of s.targets)art.rain(g,s,u);assert.ok(calls<=1+4+32*count);}
  }console.log("Hydro Serpent: stationary summon, 430 + 75 per additional enemy AoE damage, water blast and enemy-team rain.");})().catch(e=>{console.error(e);process.exitCode=1;});

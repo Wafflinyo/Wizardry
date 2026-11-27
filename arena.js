@@ -275,6 +275,7 @@
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const TEST_TECTONIC_CRUSH={id:"tectoniccrush",name:"Tectonic Crush",school:"earth",cost:6,target:"enemy",kind:"damage",damage:780,accuracy:.85,boulderChance:.25,icon:"◆",rarity:"TEST",testOnly:true,duration:4320,hit:28/48,description:"Two massive jagged rock formations erupt on either side of one enemy and crush them between their stone faces for 780 base Earth damage. A damaging hit has a 25% chance to inflict Boulder Weight (−30 accuracy points for 3 turns)."};
+  const TEST_UNDERTOW={id:"undertow",name:"Undertow",school:"water",cost:4,target:"enemy",kind:"undertow",damage:350,manaTax:2,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4200,hit:.625,description:"Two giant water hands rise from a whirlpool and pull one enemy downward for 350 base Water damage. Applies a non-stacking Undertow rune: the next successful spell costs 2 additional mana. Passes, misses and unaffordable spells preserve it."};
   const TEST_HYDRO_SERPENT={id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:6,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.72,description:"A massive water serpent rises from a whirlpool, charges a water blast and launches it into the sky above the enemy team. Fires one water blast into the sky per living enemy, then showers every enemy with sharp rain pellets for 430 base Water damage plus 75 per additional blast."};
   const TEST_JELLYSHOCK={id:"jellyshock",name:"Jellyshock",school:"water",cost:3,target:"enemy",kind:"damage",damage:280,stunChance:.15,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"A bioluminescent jellyfish lashes one enemy with charged tentacles for 280 base Water damage, with a 15% chance to Stun for one action."};
   const TEST_FOUNTAIN_YOUTH={id:"fountainofyouth",name:"Fountain of Youth",school:"water",cost:4,target:"ally",kind:"fountainofyouth",healFraction:.25,rounds:3,accuracy:.90,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.70,description:"Bless yourself or an ally with a Water rune. At the start of each of the next 3 rounds, restore 25% of their missing HP. Reapplication refreshes the duration; cannot revive."};
@@ -289,9 +290,9 @@
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="hydroserpent"?window.HydroSerpent:card.id==="jellyshock"?window.Jellyshock:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="jellyshock"?window.Jellyshock:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_HYDRO_SERPENT,TEST_JELLYSHOCK,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_UNDERTOW,TEST_HYDRO_SERPENT,TEST_JELLYSHOCK,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -301,6 +302,7 @@
     stampede:"380 damage to each living enemy.",
     petrify:"Priority 2 (stackable). Immune for 2 rounds; cannot act. Heal 200 HP each round.",
     tectoniccrush:"780 Earth damage. 25% Boulder Weight chance (−30 accuracy, 3 turns).",
+    undertow:"Next successful spell costs 2 extra mana. Does not stack.",
     hydroserpent:"430 base Water damage to each enemy, +75 for each additional living enemy.",
     jellyshock:"280 base Water damage. 15% chance to Stun.",
     fountainofyouth:"3 rounds: restore 25% of missing HP at each round start.",
@@ -396,7 +398,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -1433,7 +1435,7 @@
     }
     const area=["team","all_enemies"].includes(card?.target);
     if(state.phase!=="planning"||!c||!card||requiresRest(c)||state.plans[c.id]||
-       c.mana<card.cost||!c.hand.includes(card.id)||(!target&&!area)||
+       c.mana<effectiveSpellCost(c,card)||!c.hand.includes(card.id)||(!target&&!area)||
        (area&&!alive(card.target==="team"?c.team:1-c.team).length))return false;
     state.plans[c.id]={casterId:c.id,cardId:card.id,
       targetId:area?null:target.id,runeKind,team:c.team,auto:false};
@@ -1531,9 +1533,10 @@
     recordBattleEvent(target.name+" is haunted by Jack the Lantern: 30% chance to skip each of 3 turns.");
   }
   function petrified(u){return !!u?.hp&&u.statuses.some(st=>st.kind==="petrify"&&state.round<=st.expiresRound);}
+  function effectiveSpellCost(u,card){return card?card.cost+(u?.statuses?.find(st=>st.kind==="undertow")?.value||0):Infinity;}
   function requiresRest(u){
     return !!u&&u.hp>0&&(petrified(u)||sleepingThisRound(u)||isFrozen(u)||isStunned(u)||(isRecharging(u)&&!alive(u.team).some(ally=>ally.id!==u.id&&turnOrder().findIndex(v=>v.id===ally.id)<turnOrder().findIndex(v=>v.id===u.id)))||
-      !u.hand.some(id=>BY_ID[id]?.cost<=u.mana));
+      !u.hand.some(id=>effectiveSpellCost(u,BY_ID[id])<=u.mana));
   }
   const BRIAR_EFFECTS=new Set(["burn","poison","frostbite"]);
   function briarEffects(unit){
@@ -1675,7 +1678,7 @@
     const chargeTargets=allies.filter(ally=>canReceiveDebuff(ally,"electrical_charge"));
     // CPU healing prioritizes a real injury and never targets an enemy.
     const affordable=CARDS.filter(card=>u.hand.includes(card.id)&&
-      card.cost<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
+      effectiveSpellCost(u,card)<=u.mana&&(card.kind!=="heal"||wounded.length>0)&&
       (card.kind!=="electricalcharge"||chargeTargets.length>0)&&
       (card.kind!=="briarremedy"||briarTargets.length>0)&&
       (card.kind!=="coldstorage"||storageTargets.length>0)&&
@@ -1890,8 +1893,13 @@
     const label=conflict??(emptyTide?"no active environmental rune":sealed?"healing sealed by Dark Grounds":full?(a.card.fieldRounds||a.card.kind==="aromatherapy"?"caster":"target")+" has four runes":Math.round(a.effectiveAccuracy*100)+"% accuracy");
     tally(c,success?"casts":"failed",1);
     if(success){
-      tally(c,"mana",Math.min(c.mana,a.card.cost));
-      c.mana=Math.max(0,c.mana-a.card.cost);
+      const cost=effectiveSpellCost(c,a.card);
+      tally(c,"mana",Math.min(c.mana,cost));
+      c.mana=Math.max(0,c.mana-cost);
+      if(consumeStatus(c,"undertow")){
+        flash(c,"UNDERTOW · +2 MANA COST","#83dfff");
+        recordBattleEvent(c.name+" pays 2 extra mana for "+a.card.name+"; Undertow expires.");
+      }
       // The COMPLETED ELEMENT rune must brighten and hold before any
       // summon begins. Freeze the chosen Golem target for its later fissure.
       if(a.card.id==="golem"){
@@ -2446,7 +2454,13 @@
         recordBattleEvent(c.name+" loses their action while stunned.");
         continue;
       }
-      if(c.mana<card.cost||isRecharging(c)){if(isRecharging(c)){recordBattleEvent(c.name+' loses this action to Recharge.');flash(c,'RECHARGING · SKIPPED','#e0d5ff');}continue;}
+      if(c.mana<effectiveSpellCost(c,card)&&c.statuses.some(st=>st.kind==="undertow")&&!isRecharging(c)){
+        c.passedRound=state.round;
+        flash(c,"UNDERTOW · NOT ENOUGH MANA","#83dfff");
+        recordBattleEvent(c.name+" skips: Undertow raises "+card.name+" to "+effectiveSpellCost(c,card)+" mana.");
+        continue;
+      }
+      if(c.mana<effectiveSpellCost(c,card)||isRecharging(c)){if(isRecharging(c)){recordBattleEvent(c.name+' loses this action to Recharge.');flash(c,'RECHARGING · SKIPPED','#e0d5ff');}continue;}
       // Cast-attempt curses strike before staff raising or rune tracing.
       // Ineligible/skipped turns above never count as an attempt.
       const attempt={card};
@@ -2553,9 +2567,9 @@
     c.restore();return placed;
   }
   const MAX_RUNES=4;
-  const DEBUFF_SPELLS=new Set(['ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
+  const DEBUFF_SPELLS=new Set(['undertow','ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
-  const DEBUFFS=new Set(["thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
+  const DEBUFFS=new Set(["undertow","thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
   const BENEFICIAL_RUNES=new Set(["fountain_youth","petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
@@ -2569,7 +2583,7 @@
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||runeCount(u)<MAX_RUNES);
   }
-  const RUNE_CAST_KINDS={fountainofyouth:"fountain_youth",petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
+  const RUNE_CAST_KINDS={undertow:"undertow",fountainofyouth:"fountain_youth",petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
     drowzyflowers:"sleep",crystalicemirrors:"crystal_ice_mirrors",frozentouch:"frozen_touch",
     quicksand:"quick_sand",manascourge:"mana_scourge",gunpowder:"gunpowder_coat",decaystrength:"decay_mark",
     acidair:"decaying_strength",boulderweight:"boulder_weight",thornwrap:"thorny_wrap",
@@ -4185,6 +4199,15 @@
           }
         }
       }
+    }else if(card.kind==="undertow"){
+      if(t?.hp>0&&t.team!==c.team){
+        damage(c,t,card.damage,card,anim);
+        if(t.hp>0&&!preventsHitEffects(anim,t)&&canReceiveDebuff(t,"undertow")){
+          addStatus(t,"undertow",null,card.manaTax,card.school);
+          flash(t,"UNDERTOW · +2 MANA COST","#83dfff");
+          recordBattleEvent(t.name+"'s next successful spell costs 2 extra mana.");
+        }
+      }
     }else if(card.kind==="manascourge"){
       if(t?.team!==c.team&&canReceiveDebuff(t,"mana_scourge")){
         addStatus(t,"mana_scourge",null,1,card.school);
@@ -4586,7 +4609,7 @@
     const canConfirm=planning&&!!c&&!!card&&
       !targetNotice(target,card)&&
       (!!target||(allEnemies&&alive(1-c.team).length>0)||(allAllies&&alive(c.team).length>0))&&
-      c.mana>=card.cost&&!state.plans[c.id]&&(!choosesRune(card)||runes.some(st=>st.kind===state.selectedRune));
+      c.mana>=effectiveSpellCost(c,card)&&!state.plans[c.id]&&(!choosesRune(card)||runes.some(st=>st.kind===state.selectedRune));
     ui.confirm.hidden=!canConfirm&&!(planning&&choosesRune(card)&&runes.length);
     ui.confirm.disabled=!canConfirm;
     ui.confirm.textContent=(card?.fieldRounds||choosesRune(card)||card?.kind==="claritystrike"||card?.kind==="hightide")?"Cast "+card.name:card?.selfOnly?"Cast on Yourself":allAllies?"Cast on Entire Team":allEnemies?"Cast on All Enemies":"Confirm Target";
@@ -4650,7 +4673,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_HYDRO_SERPENT,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_UNDERTOW,TEST_HYDRO_SERPENT,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -4674,7 +4697,9 @@
       b.classList.toggle("chosen",inHand&&b.dataset.card===card?.id&&copy===(state.selectedHandCopy||0));
       // Every held card remains inspectable, even when mana is insufficient.
       b.disabled=!planning||!c||!inHand;
-      b.classList.toggle("unaffordable",!!c&&BY_ID[b.dataset.card].cost>c.mana);
+      b.classList.toggle("unaffordable",!!c&&effectiveSpellCost(c,BY_ID[b.dataset.card])>c.mana);
+      const manaBadge=b.querySelector(".spell-mana-cost"),price=effectiveSpellCost(c,BY_ID[b.dataset.card]);
+      if(manaBadge){manaBadge.textContent=price;manaBadge.setAttribute("aria-label",price+" mana");manaBadge.title=price>BY_ID[b.dataset.card].cost?"Undertow: +2 mana":"";}
       if(inHand){
         const offset=index-(c.hand.length-1)/2;
         b.style.setProperty("--fan-index",offset);
@@ -4689,14 +4714,14 @@
     if(Builds)for(const button of ui.hand.querySelectorAll('button[data-card]')){
       const k=BY_ID[button.dataset.card],range=Builds.range(k,c);
       const main=button.querySelector('.spell-combat b');
-      if(range&&main){main.textContent='✹ '+range.low.toLocaleString()+'–'+range.high.toLocaleString();button.setAttribute('aria-label',k.name+', '+k.cost+' mana, '+range.low+' to '+range.high+' '+k.school+' damage, '+Math.round(k.accuracy*100)+'% accuracy. '+k.description);}
+      if(range&&main){main.textContent='✹ '+range.low.toLocaleString()+'–'+range.high.toLocaleString();button.setAttribute('aria-label',k.name+', '+effectiveSpellCost(c,k)+' mana, '+range.low+' to '+range.high+' '+k.school+' damage, '+Math.round(k.accuracy*100)+'% accuracy. '+k.description);}
       if(k.heal&&main)main.textContent='✚ '+Builds.healing(k,c).toLocaleString();
       const scaledEffect=k.kind==="teamheal"?"RESTORE "+Builds.healing(k,c)+" HP PER ALLY":Builds.effectText(k,c),effectNode=button.querySelector('.spell-effect');
       if(scaledEffect&&effectNode){effectNode.textContent=scaledEffect;effectNode.title='Includes your mastery bonus. Healing has no damage-variant roll.';}
       if(range){const effect=button.querySelector('.spell-effect');if(effect&&!effect.dataset.base){effect.dataset.base=effect.innerHTML;effect.title='Values include your mastery bonus. Damage uses three variants; healing does not.';}}
     }
     ui.queue.disabled=!planning||!c||!card||!!state.plans[c.id]||
-      c.mana<card.cost||(card.target!=="team"&&card.target!=="all_enemies"&&!target);
+      c.mana<effectiveSpellCost(c,card)||(card.target!=="team"&&card.target!=="all_enemies"&&!target);
     ui.auto.disabled=true;
     ui.resolve.disabled=true;
     ui.resolve.textContent=state.mode==="pvp"&&state.planningSide===0?
@@ -5485,6 +5510,7 @@
       case "bubble_shield":return {title:"Bubble Shield · Water barrier",detail:st.value+" / "+BY_ID.bubbleshield.shieldHp+" shield HP. Any damage beyond the remaining shield HP reaches the wizard."};
       case "wind_dome":return {title:"Wind Dome · One spell block",detail:"Blocks the next incoming damaging spell, then disappears. Against Double Pick, it blocks the first pick and the second can hit. Misses and support spells preserve it. All damage caused by debuffs passes through without consuming it. Lasts until used."};
       case "lightning_rod":return {title:"ϟ Lightning Rod · Self debuff",detail:Math.max(0,st.expiresRound-state.round+1)+" rounds left. Redirects 20% of any wizard’s Lightning spell damage into healing. Active rods share the healing."};
+      case "undertow":return {title:"Undertow · Water debuff",detail:"The next successful spell costs 2 extra mana. Passing, fizzles and unaffordable spells preserve the rune. Does not stack. Can be cleansed."};
       case "mana_scourge":return {title:"Mana Scourge",detail:"Blocks the first round-end mana gain, including passing and Flow State. The rune stays while mana is full. Mana gained during the round still works."};
       case "soulless":return {title:"Soulless",detail:"The trapped soul causes "+st.value+" damage after "+Math.max(0,st.expiresRound-state.round)+" more rounds."};
       case "decay_mark":return {title:"Decay of Strength",detail:"The next damaging spell deals 20% more damage. All hits of a triggering spell qualify."};
@@ -5575,7 +5601,7 @@
   const statusSchools={
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
     thunder_mine:"lightning",burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
-    water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
+    undertow:"water",water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
     reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     petrify:"earth",guardian_roots:"nature",photosynthesis:"nature",growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",live_wire:"lightning",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
@@ -5816,6 +5842,7 @@
       else if(card.id==="crystalcavern")window.CrystalCavern?.portrait(c,width,height,background);
       else if(card.id==="petrify")window.Petrify?.portrait(c,width,height,wizardAtlas);
       else if(card.id==="tectoniccrush")window.TectonicCrush?.portrait(c,width,height);
+      else if(card.id==="undertow")window.Undertow?.portrait(c,width,height);
       else if(card.id==="hydroserpent")window.HydroSerpent?.portrait(c,width,height);
       else if(card.id==="jellyshock")window.Jellyshock?.portrait(c,width,height);
       else if(card.id==="fountainofyouth")window.FountainYouth?.portrait(c,width,height);
@@ -6320,7 +6347,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["hydroserpent","jellyshock","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["undertow","hydroserpent","jellyshock","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6437,6 +6464,10 @@
         renderables.push({type:"tectonic-crush-front",depthY:target.y+.15,priority:2,draw:()=>art.draw(g,s,"front")});
         renderables.push({type:"tectonic-crush-impact",depthY:target.y+.19,priority:2,draw:()=>art.impact(g,s)});
       }
+    }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="undertow"&&window.Undertow){
+      const target=getUnit(action.target);
+      if(target){const s=window.Undertow.scene(target,clamp(action.elapsed/action.duration,0,1),unitEffectFactor(target));renderables.push({type:"undertow",depthY:target.y+.18,priority:2,draw:()=>window.Undertow.draw(g,s)});}
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="hydroserpent"&&window.HydroSerpent){
       const source=getUnit(action.source),art=window.HydroSerpent;
@@ -7756,18 +7787,18 @@
       if(p.discardId&&(u.discardedRound===state.round?u.discardedCard!==p.discardId:!u.hand.includes(p.discardId)))return false;
       if(!p.pass&&needsDiscard&&p.cardId===p.discardId&&u.hand.filter(id=>id===p.cardId).length<2)return false;
       if(p.pass){if(needsDiscard)discardFromHand(u,p.discardId);rememberPlan(u);u.passedRound=state.round;state.plans[u.id]={casterId:u.id,pass:true,cardId:null,targetId:null,team:u.team};}
-      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<card.cost||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(targetNotice(t,card))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
+      else{const card=BY_ID[p.cardId],t=getUnit(p.targetId);if(!card||!u.hand.includes(card.id)||u.mana<effectiveSpellCost(u,card)||!u.masteries.includes(card.school)||requiresRest(u))return false;const area=['team','all_enemies'].includes(card.target);if(!area&&(!t||!targetsFor(card,u).includes(t)))return false;if(targetNotice(t,card))return false;if(choosesRune(card)&&!zenRunes(t).some(st=>st.kind===p.runeKind))return false;if(area&&!alive(card.target==='team'?u.team:1-u.team).length)return false;
        if(needsDiscard)discardFromHand(u,p.discardId);
        rememberPlan(u);if(!playHandCard(u,card.id))return false;state.plans[u.id]={casterId:u.id,cardId:card.id,targetId:area?null:t.id,runeKind:choosesRune(card)?p.runeKind??null:null,team:u.team};}
       if(u.id===caster()?.id)clearSelection();if(!defer){autoFill(0);autoFill(1);runResolution();paintUI();}return true;},
     advanceBackground:ms=>{let left=Math.min(30000,Math.max(0,ms));while(left>0&&state&&state.phase!=='finished'){const dt=Math.min(40,left);advanceAromatherapyGusts(dt);sampleHostStage();if(hostPlayback&&(state.phase==="resolving"||state.phase==="ending"))hostPlayback.time+=dt;advanceRoundAction(dt);for(const u of state.units)if(u.hp<=0)u.defeatElapsedMs=Math.min(DEFEAT_HOLD_MS,(u.defeatElapsedMs||0)+dt);updateBattleEnding(dt);for(const f of state.flashes)f.age+=dt/1000;state.flashes=state.flashes.filter(f=>f.age<.96);for(const key of ['gunpowderBursts','windDomeBursts','rodBursts','bubbleShieldRipples','waterPrisonBursts'])if(state[key]){for(const b of state[key])b.age+=dt/1000;state[key]=state[key].filter(b=>b.age<.85);}left-=dt;}},
     drawWizardPreview:(target,look,pose="idle")=>{const c=target.getContext('2d'),w=target.width,h=target.height;c.clearRect(0,0,w,h);c.save();c.translate(w/2,h*.94);c.scale(1.4,1.4);const now=performance.now(),t=now%2400;if(pose==='defeat')drawDefeatSprite(c,t,look);else if(pose==='cast'){const stage=t<450?'raising':t<1450?'tracing-auto':'lowering';drawWizardSprite(c,stage,t<450?t/450:(t-1450)/700,t,now,23,look);}else drawWizardSprite(c,'idle',0,0,now,null,look);c.restore();},
 
-    drawCardArts,cardInfo,applyFountainYouth,tickFountainYouth,attachThunderMine,thunderMineTriggerable,beginThunderMineDetonation,applyThunderMineDetonation,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
+    drawCardArts,cardInfo,effectiveSpellCost,applyFountainYouth,tickFountainYouth,attachThunderMine,thunderMineTriggerable,beginThunderMineDetonation,applyThunderMineDetonation,shortCircuitBase,shortCircuitCount,shortCircuitTally,advanceShortCircuit,
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_HYDRO_SERPENT,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_UNDERTOW,TEST_HYDRO_SERPENT,TEST_FOUNTAIN_YOUTH,TEST_HYDRO_CANNON,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

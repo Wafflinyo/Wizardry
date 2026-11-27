@@ -1,10 +1,8 @@
-/* Hydro Serpent: stationary illustrated summon and roar, charged water
-   projectile, then a sharp water-pellet shower across the opposing team.
-   All artwork is reused from the existing transparent raster assets. */
+/* Hydro Serpent v0.355.6: new 32-frame skyward cast; stationary summon. */
 (()=>{
 "use strict";
-const W=224,H=256,ROOT={x:500,y:510},K=1.55,CHARGE=.27,FIRE=.46,BURST=.59,HIT=.72,END=.995;
-const C=p=>Math.max(0,Math.min(1,p)),L=(a,b,p)=>a+(b-a)*p,E=p=>C(p)*C(p)*(3-2*C(p));
+const W=224,H=256,ROOT={x:500,y:510},K=1.55,BURST=.59,HIT=.72,END=.995;
+const C=p=>Math.max(0,Math.min(1,p)),L=(a,b,p)=>a+(b-a)*p;
 const body=new Image(),water=new Image();let pending=null,cleanWater=null;
 const ok=(im,w,h)=>im.complete&&im.naturalWidth===w&&im.naturalHeight===h;
 function clean(){
@@ -23,41 +21,34 @@ function clean(){
   ctx.putImageData(px,0,0);cleanWater=c;return true;
  }catch(e){return false;}
 }
-const ready=()=>ok(body,1792,2048)&&ok(water,768,768);
+const ready=()=>ok(body,1792,1024)&&ok(water,768,768);
 function ensure(){
  if(ready()){clean();return Promise.resolve(true);}
  if(pending)return pending;
  const load=(im,w,h,path)=>ok(im,w,h)?Promise.resolve(true):new Promise(resolve=>{im.onload=()=>resolve(ok(im,w,h));im.onerror=()=>resolve(false);im.src=path;});
- pending=Promise.all([load(body,1792,2048,"./assets/hydro-serpent-v7.webp?v=0.355.5"),load(water,768,768,"./assets/water-blast-frames.webp?v=0.355.5")]).then(v=>{const good=v.every(Boolean);if(good){clean();window.WIZARDRY_ARENA_TEST?.drawCardArts?.();}return good;}).finally(()=>pending=null);
+ pending=Promise.all([load(body,1792,1024,"./assets/hydro-serpent-sky-v8.webp?v=0.355.6"),load(water,768,768,"./assets/water-blast-frames.webp?v=0.355.6")]).then(v=>{const good=v.every(Boolean);if(good){clean();window.WIZARDRY_ARENA_TEST?.drawCardArts?.();}return good;}).finally(()=>pending=null);
  return pending;
 }
 function shotAt(p,count){
  const start=.24,end=.55,span=(end-start)/Math.max(1,count);
- if(p<start||p>=end)return null;
+ if(count<1||p<start||p>=end)return null;
  const i=Math.min(count-1,Math.floor((p-start)/span));
  return {i,q:C((p-start-i*span)/span)};
 }
 function frameAt(p,count){
- if(p<.24)return Math.min(19,Math.floor(20*p/.24));
+ if(p<.24)return Math.min(11,Math.floor(12*p/.24));
  const shot=shotAt(p,count);
- if(shot)return 20+Math.min(5,Math.floor(shot.q*6));
- if(p<.59)return 25;
- if(p<.91)return Math.max(0,19-Math.floor(20*(p-.59)/.32));
- return 0;
-}
-function oldFrameAt(p){
- if(p<CHARGE)return Math.min(19,Math.floor(20*p/CHARGE));
- if(p<FIRE)return 20+Math.min(5,Math.floor(6*(p-CHARGE)/(FIRE-CHARGE)));
- if(p<.58)return 24+Math.floor((p-FIRE)*34)%3;
- if(p<.91)return Math.max(0,19-Math.floor(20*(p-.58)/.33));
- return 0;
+ if(shot){const q=shot.q;if(q<.42)return 12+Math.min(5,Math.floor(q/.42*6));if(q<.70)return 18+Math.min(3,Math.floor((q-.42)/.28*4));return 22+Math.min(3,Math.floor((q-.70)/.30*4));}
+ if(p<BURST)return 25;
+ if(p<.76)return 26+Math.min(5,Math.floor((p-BURST)/(.76-BURST)*6));
+ return Math.max(0,7-Math.floor(8*(p-.76)/.18));
 }
 function scene(source,targets,p){
  p=C(p);const dir=source.team===1?-1:1,arr=targets.map((u,i)=>({...u,index:i,k:Math.max(.65,Math.min(1.8,(u.factor||1)*.85)),contact:{x:u.x,y:u.y-83*(u.factor||1)}}));
  const cx=arr.length?arr.reduce((v,u)=>v+u.x,0)/arr.length:ROOT.x+dir*270;
- const mouth={x:ROOT.x+dir*59*K,y:ROOT.y-153*K};
- const sky={x:cx+dir*40,y:-150};
- return{x:ROOT.x,y:ROOT.y,dir,p,targets:arr,mouth,sky,n:frameAt(p,Math.max(1,arr.length)),shot:shotAt(p,Math.max(1,arr.length)),alpha:C(p/.025)*C((.94-p)/.04)};
+ const mouth={x:ROOT.x+dir*44*K,y:ROOT.y-178*K};
+ const sky={x:cx+dir*40,y:-210};
+ return{x:ROOT.x,y:ROOT.y,dir,p,targets:arr,mouth,sky,n:frameAt(p,arr.length),shot:shotAt(p,arr.length),alpha:C(p/.025)*C((.94-p)/.04)};
 }
 function tile(g,im,n,cols,w,h,x,y,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,x,y,dw,dh);}
 function actor(g,s){if(!ready()||s.alpha<=0)return;g.save();g.globalAlpha*=s.alpha;g.translate(s.x,s.y);g.scale(s.dir*K,K);g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";tile(g,body,s.n,8,W,H,-112,-240,W,H);g.restore();}
@@ -65,8 +56,8 @@ function orb(g,x,y,r,n,opacity=1){if(opacity<=0)return;g.save();g.globalAlpha*=o
 function blast(g,s){
  if(!ready()||!s.shot)return;
  const q=s.shot.q;
- if(q<.43){const f=C(q/.43);orb(g,s.mouth.x,s.mouth.y,18+60*E(f),3+Math.min(8,Math.floor(f*9)));return;}
- const f=C((q-.43)/.57),x=L(s.mouth.x,s.sky.x,f),y=L(s.mouth.y,s.sky.y,f);
+ if(q<.42)return;
+ const f=C((q-.42)/.58),x=L(s.mouth.x,s.sky.x,f),y=L(s.mouth.y,s.sky.y,f);
  for(let j=3;j>=1;j--){const t=Math.max(0,f-j*.06);orb(g,L(s.mouth.x,s.sky.x,t),L(s.mouth.y,s.sky.y,t),42-j*8,5+j,.13*(4-j));}
  orb(g,x,y,78+12*f,7+Math.min(4,Math.floor(f*5)));
 }
@@ -97,6 +88,6 @@ function rain(g,s,u){
   }
  }
 }
-function portrait(g,w,h){if(!ready())return;const scale=Math.min(w/160,h/215)*1.03;tile(g,body,23,8,W,H,(w-W*scale)/2,h-240*scale,W*scale,H*scale);}
-window.HydroSerpent={ensure,ready,scene,actor,blast,rain,portrait,hit:HIT,frameCount:64};ensure();
+function portrait(g,w,h){if(!ready())return;const scale=Math.min(w/160,h/215)*1.03;tile(g,body,10,8,W,H,(w-W*scale)/2,h-240*scale,W*scale,H*scale);}
+window.HydroSerpent={ensure,ready,scene,actor,blast,rain,portrait,hit:HIT,frameCount:32};ensure();
 })();

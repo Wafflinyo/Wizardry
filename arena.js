@@ -6392,6 +6392,7 @@
       const source=getUnit(action.source),target=getUnit(action.target),art=window.HydroCannon;
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitEffectFactor(target));
+        renderables.push({type:"hydro-summon-water",depthY:scene.y-.10,priority:1,draw:()=>art.summon(g,scene)});
         renderables.push({type:"hydro-turtle",depthY:scene.y,priority:2,draw:()=>art.actor(g,scene)});
         renderables.push({type:"hydro-stream",depthY:Math.max(scene.y,target.y)+.17,priority:2,draw:()=>art.beam(g,scene)});
         renderables.push({type:"hydro-splash",depthY:target.y+.21,priority:2,draw:()=>art.impact(g,scene)});

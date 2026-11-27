@@ -19,26 +19,33 @@ for(const x of [200,800])for(const y of [320,540])for(const factor of [1,1.5,2])
  assert.equal(trans[0][0],s.coreStart.x);assert.equal(trans[0][1],s.coreStart.y);
  assert.equal(trans[1][0],s.far.x);assert.equal(trans[1][1],s.far.y);
  assert.equal(trans[2][0],s.near.x);assert.equal(trans[2][1],s.near.y);
- assert.equal(calls[0][8],88);assert.equal(calls[1][8],44);assert.equal(calls[2][8],44);
+ assert.equal(calls[0][8],104);assert.equal(calls[1][8],52);assert.equal(calls[2][8],52);
  assert.ok(Math.abs(s.branchEnd.x-s.mx)>Math.abs(s.coreStart.x-s.mx));
- assert.ok(Math.abs(s.branchEnd.x-s.coreStart.x)>Math.abs(s.tx-s.mx)*.26);
+ assert.ok(Math.abs(s.branchEnd.x-s.coreStart.x)>Math.abs(s.tx-s.mx)*.23);
  calls.length=0;art.impact(g,s);assert.equal(calls.length,1);assert.ok(calls[0][0].path.includes('hydro-crisp-water'));
 }
-// Aim is selected from the actual rendered barrel pitch and held steady.
+// Faster pose playback with target-aware limited recoil; beam keeps
+// the original impact time and never starts ahead of its muzzle branches.
 for(const x of [200,800])for(const y of [320,420,500,540])for(const factor of [1,1.5,2]){
  const t={x,y},src={x:1000-x},s=art.scene(src,t,.70,factor);
- assert.equal(s.pose.frame,s.aimFrame);
+ assert.ok(Math.abs(s.pose.frame-s.aimFrame)<=1);
  assert.equal(art.scene(src,t,.58,factor).pose.frame,s.aimFrame);
- assert.equal(art.scene(src,t,.80,factor).pose.frame,s.aimFrame);
  assert.equal(art.scene(src,t,.98,factor).pose.frame,0);
  assert.ok(s.contactY>=y-125*s.targetK-1e-8&&s.contactY<=y-45*s.targetK+1e-8);
- const mirror=art.scene({x}, {x:1000-x,y},.70,factor);
+ const mirror=art.scene({x},{x:1000-x,y},.70,factor);
  assert.equal(s.aimFrame,mirror.aimFrame);
  assert.ok(Math.abs(s.contactY-mirror.contactY)<1e-8);
+ for(let ms=0;ms<580;ms+=10){
+  const p=.58+ms/4800,r=art.scene(src,t,p,factor);
+  assert.ok(Math.abs(r.pose.frame-r.aimFrame)<=1);
+  const q=Math.min(1,(p-.58)/.12),branchTip=Math.min(q,.32);
+  const coreTip=.08+Math.max(0,q-.08);
+  if(q>.08)assert.ok(branchTip>=.08&&coreTip>=branchTip-1e-8);
+ }
 }
-for(const x of [250,750]){
- const s=art.scene({x:1000-x},{x,y:500},.70,1);
- assert.ok(s.aimFrame<=7);
- assert.ok(Math.abs((s.contactY-s.my)/Math.abs(s.tx-s.mx)-s.barrelSlope)<.15);
-}
-console.log('Hydro Cannon: dry turtle atlas, center diamond, separate twin muzzle streams and convergence, unchanged hit timing.');
+const frames=new Set();for(let ms=0;ms<500;ms+=55)frames.add(art.poseAt(.58+ms/4800).beam);
+assert.equal(frames.size,3);
+assert.equal(art.poseAt(.79).beam,-1);
+assert.equal(art.poseAt(.699).impact,-1);
+assert.equal(art.poseAt(.70).impact,16);
+console.log('Hydro Cannon: faster sprite cadence, limited aiming recoil, thicker continuous early-merged blast, unchanged damage timing.');

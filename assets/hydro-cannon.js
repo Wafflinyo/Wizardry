@@ -2,7 +2,7 @@
  * jet atlas and independent splash atlas. True arena-center summon. */
 (()=>{
 "use strict";
-const CW=222,CH=222,FW=242,FH=272,HIT=.70,FIRE=.58;
+const CW=222,CH=222,FW=242,FH=272,HIT=.70,FIRE=.58,BEAM_END=.79,DURATION=4800;
 const turtle=new Image(),water=new Image();
 const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,t)=>a+(b-a)*t;
 const good=(im,w,h)=>im.complete&&im.naturalWidth===w&&im.naturalHeight===h;
@@ -34,16 +34,13 @@ const muzzles=[
  [159,59,180,62],[157,56,177,58],[151,49,174,52],[151,46,174,50]
 ];
 function poseAt(p){
- p=C(p);let frame,alpha=1;
- if(p<.20){frame=Math.min(7,Math.floor(p/.20*8));alpha=C(p/.12);}
- else if(p<.38)frame=8+Math.min(2,Math.floor((p-.20)/.18*3));
- else if(p<FIRE)frame=11+Math.min(4,Math.floor((p-.38)/(FIRE-.38)*5));
- else if(p<.81)frame=16+Math.min(3,Math.floor((p-FIRE)/(.81-FIRE)*4));
- else if(p<.91)frame=20+Math.min(7,Math.floor((p-.81)/.10*8));
- else{frame=28+Math.min(3,Math.floor((p-.91)/.09*4));alpha=C((1-p)/.065);}
- const beam=p<FIRE||p>.81?-1:Math.min(11,Math.floor((p-FIRE)/(.81-FIRE)*12));
- const impact=p<HIT?-1:16+Math.min(7,Math.floor((p-HIT)/(1-HIT)*8));
- return {frame,alpha,beam,impact};
+ p=C(p);
+ // Fixed cast duration; sprite and water playback run on independent clocks.
+ const elapsed=p*DURATION;
+ const alpha=p<.12?C(p/.075):p>.94?C((1-p)/.06):1;
+ const beam=p<FIRE||p>=BEAM_END?-1:Math.floor((elapsed-FIRE*DURATION)/55)%3;
+ const impact=p<HIT?-1:Math.min(23,16+Math.floor((elapsed-HIT*DURATION)/115));
+ return {frame:0,alpha,beam,impact};
 }
 // Screen-space barrel-axis slopes measured from the existing raster
 // poses. Positive means down toward the floor. Use the least-pitched
@@ -60,7 +57,7 @@ function aimFor(target,dir,k,targetK){
   const projected=my+reach*aimSlopes[n];
   // Prefer hitting the center of the body with the shallowest lean.
   const outside=Math.max(0,top-projected,projected-bottom);
-  const score=Math.abs(projected-desired)+outside*3+n*1.5;
+  const score=Math.abs(projected-desired)+outside*4+n*2.5;
   if(!best||score<best.score)best={frame:n,score,projected};
  }
  return best;
@@ -70,14 +67,31 @@ function scene(source,target,p,factor=1){
  const dir=target.x===500?(source.team===1?-1:1):target.x>500?1:-1,x=500,y=510,k=1.22,pose=poseAt(p);
  const targetK=(.60+.30*C((target.y-288)/235))*Math.max(1,factor);
  const aim=aimFor(target,dir,k,targetK);
- // Rise normally, lower only as far as required, hold that exact
- // rendered stance for the whole blast, then lift back to neutral.
- if(p<.20)pose.frame=0;
- else if(p<.36)pose.frame=Math.min(2,aim.frame);
- else if(p<FIRE)pose.frame=Math.round(L(Math.min(2,aim.frame),aim.frame,C((p-.36)/(FIRE-.36))));
- else if(p<=.81)pose.frame=aim.frame;
- else if(p<.94)pose.frame=Math.round(L(aim.frame,0,C((p-.81)/.13)));
- else pose.frame=0;
+ // Rendered poses only: quickly rise and settle, then lean at about
+ // 20 frames/sec. A small recoil step is selected only when it still
+ // points toward the enemy, rather than cycling into a deep crouch.
+ const elapsed=p*DURATION;
+ const idle=Math.min(2,aim.frame);
+ const leanStart=.30*DURATION;
+ const leanStep=50;
+ const recoil=Math.max(0,aim.frame-1);
+ const rm=muzzles[recoil],rbase=bases[recoil];
+ const rx=x+dir*((rm[0]+rm[2])/2-CW/2)*k;
+ const ry=y+((rm[1]+rm[3])/2-rbase)*k;
+ const recoilProjected=ry+Math.max(1,(target.x-rx)*dir)*aimSlopes[recoil];
+ const contact=Math.max(target.y-125*targetK,Math.min(target.y-45*targetK,aim.projected));
+ const recoilOK=recoil!==aim.frame&&Math.abs(recoilProjected-contact)<=24*targetK;
+ if(p<.12)pose.frame=Math.min(idle,Math.floor(elapsed/50));
+ else if(p<.30){
+  const cycle=[idle,Math.max(0,idle-1),idle];
+  pose.frame=cycle[Math.floor((elapsed-.12*DURATION)/75)%cycle.length];
+ }
+ else if(p<FIRE)pose.frame=Math.min(aim.frame,idle+Math.floor((elapsed-leanStart)/leanStep));
+ else if(p<BEAM_END){
+  const phase=(elapsed-FIRE*DURATION)%270;
+  pose.frame=recoilOK&&phase>=55&&phase<115?recoil:aim.frame;
+ }
+ else pose.frame=Math.max(0,aim.frame-Math.floor((elapsed-BEAM_END*DURATION)/55));
  const m=muzzles[pose.frame],base=bases[pose.frame];
  const point=(px,py)=>({x:x+dir*(px-CW/2)*k,y:y+(py-base)*k});
  const near=point(m[0],m[1]),far=point(m[2],m[3]);
@@ -85,9 +99,9 @@ function scene(source,target,p,factor=1){
  // Keep the water ray within the body; when the pose is aligned, its
  // continuation follows the actual cannon pitch rather than a fixed angle.
  const contactY=Math.max(target.y-125*targetK,Math.min(target.y-45*targetK,aim.projected));
- const merge={x:L(mx,target.x,.36),y:L(my,contactY,.36)};
- const coreStart={x:L(mx,target.x,.18),y:L(my,contactY,.18)};
- const branchEnd={x:L(mx,target.x,.45),y:L(my,contactY,.45)};
+ const merge={x:L(mx,target.x,.20),y:L(my,contactY,.20)};
+ const coreStart={x:L(mx,target.x,.08),y:L(my,contactY,.08)};
+ const branchEnd={x:L(mx,target.x,.32),y:L(my,contactY,.32)};
  return {x,y,k,dir,p,pose,near,far,merge,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK,aimFrame:aim.frame,barrelSlope:aimSlopes[aim.frame]};
 }
 function tile(g,im,n,cols,w,h,dx,dy,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,dx,dy,dw,dh);}
@@ -99,8 +113,8 @@ function actor(g,s){
  tile(g,turtle,n,8,CW,CH,-CW/2,-bases[n],CW,CH);g.restore();
 }
 function summon(g,s){
- if(!ready()||s.p>=.20)return;
- const q=C(s.p/.20),n=23-Math.min(3,Math.floor(q*4));
+ if(!ready()||s.p>=.15)return;
+ const q=C(s.p/.15),n=23-Math.min(3,Math.floor(q*4));
  g.save();g.globalAlpha*=Math.sin(Math.PI*q)*.85;
  tile(g,water,n,6,FW,FH,s.x-135,s.y-235,270,290);g.restore();
 }
@@ -108,42 +122,43 @@ function summon(g,s){
 // is cropped inside its opaque core at both ends so the nozzle and
 // the merged stream share visible water, not transparent padding.
 const jetCrops=[
- [[27,103,93,51],[27,177,91,57]],
- [[29,107,119,48],[29,179,123,54]],
- [[27,102,145,54],[27,176,149,61]]
+ [[30,101,74,55],[30,175,74,61]],
+ [[30,105,110,55],[30,175,110,62]],
+ [[29,101,131,58],[29,175,131,65]]
 ];
 function stream(g,from,to,n,lower,wide,alpha,progress=1){
  if(progress<=0||alpha<=0)return;
  const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy)*progress;
  if(len<.5)return;
  const sx=(n%6)*FW,sy=Math.floor(n/6)*FH;
- const crop=wide?[18,67,221,159]:jetCrops[n][lower?1:0];
- const height=wide?88:44;
- // Extend the water a few pixels into the barrel so no rim gap is visible.
- const inset=wide?0:6;
+ // Crop only the opaque interior of the raster jets. Full-width core
+ // frames 9–11 have substantial alpha coverage right across the tile.
+ const crop=wide?[10,65,220,160]:jetCrops[n][lower?1:0];
+ const height=wide?104:52,inset=wide?8:8;
  g.save();g.globalAlpha*=alpha;g.translate(from.x,from.y);g.rotate(Math.atan2(dy,dx));
  g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+ // Extend the start under its neighbor, not beyond the moving attack tip.
  g.drawImage(water,sx+crop[0],sy+crop[1],crop[2],crop[3],-inset,-height/2,len+inset,height);g.restore();
 }
 function beam(g,s){
  if(!ready())return;
  const p=s.p;
- if(p>=.36&&p<FIRE){
-  const q=C((p-.36)/(FIRE-.36)),size=14+15*q;
+ if(p>=.28&&p<FIRE){
+  const q=C((p-.28)/(FIRE-.28)),size=14+13*q;
+  const n=Math.floor((p-.28)*DURATION/55)%3;
   for(const m of [s.far,s.near]){
-   g.save();g.globalAlpha*=.45+.4*q;
-   g.drawImage(water,16,112,57,62,m.x-size*.24,m.y-size/2,size,size);g.restore();
+   g.save();g.globalAlpha*=.5+.4*q;
+   g.drawImage(water,n*FW+25,110,53,45,m.x-size*.24,m.y-size/2,size,size);g.restore();
   }
   return;
  }
  if(s.pose.beam<0)return;
- const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.78?C((.81-p)/.03):1;
- const lead=C(q/.45),tail=C((q-.30)/.70);
- const j=Math.min(2,Math.floor((p-FIRE)/.025)%3);
- const n=9+Math.min(2,Math.floor((p-FIRE)/.026)%3);
- // The core begins while the two branches are still growing and overlaps
- // 27% of the full path. Drawing the nozzle streams on top gives a single
- // uninterrupted water silhouette all the way to the enemy.
+ const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.765?C((BEAM_END-p)/.025):1;
+ // Both branches and the long core share the same advancing front.
+ // The core begins 8% along the shot, while the branches extend to 32%.
+ // Their substantial overlap avoids a detached beam or a long Y shape.
+ const lead=C(q/.32),tail=C((q-.08)/.92);
+ const j=s.pose.beam,n=9+j;
  stream(g,s.coreStart,{x:s.tx,y:s.contactY},n,false,true,fade,tail);
  stream(g,s.far,s.branchEnd,j,true,false,fade,lead);
  stream(g,s.near,s.branchEnd,j,false,false,fade,lead);
@@ -151,7 +166,7 @@ function beam(g,s){
 function impact(g,s){
  const n=s.pose.impact;if(!ready()||n<0)return;
  const w=205*s.targetK,h=230*s.targetK;
- const q=C((n-16)/4),y=L(s.contactY+36*s.targetK,s.ty,q);
+ const q=C((s.p-HIT)/.115),y=L(s.contactY+24*s.targetK,s.ty,q);
  g.save();g.globalAlpha*=s.p>.96?C((1-s.p)/.04):1;
  tile(g,water,n,6,FW,FH,s.tx-w/2,y-h*(n>=18?222/272:218/272),w,h);g.restore();
 }

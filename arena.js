@@ -275,7 +275,7 @@
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const TEST_TECTONIC_CRUSH={id:"tectoniccrush",name:"Tectonic Crush",school:"earth",cost:6,target:"enemy",kind:"damage",damage:780,accuracy:.85,boulderChance:.25,icon:"◆",rarity:"TEST",testOnly:true,duration:4320,hit:28/48,description:"Two massive jagged rock formations erupt on either side of one enemy and crush them between their stone faces for 780 base Earth damage. A damaging hit has a 25% chance to inflict Boulder Weight (−30 accuracy points for 3 turns)."};
-  const TEST_HYDRO_SERPENT={id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:5,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.72,description:"A massive water serpent rises from a whirlpool, charges a water blast and launches it into the sky above the enemy team. Sharp rain pellets shower every living enemy for 430 base Water damage each."};
+  const TEST_HYDRO_SERPENT={id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:5,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.72,description:"A massive water serpent rises from a whirlpool, charges a water blast and launches it into the sky above the enemy team. Fires one water blast into the sky per living enemy, then showers every enemy with sharp rain pellets for 430 base Water damage plus 75 per additional blast."};
   const TEST_JELLYSHOCK={id:"jellyshock",name:"Jellyshock",school:"water",cost:3,target:"enemy",kind:"damage",damage:280,stunChance:.15,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"A bioluminescent jellyfish lashes one enemy with charged tentacles for 280 base Water damage, with a 15% chance to Stun for one action."};
   const TEST_FOUNTAIN_YOUTH={id:"fountainofyouth",name:"Fountain of Youth",school:"water",cost:4,target:"ally",kind:"fountainofyouth",healFraction:.25,rounds:3,accuracy:.90,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.70,description:"Bless yourself or an ally with a Water rune. At the start of each of the next 3 rounds, restore 25% of their missing HP. Reapplication refreshes the duration; cannot revive."};
   const TEST_HYDRO_CANNON={id:"hydrocannon",name:"Hydro Cannon",school:"water",cost:4,target:"enemy",kind:"damage",damage:460,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"An armored sea turtle emerges in a surge of water, charges both coral-stone cannons and fires two separate water blasts at one enemy for a combined 460 base Water damage."};
@@ -301,7 +301,7 @@
     stampede:"380 damage to each living enemy.",
     petrify:"Priority 2 (stackable). Immune for 2 rounds; cannot act. Heal 200 HP each round.",
     tectoniccrush:"780 Earth damage. 25% Boulder Weight chance (−30 accuracy, 3 turns).",
-    hydroserpent:"430 base Water damage to each enemy.",
+    hydroserpent:"430 base Water damage to each enemy, +75 for each additional living enemy.",
     jellyshock:"280 base Water damage. 15% chance to Stun.",
     fountainofyouth:"3 rounds: restore 25% of missing HP at each round start.",
     hydrocannon:"Twin water cannons deal 460 base Water damage.",
@@ -4265,7 +4265,9 @@
       if(field)recordBattleEvent("High Tide washes away "+field.name+".");
       clearEnvironment();
     }else if(card.kind==="hydroserpent"||card.kind==="whale"){
-      for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
+      const enemies=alive(1-c.team);
+      const base=card.damage+(card.kind==="hydroserpent"?75*Math.max(0,(anim.hydroTargets?.length??enemies.length)-1):0);
+      for(const enemy of enemies)damage(c,enemy,base,card,anim);
     }else if(card.kind==="earthquake"){
       clearEnvironment();
       for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);

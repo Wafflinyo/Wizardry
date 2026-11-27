@@ -2,7 +2,7 @@
  * Native-size alpha atlases, target-aware rendered poses, continuous water. */
 (()=>{
 "use strict";
-const CW=222,CH=222,FW=256,FH=256,HIT=.70,FIRE=.58,BEAM_END=.79,DURATION=4800;
+const CW=222,CH=222,FW=256,FH=256,HIT=.62,FIRE=.55,BEAM_END=.70,DURATION=4800;
 const turtle=new Image(),water=new Image();
 const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,t)=>a+(b-a)*t;
 const good=(im,w,h)=>im.complete&&im.naturalWidth===w&&im.naturalHeight===h;
@@ -38,7 +38,10 @@ const aimOrder=[8,7,6,9,5,10,4,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,2
 function anchors(n,dir,k){
  const m=muzzles[n],base=bases[n];
  const point=(px,py)=>({x:500+dir*(px-CW/2)*k,y:510+(py-base)*k});
- const near=point(m[0],m[1]),far=point(m[2],m[3]);
+ // Refine the opening centers using the actual raster rims. The old
+ // anchors sat slightly above/behind the holes in the firing poses.
+ const ox=n<=3?1:n<=10?2:5,oy=n<=3?1:n<=10?2:5;
+ const near=point(m[0]+ox,m[1]+oy),far=point(m[2]+(n<=10?1:4),m[3]+oy);
  return {near,far,mx:(near.x+far.x)/2,my:(near.y+far.y)/2};
 }
 function aimFor(target,dir,k,targetK){
@@ -56,8 +59,8 @@ function aimFor(target,dir,k,targetK){
 function poseAt(p){
  p=C(p);const elapsed=p*DURATION;
  return {frame:0,alpha:p<.10?C(p/.075):p>.94?C((1-p)/.06):1,
-  beam:p<FIRE||p>=BEAM_END?-1:Math.floor((elapsed-FIRE*DURATION)/48)%3,
-  impact:p<HIT?-1:Math.min(23,16+Math.floor((elapsed-HIT*DURATION)/110))};
+  beam:p<FIRE||p>=BEAM_END?-1:Math.floor((elapsed-FIRE*DURATION)/34)%3,
+  impact:p<HIT?-1:Math.min(23,16+Math.floor((elapsed-HIT*DURATION)/90))};
 }
 function scene(source,target,p,factor=1){
  p=C(p);const dir=target.x===500?(source.team===1?-1:1):target.x>500?1:-1,x=500,y=510,k=1.22,pose=poseAt(p);
@@ -89,8 +92,8 @@ function scene(source,target,p,factor=1){
   if(p>.94)pose.frame=12;
  }
  const {near,far,mx,my}=anchors(pose.frame,dir,k);
- const coreStart={x:L(mx,target.x,.08),y:L(my,contactY,.08)};
- const branchEnd={x:L(mx,target.x,.30),y:L(my,contactY,.30)};
+ const coreStart={x:L(mx,target.x,.06),y:L(my,contactY,.06)};
+ const branchEnd={x:L(mx,target.x,.28),y:L(my,contactY,.28)};
  return {x,y,k,dir,p,pose,near,far,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK,aimFrame:aim.frame,barrelSlope:pitch[pose.frame]};
 }
 function tile(g,im,n,cols,w,h,dx,dy,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,dx,dy,dw,dh);}
@@ -128,15 +131,20 @@ function stream(g,from,to,n,lower,wide,alpha,progress=1){
 function beam(g,s){
  if(!ready())return;const p=s.p;
  if(p>=.28&&p<FIRE){
-  const q=C((p-.28)/(FIRE-.28)),size=13+15*q,n=Math.floor((p-.28)*DURATION/50)%2;
+  const q=C((p-.28)/(FIRE-.28)),size=13+13*q,n=Math.floor((p-.28)*DURATION/42)%2;
+  // Center the luminous nucleus itself, not the asymmetric sprite
+  // bounding box. Measured centers: (73,135) and (70,137).
+  const cx=n?70:73,cy=n?137:135;
   for(const m of [s.far,s.near]){
-   g.save();g.globalAlpha*=.5+.4*q;
-   g.drawImage(water,n*FW+33,105,70,62,m.x-size/2,m.y-size/2,size,size);g.restore();
+   g.save();g.globalAlpha*=.55+.4*q;
+   g.translate(m.x,m.y);g.scale(s.dir,1);
+   g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+   g.drawImage(water,n*FW+cx-34,cy-34,68,68,-size/2,-size/2,size,size);g.restore();
   }return;
  }
  if(s.pose.beam<0)return;
- const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.765?C((BEAM_END-p)/.025):1;
- const lead=C(q/.30),tail=C((q-.08)/.92);
+ const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.68?C((BEAM_END-p)/.02):1;
+ const lead=C(q/.28),tail=C((q-.06)/.94);
  const j=2+Math.min(3,Math.floor(q*8))%4;
  // A continuous thick core with a 22%-of-path overlap with the two
  // muzzle branches. All pieces share one advancing front.

@@ -1,6 +1,6 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const arena=fs.readFileSync("arena.js","utf8");
-assert.ok(arena.includes('id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:5,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85'));
+assert.ok(arena.includes('id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:6,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85'));
 assert.ok(arena.includes('card.kind==="hydroserpent"||card.kind==="whale"'));
 assert.ok(arena.includes("75*Math.max(0,(anim.hydroTargets?.length??enemies.length)-1)"));
 assert.ok(!arena.includes('raw*=1+card.protectionBonus'));

@@ -16,7 +16,7 @@ full=true;assert.equal(ctx.applyFountainYouth(c,u,card),false);full=false;
 assert.ok(ctx.applyFountainYouth(c,u,card));state.round=5;suppressed=true;ctx.tickFountainYouth(u);assert.equal(u.hp,1577);assert.equal(u.statuses[0].remaining,2);
 suppressed=false;assert.ok(ctx.applyFountainYouth(c,u,card));assert.equal(u.statuses.length,1);assert.equal(u.statuses[0].remaining,3);
 u.hp=0;state.round=6;ctx.tickFountainYouth(u);assert.equal(u.hp,0);assert.equal(u.statuses.length,0);
-const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=s.includes('transfer-v91')?1446:s.includes('effects')?432:784;this.naturalHeight=s.includes('transfer-v91')?1084:s.includes('effects')?336:864;this.onload?.();}}};
+const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=s.includes('blessing-v92')?896:s.includes('effects')?432:784;this.naturalHeight=s.includes('blessing-v92')?432:s.includes('effects')?336:864;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync('assets/fountain-youth.js','utf8'),visual);
 const art=visual.window.FountainYouth;assert.ok(art.ready());
 for(let n=0;n<=100;n++){let s=art.scene({x:750,y:500},n/100);assert.equal(s.x,500);assert.equal(s.y,510);assert.ok(art.frame(s.p)>=0&&art.frame(s.p)<42);}
@@ -31,17 +31,27 @@ for(const x of [200,800])for(const factor of [1,2])for(let n=0;n<=1000;n++){
  assert.ok(d.w<180&&d.h<225&&d.y>300);
 }
 console.log('Fountain of Youth: three dynamic ticks, refresh, cap, suppression, no revival, and centered lower sprite placement.');
-// New transfer sprite uses a single moving ribbon with no wizard art.
+// Check independent water jewels on mirrored paths and a grounded aura.
 for(const x of [200,800])for(const y of [320,540])for(const factor of [1,2]){
- const u={x,y},s=art.scene(u,.70,factor),r=art.ribbonPath(s);
- assert.ok(Math.abs(r.to.x-x)<1e-7&&Math.abs(r.to.y-(y-70*s.k))<1e-7);
- assert.equal(r.source.x,500);
- assert.equal(art.ribbonPath(art.scene(u,.32,factor)),null);
- assert.equal(art.ribbonPath(art.scene(u,.76,factor)),null);
- for(let n=34;n<76;n++){
-  const s=art.scene(u,n/100,factor),r=art.ribbonPath(s);
-  assert.ok(r.n>=0&&r.n<24&&r.length>=0);
-  const calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...a){calls.push(a)}};
-  art.transfer(g,s);if(r.length>=1&&r.alpha>0){assert.equal(calls.length,1);assert.ok(calls[0][3]<=241&&calls[0][4]<=271);assert.equal(calls[0][7],r.length);}
+ const u={x,y};
+ for(let j=0;j<4;j++){
+  const start=.33+j*.037,end=.589+j*.037;
+  const first=art.blessingPaths(art.scene(u,start,factor)).find(p=>p.j===j);
+  const last=art.blessingPaths(art.scene(u,end,factor)).find(p=>p.j===j);
+  assert.ok(Math.abs(first.x-first.sx)<1e-7&&Math.abs(first.y-first.sy)<1e-7);
+  assert.ok(Math.abs(last.x-last.tx)<1e-7&&Math.abs(last.y-last.ty)<1e-7);
+  assert.equal(last.tx,x);
  }
+ for(let n=0;n<=100;n++){
+  const s=art.scene(u,n/100,factor),paths=art.blessingPaths(s);
+  const calls=[],g={globalAlpha:1,save(){},restore(){},drawImage(...v){calls.push(v)}};
+  art.transfer(g,s);assert.equal(calls.length,paths.filter(p=>p.alpha>0).length);
+  assert.ok(calls.every(c=>c[3]===36&&c[4]===32&&c[7]<=27));
+  const d=art.auraPlacement(u,n/100,factor);
+  assert.ok(d.n>=0&&d.n<14);
+  assert.ok(Math.abs(d.x+d.w/2-x)<1e-7&&Math.abs(d.y+d.h*123/144-y)<1e-7);
+ }
+ assert.equal(art.blessingPaths(art.scene(u,.32,factor)).length,0);
+ assert.equal(art.blessingPaths(art.scene(u,.71,factor)).length,0);
 }
+console.log('Fountain blessing: four separate arcing water jewels, 14-frame receiving aura, ground placement and existing healing.');

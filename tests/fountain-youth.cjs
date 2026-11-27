@@ -16,7 +16,7 @@ full=true;assert.equal(ctx.applyFountainYouth(c,u,card),false);full=false;
 assert.ok(ctx.applyFountainYouth(c,u,card));state.round=5;suppressed=true;ctx.tickFountainYouth(u);assert.equal(u.hp,1577);assert.equal(u.statuses[0].remaining,2);
 suppressed=false;assert.ok(ctx.applyFountainYouth(c,u,card));assert.equal(u.statuses.length,1);assert.equal(u.statuses[0].remaining,3);
 u.hp=0;state.round=6;ctx.tickFountainYouth(u);assert.equal(u.hp,0);assert.equal(u.statuses.length,0);
-const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=s.includes('effects')?432:784;this.naturalHeight=s.includes('effects')?336:864;this.onload?.();}}};
+const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=s.includes('transfer-v91')?1446:s.includes('effects')?432:784;this.naturalHeight=s.includes('transfer-v91')?1084:s.includes('effects')?336:864;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync('assets/fountain-youth.js','utf8'),visual);
 const art=visual.window.FountainYouth;assert.ok(art.ready());
 for(let n=0;n<=100;n++){let s=art.scene({x:750,y:500},n/100);assert.equal(s.x,500);assert.equal(s.y,510);assert.ok(art.frame(s.p)>=0&&art.frame(s.p)<42);}
@@ -31,3 +31,17 @@ for(const x of [200,800])for(const factor of [1,2])for(let n=0;n<=1000;n++){
  assert.ok(d.w<180&&d.h<225&&d.y>300);
 }
 console.log('Fountain of Youth: three dynamic ticks, refresh, cap, suppression, no revival, and centered lower sprite placement.');
+// New transfer sprite uses a single moving ribbon with no wizard art.
+for(const x of [200,800])for(const y of [320,540])for(const factor of [1,2]){
+ const u={x,y},s=art.scene(u,.70,factor),r=art.ribbonPath(s);
+ assert.ok(Math.abs(r.to.x-x)<1e-7&&Math.abs(r.to.y-(y-70*s.k))<1e-7);
+ assert.equal(r.source.x,500);
+ assert.equal(art.ribbonPath(art.scene(u,.32,factor)),null);
+ assert.equal(art.ribbonPath(art.scene(u,.76,factor)),null);
+ for(let n=34;n<76;n++){
+  const s=art.scene(u,n/100,factor),r=art.ribbonPath(s);
+  assert.ok(r.n>=0&&r.n<24&&r.length>=0);
+  const calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...a){calls.push(a)}};
+  art.transfer(g,s);if(r.length>=1&&r.alpha>0){assert.equal(calls.length,1);assert.ok(calls[0][3]<=241&&calls[0][4]<=271);assert.equal(calls[0][7],r.length);}
+ }
+}

@@ -1,6 +1,7 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const arena=fs.readFileSync("arena.js","utf8");
 assert.ok(arena.includes('id:"undertow",name:"Undertow",school:"water",cost:4,target:"enemy",kind:"undertow",damage:350,manaTax:2,accuracy:.85'));
+assert.ok(/const TEST_UNDERTOW=\{[^\n]*duration:3800,hit:\.625/.test(arena));
 const costCode=arena.match(/function effectiveSpellCost\(u,card\)\{[^\n]+\}/)[0];
 const cost=vm.runInNewContext("("+costCode+")");
 assert.equal(cost({statuses:[]},{cost:4}),4);assert.equal(cost({statuses:[{kind:"undertow",value:2}]},{cost:4}),6);
@@ -8,4 +9,4 @@ assert.equal(cost({statuses:[{kind:"undertow",value:2}]},{cost:1}),3);assert.equ
 assert.ok(arena.includes('if(consumeStatus(c,"undertow"))'));assert.ok(arena.includes('addStatus(t,"undertow",null,card.manaTax,card.school)'));
 const ctx={window:{},Image:class{constructor(){this.complete=true;}set src(s){assert.ok(s.includes("undertow-32.webp"));this.naturalWidth=1664;this.naturalHeight=960;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync("assets/undertow.js","utf8"),ctx);
-(async()=>{const art=ctx.window.Undertow;assert.ok(await art.ensure());assert.equal(art.frameCount,32);for(let i=0;i<=320;i++){const s=art.scene({x:300,y:450},i/320,1.5);assert.equal(s.y,459);assert.ok(s.n>=0&&s.n<32);art.draw({globalAlpha:1,save(){},restore(){},drawImage(im,x,y,w,h){assert.ok(x>=0&&y>=0&&x+w<=1664&&y+h<=960);}},s);}console.log("Undertow: cost, debuff wiring and 32 frame bounds.");})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{const art=ctx.window.Undertow;assert.ok(await art.ensure());assert.equal(art.frameCount,32);for(let i=0;i<=320;i++){const s=art.scene({x:300,y:450},i/320,1.5);assert.equal(s.y,480);assert.ok(s.n>=0&&s.n<32);art.draw({globalAlpha:1,save(){},restore(){},drawImage(im,x,y,w,h){assert.ok(x>=0&&y>=0&&x+w<=1664&&y+h<=960);}},s);}console.log("Undertow: cost, debuff wiring and 32 frame bounds.");})().catch(e=>{console.error(e);process.exitCode=1;});

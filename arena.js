@@ -275,7 +275,7 @@
   const TEST_SHORT_CIRCUIT={id:"shortcircuit",name:"Short Circuit",school:"lightning",cost:4,target:"enemy",kind:"shortcircuit",damage:350,manaDamage:10,maxManaBonus:150,accuracy:.85,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4800,hit:.68,description:"A low-poly electrical automaton channels electricity into one enemy, overloading their mana. Hits for 350 base damage, then adds 10 damage per mana the enemy had at first impact, up to 15 mana (+150 maximum bonus)."};
   const TEST_THUNDER_MINE={id:"thundermine",name:"Thunder Mine",school:"lightning",cost:4,target:"enemy",kind:"thundermine",damage:200,mineDamage:300,mineTurns:3,accuracy:.90,icon:"ϟ",rarity:"TEST",testOnly:true,duration:4000,hit:.78,description:"A mechanical mine leaps onto one enemy for 200 base damage and attaches a negative rune for 3 rounds. After their next successful damaging spell, the mine explodes for 300 additional damage and disappears. Cleansing or expiration removes it harmlessly."};
   const TEST_TECTONIC_CRUSH={id:"tectoniccrush",name:"Tectonic Crush",school:"earth",cost:6,target:"enemy",kind:"damage",damage:780,accuracy:.85,boulderChance:.25,icon:"◆",rarity:"TEST",testOnly:true,duration:4320,hit:28/48,description:"Two massive jagged rock formations erupt on either side of one enemy and crush them between their stone faces for 780 base Earth damage. A damaging hit has a 25% chance to inflict Boulder Weight (−30 accuracy points for 3 turns)."};
-  const TEST_HYDRO_SERPENT={id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:5,target:"enemy",kind:"damage",damage:480,protectionBonus:.25,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.67,description:"A massive water serpent rises from a whirlpool, coils and lunges through one enemy for 480 base Water damage. Deals 25% more damage against targets with an active protection spell; normal protection rules apply."};
+  const TEST_HYDRO_SERPENT={id:"hydroserpent",name:"Hydro Serpent",school:"water",cost:5,target:"all_enemies",kind:"hydroserpent",damage:430,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.72,description:"A massive water serpent rises from a whirlpool, charges a water blast and launches it into the sky above the enemy team. Sharp rain pellets shower every living enemy for 430 base Water damage each."};
   const TEST_JELLYSHOCK={id:"jellyshock",name:"Jellyshock",school:"water",cost:3,target:"enemy",kind:"damage",damage:280,stunChance:.15,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"A bioluminescent jellyfish lashes one enemy with charged tentacles for 280 base Water damage, with a 15% chance to Stun for one action."};
   const TEST_FOUNTAIN_YOUTH={id:"fountainofyouth",name:"Fountain of Youth",school:"water",cost:4,target:"ally",kind:"fountainofyouth",healFraction:.25,rounds:3,accuracy:.90,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.70,description:"Bless yourself or an ally with a Water rune. At the start of each of the next 3 rounds, restore 25% of their missing HP. Reapplication refreshes the duration; cannot revive."};
   const TEST_HYDRO_CANNON={id:"hydrocannon",name:"Hydro Cannon",school:"water",cost:4,target:"enemy",kind:"damage",damage:460,accuracy:.85,icon:"♆",rarity:"TEST",testOnly:true,duration:4800,hit:.62,description:"An armored sea turtle emerges in a surge of water, charges both coral-stone cannons and fires two separate water blasts at one enemy for a combined 460 base Water damage."};
@@ -301,7 +301,7 @@
     stampede:"380 damage to each living enemy.",
     petrify:"Priority 2 (stackable). Immune for 2 rounds; cannot act. Heal 200 HP each round.",
     tectoniccrush:"780 Earth damage. 25% Boulder Weight chance (−30 accuracy, 3 turns).",
-    hydroserpent:"480 base Water damage. +25% damage against active protection.",
+    hydroserpent:"430 base Water damage to each enemy.",
     jellyshock:"280 base Water damage. 15% chance to Stun.",
     fountainofyouth:"3 rounds: restore 25% of missing HP at each round start.",
     hydrocannon:"Twin water cannons deal 460 base Water damage.",
@@ -1849,6 +1849,9 @@
   function startStage(a,stage,duration){
     a.stage=stage;a.elapsed=0;a.duration=duration;
     if(stage==="summon"&&a.card.id==="quicksilver")initQuicksilver(a);
+    if(stage==="summon"&&a.card.id==="hydroserpent"){
+      const c=getUnit(a.source);a.hydroTargets=c?alive(1-c.team).map(u=>({id:u.id,x:u.x,y:u.y,factor:unitEffectFactor(u)})):[];
+    }
     if(stage==="summon"&&a.card.id==="sentinelfissure"){
       const c=getUnit(a.source);a.sentinelTargets=c?alive(1-c.team).map(u=>({id:u.id,x:u.x,y:u.y,factor:unitEffectFactor(u)})):[];
     }
@@ -3066,10 +3069,6 @@
     const damageTarget=reflected?(spell.mirrorDamageTarget??={statuses:target.statuses.slice()}):target;
     const targetRune=kind=>consumeStatus(damageTarget,kind);
     let raw=base*(flatManaBonus?1:spellPower(source,card,spell)),notes=reduction?["DECAY OF STRENGTH −25%"]:[];
-    if(base>0&&card?.id==="hydroserpent"&&source.team!==target.team&&hydroSerpentProtection(target,state.round)){
-      raw*=1+card.protectionBonus;
-      notes.push("HYDRO SERPENT · PROTECTION +25%");
-    }
     const fieldBoost=environmentDamageMultiplier(card?.school);
     if(base>0&&fieldBoost>1){
       raw*=fieldBoost;
@@ -4265,7 +4264,7 @@
       const field=BY_ID[state.environment?.id];
       if(field)recordBattleEvent("High Tide washes away "+field.name+".");
       clearEnvironment();
-    }else if(card.kind==="whale"){
+    }else if(card.kind==="hydroserpent"||card.kind==="whale"){
       for(const enemy of alive(1-c.team))damage(c,enemy,card.damage,card,anim);
     }else if(card.kind==="earthquake"){
       clearEnvironment();
@@ -6438,13 +6437,13 @@
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="hydroserpent"&&window.HydroSerpent){
-      const source=getUnit(action.source),target=getUnit(action.target),art=window.HydroSerpent;
-      if(source&&target){
-        const s=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitEffectFactor(target),preventsHitEffects(action,target));
-        renderables.push({type:"hydro-serpent-pool",depthY:s.y-.12,priority:0,draw:()=>art.pool(g,s)});
+      const source=getUnit(action.source),art=window.HydroSerpent;
+      if(source){
+        const targets=(action.hydroTargets??alive(1-source.team).map(u=>({id:u.id,x:u.x,y:u.y,factor:unitEffectFactor(u)}))).map(entry=>({...entry,blocked:preventsHitEffects(action,getUnit(entry.id))}));
+        const s=art.scene(source,targets,clamp(action.elapsed/action.duration,0,1));
         renderables.push({type:"hydro-serpent-body",depthY:s.y,priority:2,draw:()=>art.actor(g,s)});
-        renderables.push({type:"hydro-serpent-travel",depthY:Math.max(s.y,target.y)+.12,priority:2,draw:()=>art.travel(g,s)});
-        if(!preventsHitEffects(action,target))renderables.push({type:"hydro-serpent-impact",depthY:target.y+.2,priority:2,draw:()=>art.impact(g,s)});
+        renderables.push({type:"hydro-serpent-sky-blast",depthY:1000,priority:2,draw:()=>art.blast(g,s)});
+        for(const entry of s.targets)renderables.push({type:"hydro-serpent-rain",depthY:entry.y+.25,priority:2,draw:()=>art.rain(g,s,entry)});
       }
     }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="jellyshock"&&window.Jellyshock){

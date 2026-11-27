@@ -1,5 +1,5 @@
 /* Hydro Cannon: original remade 32 dry turtle and 24 separate water frames.
- * Native-size alpha atlases, target-aware rendered poses, continuous water. */
+ * Native-size alpha atlases, target-aware rendered poses, two independent water blasts. */
 (()=>{
 "use strict";
 const CW=222,CH=222,FW=256,FH=256,HIT=.62,FIRE=.55,BEAM_END=.70,DURATION=4800;
@@ -92,9 +92,13 @@ function scene(source,target,p,factor=1){
   if(p>.94)pose.frame=12;
  }
  const {near,far,mx,my}=anchors(pose.frame,dir,k);
- const coreStart={x:L(mx,target.x,.06),y:L(my,contactY,.06)};
- const branchEnd={x:L(mx,target.x,.28),y:L(my,contactY,.28)};
- return {x,y,k,dir,p,pose,near,far,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK,aimFrame:aim.frame,barrelSlope:pitch[pose.frame]};
+ // Separate upper and lower contact points, both on the selected enemy.
+ // The two shots have no common junction, branch, or merged beam.
+ const halfGap=Math.min(28,30*targetK);
+ const center=Math.max(top+halfGap,Math.min(bottom-halfGap,contactY));
+ const farTarget={x:target.x,y:center-halfGap};
+ const nearTarget={x:target.x,y:center+halfGap};
+ return {x,y,k,dir,p,pose,near,far,nearTarget,farTarget,mx,my,tx:target.x,ty:target.y,contactY,targetK,aimFrame:aim.frame,barrelSlope:pitch[pose.frame]};
 }
 function tile(g,im,n,cols,w,h,dx,dy,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,dx,dy,dw,dh);}
 function actor(g,s){
@@ -109,24 +113,42 @@ function summon(g,s){
  g.save();g.globalAlpha*=Math.sin(Math.PI*q)*.85;
  const w=270,h=250;tile(g,water,n,6,FW,FH,s.x-w/2,s.y-h*.74,w,h);g.restore();
 }
-// Crops are inside the opaque water body at both ends, measured from
-// the new alpha atlas. Charge/branches/core/impact remain separate.
+// Separate upper and lower projectile sprites from the original atlas.
+// These are the four unmerged pairs: no portion of a merged-beam frame
+// is drawn. Each individual sprite is anchored on its own travel axis.
 const jetCrops=[
- [[40,112,68,45],[40,169,68,45]],
- [[39,110,111,48],[39,167,111,48]],
- [[38,109,155,48],[38,168,155,48]],
- [[38,108,180,49],[38,167,180,49]]
+ [[14,101,112,66],[15,161,112,64]],
+ [[9,101,153,66],[10,161,158,64]],
+ [[5,101,201,66],[6,161,208,64]],
+ [[3,101,231,66],[4,161,237,64]]
 ];
-function stream(g,from,to,n,lower,wide,alpha,progress=1){
- if(progress<=0||alpha<=0)return;
- const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy)*progress;
- if(len<.5)return;
- const sx=(n%6)*FW,sy=Math.floor(n/6)*FH;
- const crop=wide?[32,108,198,73]:jetCrops[n-2][lower?1:0];
- const height=wide?100:48,inset=8;
- g.save();g.globalAlpha*=alpha;g.translate(from.x,from.y);g.rotate(Math.atan2(dy,dx));
+const NEAR_DELAY=38/DURATION;
+function blastPath(s,lower){
+ const from=lower?s.near:s.far,to=lower?s.nearTarget:s.farTarget;
+ // A tiny stagger lets both distinct cannon discharges read clearly.
+ // Both water bolts still reach the target at the original hit time.
+ const start=FIRE+(lower?NEAR_DELAY:0);
+ if(s.p<=start||s.p>=BEAM_END)return null;
+ const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy);
+ if(len<1)return null;
+ const q=C((s.p-start)/(HIT-start));
+ const tip=len*q;
+ const body=Math.min(112,len*.62);
+ const drain=C((s.p-HIT)/(BEAM_END-HIT));
+ const tail=Math.min(tip,Math.max(0,tip-body)+body*drain);
+ if(tip-tail<.5)return null;
+ const ux=dx/len,uy=dy/len;
+ const n=q<.28?Math.min(1,Math.floor(q/.14)):2+Math.floor((s.p-start)*DURATION/46)%2;
+ return {x:from.x+ux*tail,y:from.y+uy*tail,tipX:from.x+ux*tip,tipY:from.y+uy*tip,
+  length:tip-tail,angle:Math.atan2(dy,dx),height:46,alpha:1-drain,frame:n,lower};
+}
+function drawBlast(g,b){
+ if(!b)return;
+ const crop=jetCrops[b.frame][b.lower?1:0];
+ g.save();g.globalAlpha*=b.alpha;g.translate(b.x,b.y);g.rotate(b.angle);
  g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
- g.drawImage(water,sx+crop[0],sy+crop[1],crop[2],crop[3],-inset,-height/2,len+inset,height);g.restore();
+ g.drawImage(water,(b.frame+2)*FW+crop[0],crop[1],crop[2],crop[3],0,-b.height/2,b.length,b.height);
+ g.restore();
 }
 function beam(g,s){
  if(!ready())return;const p=s.p;
@@ -143,14 +165,9 @@ function beam(g,s){
   }return;
  }
  if(s.pose.beam<0)return;
- const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.68?C((BEAM_END-p)/.02):1;
- const lead=C(q/.28),tail=C((q-.06)/.94);
- const j=2+Math.min(3,Math.floor(q*8))%4;
- // A continuous thick core with a 22%-of-path overlap with the two
- // muzzle branches. All pieces share one advancing front.
- stream(g,s.coreStart,{x:s.tx,y:s.contactY},9+s.pose.beam,false,true,fade,tail);
- stream(g,s.far,s.branchEnd,j,true,false,fade,lead);
- stream(g,s.near,s.branchEnd,j,false,false,fade,lead);
+ // Far cannon first; the nearer cannon has its own independent shot.
+ drawBlast(g,blastPath(s,false));
+ drawBlast(g,blastPath(s,true));
 }
 const splashBases=[193,194,195,192,192,191,187,185];
 function impact(g,s){
@@ -165,6 +182,6 @@ function portrait(g,w,h){
  g.save();g.translate(w/2,h*.95);g.scale(k,k);
  tile(g,turtle,12,8,CW,CH,-CW/2,-bases[12],CW,CH);g.restore();
 }
-window.HydroCannon={frameCount:32,effectFrameCount:24,hit:HIT,aimFor,ensure,ready,error:()=>lastError,poseAt,scene,actor,summon,beam,impact,portrait};
+window.HydroCannon={frameCount:32,effectFrameCount:24,hit:HIT,aimFor,blastPath,ensure,ready,error:()=>lastError,poseAt,scene,actor,summon,beam,impact,portrait};
 ensure();
 })();

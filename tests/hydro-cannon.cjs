@@ -24,10 +24,28 @@ for(const x of [200,250,750,800])for(const y of [320,420,500,540])for(const fact
  assert.ok(calls.every(c=>c[3]===68&&c[4]===68&&c[5]===-c[7]/2&&c[6]===-c[8]/2));
  calls.length=0;trans.length=0;
  art.actor(g,s);assert.equal(calls.length,1);assert.ok(calls[0][0].path.includes('remake-turtle'));
- calls.length=0;trans.length=0;art.beam(g,s);assert.equal(calls.length,3);assert.ok(calls.every(c=>c[0].path.includes('remake-water')));
- assert.equal(trans[0][0],s.coreStart.x);assert.equal(trans[0][1],s.coreStart.y);assert.equal(trans[1][0],s.far.x);assert.equal(trans[2][0],s.near.x);
- assert.equal(calls[0][8],100);assert.equal(calls[1][8],48);assert.equal(calls[2][8],48);
- assert.ok(Math.abs(s.branchEnd.x-s.coreStart.x)>=Math.abs(s.tx-s.mx)*.219);
+ calls.length=0;trans.length=0;art.beam(g,s);
+ assert.equal(calls.length,2);assert.ok(calls.every(c=>c[0].path.includes('remake-water')));
+ assert.ok(!('coreStart' in s)&&!('branchEnd' in s));
+ assert.ok(s.farTarget.y<s.nearTarget.y);
+ assert.ok(s.farTarget.y>=y-125*s.targetK-1e-8&&s.nearTarget.y<=y-45*s.targetK+1e-8);
+ for(const [j,lower] of [false,true].entries()){
+  const path=art.blastPath(s,lower),end=lower?s.nearTarget:s.farTarget;
+  assert.ok(path&&path.length>0);
+  assert.ok(Math.abs(path.tipX-end.x)<1e-7&&Math.abs(path.tipY-end.y)<1e-7);
+  assert.equal(trans[j][0],path.x);assert.equal(trans[j][1],path.y);
+  assert.equal(calls[j][7],path.length);assert.equal(calls[j][8],46);
+  assert.ok(calls[j][1]>=2*256&&calls[j][1]<6*256);
+  assert.ok(Math.abs(path.tipX-(path.x+Math.cos(path.angle)*path.length))<1e-7);
+  assert.ok(Math.abs(path.tipY-(path.y+Math.sin(path.angle)*path.length))<1e-7);
+ }
+ const launch=art.scene(src,t,.555,factor);
+ assert.ok(art.blastPath(launch,false));assert.equal(art.blastPath(launch,true),null);
+ const early=art.scene(src,t,.565,factor);
+ for(const lower of [false,true]){
+  const shot=art.blastPath(early,lower),m=lower?early.near:early.far;
+  assert.ok(shot);assert.ok(Math.abs(shot.x-m.x)<1e-7&&Math.abs(shot.y-m.y)<1e-7);
+ }
  for(let n=0;n<=100;n++){
   const r=art.scene(src,t,n/100,factor);assert.ok(r.pose.frame>=0&&r.pose.frame<32);assert.ok(Number.isFinite(r.mx)&&Number.isFinite(r.my));
  }
@@ -35,4 +53,4 @@ for(const x of [200,250,750,800])for(const y of [320,420,500,540])for(const fact
  const c=calls[0],n=art.poseAt(.95).impact,bases=[193,194,195,192,192,191,187,185];
  assert.ok(Math.abs(c[6]+c[8]*bases[n-16]/256-y)<1e-7);
 }
-console.log('Hydro Cannon remake: 32 dry and 24 water frames, continuous beam, mirrored targeting and grounded ripple.');
+console.log('Hydro Cannon remake: 32 dry and 24 water frames, two independent shots, mirrored targeting and grounded ripple.');

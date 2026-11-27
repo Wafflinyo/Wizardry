@@ -2,11 +2,11 @@
  * jet atlas and independent splash atlas. True arena-center summon. */
 (()=>{
 "use strict";
-const CW=181,CH=200,FW=242,FH=272,HIT=.70,FIRE=.58;
+const CW=222,CH=222,FW=242,FH=272,HIT=.70,FIRE=.58;
 const turtle=new Image(),water=new Image();
 const C=v=>Math.max(0,Math.min(1,v)),L=(a,b,t)=>a+(b-a)*t;
 const good=(im,w,h)=>im.complete&&im.naturalWidth===w&&im.naturalHeight===h;
-const ready=()=>good(turtle,1448,800)&&good(water,1452,1088);
+const ready=()=>good(turtle,1776,888)&&good(water,1452,1088);
 let pending=null,lastError="";
 function ensure(){
  if(ready())return Promise.resolve(true);
@@ -15,23 +15,23 @@ function ensure(){
   im.onload=()=>resolve(good(im,w,h));im.onerror=()=>resolve(false);im.src=path;
  });
  pending=Promise.all([
-  load(turtle,1448,800,"./assets/hydro-aim-turtle.webp?v=0.354.82"),
-  load(water,1452,1088,"./assets/hydro-heavy-water.webp?v=0.354.82")
+  load(turtle,1776,888,"./assets/hydro-crisp-turtle.webp?v=0.354.83"),
+  load(water,1452,1088,"./assets/hydro-crisp-water.webp?v=0.354.83")
  ]).then(r=>{const ok=r.every(Boolean);lastError=ok?"":"Hydro Cannon artwork failed to load";if(ok)window.WIZARDRY_ARENA_TEST?.drawCardArts?.();return ok;}).finally(()=>pending=null);
  return pending;
 }
 // Native-resolution cells. Measured front-foot baselines and barrel centers
 // in the individually rendered upright, lean, firing and recovery poses.
-const bases=[173,173,172,173,172,171,171,171,166,166,165,165,164,164,164,163,162,161,161,160,160,160,160,163,161,159,158,158,158,159,159,159];
+const bases=[193,192,191,191,191,191,191,191,191,192,191,192,193,193,193,193,192,192,192,192,192,192,191,191,192,192,193,193,193,192,192,192];
 const muzzles=[
- [110,55,130,58],[110,54,129,58],[111,54,130,57],[111,52,130,56],
- [111,52,130,55],[110,53,130,55],[111,54,130,57],[112,56,130,59],
- [115,56,134,60],[116,60,135,64],[117,65,136,69],[119,73,138,77],
- [122,79,141,84],[123,83,142,88],[124,87,143,91],[124,90,143,95],
- [137,95,155,98],[132,95,150,98],[135,94,153,97],[138,91,157,93],
- [132,80,151,83],[133,77,151,80],[128,67,147,69],[126,55,145,58],
- [120,52,139,55],[120,50,139,54],[119,48,138,50],[119,45,138,48],
- [117,40,136,42],[117,38,136,41],[118,37,137,40],[118,37,137,40]
+ [151,53,177,56],[150,54,176,58],[150,63,178,67],[156,67,181,71],
+ [161,80,184,82],[167,86,191,89],[172,88,191,94],[169,112,188,109],
+ [173,115,194,115],[171,120,192,123],[171,127,192,128],[170,136,193,134],
+ [173,134,193,136],[173,142,193,142],[174,145,195,145],[174,145,195,145],
+ [176,153,196,152],[177,150,196,151],[175,151,196,150],[180,143,200,144],
+ [176,136,196,137],[175,131,194,132],[174,133,193,134],[170,130,190,131],
+ [175,122,194,123],[170,114,189,114],[165,99,185,100],[166,88,185,89],
+ [159,59,180,62],[157,56,177,58],[151,49,174,52],[151,46,174,50]
 ];
 function poseAt(p){
  p=C(p);let frame,alpha=1;
@@ -46,12 +46,12 @@ function poseAt(p){
  return {frame,alpha,beam,impact};
 }
 function scene(source,target,p,factor=1){
- const dir=target.x===500?(source.team===1?-1:1):target.x>500?1:-1,x=500,y=510,k=1.48,pose=poseAt(p);
+ const dir=target.x===500?(source.team===1?-1:1):target.x>500?1:-1,x=500,y=510,k=1.22,pose=poseAt(p);
  const targetK=(.60+.30*C((target.y-288)/235))*Math.max(1,factor);
  // Upper-row opponents need a shallower barrel pose. Select a rendered
  // aiming pose, not a rotation of the creature, for those positions.
  const nominalContact=target.y-85*targetK;
- if(p>=.38&&p<=.81&&nominalContact<y-124&&pose.frame>=11)pose.frame=9+Math.min(2,Math.floor((p-.38)/.15));
+ if(p>=.38&&p<=.81&&nominalContact<y-124&&pose.frame>=11)pose.frame=4+Math.min(2,Math.floor((p-.38)/.15));
  const m=muzzles[pose.frame],base=bases[pose.frame];
  const point=(px,py)=>({x:x+dir*(px-CW/2)*k,y:y+(py-base)*k});
  const near=point(m[0],m[1]),far=point(m[2],m[3]);
@@ -60,8 +60,12 @@ function scene(source,target,p,factor=1){
  // the target's torso rather than forcing the stream toward its feet.
  const preferred=my+Math.abs(target.x-mx)*(pose.frame>=11&&pose.frame<=19?.27:.04);
  const contactY=Math.max(target.y-125*targetK,Math.min(target.y-45*targetK,preferred));
- const merge={x:L(mx,target.x,.32),y:L(my,contactY,.32)};
- return {x,y,k,dir,p:C(p),pose,near,far,merge,mx,my,tx:target.x,ty:target.y,contactY,targetK};
+ const merge={x:L(mx,target.x,.36),y:L(my,contactY,.36)};
+ // Use one continuous thick core which starts BEFORE the visible junction.
+ // The individual muzzle jets overlap the core, never meet edge-to-edge.
+ const coreStart={x:L(mx,target.x,.18),y:L(my,contactY,.18)};
+ const branchEnd={x:L(mx,target.x,.45),y:L(my,contactY,.45)};
+ return {x,y,k,dir,p:C(p),pose,near,far,merge,coreStart,branchEnd,mx,my,tx:target.x,ty:target.y,contactY,targetK};
 }
 function tile(g,im,n,cols,w,h,dx,dy,dw,dh){g.drawImage(im,n%cols*w,Math.floor(n/cols)*h,w,h,dx,dy,dw,dh);}
 function actor(g,s){
@@ -77,18 +81,26 @@ function summon(g,s){
  g.save();g.globalAlpha*=Math.sin(Math.PI*q)*.85;
  tile(g,water,n,6,FW,FH,s.x-135,s.y-235,270,290);g.restore();
 }
-// The two streams use independent cropped, thick raster jets; their
-// merged segment follows a single straight axis into the target.
-const jetWidths=[132,174,201];
+// Tight crops of the existing transparent raster artwork. Each branch
+// is cropped inside its opaque core at both ends so the nozzle and
+// the merged stream share visible water, not transparent padding.
+const jetCrops=[
+ [[27,103,93,51],[27,177,91,57]],
+ [[29,107,119,48],[29,179,123,54]],
+ [[27,102,145,54],[27,176,149,61]]
+];
 function stream(g,from,to,n,lower,wide,alpha,progress=1){
  if(progress<=0||alpha<=0)return;
  const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy)*progress;
  if(len<.5)return;
  const sx=(n%6)*FW,sy=Math.floor(n/6)*FH;
- const crop=wide?[0,60,242,170]:lower?[12,175,jetWidths[n],67]:[12,96,jetWidths[n],79];
- const height=wide?86:43;
+ const crop=wide?[18,67,221,159]:jetCrops[n][lower?1:0];
+ const height=wide?88:44;
+ // Extend the water a few pixels into the barrel so no rim gap is visible.
+ const inset=wide?0:6;
  g.save();g.globalAlpha*=alpha;g.translate(from.x,from.y);g.rotate(Math.atan2(dy,dx));
- g.drawImage(water,sx+crop[0],sy+crop[1],crop[2],crop[3],0,-height/2,len,height);g.restore();
+ g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
+ g.drawImage(water,sx+crop[0],sy+crop[1],crop[2],crop[3],-inset,-height/2,len+inset,height);g.restore();
 }
 function beam(g,s){
  if(!ready())return;
@@ -103,12 +115,15 @@ function beam(g,s){
  }
  if(s.pose.beam<0)return;
  const q=C((p-FIRE)/(HIT-FIRE)),fade=p>.78?C((.81-p)/.03):1;
- const lead=C(q/.32),tail=C((q-.32)/.68);
+ const lead=C(q/.45),tail=C((q-.30)/.70);
  const j=Math.min(2,Math.floor((p-FIRE)/.025)%3);
- stream(g,s.far,s.merge,j,true,false,fade,lead);
- stream(g,s.near,s.merge,j,false,false,fade,lead);
- const n=8+Math.min(3,Math.floor((p-FIRE)/.026)%4);
- stream(g,s.merge,{x:s.tx,y:s.contactY},n,false,true,fade,tail);
+ const n=9+Math.min(2,Math.floor((p-FIRE)/.026)%3);
+ // The core begins while the two branches are still growing and overlaps
+ // 27% of the full path. Drawing the nozzle streams on top gives a single
+ // uninterrupted water silhouette all the way to the enemy.
+ stream(g,s.coreStart,{x:s.tx,y:s.contactY},n,false,true,fade,tail);
+ stream(g,s.far,s.branchEnd,j,true,false,fade,lead);
+ stream(g,s.near,s.branchEnd,j,false,false,fade,lead);
 }
 function impact(g,s){
  const n=s.pose.impact;if(!ready()||n<0)return;
@@ -118,9 +133,9 @@ function impact(g,s){
  tile(g,water,n,6,FW,FH,s.tx-w/2,y-h*(n>=18?222/272:218/272),w,h);g.restore();
 }
 function portrait(g,w,h){
- if(!ready())return;const k=Math.min(w/181,h/148)*.95;
+ if(!ready())return;const k=Math.min(w/222,h/190)*.95;
  g.save();g.translate(w/2,h*.95);g.scale(k,k);
- tile(g,turtle,12,8,CW,CH,-CW/2,-bases[12],CW,CH);g.restore();
+ tile(g,turtle,5,8,CW,CH,-CW/2,-bases[5],CW,CH);g.restore();
 }
 window.HydroCannon={frameCount:32,effectFrameCount:24,hit:HIT,ensure,ready,error:()=>lastError,poseAt,scene,actor,summon,beam,impact,portrait};
 ensure();

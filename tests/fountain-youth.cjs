@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const a=fs.readFileSync('arena.js','utf8');
-assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["jellyshock","fountainofyouth","hydrocannon"'));
+assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["hydroserpent","fountainofyouth","hydrocannon"'));
 assert.ok(a.includes('healFraction:.25,rounds:3,accuracy:.90'));
 const u={id:'u',team:0,hp:1000,maxHp:2000,statuses:[]},c={id:'c',team:0,hp:2000,statuses:[]},state={round:1};
 let suppressed=false,full=false;

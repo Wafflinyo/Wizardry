@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const a=fs.readFileSync('arena.js','utf8');
 assert.ok(a.includes('id:"jellyshock",name:"Jellyshock",school:"water",cost:3,target:"enemy",kind:"damage",damage:280,stunChance:.15,accuracy:.85'));
-assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["jellyshock","fountainofyouth","hydrocannon"'));
+assert.ok(a.includes('RECENTLY_UPDATED_CARDS=["hydroserpent","fountainofyouth","hydrocannon"'));
 assert.ok(a.includes('if(card.id==="jellyshock"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))attemptVoltStun'));
 const target={id:'t',hp:1000,statuses:[]},source={name:'Caster'},card={id:'jellyshock',name:'Jellyshock',school:'water',stunChance:.15};
 const state={round:2,phase:'resolving',sequence:[{casterId:'t'}],queueAt:0};

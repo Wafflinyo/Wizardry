@@ -9,23 +9,24 @@ const isProtected=(kind,value,expiresRound,round=2)=>context.hydroSerpentProtect
 for(const kind of ["sand_warrior","faultline_bulwark","bubble_shield"]){assert.equal(isProtected(kind,1),true);assert.equal(isProtected(kind,0),false);}
 assert.equal(isProtected("wind_dome"),true);assert.equal(isProtected("reflective_ice",1,3),true);assert.equal(isProtected("reflective_ice",1,2),false);
 assert.equal(isProtected("petrify",1,2),true);assert.equal(isProtected("petrify",1,1),false);assert.equal(isProtected("burn",1,3),false);
-const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){assert.ok(s.includes("hydro-serpent-v4.webp"));this.naturalWidth=1792;this.naturalHeight=1120;this.onload?.();}}};
+const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){assert.ok(s.includes("hydro-serpent-v5.webp"));this.naturalWidth=3584;this.naturalHeight=2880;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync("assets/hydro-serpent.js","utf8"),visual);
-const art=visual.window.HydroSerpent;assert.equal(art.hit,.67);assert.equal(art.frameCount,40);assert.ok(art.ready());
+const art=visual.window.HydroSerpent;assert.equal(art.hit,.67);assert.equal(art.frameCount,63);assert.ok(art.ready());
 const reached=new Set();
-for(const x of [400,450,200,300,550,600,700,800])for(const y of [320,420,540])for(const f of [1,1.5,2])for(const blocked of [false,true]){
+for(const x of [200,300,400,450,550,600,700,800])for(const y of [320,420,540])for(const f of [1,1.5,2])for(const blocked of [false,true]){
  const target={x,y},source={x:1000-x},hit=art.scene(source,target,.67,f,blocked);
- assert.equal(hit.x,500);assert.equal(hit.y,510);assert.equal(hit.dir,x>500?1:-1);assert.equal(hit.n,29);assert.equal(hit.head.x,x);assert.ok(Math.abs(hit.head.y-hit.end.y)<1e-8);
- const before=art.scene(source,target,.469999,f,blocked),after=art.scene(source,target,.470001,f,blocked);assert.ok(Math.hypot(before.head.x-after.head.x,before.head.y-after.head.y)<.1);
- const tail=art.scene(source,target,.671,f,blocked);assert.equal(tail.n,30);assert.equal(tail.head.x,x);assert.equal(tail.head.y,hit.end.y);
- for(let i=0;i<=1000;i++){const s=art.scene(source,target,i/1000,f,blocked),calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(...args){calls.push(args);}};
+ assert.equal(hit.n,38);assert.equal(hit.head.x,x);assert.equal(hit.head.y,hit.end.y);
+ assert.ok(Math.abs(hit.x+hit.dir*hit.sx*310-x)<1e-8);
+ assert.ok(Math.abs(hit.y+310*hit.shear-90*hit.sy-hit.end.y)<1e-8);
+ const tail=art.scene(source,target,.67001,f,blocked);assert.equal(tail.n,39);
+ for(let i=0;i<=1000;i++){const s=art.scene(source,target,i/1000,f,blocked),calls=[],g={globalAlpha:1,save(){},restore(){},translate(){},transform(){},drawImage(...args){calls.push(args);}};
  art.pool(g,s);art.actor(g,s);art.travel(g,s);art.impact(g,s);
- assert.ok(calls.length<=1,"only one illustrated sprite per tick");
- if(calls.length){const c=calls[0];assert.ok(c[1]>=0&&c[2]>=0&&c[1]+c[3]<=c[0].naturalWidth&&c[2]+c[4]<=c[0].naturalHeight);assert.equal(s.n,c[1]/224+c[2]/224*8);if(!blocked)reached.add(s.n);}
+ assert.ok(calls.length<=1);
+ if(calls.length){const c=calls[0];assert.ok(c[1]>=0&&c[2]>=0&&c[1]+c[3]<=c[0].naturalWidth&&c[2]+c[4]<=c[0].naturalHeight);assert.equal(s.n,c[1]/512+c[2]/320*7);if(!blocked)reached.add(s.n);}
  if(i>670)assert.equal(s.head.x,x);
  }
 }
-assert.equal(reached.size,40);
-const asset=fs.readFileSync("assets/hydro-serpent-v4.webp");assert.equal(asset.subarray(0,4).toString(),"RIFF");assert.equal(asset.subarray(8,12).toString(),"WEBP");assert.equal(asset.length,441612);
+assert.equal(reached.size,63);
+const asset=fs.readFileSync("assets/hydro-serpent-v5.webp");assert.equal(asset.subarray(0,4).toString(),"RIFF");assert.equal(asset.subarray(8,12).toString(),"WEBP");assert.equal(asset.length,624242);
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8")),html=fs.readFileSync("arena.html","utf8"),index=fs.readFileSync("index.html","utf8");assert.ok(html.includes('aria-label="Game version '+pkg.version+'">v'+pkg.version));assert.ok(html.includes("hydro-serpent.js?v="+pkg.version));assert.ok(index.includes("arena.html?v="+pkg.version));
-console.log("Hydro Serpent: 40 original frames, single sprite per tick, target-aligned strike and tail dissolve, verified release label.");
+console.log("Hydro Serpent: 63 original raster frames, fixed pool and contact anchors, uninterrupted tail follow-through, verified release label.");

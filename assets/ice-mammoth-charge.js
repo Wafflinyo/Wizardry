@@ -13,8 +13,8 @@ function load(im,path){if(loaded(im))return Promise.resolve(true);return new Pro
 function ensure(){if(ready())return Promise.resolve(true);if(pending)return pending;
  pending=Promise.all([load(body,"./assets/ice-mammoth-body-v23.webp?v=0.355.23"),load(fx,"./assets/ice-mammoth-fx-v23.webp?v=0.355.23")]).then(v=>{const ok=v.every(Boolean);if(ok)window.WIZARDRY_ARENA_TEST?.drawCardArts?.();return ok;}).finally(()=>pending=null);return pending;
 }
-function scene(source,target,p,hit=.68,factor=1){
- p=C(p);const dir=source.team===0?1:-1,scale=1.48,origin={x:500-dir*120,y:510+GROUND_DROP},contact={x:target.x-dir*(125+26*factor),y:target.y+6+GROUND_DROP},dash=.30;
+function scene(source,target,p,hit=.60,factor=1){
+ p=C(p);const dir=source.team===0?1:-1,scale=1.48,origin={x:500-dir*120,y:510+GROUND_DROP},contact={x:target.x-dir*(125+26*factor),y:target.y+6+GROUND_DROP},dash=.33;
  const u=C((p-dash)/(hit-dash)),run=u*u*(2-u),q=C((p-hit)/(1-hit));
  const frame=p<dash?Math.min(7,Math.floor(p/dash*8)):p<hit?8+Math.min(19,Math.floor(u*20)):28+Math.min(3,Math.floor(q*12));
  return{x:L(origin.x,contact.x,run),y:L(origin.y,contact.y,E(u)),dir,scale,origin,contact,target:{x:target.x,y:target.y},factor,frame,p,hit,dash,u,q,alpha:E(p/.12)*(1-E(q/.40))};
@@ -45,5 +45,5 @@ function impact(g,s){
  tile(g,fx,n,-W*k/2,-FX_FEET[n]*k,W*k,H*k);g.restore();
 }
 function portrait(g,w,h){if(!ready())return;const k=Math.min(w/W,h/H)*1.08;tile(g,body,0,(w-W*k)/2,(h-H*k)/2,W*k,H*k);}
-window.IceMammoth={ensure,ready,scene,draw,trail,impact,portrait,frameCount:32,effectFrameCount:32,hit:.68};ensure();
+window.IceMammoth={ensure,ready,scene,draw,trail,impact,portrait,frameCount:32,effectFrameCount:32,hit:.60};ensure();
 })();

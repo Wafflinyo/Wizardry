@@ -13,8 +13,14 @@ assert.equal(ctx.applyShatterpointRune(u,card,{},.34,0),true);
 assert.deepEqual(u.statuses.map(x=>x.kind),["blade","trap","fear","frostbite"]);
 u={hp:1000,statuses:[{kind:"growth"},{kind:"frostbite",extreme:true}]};assert.equal(ctx.applyShatterpointRune(u,card,{},0,0),false);assert.equal(u.statuses.length,2);
 u={hp:1000,statuses:[]};assert.equal(ctx.applyShatterpointRune(u,card,{},0,0),false);
+let rolls=0;ctx.spellFrostChance=n=>{rolls++;return n+.15;};
+for(const statuses of [[],[{kind:"trap"}],[{kind:"fear"}]]){u={hp:1000,statuses};assert.equal(ctx.applyShatterpointRune(u,card,{},0,0),false);}
+assert.equal(rolls,0);u={hp:1000,statuses:[{kind:"growth"}]};assert.equal(ctx.applyShatterpointRune(u,card,{},.49,0),true);assert.equal(rolls,1);
+assert.ok(a.includes("No positive runes: 0% Frostbite chance."));
 vm.runInNewContext(fs.readFileSync("assets/shatterpoint.js","utf8"),ctx);
 (async()=>{const art=ctx.window.Shatterpoint;assert.ok(await art.ensure());assert.equal(art.frameCount,32);assert.equal(art.effectFrameCount,32);
+let portraits=0;art.portrait({drawImage(im,x,y,w,h,dx,dy,dw,dh){assert.ok(im.path.includes("-hammer-"));assert.ok(dx>=0&&dy>=0&&dx+dw<=320&&dy+dh<=320);portraits++;}},320,320);assert.equal(portraits,1);
+const independent={window:{},Image:class{constructor(){this.complete=false;}set src(s){this.path=s;if(s.includes("-hammer-")){this.complete=true;this.naturalWidth=1792;this.naturalHeight=896;this.onload?.();}else this.onerror?.();}}};vm.runInNewContext(fs.readFileSync("assets/shatterpoint.js","utf8"),independent);assert.equal(await independent.window.Shatterpoint.ensure(),false);independent.window.Shatterpoint.portrait({drawImage(){portraits++;}},320,320);assert.equal(portraits,2);
 for(const team of [0,1]){
  const body=new Set(),fx=new Set(),target={x:500,y:400};
  for(let i=0;i<2600;i++){

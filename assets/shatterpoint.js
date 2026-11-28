@@ -4,12 +4,16 @@
 (()=>{
 "use strict";
 const W=224,H=224,body=new Image(),fx=new Image(),C=x=>Math.max(0,Math.min(1,x)),L=(a,b,t)=>a+(b-a)*t,E=x=>{x=C(x);return x*x*(3-2*x);};
-let pending=null;
+let pending=null,bodyPending=null;
+const redraw=()=>window.WIZARDRY_ARENA_TEST?.drawCardArts?.();
 const loaded=(im,rows)=>im.complete&&im.naturalWidth===1792&&im.naturalHeight===rows*H;
 const ready=()=>loaded(body,4)&&loaded(fx,4);
 function load(im,path,rows){if(loaded(im,rows))return Promise.resolve(true);return new Promise(resolve=>{im.onload=()=>resolve(loaded(im,rows));im.onerror=()=>resolve(false);im.src=path;});}
+function ensureBody(){if(loaded(body,4))return Promise.resolve(true);if(bodyPending)return bodyPending;
+ bodyPending=load(body,"./assets/shatterpoint-hammer-v33.webp?v=0.355.35",4).then(ok=>{if(ok)redraw();return ok;}).finally(()=>bodyPending=null);return bodyPending;
+}
 function ensure(){if(ready())return Promise.resolve(true);if(pending)return pending;
- pending=Promise.all([load(body,"./assets/shatterpoint-hammer-v33.webp?v=0.355.33",4),load(fx,"./assets/shatterpoint-centered-fx-v34.webp?v=0.355.34",4)]).then(v=>{const ok=v.every(Boolean);if(ok)window.WIZARDRY_ARENA_TEST?.drawCardArts?.();return ok;}).finally(()=>pending=null);return pending;
+ pending=Promise.all([ensureBody(),load(fx,"./assets/shatterpoint-centered-fx-v34.webp?v=0.355.34",4)]).then(v=>v.every(Boolean)).finally(()=>pending=null);return pending;
 }
 function tile(g,im,n,x,y,w,h){g.drawImage(im,n%8*W,Math.floor(n/8)*H,W,H,x,y,w,h);}
 function scene(source,target,p,hit=.64,factor=1){
@@ -48,6 +52,12 @@ function impact(g,s){
  g.globalAlpha*=1-E((s.q-.76)/.24);g.imageSmoothingEnabled=true;g.imageSmoothingQuality="high";
  tile(g,fx,n,-W*k/2,-H*k/2,W*k,H*k);g.restore();
 }
-function portrait(g,w,h){if(!ready())return;const k=Math.min(w/144,h/154);tile(g,18,w/2-112*k,h/2-144*k,W*k,H*k);}
+function portrait(g,w,h){
+ // The card needs only the illustrated hammer, not the battle FX atlas.
+ // Repaint when the hammer loads, even if the effects are still loading.
+ if(!loaded(body,4)){if(!bodyPending)ensureBody();return;}
+ const k=Math.min(w/W,h/H)*.96;
+ tile(g,18,(w-W*k)/2,(h-H*k)/2,W*k,H*k);
+}
 window.Shatterpoint={ensure,ready,scene,actor,summon,impact,portrait,frameCount:32,effectFrameCount:32,hit:.64};ensure();
 })();

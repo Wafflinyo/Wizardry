@@ -6,8 +6,8 @@ const source=fs.readFileSync('arena.js','utf8').replace(
  '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
  '  window.setShortCircuitState=s=>state=s;paintUI=()=>{};');
 vm.runInNewContext(source,context);
-const api=context.window.WIZARDRY_ARENA_TEST,card=api.testCards.find(c=>c.id==='shortcircuit');
-assert.ok(card.testOnly&&!api.cards.some(c=>c.id===card.id));
+const api=context.window.WIZARDRY_ARENA_TEST,card=api.cards.find(c=>c.id==='shortcircuit');
+assert.ok(card&&!card.testOnly&&!api.testCards.some(c=>c.id===card.id));
 for(const [mana,expected] of [[0,350],[5,400],[10,450],[15,500],[20,500],[46,500]]){
  assert.equal(api.shortCircuitBase(card,mana),expected);
  const unit=(id,team)=>({id,name:id,team,index:0,x:team?750:250,y:430,hp:3000,maxHp:3000,mana:10,maxMana:50,statuses:[],masteries:[],skills:{},hand:[]});

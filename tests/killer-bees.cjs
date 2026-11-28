@@ -4,8 +4,8 @@ vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js','utf8'),ctx);
 vm.runInNewContext(fs.readFileSync('arena.js','utf8').replace(
  '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
  '  window.setBeesState=s=>state=s;paintUI=()=>{};'),ctx);
-const api=ctx.window.WIZARDRY_ARENA_TEST,card=api.testCards.find(c=>c.id==='killerbees');
-assert.ok(card.testOnly&&!api.cards.some(c=>c.id===card.id));
+const api=ctx.window.WIZARDRY_ARENA_TEST,card=api.cards.find(c=>c.id==='killerbees');
+assert.ok(card&&!card.testOnly&&!api.testCards.some(c=>c.id===card.id));
 assert.equal(card.cost,3);assert.equal(card.damage,300);assert.equal(card.poisonChance,.35);
 assert.equal(card.poisonDamage,50);assert.equal(card.poisonTurns,3);assert.equal(card.accuracy,.90);
 const unit=(id,team)=>({id,name:id,team,index:0,x:team?750:250,y:430,hp:3000,maxHp:3000,mana:10,maxMana:20,statuses:[],masteries:[],skills:{},hand:[]});

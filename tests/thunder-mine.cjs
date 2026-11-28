@@ -4,8 +4,8 @@ vm.runInNewContext(fs.readFileSync('assets/wizard-system-v135.js','utf8'),ctx);
 vm.runInNewContext(fs.readFileSync('arena.js','utf8').replace(
  '  setupControlHandlers();createBackground();setupSprites();setBattle("story",4);',
  '  window.setMineState=s=>state=s;paintUI=()=>{};'),ctx);
-const api=ctx.window.WIZARDRY_ARENA_TEST,card=api.testCards.find(c=>c.id==='thundermine');
-assert.ok(card.testOnly&&!api.cards.some(c=>c.id===card.id));
+const api=ctx.window.WIZARDRY_ARENA_TEST,card=api.cards.find(c=>c.id==='thundermine');
+assert.ok(card&&!card.testOnly&&!api.testCards.some(c=>c.id===card.id));
 const unit=(id,team)=>({id,name:id,team,index:0,x:team?750:250,y:430,hp:3000,maxHp:3000,mana:10,maxMana:20,statuses:[],masteries:[],skills:{},hand:[]});
 function setup(){const c=unit('a',0),t=unit('b',1),s={mode:'tester',phase:'resolving',round:1,units:[c,t],auras:[null,null],log:[],flashes:[],sequence:[],queueAt:0};ctx.window.setMineState(s);return {c,t,s};}
 const cast=(c,t)=>({card,action:{casterId:c.id,targetId:t.id},source:c.id,target:t.id,runeResult:'success',damageVariant:1});

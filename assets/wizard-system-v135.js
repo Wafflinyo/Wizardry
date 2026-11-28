@@ -23,12 +23,12 @@ function orderedSpells(cards,school){
 // Unlock order mixes direct damage, support, and debuffs. Binder display sorts separately.
 const UNLOCK_ORDER=Object.fromEntries(Object.entries({
  water:"waterblast octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon waterprison hightide whale ripcurrent hydrocannon fountainofyouth hydroserpent undertow tidalexchange",
- earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure landray earthquake sandwarrior",
- lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus lightningfield claritystrike",
- nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree groveland thornyhug",
+ earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure landray earthquake sandwarrior faultlinebulwark tectoniccrush quicksilver crystalcavern petrify giantarmadillo",
+ lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus lightningfield claritystrike livewire chainedjavelin thunderbirds thundergoddrums magneticpulse shortcircuit thundermine",
+ nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree groveland thornyhug briarremedy lifevine stampede killerbees guardianroots photosynthesis mothernature",
  wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor windrazor aromatherapy",
  dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper darkgrounds cursedhold",
- fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix sunfire flamingflamingo flamewheel",
+ fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix sunfire flamingflamingo flamewheel flashover hellhound infernotitan ringoffire backdraft furnace",
  ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann doublepick reflectiveice",
 }).map(([school,ids])=>[school,ids.split(" ")]));
 function unlockOrder(cards,school){

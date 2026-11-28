@@ -270,7 +270,7 @@
   const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   // New Hellhound is isolated from binders, CPU decks and normal progression.
-  const TEST_SHATTERPOINT={id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,barrierBonus:.50,accuracy:.90,icon:"❄",rarity:"TEST",testOnly:true,duration:2600,hit:.64,description:"A massive crystalline ice warhammer slams down and shatters. Deals 320 base Ice damage, with 50% extra damage to HP-based barriers (480 base against a shield). Excess normal damage carries through."};
+  const TEST_SHATTERPOINT={id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,frostChance:.35,frostDamage:50,frostTurns:3,accuracy:.90,icon:"❄",rarity:"TEST",testOnly:true,duration:2600,hit:.64,description:"A massive crystalline ice warhammer slams down and shatters for 320 base Ice damage. On an unblocked hit, has a 35% chance to replace one random beneficial rune on the enemy with a Frostbite debuff rune (50 damage per round for 3 rounds)."};
   const TEST_PERMAFROST={id:"permafrost",name:"Permafrost",school:"ice",cost:5,target:"team",kind:"permafrost",accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:3300,hit:.75,fieldRounds:5,fieldBoost:.10,frostChanceBoost:.15,frostExtraTurns:2,description:"Environmental rune for 5 rounds. Both teams gain +10% Ice spell damage and +15 percentage points to existing normal and Extreme Frostbite chances. Normal Frostbite applied during the field lasts 5 rounds instead of 3; Extreme Frostbite duration is unchanged."};
   const TEST_MAMMOTH={id:"mammothiceshard",name:"Mammoth Ice Shard",school:"ice",cost:6,target:"enemy",kind:"damage",damage:630,frostChance:.25,frostDamage:50,frostTurns:3,accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:2400,hit:.60,description:"A massive ice-armored mammoth emerges, lowers its tusks and charges one enemy for 630 base Ice damage, with a 25% chance to inflict Frostbite for 50 damage per round for 3 rounds."};
   const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
@@ -298,7 +298,7 @@
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
-    shatterpoint:"320 base Ice damage. +50% damage to HP-based barriers; excess normal damage carries through.",
+    shatterpoint:"320 base Ice damage. 35% chance to replace a positive debuff rune with Frostbite: 50 × 3 rounds.",
     permafrost:"5 rounds. Ice damage +10%; Frostbite chance +15 points; normal Frostbite lasts 5 rounds.",
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
@@ -2749,6 +2749,20 @@
   }
   function spellFrostChance(base){return Math.min(1,base+(base>0&&state.environment?.id==="permafrost"?BY_ID.permafrost.frostChanceBoost:0));}
   function frostbiteDuration(base,turns){return state.environment?.id==="permafrost"&&base===50&&turns===3?turns+BY_ID.permafrost.frostExtraTurns:turns;}
+  function applyShatterpointRune(target,card,spell,roll=Math.random(),pick=Math.random()){
+    if(!target||target.hp<=0||preventsHitEffects(spell,target)||roll>=spellFrostChance(card.frostChance))return false;
+    // Never discard a beneficial rune if normal Frostbite would conflict.
+    if(target.statuses.some(st=>st.kind==="frostbite"&&st.extreme||["burn","poison"].includes(st.kind)))return false;
+    const runes=target.statuses.filter(st=>BENEFICIAL_RUNES.has(st.kind));
+    if(!runes.length)return false;
+    const rune=runes[Math.min(runes.length-1,Math.floor(pick*runes.length))];
+    const name=describeStatus(target,rune).title.split(" · ")[0];
+    consumeStatus(target,rune.kind);
+    if(!applyPeriodicStatus(target,"frostbite",card))return false;
+    flash(target,"RUNE CONVERTED · FROSTBITE","#b6eeff");
+    recordBattleEvent(card.name+" converts "+name+" on "+target.name+" into Frostbite.");
+    return true;
+  }
   function applyPeriodicStatus(target,kind,card){
     const prefix=kind==="frostbite"?"frost":kind;
     const base=card[prefix+"Damage"],baseTurns=card[prefix+"Turns"];
@@ -4363,6 +4377,7 @@
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         const dealt=damage(c,t,card.damage,card,anim);
+        if(card.id==="shatterpoint"&&t.team!==c.team)applyShatterpointRune(t,card,anim,anim.frostRoll??Math.random());
         if(card.id==="mammothiceshard"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t)&&(anim.frostRoll??Math.random())<spellFrostChance(card.frostChance))applyPeriodicStatus(t,"frostbite",card);
         if(card.id==="tectoniccrush"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))applyColossalBoulder(t,anim.boulderRoll??Math.random(),card.boulderChance);
         if(card.id==="landray"&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))

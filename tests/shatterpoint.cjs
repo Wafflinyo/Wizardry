@@ -1,14 +1,24 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const a=fs.readFileSync("arena.js","utf8");
-assert.ok(a.includes('id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,barrierBonus:.50,accuracy:.90'));
+assert.ok(a.includes('id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,frostChance:.35,frostDamage:50,frostTurns:3,accuracy:.90'));
 assert.ok(a.includes('testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT'));
-const start=a.indexOf("  function barrierDamagePortion("),end=a.indexOf("\n  }",start)+4;
-const ctx={window:{}};vm.runInNewContext(a.slice(start,end),ctx);
-assert.equal(ctx.barrierDamagePortion(320,500,.5).shieldDamage,480);
-assert.equal(ctx.barrierDamagePortion(320,360,.5).spent,240);
+const start=a.indexOf("  function applyShatterpointRune("),end=a.indexOf("  function applyPeriodicStatus(",start);
+const ctx={BENEFICIAL_RUNES:new Set(["growth","blade"]),preventsHitEffects:s=>!!s?.blocked,spellFrostChance:n=>n,describeStatus:(_,r)=>({title:r.kind}),consumeStatus:(u,k)=>{u.statuses=u.statuses.filter(s=>s.kind!==k);},applyPeriodicStatus:(u,k,c)=>{u.statuses.push({kind:k,value:c.frostDamage});return true;},flash(){},recordBattleEvent(){},window:{},Image:class{constructor(){this.complete=true;}set src(s){this.naturalWidth=1280;this.naturalHeight=1280;this.onload?.();}}};
+vm.runInNewContext(a.slice(start,end),ctx);
+const card={name:"Shatterpoint",frostChance:.35,frostDamage:50,frostTurns:3};
+let u={hp:1000,statuses:[{kind:"growth"},{kind:"blade"},{kind:"trap"},{kind:"fear"}]};
+assert.equal(ctx.applyShatterpointRune(u,card,{},.35,0),false);
+assert.equal(ctx.applyShatterpointRune(u,card,{blocked:true},.1,0),false);
+assert.equal(ctx.applyShatterpointRune(u,card,{},.34,0),true);
+assert.deepEqual(u.statuses.map(x=>x.kind),["blade","trap","fear","frostbite"]);
+u={hp:1000,statuses:[{kind:"growth"},{kind:"frostbite",extreme:true}]};assert.equal(ctx.applyShatterpointRune(u,card,{},0,0),false);assert.equal(u.statuses.length,2);
+u={hp:1000,statuses:[]};assert.equal(ctx.applyShatterpointRune(u,card,{},0,0),false);
 vm.runInNewContext(fs.readFileSync("assets/shatterpoint.js","utf8"),ctx);
-const art=ctx.window.Shatterpoint,seen=new Set();
-const g={globalAlpha:1,save(){},restore(){},translate(){},scale(){},rotate(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},ellipse(){}};
-for(const team of [0,1])for(let i=0;i<=320;i++){const s=art.scene({team},{x:500,y:400},i/320);seen.add(s.frame);art.summon(g,s);art.actor(g,s);art.impact(g,s);}
-assert.equal(seen.size,32);assert.equal(art.scene({team:0},{x:500,y:400},.64).headY,370);
-console.log("Shatterpoint: test card, shield bonus, separate hammer and impact, mirrored 32-pose sequence.");
+(async()=>{const art=ctx.window.Shatterpoint;assert.ok(await art.ensure());assert.equal(art.frameCount,32);assert.equal(art.effectFrameCount,32);
+const frames=new Set(),effects=new Set();
+for(const team of [0,1])for(let i=0;i<2600;i++){const s=art.scene({team},{x:500,y:400},i/2600);
+ const g={globalAlpha:1,save(){},restore(){},translate(){},scale(){},drawImage(im,x,y,w,h){assert.ok(x>=0&&y>=0&&x+w<=1280&&y+h<=1280);(y<640?frames:effects).add(y/160*8+x/160);}};
+ art.actor(g,s);art.impact(g,s);}
+assert.equal(frames.size,32);assert.equal(effects.size,32);assert.ok(fs.existsSync("assets/shatterpoint-illustrated-v29.webp"));
+console.log("Shatterpoint: illustrated sprite playback, rune conversion, protection and chance.");
+})().catch(e=>{console.error(e);process.exitCode=1;});

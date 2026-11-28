@@ -1,7 +1,7 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const arena=fs.readFileSync("arena.js","utf8");
 assert.ok(arena.includes('id:"undertow",name:"Undertow",school:"water",cost:4,target:"enemy",kind:"undertow",damage:300,manaTax:2,accuracy:.85'));
-assert.ok(/const TEST_UNDERTOW=\{[^\n]*duration:3400,hit:\.625/.test(arena));
+assert.ok(/CARDS\.push\(\{id:"undertow"[^\n]*duration:3400,hit:\.625/.test(arena));
 const costCode=arena.match(/function effectiveSpellCost\(u,card\)\{[^\n]+\}/)[0];
 const cost=vm.runInNewContext("("+costCode+")");
 assert.equal(cost({statuses:[]},{cost:4}),4);assert.equal(cost({statuses:[{kind:"undertow",value:2}]},{cost:4}),6);

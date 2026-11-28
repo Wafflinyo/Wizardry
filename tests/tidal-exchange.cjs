@@ -2,7 +2,7 @@ const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/st
 const arena=fs.readFileSync("arena.js","utf8");
 assert.ok(arena.includes('id:"tidalexchange",name:"Tidal Exchange",school:"water",cost:3,target:"ally",kind:"tidalexchange",manaRestore:4,accuracy:.90'));
 assert.ok(arena.includes('const gained=restoreTidalMana(t,card.manaRestore)'));
-assert.ok(/const TEST_TIDAL_EXCHANGE=\{[^\n]*duration:3500,hit:\.72/.test(arena));
+assert.ok(/CARDS\.push\(\{id:"tidalexchange"[^\n]*duration:3500,hit:\.72/.test(arena));
 assert.ok(arena.includes('type:"tidal-exchange-back",depthY:target.y-.16'));
 assert.ok(arena.includes('type:"tidal-exchange-front",depthY:target.y+.20'));
 const code=arena.match(/function restoreTidalMana\(target,amount\)\{[\s\S]*?\n  \}/)[0];

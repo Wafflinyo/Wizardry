@@ -4,7 +4,7 @@ assert.ok(arena.includes('id:"hydroserpent",name:"Hydro Serpent",school:"water",
 assert.ok(arena.includes('card.kind==="hydroserpent"||card.kind==="whale"'));
 assert.ok(arena.includes("75*Math.max(0,(anim.hydroTargets?.length??enemies.length)-1)"));
 assert.ok(!arena.includes('raw*=1+card.protectionBonus'));
-assert.ok(arena.includes('testCards:[TEST_UNDERTOW,TEST_HYDRO_SERPENT,TEST_FOUNTAIN_YOUTH'));
+assert.ok(arena.includes('CARDS.push({id:"hydroserpent"'));
 const visual={window:{},Image:class{constructor(){this.complete=true;}set src(s){[this.naturalWidth,this.naturalHeight]=s.includes("sky-v8.webp")?[1792,1024]:[768,768];this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync("assets/hydro-serpent.js","utf8"),visual);
 const art=visual.window.HydroSerpent;assert.equal(art.hit,.72);assert.equal(art.frameCount,32);

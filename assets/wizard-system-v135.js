@@ -22,7 +22,7 @@ function orderedSpells(cards,school){
 }
 // Unlock order mixes direct damage, support, and debuffs. Binder display sorts separately.
 const UNLOCK_ORDER=Object.fromEntries(Object.entries({
- water:"waterblast octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon waterprison hightide whale",
+ water:"waterblast octo shark calming bubbleshield crabgiant flowstate ragingwaters sirensmelody croc poseidon waterprison hightide whale ripcurrent hydrocannon fountainofyouth hydroserpent undertow tidalexchange",
  earth:"rockblast scorpion bender solidity boulderweight kineticsand quicksand rogginbowler cyclops meteorshower sentinelfissure landray earthquake sandwarrior",
  lightning:"shockblast electrodisc volt electricalcharge static lightningball rod thunder electriceel stormlizard zeus lightningfield claritystrike",
  nature:"solarblast bulletseed venustrap growth estel bloom thornwrap centaur healingaura drowzyflowers tree groveland thornyhug",

@@ -15,4 +15,5 @@ assert.ok(a.includes('kind==="frostbite"&&state.environment?.id==="permafrost"?1
 const ctx={window:{}};vm.runInNewContext(fs.readFileSync("assets/permafrost.js","utf8"),ctx);
 const g={globalAlpha:1,save(){},restore(){},translate(){},scale(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},ellipse(){},clip(){},fillRect(){},createLinearGradient(){return{addColorStop(){}};}};
 for(let i=0;i<=32;i++){ctx.window.Permafrost.landscape(g,{time:i*100,strength:i/32});ctx.window.Permafrost.draw(g,{width:1000,height:620,time:i*100,strength:i/32});}
+const lower=[];const probe={...g,fillRect(x,y,w,h){lower.push([x,y,w,h]);}};ctx.window.Permafrost.landscape(probe,{strength:1});assert.ok(lower.some(([x,y,w,h])=>x===0&&y===520&&w===1000&&y+h===620));
 console.log("Permafrost: field registration, chance cap, normal/extreme duration, base tick damage and visual growth.");

@@ -14,7 +14,7 @@ function freezeMaterial(bg){
  for(let i=0;i<d.length;i+=4){
   const x=(i/4%c.width)/c.width,y=Math.floor(i/4/c.width)/c.height;
   const lum=.299*d[i]+.587*d[i+1]+.114*d[i+2];
-  const floor=C((y-.40)*5)*C((.93-y)*7),a=.30+floor*.40;
+  const floor=C((y-.40)*5),a=.30+floor*.40;
   const r=lum*.78+24+floor*14,gg=lum*1.06+44+floor*20,bb=lum*1.17+65+floor*25;
   d[i]=d[i]*(1-a)+r*a;d[i+1]=d[i+1]*(1-a)+gg*a;d[i+2]=d[i+2]*(1-a)+bb*a;
  }
@@ -35,10 +35,10 @@ function landscape(g,{x=0,y=0,width=1000,height=620,time=0,strength=1,background
  if(m){g.globalAlpha=s;g.drawImage(m,0,0,1000,620);}
  // Translucent crystalline plates conform to the existing floor. No
  // opaque replacement platform, no change to elevation or arena edges.
- g.save();g.beginPath();g.ellipse(500,414,454,119,0,0,TAU);g.clip();
+ g.save();g.beginPath();g.ellipse(500,408,462,129,0,0,TAU);g.clip();
  const spread=E(s),radius=40+470*spread;
- g.beginPath();g.ellipse(500,414,radius,18+106*spread,0,0,TAU);g.clip();
- for(let j=0;j<8;j++)for(let i=0;i<17;i++){
+ g.beginPath();g.ellipse(500,408,radius,18+114*spread,0,0,TAU);g.clip();
+ for(let j=0;j<9;j++)for(let i=0;i<17;i++){
   const n=j*17+i,xx=12+i*61+(j%2)*28,yy=286+j*33,rx=35+rand(n)*9,ry=15+rand(n+400)*6;
   const pts=[[xx-rx,yy],[xx-7,yy-ry],[xx+rx,yy-4],[xx+7,yy+ry]];
   g.globalAlpha=s*(.12+rand(n+20)*.19);
@@ -52,6 +52,21 @@ function landscape(g,{x=0,y=0,width=1000,height=620,time=0,strength=1,background
   let xx=500,yy=414;g.beginPath();g.moveTo(xx,yy);
   for(let j=1;j<=5;j++){xx=500+Math.cos(a)*r*j/5+(rand(i*11+j)-.5)*18;yy=414+Math.sin(a)*r*j/5*.25+(rand(i*11+j+500)-.5)*9;g.lineTo(xx,yy);}
   g.globalAlpha=s*.40;g.strokeStyle="#c7efff";g.lineWidth=1.2;g.stroke();
+ }
+ g.restore();
+ // Coat the near rim and lower foreground as well. Keep the original
+ // stone geometry visible beneath a translucent frost finish.
+ g.save();
+ const near=E((s-.30)/.70);
+ const frontFrost=g.createLinearGradient(0,520,0,620);
+ frontFrost.addColorStop(0,"rgba(160,218,241,0)");
+ frontFrost.addColorStop(.35,"rgba(155,213,237,.24)");
+ frontFrost.addColorStop(1,"rgba(167,222,245,.36)");
+ g.globalAlpha=near;g.fillStyle=frontFrost;g.fillRect(0,520,1000,100);
+ for(let i=0;i<26;i++){
+  const xx=i*40-12,yy=564+rand(i+1800)*48,rx=17+rand(i+1900)*20,ry=4+rand(i+2000)*7;
+  g.globalAlpha=near*(.11+rand(i+2100)*.16);
+  poly(g,[[xx-rx,yy],[xx-4,yy-ry],[xx+rx,yy-2],[xx+5,yy+ry]],"#b5e4f8");
  }
  g.restore();
  // Crystals grow at staggered perimeter anchors, not on the combat slots.
@@ -70,12 +85,12 @@ function draw(g,{width,height,time=0,strength=1}){
  const s=C(strength);if(s<=0)return;
  g.save();
  // Low, subtle moving cold air: no opaque fog circles or hidden characters.
- const mist=g.createLinearGradient(0,height*.55,0,height*.93);
+ const mist=g.createLinearGradient(0,height*.55,0,height);
  mist.addColorStop(0,"rgba(191,228,247,0)");
  mist.addColorStop(.55,"rgba(176,218,239,.07)");
  mist.addColorStop(.85,"rgba(189,225,243,.14)");
  mist.addColorStop(1,"rgba(191,228,247,0)");
- g.globalAlpha=s;g.fillStyle=mist;g.fillRect(0,height*.55,width,height*.38);
+ g.globalAlpha=s;g.fillStyle=mist;g.fillRect(0,height*.55,width,height*.45);
  for(let i=0;i<72;i++){
   const x=((rand(i+900)*width-time*(.013+rand(i+12)*.018)+Math.sin(time*.001+i)*8)%width+width)%width;
   const y=((rand(i+1100)*height+time*(.009+rand(i+22)*.018))%height+height)%height;

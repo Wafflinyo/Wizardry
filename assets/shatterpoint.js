@@ -5,7 +5,7 @@
 "use strict";
 const W=224,H=224,body=new Image(),fx=new Image(),C=x=>Math.max(0,Math.min(1,x)),L=(a,b,t)=>a+(b-a)*t,E=x=>{x=C(x);return x*x*(3-2*x);};
 let pending=null,bodyPending=null;
-const redraw=()=>window.WIZARDRY_ARENA_TEST?.drawCardArts?.();
+const redraw=()=>{const paint=window.WIZARDRY_ARENA_TEST?.drawCardArts;if(typeof paint==="function"){if(typeof requestAnimationFrame==="function")requestAnimationFrame(()=>paint());else paint();}};
 const loaded=(im,rows)=>im.complete&&im.naturalWidth===1792&&im.naturalHeight===rows*H;
 const ready=()=>loaded(body,4)&&loaded(fx,4);
 function load(im,path,rows){if(loaded(im,rows))return Promise.resolve(true);return new Promise(resolve=>{im.onload=()=>resolve(loaded(im,rows));im.onerror=()=>resolve(false);im.src=path;});}
@@ -57,7 +57,7 @@ function portrait(g,w,h){
  // Repaint when the hammer loads, even if the effects are still loading.
  if(!loaded(body,4)){if(!bodyPending)ensureBody();return;}
  const k=Math.min(w/W,h/H)*.96;
- tile(g,18,(w-W*k)/2,(h-H*k)/2,W*k,H*k);
+ tile(g,body,18,(w-W*k)/2,(h-H*k)/2,W*k,H*k);
 }
-window.Shatterpoint={ensure,ready,scene,actor,summon,impact,portrait,frameCount:32,effectFrameCount:32,hit:.64};ensure();
+window.Shatterpoint={ensure,ensureBody,ready,scene,actor,summon,impact,portrait,frameCount:32,effectFrameCount:32,hit:.64};ensure();
 })();

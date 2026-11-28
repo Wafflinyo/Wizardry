@@ -5979,14 +5979,15 @@
       else window.WIZARDRY_CARD_ART_V70?.draw(card.id,c,width,height);
   }
   function drawCardArts(){
-    const cards=[...ui.hand.children,...document.querySelectorAll?.("[data-binder-art]")||[]];
+    const cards=[...(ui.hand?.children||[]),...(document.querySelectorAll?.("[data-binder-art]")||[])];
     for(const b of cards){
       if(b.hidden)continue;
       const card=BY_ID[b.dataset.card];
       const canvas=b.querySelector?.(".spell-art-canvas");
       if(!card||!canvas)continue;
       const c=canvas.getContext("2d");if(!c)continue;
-      const shell=canvas.parentElement,rect=shell.getBoundingClientRect();
+      const shell=canvas.parentElement;if(!shell||typeof shell.getBoundingClientRect!=="function")continue;
+      const rect=shell.getBoundingClientRect();
       const width=Math.max(1,rect.width||240),height=Math.max(1,rect.height||196);
       const ratio=Math.min(window.devicePixelRatio||1,2);
       const pixelW=Math.round(width*ratio),pixelH=Math.round(height*ratio);
@@ -6013,6 +6014,7 @@
     }
   }
   function setupSprites(){
+    window.Shatterpoint?.ensureBody?.().then(ok=>{if(ok)requestAnimationFrame(drawCardArts);});
     if(!wizardAtlasReady())wizardAtlas.addEventListener?.("load",drawCardArts,{once:true});
     window.MeteorShower?.onReady(drawCardArts);
     window.SentinelFissure?.onReady(drawCardArts);

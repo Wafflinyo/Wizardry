@@ -298,12 +298,15 @@
   const TEST_FROSTBOUND_COLOSSUS={id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80,icon:"❄",rarity:"EPIC",duration:4800,hit:.80,description:"A colossal ice golem rises in the center of the arena, lifts both fists overhead and slams the ground. Traveling icy shockwaves erupt beneath every living enemy for 480 base Ice damage each. Each surviving enemy damaged has an independent 15% chance to Freeze."};
   const TEST_WINTERS_EMBRACE={id:"wintersembrace",name:"Winter’s Embrace",school:"ice",cost:3,target:"ally",kind:"wintersembrace",accuracy:.95,reduction:.50,rounds:3,icon:"❄",rarity:"RARE",duration:3200,hit:.78,description:"Places a positive Ice debuff rune on yourself or one living ally for the next 3 rounds. Reduces normal and Extreme Burn, Poison and Frostbite damage by 50%. Reapplying refreshes the duration without stacking. Does not block direct spells or occupy a barrier priority."};
   CARDS.push(TEST_SHATTERPOINT,TEST_PERMAFROST,TEST_MAMMOTH,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE);
+  const TEST_SKY_SERPENT={id:"skyserpent",name:"Sky Serpent",school:"wind",cost:7,target:"enemy",kind:"damage",damage:800,reductionPierce:.50,accuracy:.80,icon:"≋",rarity:"TEST",testOnly:true,duration:4400,hit:.73,description:"A feathered sky serpent spirals down from above, coils, then dives headfirst through one enemy for 800 base Wind damage. Ignores 50% of the target’s incoming percentage damage reduction from runes; does not bypass barriers."};
   const ICE_TEST_CARDS=[];
-  function testSpellArt(card){return card.id==="wintersembrace"?window.WintersEmbrace:card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  const TEST_ONLY_CARDS=[...ICE_TEST_CARDS,TEST_SKY_SERPENT];
+  function testSpellArt(card){return card.id==="skyserpent"?window.SkySerpent:card.id==="wintersembrace"?window.WintersEmbrace:card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,...ICE_TEST_CARDS].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,...TEST_ONLY_CARDS].map(x=>[x.id,x]));
   const CARD_EFFECTS={
     wintersembrace:"3 rounds: −50% Burn, Poison and Frostbite damage (including Extreme). Positive rune; not a barrier.",
+    skyserpent:"Ignores 50% of incoming percentage damage reduction. Does not bypass barriers.",
     frostboundcolossus:"480 base damage to each enemy. Independent 15% Freeze chance per damaged enemy.",
     shatterpoint:"35% chance to replace a target\x27s positive debuff rune with a Frostbite rune (50 × 3 rounds). No positive runes: 0% Frostbite chance.",
     permafrost:"5 rounds. Ice damage +10%; Frostbite chance +15 points; normal Frostbite lasts 5 rounds.",
@@ -412,7 +415,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["wintersembrace","frostboundcolossus","shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["skyserpent","wintersembrace","frostboundcolossus","shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -3192,9 +3195,14 @@
     let solidity=spell?.solidityTargets?.[target.id];
     if(solidity===undefined){const ward=targetRune("solidity");solidity=ward?.value||0;
       if(spell){if(!spell.solidityTargets)spell.solidityTargets={};spell.solidityTargets[target.id]=solidity;}}
-    if(solidity){tally(recipient,"tanked",Math.floor(raw*solidity));raw*=1-solidity;notes.push("SOLIDITY -25%");}
+    // Reduction piercing affects only incoming percentage runes, never HP barriers,
+    // Wind Dome, Reflective Ice, Petrify, or the caster's outgoing penalties.
+    const incomingPierce=Math.max(0,Math.min(1,card?.reductionPierce||0));
+    const effectiveSolidity=solidity*(1-incomingPierce);
+    if(solidity){tally(recipient,"tanked",Math.floor(raw*effectiveSolidity));raw*=1-effectiveSolidity;notes.push("SOLIDITY -"+(effectiveSolidity*100)+"%");}
     const shield=targetRune("shield");
-    if(shield){tally(recipient,"tanked",Math.floor(raw*shield.value));raw*=1-shield.value;notes.push("BLOCK");}
+    if(shield){const effectiveShield=shield.value*(1-incomingPierce);tally(recipient,"tanked",Math.floor(raw*effectiveShield));raw*=1-effectiveShield;notes.push("BLOCK");}
+    if(incomingPierce&&(solidity||shield))notes.push("REDUCTION PIERCE");
     const impact=Math.max(0,Math.floor(raw));
     const rodOwners=card?.school==="lightning"&&impact>0?lightningRodOwners():[];
     const redirected=rodOwners.length?Math.floor(impact*BY_ID.rod.redirect):0;
@@ -4764,7 +4772,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,...ICE_TEST_CARDS])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,...TEST_ONLY_CARDS])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5942,6 +5950,7 @@
       else if(card.id==="hydrocannon")window.HydroCannon?.portrait(c,width,height);
       else if(card.id==="quicksilver")window.Quicksilver?.portrait(c,width,height);
       else if(card.id==="wintersembrace")window.WintersEmbrace?.portrait(c,width,height);
+      else if(card.id==="skyserpent")window.SkySerpent?.portrait(c,width,height);
       else if(card.id==="frostboundcolossus")window.FrostboundColossus?.portrait(c,width,height);
       else if(card.id==="shatterpoint")window.Shatterpoint?.portrait(c,width,height);
       else if(card.id==="mammothiceshard")window.IceMammoth?.portrait(c,width,height);
@@ -6064,6 +6073,7 @@
   }
   function setupSprites(){
     window.WintersEmbrace?.onReady(drawCardArts);
+    window.SkySerpent?.onReady(drawCardArts);
     window.FrostboundColossus?.onReady(drawCardArts);
     window.Shatterpoint?.ensureBody?.().then(ok=>{if(ok)requestAnimationFrame(drawCardArts);});
     if(!wizardAtlasReady())wizardAtlas.addEventListener?.("load",drawCardArts,{once:true});
@@ -6452,7 +6462,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["wintersembrace","frostboundcolossus","shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["skyserpent","wintersembrace","frostboundcolossus","shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6643,6 +6653,14 @@
         renderables.push({type:"shatterpoint-summon",depthY:target.y-.14,priority:0,draw:()=>art.summon(g,s)});
         renderables.push({type:"shatterpoint-hammer",depthY:target.y+.12,priority:2,draw:()=>art.actor(g,s)});
         renderables.push({type:"shatterpoint-impact",depthY:target.y+.21,priority:2,draw:()=>art.impact(g,s)});
+      }
+    }
+    if(action?.stage==="summon"&&action.card.id==="skyserpent"&&window.SkySerpent){
+      const source=getUnit(action.source),target=getUnit(action.target),art=window.SkySerpent;
+      if(source&&target){
+        const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
+        renderables.push({type:"sky-serpent-body",depthY:target.y+.11,priority:2,draw:()=>art.actor(g,scene)});
+        if(!preventsHitEffects(action,target))renderables.push({type:"sky-serpent-impact",depthY:target.y+.2,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
     if(action?.stage==="summon"&&action.card.id==="mammothiceshard"&&window.IceMammoth){
@@ -7939,7 +7957,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:ICE_TEST_CARDS,testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:TEST_ONLY_CARDS,testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

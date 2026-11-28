@@ -296,11 +296,13 @@
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   CARDS.push(TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_KILLER_BEES,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE);
   const TEST_FROSTBOUND_COLOSSUS={id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80,icon:"❄",rarity:"TEST",testOnly:true,duration:4800,hit:.80,description:"A colossal ice golem rises in the center of the arena, lifts both fists overhead and slams the ground. Traveling icy shockwaves erupt beneath every living enemy for 480 base Ice damage each. Each surviving enemy damaged has an independent 15% chance to Freeze."};
-  const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS];
-  function testSpellArt(card){return card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  const TEST_WINTERS_EMBRACE={id:"wintersembrace",name:"Winter’s Embrace",school:"ice",cost:3,target:"ally",kind:"wintersembrace",accuracy:.95,reduction:.50,rounds:3,icon:"❄",rarity:"TEST",testOnly:true,duration:3200,hit:.78,description:"Places a positive Ice debuff rune on yourself or one living ally for the next 3 rounds. Reduces normal and Extreme Burn, Poison and Frostbite damage by 50%. Reapplying refreshes the duration without stacking. Does not block direct spells or occupy a barrier priority."};
+  const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE];
+  function testSpellArt(card){return card.id==="wintersembrace"?window.WintersEmbrace:card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,...ICE_TEST_CARDS].map(x=>[x.id,x]));
   const CARD_EFFECTS={
+    wintersembrace:"3 rounds: −50% Burn, Poison and Frostbite damage (including Extreme). Positive rune; not a barrier.",
     frostboundcolossus:"480 base damage to each enemy. Independent 15% Freeze chance per damaged enemy.",
     shatterpoint:"35% chance to replace a target\x27s positive debuff rune with a Frostbite rune (50 × 3 rounds). No positive runes: 0% Frostbite chance.",
     permafrost:"5 rounds. Ice damage +10%; Frostbite chance +15 points; normal Frostbite lasts 5 rounds.",
@@ -409,7 +411,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["frostboundcolossus","shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["wintersembrace","frostboundcolossus","shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -1557,6 +1559,7 @@
     if(target&&card?.kind==="petrify"&&petrified(target))return target.name+" is already petrified.";
     if(target&&card?.kind==="briarremedy"&&!briarEffects(target).length)
       return target.name+" has no Burn, Poison, or Frostbite to cleanse.";
+    if(target&&card?.kind==="wintersembrace"&&!canReceiveDebuff(target,"winters_embrace"))return target.name+" already has four runes.";
     if(target&&card?.kind==="coldstorage"&&!canReceiveDebuff(target,"cold_storage"))
       return target.name+" already has four runes.";
     return barrierNotice(target,card);
@@ -2597,7 +2600,7 @@
   const DEBUFF_SPELLS=new Set(['undertow','ringoffire','waterprison','lightningrod','drowzyflowers','crystalicemirrors','frozentouch','quicksand','manascourge','gunpowder','decaystrength','acidair','boulderweight','thornwrap','electricalcharge','freezing','souldrain','turbulence','static','trap']);
   const ENVIRONMENT_RUNE="environment_rune";
   const DEBUFFS=new Set(["undertow","thunder_mine","ring_of_fire","recharge","pressure_drop","cold_storage","blood_debt",ENVIRONMENT_RUNE,"cursed_hold","aromatherapy",'water_prison','lightning_rod','sleep','curse','crystal_ice_mirrors','frozen_touch','quick_sand','mana_scourge','soulless','decay_mark','boulder_weight','burn','poison','frostbite','fear','fear_turn','fissure_disable','stun','frozen','freezing_temps','thorny_wrap','gunpowder_coat','decaying_strength','soul_drain','healing_seed','turbulence','static_shock','electrical_charge','raging_waters','trap']);
-  const BENEFICIAL_RUNES=new Set(["fountain_youth","petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
+  const BENEFICIAL_RUNES=new Set(["winters_embrace","fountain_youth","petrify","guardian_roots","photosynthesis","lifevine","healing_aura","calming_waters","flow_state","raging_waters",
     "electrical_charge","tidal_echo","tailwind","blazing_rage","growth","live_wire","reflective_ice","wind_dome","bubble_shield","sand_warrior","faultline_bulwark","solidity","shield","blade"]);
   function zenRunes(u){
     return u?.hp>0?u.statuses.filter(st=>st.kind!=="electrical_charge"&&st.kind!=="raging_waters"&&DEBUFFS.has(st.kind)):[];
@@ -2610,7 +2613,7 @@
   function canReceiveDebuff(u,kind){
     return !!u&&u.hp>0&&(u.statuses.some(st=>st.kind===kind)||runeCount(u)<MAX_RUNES);
   }
-  const RUNE_CAST_KINDS={undertow:"undertow",fountainofyouth:"fountain_youth",petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
+  const RUNE_CAST_KINDS={wintersembrace:"winters_embrace",undertow:"undertow",fountainofyouth:"fountain_youth",petrify:"petrify",guardianroots:"guardian_roots",photosynthesis:"photosynthesis",ringoffire:"ring_of_fire",waterprison:"water_prison",lightningrod:"lightning_rod",
     drowzyflowers:"sleep",crystalicemirrors:"crystal_ice_mirrors",frozentouch:"frozen_touch",
     quicksand:"quick_sand",manascourge:"mana_scourge",gunpowder:"gunpowder_coat",decaystrength:"decay_mark",
     acidair:"decaying_strength",boulderweight:"boulder_weight",thornwrap:"thorny_wrap",
@@ -3705,6 +3708,18 @@
     }
     if(r.remaining<=0)consumeStatus(u,r.kind);
   }
+  function applyWintersEmbrace(c,t,card){
+    if(!c?.hp||!t?.hp||t.team!==c.team||addStatus(t,"winters_embrace",null,card.reduction,card.school)===false)return false;
+    Object.assign(t.statuses.find(st=>st.kind==="winters_embrace"),{sourceId:c.id,appliedRound:state.round,expiresRound:state.round+card.rounds+1});
+    flash(t,"WINTER’S EMBRACE · 3 ROUNDS","#b9eaff");
+    recordBattleEvent(t.name+" gains Winter’s Embrace: 50% less Burn, Poison and Frostbite damage for 3 rounds.");
+    return true;
+  }
+  function wintersEmbraceMultiplier(u,kind){
+    if(!["burn","poison","frostbite"].includes(kind))return 1;
+    const rune=u.statuses.find(st=>st.kind==="winters_embrace"&&state.round<st.expiresRound);
+    return rune?1-rune.value:1;
+  }
   function tickBurnsForRound(){
     for(const u of state.units)tickFountainYouth(u);
     for(const u of state.units){
@@ -3718,7 +3733,7 @@
     for(const u of state.units)tickAromatherapy(u);
     for(const u of state.units){expireJackFear(u);checkFlowerSleep(u);}
     for(const u of state.units){isFrozen(u);const vine=u.statuses.find(st=>st.kind==="thorny_wrap");if(vine&&(u.hp<=0||state.round>=vine.expiresRound))consumeStatus(u,"thorny_wrap");}
-    for(const u of state.units)for(const kind of ["guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
+    for(const u of state.units)for(const kind of ["winters_embrace","guardian_roots","photosynthesis","static_shock","electrical_charge","boulder_weight","quick_sand","crystal_ice_mirrors","cursed_hold","thunder_mine"]){
       const status=u.statuses.find(st=>st.kind===kind);
       if(status&&(u.hp<=0||state.round>=status.expiresRound))consumeStatus(u,kind);
     }
@@ -3778,7 +3793,7 @@
       effect.lastTickRound=state.round;
       const school=effect.school??statusSchool(effect,u);
       const fieldMultiplier=kind==="frostbite"&&state.environment?.id==="permafrost"?1:environmentDamageMultiplier(school);
-       const damage=Math.floor((effect.value||50)*fieldMultiplier*grovelandMultiplier(school));
+       const damage=Math.floor((effect.value||50)*fieldMultiplier*grovelandMultiplier(school)*wintersEmbraceMultiplier(u,kind));
       const amount=loseHp(getUnit(effect.sourceId),u,absorbBarrierDamage(u,damage));
       effect.remaining=Math.max(0,(effect.remaining||1)-1);
       const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
@@ -3985,6 +4000,8 @@
       flash(t,"GUARDIAN ROOTS · 3 ROUNDS","#c3da80");
     }else if(card.kind==="fountainofyouth"){
       applyFountainYouth(c,t,card);
+    }else if(card.kind==="wintersembrace"){
+      applyWintersEmbrace(c,t,card);
     }else if(card.kind==="photosynthesis"){
       if(!t||t.hp<=0||t.team!==c.team||addStatus(t,"photosynthesis",null,card.passHeal,card.school)===false)return;
       Object.assign(t.statuses.find(st=>st.kind==="photosynthesis"),{sourceId:c.id,appliedRound:state.round,expiresRound:state.round+card.rounds+1,lastTriggerRound:null});
@@ -5569,6 +5586,7 @@
       case "petrify":return {title:"Petrify · Priority 2",detail:"Stackable with other Priority 2 barriers. Other barriers resolve first; remaining damage is blocked. Invulnerable. Cannot act; counts as a Skip for mana regeneration. Heals 200 HP after each locked round. "+Math.max(0,Math.min(2,st.expiresRound-state.round))+" rounds remain."};
       case "guardian_roots":return {title:"Guardian Roots · Nature blessing",detail:"Retaliates for 100 damage when direct enemy spell damage reaches you, once per round. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Does not absorb damage."};
       case "fountain_youth":return {title:"Fountain of Youth · Water blessing",detail:"Restores 25% of missing HP at the start of each of the next "+st.remaining+" rounds. Cannot revive."};
+      case "winters_embrace":return {title:"Winter’s Embrace · Ice blessing",detail:"Reduces Burn, Poison and Frostbite damage by 50%, including Extreme variants. "+Math.min(3,Math.max(0,st.expiresRound-state.round-1))+" future round-start ticks remain. Does not block direct damage."};
       case "photosynthesis":return {title:"Photosynthesis · Nature blessing",detail:"Restore 100 HP on each voluntary pass. "+Math.min(4,Math.max(0,st.expiresRound-state.round))+" rounds remain. Forced skips and fizzles do not trigger it."};
       case "flow_state":return {title:"Flow State · Water blessing",detail:"Gain 1 extra mana on each of your next "+st.remaining+" turns: 1 bonus mana on top of normal regeneration or the current consecutive-pass bonus. Maximum mana is determined by your build. Skipping or saving mana still grants this bonus. Reapplying refreshes without stacking."};
       case "thunder_mine":return {title:"Thunder Mine · Cast trigger",detail:"After the next successful damaging spell, detonates for 300 damage and disappears. "+Math.max(0,st.expiresRound-state.round)+" rounds remain. Passing, healing and missed spells do not trigger it. Cleansing removes it harmlessly."};
@@ -5675,7 +5693,7 @@
     quick_sand:"earth",boulder_weight:"earth",solidity:"earth",shield:"earth",trap:"earth",
     thunder_mine:"lightning",burn:"fire",gunpowder_coat:"fire",blazing_rage:"fire",
     undertow:"water",water_prison:"water",cursed_hold:"dark",curse:"dark",fear:"dark",decay_mark:"dark",decaying_strength:"dark",soul_drain:"dark",mana_scourge:"dark",soulless:"dark",
-    reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
+    winters_embrace:"ice",reflective_ice:"ice",frozen_touch:"ice",crystal_ice_mirrors:"ice",frostbite:"ice",freezing_temps:"ice",frozen:"ice",
     petrify:"earth",guardian_roots:"nature",photosynthesis:"nature",growth:"nature",thorny_wrap:"nature",healing_aura:"nature",healing_seed:"nature",
     sleep:"nature",live_wire:"lightning",faultline_bulwark:"earth",sand_warrior:"earth",bubble_shield:"water",turbulence:"wind",wind_dome:"wind",tailwind:"wind",
     stun:"lightning",electrical_charge:"lightning",static_shock:"lightning",lightning_rod:"lightning",
@@ -5922,6 +5940,7 @@
       else if(card.id==="fountainofyouth")window.FountainYouth?.portrait(c,width,height);
       else if(card.id==="hydrocannon")window.HydroCannon?.portrait(c,width,height);
       else if(card.id==="quicksilver")window.Quicksilver?.portrait(c,width,height);
+      else if(card.id==="wintersembrace")window.WintersEmbrace?.portrait(c,width,height);
       else if(card.id==="frostboundcolossus")window.FrostboundColossus?.portrait(c,width,height);
       else if(card.id==="shatterpoint")window.Shatterpoint?.portrait(c,width,height);
       else if(card.id==="mammothiceshard")window.IceMammoth?.portrait(c,width,height);
@@ -6043,6 +6062,7 @@
     }
   }
   function setupSprites(){
+    window.WintersEmbrace?.onReady(drawCardArts);
     window.FrostboundColossus?.onReady(drawCardArts);
     window.Shatterpoint?.ensureBody?.().then(ok=>{if(ok)requestAnimationFrame(drawCardArts);});
     if(!wizardAtlasReady())wizardAtlas.addEventListener?.("load",drawCardArts,{once:true});
@@ -6431,7 +6451,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["frostboundcolossus","shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["wintersembrace","frostboundcolossus","shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6490,6 +6510,13 @@
       for(const e of state.guardianRootBursts){
         const u=getUnit(e.targetId);
         if(u)renderables.push({type:"guardian-roots-strike",depthY:u.y+.15,priority:2,draw:()=>art.strike(g,u,clamp((now-e.time)/1450,0,1),unitSlotFactor(u))});
+      }
+    }
+    if(action?.stage==="summon"&&action.card.id==="wintersembrace"&&window.WintersEmbrace){
+      const target=getUnit(action.target),art=window.WintersEmbrace;
+      if(target?.hp>0){
+        const p=clamp(action.elapsed/action.duration,0,1),k=unitSlotFactor(target);
+        for(const layer of ["back","front"])renderables.push({type:"winters-embrace-"+layer,depthY:target.y+(layer==="back"?-.15:.15),priority:2,draw:()=>art.cast(g,target,p,k,layer)});
       }
     }
     if(action?.stage==="summon"&&action.card.id==="photosynthesis"&&window.Photosynthesis){
@@ -7911,7 +7938,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS],testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE],testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

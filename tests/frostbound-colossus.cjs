@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const arena=fs.readFileSync('arena.js','utf8');
 assert.ok(arena.includes('id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80'));
-assert.ok(arena.includes('const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS]'));
+assert.ok(arena.includes('const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE]'));
 const ctx={window:{},setTimeout,clearTimeout,Image:class{constructor(){this.complete=false;}set src(s){this.path=s;this.complete=true;this.naturalWidth=1792;this.naturalHeight=896;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync('assets/frostbound-colossus.js','utf8'),ctx);
 (async()=>{

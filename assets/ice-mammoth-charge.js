@@ -1,12 +1,12 @@
 /* Mammoth Ice Shard: 32 illustrated charge poses; layered foot-height blizzard and amplified icy collision. */
 (()=>{
 "use strict";
-const W=220,H=220,atlas=new Image(),C=p=>Math.max(0,Math.min(1,p)),L=(a,b,p)=>a+(b-a)*p,E=p=>{p=C(p);return p*p*(3-2*p);};
+const W=220,H=220,GROUND_DROP=22,atlas=new Image(),C=p=>Math.max(0,Math.min(1,p)),L=(a,b,p)=>a+(b-a)*p,E=p=>{p=C(p);return p*p*(3-2*p);};
 let pending=null;
 const ready=()=>atlas.complete&&atlas.naturalWidth===1760&&atlas.naturalHeight===880;
 function ensure(){if(ready())return Promise.resolve(true);if(pending)return pending;pending=new Promise(resolve=>{atlas.onload=()=>resolve(ready());atlas.onerror=()=>resolve(false);atlas.src="./assets/ice-mammoth-charge-32.webp?v=0.355.17";}).then(ok=>{if(ok)window.WIZARDRY_ARENA_TEST?.drawCardArts?.();return ok;}).finally(()=>pending=null);return pending;}
 function scene(source,target,p,hit=.72,factor=1){
- p=C(p);const dir=source.team===0?1:-1,scale=1.48,origin={x:500-dir*120,y:510},contact={x:target.x-dir*(125+26*factor),y:target.y+6},dash=.34;
+ p=C(p);const dir=source.team===0?1:-1,scale=1.48,origin={x:500-dir*120,y:510+GROUND_DROP},contact={x:target.x-dir*(125+26*factor),y:target.y+6+GROUND_DROP},dash=.34;
  const u=C((p-dash)/(hit-dash)),run=u*u*(2-u);
  let frame=p<.23?Math.min(7,Math.floor(p/.23*8)):p<dash?8+Math.min(3,Math.floor((p-.23)/(dash-.23)*4)):p<hit?12+Math.min(11,Math.floor(u*12)):24+Math.min(7,Math.floor((p-hit)/(1-hit)*8));
  return{x:L(origin.x,contact.x,run),y:L(origin.y,contact.y,E(u)),dir,scale,origin,contact,target:{x:target.x,y:target.y},factor,frame,p,hit,dash,alpha:1-E((p-hit-.04)/.20)};
@@ -25,31 +25,32 @@ function snow(g,x,y,rx,ry,alpha){
  g.fillStyle=glow;g.beginPath();g.ellipse(0,0,1,1,0,0,Math.PI*2);g.fill();g.restore();
 }
 function trail(g,s,front=false){
- if(s.p<.035||s.p>s.hit+.23)return;
- const fade=C((s.hit+.23-s.p)/.16),rise=E((s.p-.035)/.12),moving=E((s.p-s.dash)/.06),k=s.scale/1.48;
+ if(s.p<.015||s.p>s.hit+.25)return;
+ const fade=C((s.hit+.25-s.p)/.16),rise=E((s.p-.015)/.085),moving=E((s.p-s.dash)/.06),k=s.scale/1.48;
  g.save();
  // Floor-hugging rear frost stays in world space; foreground mist
  // overlaps the lower legs instead of being hidden by the body.
  if(front){
-  for(let i=0;i<9;i++){
+  for(let i=0;i<13;i++){
    const phase=(s.p*15+i*.237)%1;
-   const off=(i-4)*25*k;
-   snow(g,s.x+off-s.dir*phase*18*k,s.y-15*k-phase*17*k,54*k,35*k+phase*10*k,fade*rise*(.74+.18*moving));
+   const off=(i-6)*22*k;
+   snow(g,s.x+off-s.dir*phase*18*k,s.y-38*k-phase*22*k,66*k,59*k+phase*15*k,fade*rise*(.88+.10*moving));
+   snow(g,s.x+off,s.y-5*k,55*k,25*k,fade*rise*.93);
   }
  }
- const count=front?30:46;
+ const count=front?42:46;
  for(let i=0;i<count;i++){
   const q=(s.p*(9+(i%4)*1.1)+i*.173)%1;
   const birth=Math.max(.035,Math.min(s.hit,s.p-q*.18));
   const o=footAt(s,birth),drift=(12+q*(moving?130:45))*k;
   const x=o.x-s.dir*drift+Math.sin(i*2.399)*78*k;
-  const y=o.y-8*k-q*(front?60:84)*k+Math.cos(i*2.399)*11*k;
+  const y=o.y-8*k-q*(front?95:84)*k+Math.cos(i*2.399)*11*k;
   const r=(29+i%6*6)*k*(.75+q*.65);
-  snow(g,x,y,r*1.48,r*.61,fade*rise*(1-q)* (front?.63:.76));
+  snow(g,x,y,r*1.48,r*.61,fade*rise*(1-q)* (front?.81:.76));
  }
  // Ice chips and sharp crystalline snow spray are drawn independently
  // of the soft mist so the low-poly texture remains legible.
- for(let i=0;i<(front?38:44);i++){
+ for(let i=0;i<(front?48:44);i++){
   const q=(s.p*13+i*.173)%1;
   const o=footAt(s,Math.max(.035,Math.min(s.hit,s.p-q*.15)));
   const x=o.x-s.dir*(12+q*(90+moving*62))*k+Math.sin(i*2.399)*90*k;

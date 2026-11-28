@@ -295,11 +295,13 @@
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"LEGENDARY",duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   CARDS.push(TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_KILLER_BEES,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE);
-  const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT];
-  function testSpellArt(card){return card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  const TEST_FROSTBOUND_COLOSSUS={id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80,icon:"❄",rarity:"TEST",testOnly:true,duration:4800,hit:.80,description:"A colossal ice golem rises in the center of the arena, lifts both fists overhead and slams the ground. Traveling icy shockwaves erupt beneath every living enemy for 480 base Ice damage each. Each surviving enemy damaged has an independent 15% chance to Freeze."};
+  const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS];
+  function testSpellArt(card){return card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,...ICE_TEST_CARDS].map(x=>[x.id,x]));
   const CARD_EFFECTS={
+    frostboundcolossus:"480 base damage to each enemy. Independent 15% Freeze chance per damaged enemy.",
     shatterpoint:"35% chance to replace a target\x27s positive debuff rune with a Frostbite rune (50 × 3 rounds). No positive runes: 0% Frostbite chance.",
     permafrost:"5 rounds. Ice damage +10%; Frostbite chance +15 points; normal Frostbite lasts 5 rounds.",
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
@@ -407,7 +409,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["frostboundcolossus","shatterpoint","permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -2006,6 +2008,10 @@
         if(p>=blizzardHitAt(i,a.blizzardTargets.length))applyBlizzardHit(a,entry);
     if(a.stage==="summon"&&a.card.id==="penguins"&&a.runeResult==="success")
       for(let i=0;i<3;i++)if(a.elapsed>=NINJA_HIT_TIMES[i]*a.card.duration)applyPenguinHit(a,i);
+    if(a.stage==="summon"&&a.card.kind==="frostboundcolossus"&&a.runeResult==="success"){
+      for(const entry of a.colossusTargets||[])if(p>=entry.hitAt)applyColossusHit(a,entry);
+      if((a.colossusTargets||[]).every(entry=>entry.hit))a.applied=true;
+    }
     if(a.stage==="summon"&&a.card.kind==="stampede"&&a.runeResult==="success"){
       for(const entry of a.stampedeTargets||[])if(p>=entry.hitAt)applyStampedeHit(a,entry);
       if((a.stampedeTargets||[]).every(entry=>entry.hit))a.applied=true;
@@ -2036,7 +2042,7 @@
       for(const entry of a.meteorTargets||[])
         if(a.elapsed>=entry.hitAt)applyFallingHit(a,entry);
     if(a.stage==="summon"&&a.card.kind==="shortcircuit")advanceShortCircuit(a);
-    if(a.stage==="summon"&&a.card.kind!=="shortcircuit"&&a.card.kind!=="stampede"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
+    if(a.stage==="summon"&&a.card.kind!=="shortcircuit"&&a.card.kind!=="frostboundcolossus"&&a.card.kind!=="stampede"&&a.card.kind!=="thundergoddrums"&&a.card.kind!=="hellhound"&&a.card.kind!=="sticksandstones"&&a.card.id!=="volcaniceruption"&&a.card.id!=="meteorshower"&&a.card.id!=="lightningball"&&a.card.id!=="penguins"&&!a.applied&&a.elapsed>=a.card.duration*a.card.hit)
       applySpell(a);
     if(a.stage==="summon"&&a.card.id==="quicksilver")advanceQuicksilver(a);
     if(a.stage==="summon"&&a.card.kind==="magneticpulse")advanceMagneticRune(a);
@@ -2095,7 +2101,10 @@
       // Only begin a summon after the completed rune has glowed.
       // Estel then materializes BEFORE releasing the floating orb;
       // the HP change is delayed until the orb reaches the ally.
-      if(a.card.kind==="stampede"){
+      if(a.card.kind==="frostboundcolossus"){
+        a.colossusTargets=colossusTargets(caster);
+        startStage(a,"summon",a.card.duration);
+      }else if(a.card.kind==="stampede"){
         a.stampedeTargets=stampedeTargets(caster);
         startStage(a,"summon",a.card.duration);
       }else if(a.card.kind==="thundergoddrums"){
@@ -2723,7 +2732,7 @@
       if(shared>0)flash(partner,"+"+shared+" HP · LIFEVINE","#c4ff90").lifevineTarget=partner.id;
     }
     const ring=target.statuses.find(st=>st.kind==="ring_of_fire"&&state.round<st.expiresRound);
-    if(amount>0&&ring&&target.hp>0&&state.mode==="tester"){
+    if(amount>0&&ring&&target.hp>0){
       const lost=loseHp(getUnit(ring.sourceId),target,100);
       flash(target,"RING OF FIRE −"+lost,"#ff9c60");
       (state.fireRingHits??=[]).push({id:target.id,time:performance.now()});
@@ -3210,7 +3219,8 @@
       recordBattleEvent(source.name+" → "+target.name+": "+amount+" damage"+
         (notes.length?" ["+notes.join(", ")+"]":""));
       if(target.hp<=0){flash(target,"DEFEATED","#ffd5b0");}
-      if(base>0&&source.team!==target.team)attemptMarkedFreeze(target,card,spell);
+      if(base>0&&source.team!==target.team&&(card?.id!=="frostboundcolossus"||(amount>0&&!preventsHitEffects(spell,target))))
+        attemptMarkedFreeze(target,card,spell,card?.id==="frostboundcolossus"?Math.random():undefined);
       const directDamage=oldHp-target.hp;
       healFromLightningRod(rodOwners,redirected,recipient);
       triggerGuardianRoots(source,target,directDamage,spell);
@@ -3536,6 +3546,20 @@
     flash(target,"DECAY OF STRENGTH",runeColors[school]);
   }
   // One snapshot entry per living enemy, no extra drumbeats for empty slots.
+  function colossusTargets(caster){
+    if(!caster)return [];
+    return alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y,hitAt:.735+Math.min(.085,Math.hypot(u.x-500,u.y-510)/480*.085),hit:false,frozen:false}));
+  }
+  function applyColossusHit(a,entry){
+    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
+    entry.hit=true;
+    const source=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
+    if(!source?.hp||!victim?.hp||victim.team===source.team)return false;
+    const before=victim.statuses.some(st=>st.kind==="frozen");
+    damage(source,victim,a.card.damage,a.card,a);
+    entry.frozen=!before&&victim.hp>0&&victim.statuses.some(st=>st.kind==="frozen");
+    paintUI();return true;
+  }
   function stampedeTargets(caster){
     if(!caster)return [];
     return alive(1-caster.team).slice().sort((a,b)=>a.y-b.y||a.index-b.index).map((u,i)=>({
@@ -3543,7 +3567,7 @@
     }));
   }
   function applyStampedeHit(a,entry){
-    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
+    if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
     const source=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
     if(!source?.hp||!victim?.hp||victim.team===source.team)return false;
@@ -3558,7 +3582,7 @@
     });
   }
   function applyDrumHit(a,entry){
-    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
+    if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
     const source=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
     if(!source?.hp||!victim?.hp||victim.team===source.team)return false;
@@ -3579,7 +3603,7 @@
     });
   }
   function applyHellhoundHit(a,entry,roll){
-    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
+    if(!a||!entry||entry.hit||a.runeResult!=="success")return false;
     entry.hit=true;
     const caster=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
     if(!caster?.hp||!victim?.hp||victim.team===caster.team)return false;
@@ -3862,7 +3886,7 @@
     return true;
   }
   function advanceShortCircuit(a){
-    if(a.applied||a.runeResult!=="success"||state.mode!=="tester")return;
+    if(a.applied||a.runeResult!=="success")return;
     const arrival=a.card.duration*a.card.hit;
     const c=getUnit(a.source??a.action?.casterId),target=getUnit(a.target??a.action?.targetId);
     if(!a.shortCircuitTally){
@@ -3905,7 +3929,7 @@
       (Number(card.damage)>0||Number(card.hitDamage)>0||card.id==="earthquake");
   }
   function beginThunderMineDetonation(a,c){
-    if(state.mode!=="tester"||!c?.hp||!thunderMineTriggerable(a)||a.mineTriggered)return false;
+    if(!c?.hp||!thunderMineTriggerable(a)||a.mineTriggered)return false;
     const mine=c.statuses.find(st=>st.kind==="thunder_mine"&&state.round<st.expiresRound);
     if(!mine)return false;
     a.mineTriggered=true;
@@ -3940,7 +3964,9 @@
     if(anim.runeResult==="failed"||(towerHealing.has(card.kind)&&healingSuppressed(card.school)))return;
     if(card.testOnly&&state.mode!=="tester")return;
     if(card.kind==="static"&&t?.team!==c.team)gainElectricalChargeMana(t,card,anim);
-    if(card.kind==="stampede"){
+    if(card.kind==="frostboundcolossus"){
+      for(const entry of anim.colossusTargets??colossusTargets(c))applyColossusHit(anim,entry);
+    }else if(card.kind==="stampede"){
       for(const entry of anim.stampedeTargets??stampedeTargets(c))applyStampedeHit(anim,entry);
     }else if(card.kind==="thundergoddrums"){
       for(const entry of anim.drumTargets??drumTargets(c))applyDrumHit(anim,entry);
@@ -5896,6 +5922,7 @@
       else if(card.id==="fountainofyouth")window.FountainYouth?.portrait(c,width,height);
       else if(card.id==="hydrocannon")window.HydroCannon?.portrait(c,width,height);
       else if(card.id==="quicksilver")window.Quicksilver?.portrait(c,width,height);
+      else if(card.id==="frostboundcolossus")window.FrostboundColossus?.portrait(c,width,height);
       else if(card.id==="shatterpoint")window.Shatterpoint?.portrait(c,width,height);
       else if(card.id==="mammothiceshard")window.IceMammoth?.portrait(c,width,height);
       else if(card.id==="giantarmadillo")window.GiantArmadillo?.portrait(c,width,height);
@@ -6016,6 +6043,7 @@
     }
   }
   function setupSprites(){
+    window.FrostboundColossus?.onReady(drawCardArts);
     window.Shatterpoint?.ensureBody?.().then(ok=>{if(ok)requestAnimationFrame(drawCardArts);});
     if(!wizardAtlasReady())wizardAtlas.addEventListener?.("load",drawCardArts,{once:true});
     window.MeteorShower?.onReady(drawCardArts);
@@ -6324,7 +6352,7 @@
     const impactFx=state.animation?.card?.id==="infernotitan"?window.InfernoTitan:state.animation?.card?.id==="sentinelfissure"?window.SentinelFissure:state.animation?.card?.id==="cyclops"?window.Cyclops:state.animation?.card?.id==="heizmann"?window.Heizmann:state.animation?.card?.id==="yeti"?window.IceYeti:null;
     const earthquakeProgress=state.animation?.card?.id==="earthquake"&&state.animation.stage==="summon"
       ?clamp(state.animation.elapsed/state.animation.duration,0,1):null;
-    const drumCast=state.mode==="tester"&&state.animation?.card?.id==="thundergoddrums"&&state.animation.stage==="summon"?state.animation:null;
+    const drumCast=state.animation?.card?.id==="thundergoddrums"&&state.animation.stage==="summon"?state.animation:null;
     const mineShake=state.animation?.stage==="mine-detonation"?window.ThunderMine?.shake(state.animation.elapsed):null;
     const octoShake=state.animation?.card?.id==="octo"&&state.animation.stage==="summon"?window.WIZARDRY_OCTO_V95?.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.duration):null;
     const crabCast=state.animation?.card?.id==="crabgiant"&&state.animation.stage==="summon"?state.animation:null;
@@ -6342,7 +6370,9 @@
     const quicksilverShake=qsStage?window.Quicksilver?.shake((quicksilverCast.elapsed-qsStage.hitAt)/1000,0):null;
     const tectonicCast=state.animation?.card?.id==="tectoniccrush"&&state.animation.stage==="summon"?state.animation:null;
     const tectonicShake=tectonicCast?window.TectonicCrush?.shake(tectonicCast.elapsed/tectonicCast.duration):null;
-    const impactShake=tectonicShake??quicksilverShake??cavernShake??mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
+    const colossusCast=state.animation?.card?.id==="frostboundcolossus"&&state.animation.stage==="summon"?state.animation:null;
+    const colossusShake=colossusCast?window.FrostboundColossus?.shake(colossusCast.elapsed/colossusCast.duration):null;
+    const impactShake=colossusShake??tectonicShake??quicksilverShake??cavernShake??mineShake??octoShake??crabShake??stampedeShake??armadilloShake??bulwarkShake??(drumCast?window.ThunderGodDrums?.shake(drumCast.elapsed,drumCast.drumTargets||[]):earthquakeProgress!==null?window.Earthquake?.shake(earthquakeProgress):impactFx&&state.animation.stage==="summon"?impactFx.shake(state.animation.elapsed/state.animation.duration,getUnit(state.animation.target)?.x>=500?1:-1,state.animation.card.hit):null);
     const formingField=state.animation?.card.fieldRounds&&state.animation.stage==="summon"?state.animation:null;
     const fieldId=formingField?.card.id??state.environment?.id;
     const cavernExit=state.crystalCavernExit==null?null:clamp((time-state.crystalCavernExit)/1000,0,1);
@@ -6355,14 +6385,14 @@
       else if(cavernExit!==null&&cavernExit<1)window.CrystalCavern?.landscape(g,{x,y,width,height,time,strength:1-cavernExit,exit:cavernExit,background,exitOnly:!!fieldId});
       if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
        if(fieldId==="permafrost")window.Permafrost?.landscape(g,{x,y,width,height,time,strength,background});
-       if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
-      if(state.mode==="tester"&&state.animation?.card.id==="thunderbirds"&&state.animation.stage==="summon")window.Thunderbirds?.sky(g,{x,y,width,height,time,p:clamp(state.animation.elapsed/state.animation.duration,0,1)});
+       if(fieldId==="furnace")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
+      if(state.animation?.card.id==="thunderbirds"&&state.animation.stage==="summon")window.Thunderbirds?.sky(g,{x,y,width,height,time,p:clamp(state.animation.elapsed/state.animation.duration,0,1)});
       g.restore();}
     g.setTransform(ratio*fit,0,0,ratio*fit,ratio*camera.x,ratio*camera.y);
     if(impactShake)g.translate(impactShake.x,impactShake.y);
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
-    if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:0,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
+    if(!background){drawBackground(g);if(fieldId==="furnace")window.FireTestArt?.furnace.landscape(g,{x:0,y:0,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
     if(!background&&fieldId==="permafrost")window.Permafrost?.landscape(g,{x:0,y:0,width:W,height:H,time,strength});
     if(!background&&fieldId==="crystalcavern")window.CrystalCavern?.landscape(g,{x:0,y:0,width:W,height:H,time,strength});
     if(floorIntro){drawFloorIntro(time);return;}
@@ -6401,7 +6431,7 @@
         ["dragon-drop","dragon-land","dragon-charge","dragon-shot",
          "dragon-splash","dragon-impact","dragon-exit"].includes(a.stage)){
         // Dragon and its projectile use the shared world depth sorter.
-      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
+      }else if(a.stage==="summon"&&(a.card.starterBlast||a.card.fieldRounds||["frostboundcolossus","shatterpoint","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","quicksilver","petrify","giantarmadillo","stampede","guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound","livewire","faultlinebulwark","razorang","chainedjavelin","pressuredrop","ripcurrent","glacierlance","coldstorage","blooddebt","lifevine","briarremedy","flashover","soulghoul","sandwarrior","flamewheel","whale","hightide","thornyhug","reflectiveice","cursedhold","claritystrike","earthquake","flamingflamingo","aromatherapy","doublepick","landray","sunfire","windrazor","wynzor","frozentouch","volcaniceruption","sentinelfissure","rogginbowler","stormlizard","drowzyflowers","darksorcerer","sticksandstones","electriceel","crystalicemirrors","reikel","manascourge","soulharvest","meteorshower","ragingwaters","crabgiant","kamikaze","wickedwitch","lightningball","totallyrad","yeti","bulletseed","tree","scaldingair","zen","electrodisc","burningpheonix","decaystrength","acidair","cyclops","boulderweight","heizmann","venustrap","grillmaster","croc","jack","windfist","gunpowderkiss","zeus","kineticsand","thornwrap","blizzard","penguins","scorpion","octo","devil","bloom","rod","undead","centaur","winddome"].includes(a.card.id)||["lightningfield","waterprison","bubbleshield","growth","electricalcharge","ragingwaters","flowstate","shield","regen","teamregen","rage","static","turbulence","souldrain","freezing"].includes(a.card.kind))){
         // Attached effects and the scorpion share the fighter depth sorter below.
       }else if(a.stage==="summon"||
           a.card.id==="estel"&&
@@ -6419,7 +6449,7 @@
     const renderables=sorted.map(u=>({
       type:"wizard",unitTeam:u.team,depthY:u.y,priority:1,draw:()=>drawUnit(u,time)
     }));
-    if(state.mode==="tester"&&window.FireTestArt){
+    if(window.FireTestArt){
       const fire=window.FireTestArt;
 
       if(action?.stage==="summon"&&["ringoffire","backdraft"].includes(action.card.kind)){
@@ -6448,7 +6478,7 @@
     }
     if(window.GuardianRoots){
       const art=window.GuardianRoots;
-      if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="guardianroots"){
+      if(action?.stage==="summon"&&action.card.id==="guardianroots"){
         const u=getUnit(action.target);
         if(u){
           const p=clamp(action.elapsed/action.duration,0,1),k=unitSlotFactor(u);
@@ -6462,7 +6492,7 @@
         if(u)renderables.push({type:"guardian-roots-strike",depthY:u.y+.15,priority:2,draw:()=>art.strike(g,u,clamp((now-e.time)/1450,0,1),unitSlotFactor(u))});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="photosynthesis"&&window.Photosynthesis){
+    if(action?.stage==="summon"&&action.card.id==="photosynthesis"&&window.Photosynthesis){
       const target=getUnit(action.target),art=window.Photosynthesis;
       if(target){
         const s=art.scene(target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target),-camera.y/camera.scale-80);
@@ -6480,7 +6510,7 @@
         renderables.push({type:"photo-pass-heal",depthY:u.y+.15,priority:2,draw:()=>window.Photosynthesis.activate(g,u,progress,factor)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="quicksilver"&&window.Quicksilver){
+    if(action?.stage==="summon"&&action.card.id==="quicksilver"&&window.Quicksilver){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.Quicksilver;
       if(source&&target){
         const v=quicksilverVisual(action,target);
@@ -6507,7 +6537,7 @@
         }
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="tectoniccrush"&&window.TectonicCrush){
+    if(action?.stage==="summon"&&action.card.id==="tectoniccrush"&&window.TectonicCrush){
       const target=getUnit(action.target),art=window.TectonicCrush;
       if(target){
         const s=art.scene(target,clamp(action.elapsed/action.duration,0,1),unitEffectFactor(target));
@@ -6565,6 +6595,20 @@
         renderables.push({type:"hydro-splash",depthY:target.y+.21,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
+    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="frostboundcolossus"&&window.FrostboundColossus){
+      const source=getUnit(action.source),art=window.FrostboundColossus;
+      if(source){
+        const s=art.scene(source,action.colossusTargets||colossusTargets(source),clamp(action.elapsed/action.duration,0,1));
+        renderables.push({type:"colossus-summon-ring",depthY:s.y-.25,priority:0,draw:()=>art.summon(g,s)});
+        renderables.push({type:"colossus-ground-shockwave",depthY:s.y-.18,priority:0,draw:()=>art.shockwave(g,s)});
+        renderables.push({type:"frostbound-colossus",depthY:s.y+.05,priority:2,draw:()=>art.actor(g,s)});
+        for(const entry of s.targets){
+          const u=getUnit(entry.id),k=u?unitEffectFactor(u):1;
+          renderables.push({type:"colossus-traveling-wave",depthY:entry.y-.2,priority:0,draw:()=>art.travel(g,s,entry)});
+          renderables.push({type:"colossus-impact",depthY:entry.y+.2,priority:2,draw:()=>art.impact(g,s,entry,k)});
+        }
+      }
+    }
     if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="shatterpoint"&&window.Shatterpoint){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.Shatterpoint;
       if(source&&target){const s=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
@@ -6586,7 +6630,7 @@
         if(!preventsHitEffects(action,target))renderables.push({type:"mammoth-impact",depthY:target.y+.19,priority:2,draw:()=>art.impact(g,s)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="giantarmadillo"&&window.GiantArmadillo){
+    if(action?.stage==="summon"&&action.card.id==="giantarmadillo"&&window.GiantArmadillo){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.GiantArmadillo;
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit);
@@ -6596,7 +6640,7 @@
         if(!preventsHitEffects(action,target))renderables.push({type:"armadillo-impact",depthY:target.y+.19,priority:2,draw:()=>fitUnitEffect(g,target,()=>art.impact(g,scene,target))});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="stampede"&&window.Stampede){
+    if(action?.stage==="summon"&&action.card.id==="stampede"&&window.Stampede){
       const source=getUnit(action.source),art=window.Stampede;
       if(source){
         const scene=art.scene(source,action.stampedeTargets||stampedeTargets(source),clamp(action.elapsed/action.duration,0,1));
@@ -6611,7 +6655,7 @@
         }
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="mothernature"&&window.MotherNature){
+    if(action?.stage==="summon"&&action.card.id==="mothernature"&&window.MotherNature){
       const source=getUnit(action.source),art=window.MotherNature;
       if(source){
         const allies=alive(source.team),scene=art.scene(source,allies,clamp(action.elapsed/action.duration,0,1));
@@ -6624,7 +6668,7 @@
         }
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="killerbees"&&window.KillerBees){
+    if(action?.stage==="summon"&&action.card.kind==="killerbees"&&window.KillerBees){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.KillerBees;
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target));
@@ -6634,7 +6678,7 @@
         renderables.push({type:"killer-bees-impact",depthY:target.y+.18,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thundermine"&&window.ThunderMine){
+    if(action?.stage==="summon"&&action.card.kind==="thundermine"&&window.ThunderMine){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.ThunderMine;
       if(source&&target){
         const scene=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),unitSlotFactor(target));
@@ -6642,11 +6686,11 @@
         renderables.push({type:"thunder-mine-cast-fx",depthY:Math.max(scene.depth,target.y)+.13,priority:2,draw:()=>art.castFx(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="mine-detonation"&&action.mineDetonation&&window.ThunderMine){
+    if(action?.stage==="mine-detonation"&&action.mineDetonation&&window.ThunderMine){
       const target=getUnit(action.mineDetonation.targetId);
       if(target)renderables.push({type:"thunder-mine-explosion",depthY:target.y+.35,priority:3,draw:()=>window.ThunderMine.explode(g,target,action.elapsed,unitSlotFactor(target))});
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="shortcircuit"&&window.ShortCircuit){
+    if(action?.stage==="summon"&&action.card.kind==="shortcircuit"&&window.ShortCircuit){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.ShortCircuit;
       if(source&&target){
         const tally=shortCircuitTally(action);
@@ -6658,7 +6702,7 @@
         renderables.push({type:"short-circuit-overload",depthY:target.y+.18,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="magneticpulse"&&window.MagneticPulse){
+    if(action?.stage==="summon"&&action.card.kind==="magneticpulse"&&window.MagneticPulse){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
         const scene=window.MagneticPulse.scene(source,target,clamp(action.elapsed/action.duration,0,1));
@@ -6671,20 +6715,20 @@
         renderables.push({type:"magnetic-impact",depthY:target.y+.20,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thundergoddrums"&&window.ThunderGodDrums){
+    if(action?.stage==="summon"&&action.card.kind==="thundergoddrums"&&window.ThunderGodDrums){
       const art=window.ThunderGodDrums;
       const scene=art.scene(action.elapsed,action.duration,action.drumTargets||[]);
       renderables.push({type:"thunder-god-drums",depthY:scene.y,priority:2,draw:()=>art.draw(g,scene)});
       for(const pulse of scene.pulses)renderables.push({type:"drum-pulse",depthY:Math.max(scene.y,pulse.y)+.15,priority:2,draw:()=>art.pulse(g,scene,pulse)});
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="thunderbirds"&&window.Thunderbirds){
+    if(action?.stage==="summon"&&action.card.kind==="thunderbirds"&&window.Thunderbirds){
       const target=getUnit(action.target);
       if(target){const scene=window.Thunderbirds.scene(target,clamp(action.elapsed/action.duration,0,1));
         renderables.push({type:"thunderbirds-falcons",depthY:target.y+.1,priority:2,draw:()=>window.Thunderbirds.draw(g,scene)});
         renderables.push({type:"thunderbirds-impact",depthY:target.y+.2,priority:2,draw:()=>window.Thunderbirds.impact(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="infernotitan"&&window.InfernoTitan){
+    if(action?.stage==="summon"&&action.card.kind==="infernotitan"&&window.InfernoTitan){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
         const scene=window.InfernoTitan.scene(source,target,clamp(action.elapsed/action.duration,0,1));
@@ -6693,7 +6737,7 @@
         renderables.push({type:"infernotitan-geyser",depthY:target.y+.15,priority:2,draw:()=>window.InfernoTitan.geyser(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.kind==="hellhound"&&window.HellhoundArt){
+    if(action?.stage==="summon"&&action.card.kind==="hellhound"&&window.HellhoundArt){
       const source=getUnit(action.source),target=getUnit(action.target);
       if(source&&target){
         const scene=window.HellhoundArt.scene(source,target,action.houndTargets||[],clamp(action.elapsed/action.duration,0,1));
@@ -7867,7 +7911,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT],testCardOrder:[...TEST_CARD_ORDER],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS],testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

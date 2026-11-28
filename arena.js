@@ -270,6 +270,7 @@
   const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   // New Hellhound is isolated from binders, CPU decks and normal progression.
+  const TEST_PERMAFROST={id:"permafrost",name:"Permafrost",school:"ice",cost:5,target:"team",kind:"permafrost",accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:3300,hit:.75,fieldRounds:5,fieldBoost:.10,frostChanceBoost:.15,frostExtraTurns:2,description:"Environmental rune for 5 rounds. Both teams gain +10% Ice spell damage and +15 percentage points to existing normal and Extreme Frostbite chances. Normal Frostbite applied during the field lasts 5 rounds instead of 3; Extreme Frostbite duration is unchanged."};
   const TEST_MAMMOTH={id:"mammothiceshard",name:"Mammoth Ice Shard",school:"ice",cost:6,target:"enemy",kind:"damage",damage:630,frostChance:.25,frostDamage:50,frostTurns:3,accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:2400,hit:.60,description:"A massive ice-armored mammoth emerges, lowers its tusks and charges one enemy for 630 base Ice damage, with a 25% chance to inflict Frostbite for 50 damage per round for 3 rounds."};
   const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"TEST",testOnly:true,duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
   const TEST_INFERNO_TITAN={id:"infernotitan",name:"Inferno Titan",school:"fire",cost:8,target:"enemy",kind:"infernotitan",damage:700,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:.80,icon:"♨",rarity:"TEST",testOnly:true,duration:5400,hit:.61,description:"A molten knight rises, grips his straight lava blade with both hands and drives it point-first into the ground. A traveling fissure erupts beneath the selected enemy for 700 base damage, with a 30% chance of Extreme Burn (100 damage each round for 5 rounds)."};
@@ -292,10 +293,11 @@
   const TEST_PHOTOSYNTHESIS={id:"photosynthesis",name:"Photosynthesis",school:"nature",cost:2,target:"ally",kind:"photosynthesis",passHeal:100,rounds:4,accuracy:.95,icon:"❀",rarity:"TEST",testOnly:true,duration:4000,hit:.73,description:"Places a beneficial Nature rune for the next 4 rounds. Whenever the recipient voluntarily passes, restores 100 HP. Reapplying refreshes the duration without stacking."};
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"TEST",testOnly:true,duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
-  function testSpellArt(card){return card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
+  function testSpellArt(card){return card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
-  const BY_ID=Object.fromEntries([...CARDS,TEST_MAMMOTH,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
+  const BY_ID=Object.fromEntries([...CARDS,TEST_MAMMOTH,TEST_PERMAFROST,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST].map(x=>[x.id,x]));
   const CARD_EFFECTS={
+    permafrost:"5 rounds. Ice damage +10%; Frostbite chance +15 points; normal Frostbite lasts 5 rounds.",
     poseidon:"Rest 1 round. Next Water hit +30%.",volt:"15% Stun chance on hit.",wind:"Next cast gains 10 accuracy points.",
     vampire:"On damage, heals for half the mastery-adjusted base hit.",
     hellhound:"Main + adjacent enemies. 30% Burn each: 50 × 3 rounds.",
@@ -401,7 +403,7 @@
   const MAX_HAND_SIZE=5;
   // Feature the current release in human opening hands when the grimoire includes it.
   // Move the most recently updated spells here first for immediate testing.
-  const RECENTLY_UPDATED_CARDS=["mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
+  const RECENTLY_UPDATED_CARDS=["permafrost","mammothiceshard","tidalexchange","undertow","hydroserpent","fountainofyouth","hydrocannon","tectoniccrush","sentinelfissure","quicksilver","crystalcavern","petrify","faultlinebulwark","giantarmadillo","stampede","thundergoddrums","crabgiant","octo","guardianroots"];
   const TEST_CARD_ORDER=[...new Set([...RECENTLY_UPDATED_CARDS,"guardianroots","photosynthesis","mothernature","killerbees","thundermine","shortcircuit","magneticpulse","thundergoddrums","thunderbirds","ringoffire","backdraft","furnace","infernotitan","hellhound",...CARDS.map(card=>card.id).reverse()])];
   const FEATURED_TEST_CARDS=TEST_CARD_ORDER.filter(id=>RECENTLY_UPDATED_CARDS.includes(id)||id==="livewire"||id==="faultlinebulwark"||id==="razorang"||id==="chainedjavelin"||id==="pressuredrop"||id==="ripcurrent"||id==="glacierlance"||id==="coldstorage"||id==="blooddebt"||id==="lifevine"||id==="briarremedy"||id==="flashover"||id==="soulghoul"||id==="sandwarrior"||BY_ID[id].starterBlast);
   function shuffleDeck(cards){
@@ -2743,10 +2745,13 @@
       existing.charges=1;if(sourceId)existing.sourceId=sourceId;return;}
     u.statuses.push({kind,value,school:school||statusSchool({kind},u),charges:1,...(sourceId?{sourceId}:{})});
   }
+  function spellFrostChance(base){return Math.min(1,base+(base>0&&state.environment?.id==="permafrost"?BY_ID.permafrost.frostChanceBoost:0));}
+  function frostbiteDuration(base,turns){return state.environment?.id==="permafrost"&&base===50&&turns===3?turns+BY_ID.permafrost.frostExtraTurns:turns;}
   function applyPeriodicStatus(target,kind,card){
     const prefix=kind==="frostbite"?"frost":kind;
-    const base=card[prefix+"Damage"],turns=card[prefix+"Turns"];
-    const extreme=base===100&&turns===5;
+    const base=card[prefix+"Damage"],baseTurns=card[prefix+"Turns"];
+    const extreme=base===100&&baseTurns===5;
+    const turns=kind==="frostbite"?frostbiteDuration(base,baseTurns):baseTurns;
     let effect=target.statuses.find(st=>st.kind===kind);
     if(!canReceiveDebuff(target,kind)||(effect&&Boolean(effect.extreme)!==extreme))return false;
     const refresh=Boolean(effect);
@@ -3377,7 +3382,7 @@
     const caster=getUnit(a.source),target=getUnit(a.target);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<spellFrostChance(a.card.frostChance)){
       applyPeriodicStatus(target,"frostbite",a.card);
     }
     paintUI();return true;
@@ -3463,7 +3468,7 @@
     const caster=getUnit(a.source),target=getUnit(entry.id);
     if(!caster||caster.hp<=0||!target||target.hp<=0||target.team===caster.team)return false;
     damage(caster,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<spellFrostChance(a.card.frostChance)){
       if(applyPeriodicStatus(target,"frostbite",a.card))recordBattleEvent(target.name+" suffers Extreme Frostbite: 100 HP per turn for 5 turns.");
     }
     paintUI();return true;
@@ -3474,7 +3479,7 @@
     a.applied=true;const c=getUnit(a.source),target=getUnit(a.target);
     if(!c||c.hp<=0||!target||target.hp<=0||target.team===c.team)return false;
     damage(c,target,a.card.damage,a.card,a);
-    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<a.card.frostChance){
+    if(canReceiveDebuff(target,"frostbite")&&target.hp>0&&!preventsHitEffects(a,target)&&(roll??Math.random())<spellFrostChance(a.card.frostChance)){
       applyPeriodicStatus(target,"frostbite",a.card);
     }
     paintUI();return true;
@@ -3729,7 +3734,8 @@
       if(effect.lastTickRound===state.round||effect.appliedRound>=state.round)continue;
       effect.lastTickRound=state.round;
       const school=effect.school??statusSchool(effect,u);
-      const damage=Math.floor((effect.value||50)*environmentDamageMultiplier(school)*grovelandMultiplier(school));
+      const fieldMultiplier=kind==="frostbite"&&state.environment?.id==="permafrost"?1:environmentDamageMultiplier(school);
+       const damage=Math.floor((effect.value||50)*fieldMultiplier*grovelandMultiplier(school));
       const amount=loseHp(getUnit(effect.sourceId),u,absorbBarrierDamage(u,damage));
       effect.remaining=Math.max(0,(effect.remaining||1)-1);
       const label=(effect.extreme?"Extreme ":"")+(kind==="water_prison"?"Water Prison":kind);
@@ -4102,7 +4108,7 @@
         if(t.hp<=0||preventsHitEffects(anim,t))return;
         const roll=anim.witchStatusRoll??Math.random();
         if(element==="lightning")attemptVoltStun(c,t,card,roll);
-        else if(roll<card.stunChance){
+        else if(roll<(element==="ice"?spellFrostChance(card.stunChance):card.stunChance)){
           const kind=element==="fire"?"burn":element==="ice"?"frostbite":"poison";
           applyPeriodicStatus(t,kind,{...card,statusSchool:element==="poison"?"dark":element});
         }
@@ -4355,7 +4361,7 @@
     }else if(card.kind==="damage"||card.kind==="summon"){
       if(t&&t.hp>0){
         const dealt=damage(c,t,card.damage,card,anim);
-        if(card.id==="mammothiceshard"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t)&&(anim.frostRoll??Math.random())<card.frostChance)applyPeriodicStatus(t,"frostbite",card);
+        if(card.id==="mammothiceshard"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t)&&(anim.frostRoll??Math.random())<spellFrostChance(card.frostChance))applyPeriodicStatus(t,"frostbite",card);
         if(card.id==="tectoniccrush"&&dealt>0&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))applyColossalBoulder(t,anim.boulderRoll??Math.random(),card.boulderChance);
         if(card.id==="landray"&&t.hp>0&&t.team!==c.team&&!preventsHitEffects(anim,t))
           attemptVoltStun(c,t,card,anim.stunRoll);
@@ -4694,7 +4700,7 @@
       ui.targetPicker.hidden=!planning||["team","all_enemies"].includes(card?.target);
     }
     if(!ui.hand.childElementCount){
-      for(const k of [...CARDS,TEST_MAMMOTH,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
+      for(const k of [...CARDS,TEST_MAMMOTH,TEST_PERMAFROST,TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_KILLER_BEES,TEST_MOTHER_NATURE,TEST_PHOTOSYNTHESIS,TEST_GUARDIAN_ROOTS,TEST_STAMPEDE,TEST_ARMADILLO,TEST_PETRIFY,TEST_CRYSTAL_CAVERN,TEST_QUICKSILVER,TEST_TECTONIC_CRUSH,...EXTRA_FIRE_TEST])for(let copy=0;copy<(k.testOnly?1:Builds.MAX_COPIES);copy++){
         const b=document.createElement("button");b.type="button";
         b.className="spell card-ornate school-"+k.school;
         b.dataset.card=k.id;b.dataset.copy=String(copy);b.hidden=true;
@@ -5860,6 +5866,7 @@
       else if(card.id==="thundergoddrums")window.ThunderGodDrums?.portrait(c,width,height);
       else if(card.id==="magneticpulse")window.MagneticPulse?.portrait(c,width,height);
       else if(card.id==="shortcircuit")window.ShortCircuit?.portrait(c,width,height);
+      else if(card.id==="permafrost")window.Permafrost?.portrait(c,width,height,background);
       else if(card.id==="crystalcavern")window.CrystalCavern?.portrait(c,width,height,background);
       else if(card.id==="petrify")window.Petrify?.portrait(c,width,height,wizardAtlas);
       else if(card.id==="tectoniccrush")window.TectonicCrush?.portrait(c,width,height);
@@ -6128,7 +6135,7 @@
       target=getUnit(anim.target),card=anim.card;
     if(!caster)return;
     const baseX=500,baseY=510;
-    if(card.id==="crystalcavern")return;
+    if(card.id==="crystalcavern"||card.id==="permafrost")return;
     g.save();
     if(card.id==="dragon"){
       window.WIZARDRY_BABY_DRAGON_V61?.draw(g,{
@@ -6324,6 +6331,7 @@
       if(fieldId==="crystalcavern")window.CrystalCavern?.landscape(g,{x,y,width,height,time,strength,background});
       else if(cavernExit!==null&&cavernExit<1)window.CrystalCavern?.landscape(g,{x,y,width,height,time,strength:1-cavernExit,exit:cavernExit,background,exitOnly:!!fieldId});
       if(fieldId==="groveland")window.Groveland?.landscape(g,{x,y,width,height,time,strength});
+       if(fieldId==="permafrost")window.Permafrost?.landscape(g,{x,y,width,height,time,strength,background});
        if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x,y,width,height,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});
       if(state.mode==="tester"&&state.animation?.card.id==="thunderbirds"&&state.animation.stage==="summon")window.Thunderbirds?.sky(g,{x,y,width,height,time,p:clamp(state.animation.elapsed/state.animation.duration,0,1)});
       g.restore();}
@@ -6332,10 +6340,11 @@
     const quake=state.animation?.card?.id==="zeus"&&state.animation.stage==="summon"?window.WIZARDRY_ZEUS_V119?.shake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="kineticsand"&&state.animation.stage==="summon"?sandGripShake(clamp(state.animation.elapsed/state.animation.duration,0,1)):state.animation?.card?.id==="bender"?window.WIZARDRY_STONE_BENDER_V83?.cameraShake({stage:state.animation.stage,progress:clamp(state.animation.elapsed/state.animation.duration,0,1)}):state.animation?.card?.id==="centaur"&&state.animation.stage==="summon"?window.WIZARDRY_CENTAUR_V100?.impactKick(clamp(state.animation.elapsed/state.animation.duration,0,1)):null;
     if(quake&&(quake.x||quake.y))g.translate(quake.x,quake.y);
     if(!background){drawBackground(g);if(fieldId==="furnace"&&state.mode==="tester")window.FireTestArt?.furnace.landscape(g,{x:0,y:0,width:W,height:H,time,strength,progress:formingField?clamp(formingField.elapsed/formingField.duration,0,1):null});}
+    if(!background&&fieldId==="permafrost")window.Permafrost?.landscape(g,{x:0,y:0,width:W,height:H,time,strength});
     if(!background&&fieldId==="crystalcavern")window.CrystalCavern?.landscape(g,{x:0,y:0,width:W,height:H,time,strength});
     if(floorIntro){drawFloorIntro(time);return;}
     if(fieldId&&fieldId!=="groveland"){
-      const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField}[fieldId];
+      const effect={darkgrounds:window.DarkGrounds,lightningfield:window.LightningField,permafrost:window.Permafrost}[fieldId];
       g.save();
       g.setTransform(ratio,0,0,ratio,0,0);
       effect?.draw(g,{width:vw,height:vh,time,strength});
@@ -7827,7 +7836,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE,TEST_KILLER_BEES,TEST_THUNDER_MINE,TEST_SHORT_CIRCUIT,TEST_MAGNETIC_PULSE,TEST_THUNDER_DRUMS,TEST_THUNDERBIRDS,...EXTRA_FIRE_TEST,TEST_INFERNO_TITAN,TEST_HELLHOUND],stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

@@ -270,9 +270,9 @@
   const BULLET_SEED_RELEASES=[.68,.717,.754,.791,.828];
   const BULLET_SEED_HITS=BULLET_SEED_RELEASES.map(p=>p+.052);
   // Ice previews remain test-only; approved Fire, Lightning, Earth and Nature spells join the normal catalog.
-  const TEST_SHATTERPOINT={id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,frostChance:.35,frostDamage:50,frostTurns:3,accuracy:.90,icon:"❄",rarity:"TEST",testOnly:true,duration:2600,hit:.64,description:"A massive crystalline ice warhammer slams down and shatters for 320 base Ice damage. On an unblocked hit, has a 35% chance to replace a target's positive debuff rune with a Frostbite rune (50 damage per round for 3 rounds). If the target has no positive runes, Frostbite chance is 0%."};
-  const TEST_PERMAFROST={id:"permafrost",name:"Permafrost",school:"ice",cost:5,target:"team",kind:"permafrost",accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:3300,hit:.75,fieldRounds:5,fieldBoost:.10,frostChanceBoost:.15,frostExtraTurns:2,description:"Environmental rune for 5 rounds. Both teams gain +10% Ice spell damage and +15 percentage points to existing normal and Extreme Frostbite chances. Normal Frostbite applied during the field lasts 5 rounds instead of 3; Extreme Frostbite duration is unchanged."};
-  const TEST_MAMMOTH={id:"mammothiceshard",name:"Mammoth Ice Shard",school:"ice",cost:6,target:"enemy",kind:"damage",damage:630,frostChance:.25,frostDamage:50,frostTurns:3,accuracy:.85,icon:"❄",rarity:"TEST",testOnly:true,duration:2400,hit:.60,description:"A massive ice-armored mammoth emerges, lowers its tusks and charges one enemy for 630 base Ice damage, with a 25% chance to inflict Frostbite for 50 damage per round for 3 rounds."};
+  const TEST_SHATTERPOINT={id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,frostChance:.35,frostDamage:50,frostTurns:3,accuracy:.90,icon:"❄",rarity:"RARE",duration:2600,hit:.64,description:"A massive crystalline ice warhammer slams down and shatters for 320 base Ice damage. On an unblocked hit, has a 35% chance to replace a target's positive debuff rune with a Frostbite rune (50 damage per round for 3 rounds). If the target has no positive runes, Frostbite chance is 0%."};
+  const TEST_PERMAFROST={id:"permafrost",name:"Permafrost",school:"ice",cost:5,target:"team",kind:"permafrost",accuracy:.85,icon:"❄",rarity:"EPIC",duration:3300,hit:.75,fieldRounds:5,fieldBoost:.10,frostChanceBoost:.15,frostExtraTurns:2,description:"Environmental rune for 5 rounds. Both teams gain +10% Ice spell damage and +15 percentage points to existing normal and Extreme Frostbite chances. Normal Frostbite applied during the field lasts 5 rounds instead of 3; Extreme Frostbite duration is unchanged."};
+  const TEST_MAMMOTH={id:"mammothiceshard",name:"Mammoth Ice Shard",school:"ice",cost:6,target:"enemy",kind:"damage",damage:630,frostChance:.25,frostDamage:50,frostTurns:3,accuracy:.85,icon:"❄",rarity:"EPIC",duration:2400,hit:.60,description:"A massive ice-armored mammoth emerges, lowers its tusks and charges one enemy for 630 base Ice damage, with a 25% chance to inflict Frostbite for 50 damage per round for 3 rounds."};
   const TEST_HELLHOUND={id:"hellhound",name:"Hellhound",school:"fire",cost:6,target:"enemy",kind:"hellhound",damage:420,burnChance:.30,burnDamage:50,burnTurns:3,accuracy:.85,icon:"♨",rarity:"EPIC",duration:6400,hit:.55,description:"Three-headed Hellhound breathes fire simultaneously at the selected enemy and the immediately adjacent living enemies for 420 base damage each, with an independent 30% chance to Burn each hit target for 50 damage per round for 3 rounds. Missing or defeated neighbors are skipped."};
   const TEST_INFERNO_TITAN={id:"infernotitan",name:"Inferno Titan",school:"fire",cost:8,target:"enemy",kind:"infernotitan",damage:700,burnChance:.30,burnDamage:100,burnTurns:5,accuracy:.80,icon:"♨",rarity:"LEGENDARY",duration:5400,hit:.61,description:"A molten knight rises, grips his straight lava blade with both hands and drives it point-first into the ground. A traveling fissure erupts beneath the selected enemy for 700 base damage, with a 30% chance of Extreme Burn (100 damage each round for 5 rounds)."};
   const TEST_RING_OF_FIRE={id:"ringoffire",name:"Ring of Fire",school:"fire",cost:3,target:"enemy",kind:"ringoffire",accuracy:.90,icon:"♨",rarity:"RARE",duration:3200,hit:.55,rounds:3,description:"Attach a negative Fire rune for 3 rounds. Every time the enemy actually recovers HP, they take 100 damage."};
@@ -295,9 +295,10 @@
   const TEST_MOTHER_NATURE={id:"mothernature",name:"Mother Nature",school:"nature",cost:8,target:"team",kind:"teamheal",heal:550,accuracy:.85,icon:"❀",rarity:"LEGENDARY",duration:6200,hit:.70,description:"An ancient tree grows in the arena and releases healing pollen, restoring 550 base HP to every living teammate, including the caster."};
   const EXTRA_FIRE_TEST=[TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE];
   CARDS.push(TEST_HELLHOUND,TEST_INFERNO_TITAN,TEST_RING_OF_FIRE,TEST_BACKDRAFT,TEST_FURNACE,TEST_THUNDERBIRDS,TEST_THUNDER_DRUMS,TEST_MAGNETIC_PULSE,TEST_SHORT_CIRCUIT,TEST_THUNDER_MINE,TEST_TECTONIC_CRUSH,TEST_QUICKSILVER,TEST_CRYSTAL_CAVERN,TEST_PETRIFY,TEST_ARMADILLO,TEST_STAMPEDE,TEST_KILLER_BEES,TEST_GUARDIAN_ROOTS,TEST_PHOTOSYNTHESIS,TEST_MOTHER_NATURE);
-  const TEST_FROSTBOUND_COLOSSUS={id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80,icon:"❄",rarity:"TEST",testOnly:true,duration:4800,hit:.80,description:"A colossal ice golem rises in the center of the arena, lifts both fists overhead and slams the ground. Traveling icy shockwaves erupt beneath every living enemy for 480 base Ice damage each. Each surviving enemy damaged has an independent 15% chance to Freeze."};
-  const TEST_WINTERS_EMBRACE={id:"wintersembrace",name:"Winter’s Embrace",school:"ice",cost:3,target:"ally",kind:"wintersembrace",accuracy:.95,reduction:.50,rounds:3,icon:"❄",rarity:"TEST",testOnly:true,duration:3200,hit:.78,description:"Places a positive Ice debuff rune on yourself or one living ally for the next 3 rounds. Reduces normal and Extreme Burn, Poison and Frostbite damage by 50%. Reapplying refreshes the duration without stacking. Does not block direct spells or occupy a barrier priority."};
-  const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE];
+  const TEST_FROSTBOUND_COLOSSUS={id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80,icon:"❄",rarity:"EPIC",duration:4800,hit:.80,description:"A colossal ice golem rises in the center of the arena, lifts both fists overhead and slams the ground. Traveling icy shockwaves erupt beneath every living enemy for 480 base Ice damage each. Each surviving enemy damaged has an independent 15% chance to Freeze."};
+  const TEST_WINTERS_EMBRACE={id:"wintersembrace",name:"Winter’s Embrace",school:"ice",cost:3,target:"ally",kind:"wintersembrace",accuracy:.95,reduction:.50,rounds:3,icon:"❄",rarity:"RARE",duration:3200,hit:.78,description:"Places a positive Ice debuff rune on yourself or one living ally for the next 3 rounds. Reduces normal and Extreme Burn, Poison and Frostbite damage by 50%. Reapplying refreshes the duration without stacking. Does not block direct spells or occupy a barrier priority."};
+  CARDS.push(TEST_SHATTERPOINT,TEST_PERMAFROST,TEST_MAMMOTH,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE);
+  const ICE_TEST_CARDS=[];
   function testSpellArt(card){return card.id==="wintersembrace"?window.WintersEmbrace:card.id==="frostboundcolossus"?window.FrostboundColossus:card.id==="shatterpoint"?window.Shatterpoint:card.id==="permafrost"?window.Permafrost:card.id==="mammothiceshard"?window.IceMammoth:card.id==="tidalexchange"?window.TidalExchange:card.id==="undertow"?window.Undertow:card.id==="hydroserpent"?window.HydroSerpent:card.id==="fountainofyouth"?window.FountainYouth:card.id==="hydrocannon"?window.HydroCannon:card.id==="tectoniccrush"?window.TectonicCrush:card.id==="quicksilver"?window.Quicksilver:card.id==="crystalcavern"?window.CrystalCavern:card.id==="petrify"?window.Petrify:card.id==="giantarmadillo"?window.GiantArmadillo:card.id==="stampede"?window.Stampede:card.id==="guardianroots"?window.GuardianRoots:card.id==="photosynthesis"?window.Photosynthesis:card.id==="mothernature"?window.MotherNature:card.id==="killerbees"?window.KillerBees:card.id==="infernotitan"?window.InfernoTitan:card.id==="hellhound"?window.HellhoundArt:card.id==="thunderbirds"?window.Thunderbirds:card.id==="thundergoddrums"?window.ThunderGodDrums:card.id==="magneticpulse"?window.MagneticPulse:card.id==="shortcircuit"?window.ShortCircuit:card.id==="thundermine"?window.ThunderMine:window.FireTestArt?.[card.id];}
   const HELLHOUND_WINDOWS=[[.42,.70],[.42,.70],[.42,.70]];
   const BY_ID=Object.fromEntries([...CARDS,...ICE_TEST_CARDS].map(x=>[x.id,x]));
@@ -3554,7 +3555,7 @@
     return alive(1-caster.team).map(u=>({id:u.id,x:u.x,y:u.y,hitAt:.735+Math.min(.085,Math.hypot(u.x-500,u.y-510)/480*.085),hit:false,frozen:false}));
   }
   function applyColossusHit(a,entry){
-    if(!a||!entry||entry.hit||a.runeResult!=="success"||state.mode!=="tester")return false;
+    if(!a||!entry||entry.hit||a.runeResult!=="success"||(a.card.testOnly&&state.mode!=="tester"))return false;
     entry.hit=true;
     const source=getUnit(a.source??a.action?.casterId),victim=getUnit(entry.id);
     if(!source?.hp||!victim?.hp||victim.team===source.team)return false;
@@ -6622,7 +6623,7 @@
         renderables.push({type:"hydro-splash",depthY:target.y+.21,priority:2,draw:()=>art.impact(g,scene)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="frostboundcolossus"&&window.FrostboundColossus){
+    if(action?.stage==="summon"&&action.card.id==="frostboundcolossus"&&window.FrostboundColossus){
       const source=getUnit(action.source),art=window.FrostboundColossus;
       if(source){
         const s=art.scene(source,action.colossusTargets||colossusTargets(source),clamp(action.elapsed/action.duration,0,1));
@@ -6636,7 +6637,7 @@
         }
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="shatterpoint"&&window.Shatterpoint){
+    if(action?.stage==="summon"&&action.card.id==="shatterpoint"&&window.Shatterpoint){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.Shatterpoint;
       if(source&&target){const s=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
         renderables.push({type:"shatterpoint-summon",depthY:target.y-.14,priority:0,draw:()=>art.summon(g,s)});
@@ -6644,7 +6645,7 @@
         renderables.push({type:"shatterpoint-impact",depthY:target.y+.21,priority:2,draw:()=>art.impact(g,s)});
       }
     }
-    if(state.mode==="tester"&&action?.stage==="summon"&&action.card.id==="mammothiceshard"&&window.IceMammoth){
+    if(action?.stage==="summon"&&action.card.id==="mammothiceshard"&&window.IceMammoth){
       const source=getUnit(action.source),target=getUnit(action.target),art=window.IceMammoth;
       if(source&&target){
         const s=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
@@ -7938,7 +7939,7 @@
     getHand:id=>[...(getUnit(id)?.hand||[])],
     getDeck:id=>[...(getUnit(id)?.drawPile||[])],
     featuredCard:FEATURED_TEST_CARDS[0],drawCard,startHand,playHandCard,
-    cards:CARDS,testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE],testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
+    cards:CARDS,testCards:ICE_TEST_CARDS,testCardOrder:[...TEST_CARD_ORDER],colossusTargets,applyColossusHit,stampedeTargets,applyStampedeHit,drumTargets,applyDrumHit,hellhoundTargets,applyHellhoundHit,desiredYaw,updateFacing,runePath,spellHitCheck,
     getDragonInfo:()=>state?.animation?.card?.id==="dragon"?{
       stage:state.animation.stage,
       burned:!!state.animation.dragonBurned,

@@ -1,7 +1,7 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const a=fs.readFileSync("arena.js","utf8");
 assert.ok(a.includes('id:"shatterpoint",name:"Shatterpoint",school:"ice",cost:3,target:"enemy",kind:"damage",damage:320,frostChance:.35,frostDamage:50,frostTurns:3,accuracy:.90'));
-assert.ok(a.includes('testCards:[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT'));
+assert.ok(JSON.parse(fs.readFileSync("backend/cards.json","utf8")).some(c=>c.id==="shatterpoint"&&!c.testOnly));
 const start=a.indexOf("  function applyShatterpointRune("),end=a.indexOf("  function applyPeriodicStatus(",start);
 const ctx={BENEFICIAL_RUNES:new Set(["growth","blade"]),preventsHitEffects:s=>!!s?.blocked,spellFrostChance:n=>n,describeStatus:(_,r)=>({title:r.kind}),consumeStatus:(u,k)=>{u.statuses=u.statuses.filter(s=>s.kind!==k);},applyPeriodicStatus:(u,k,c)=>{u.statuses.push({kind:k,value:c.frostDamage});return true;},flash(){},recordBattleEvent(){},window:{},Image:class{constructor(){this.complete=true;}set src(s){this.path=s;this.naturalWidth=1792;this.naturalHeight=896;this.onload?.();}}};
 vm.runInNewContext(a.slice(start,end),ctx);

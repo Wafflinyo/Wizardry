@@ -1,7 +1,7 @@
 const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
 const arena=fs.readFileSync("arena.js","utf8");
 assert.ok(arena.includes('id:"mammothiceshard",name:"Mammoth Ice Shard",school:"ice",cost:6,target:"enemy",kind:"damage",damage:630,frostChance:.25,frostDamage:50,frostTurns:3,accuracy:.85'));
-assert.ok(arena.includes('testCards:[TEST_MAMMOTH'));
+assert.ok(JSON.parse(fs.readFileSync("backend/cards.json","utf8")).some(c=>c.id==="mammothiceshard"&&!c.testOnly));
 assert.ok(/const TEST_MAMMOTH=\{[^\n]*duration:2400,hit:\.60/.test(arena));
 assert.ok(arena.includes('art.trail(g,s,true)'));
 assert.ok(arena.includes("const mammothDepth=Math.min(s.y,source.y-.35)"));

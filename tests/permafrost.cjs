@@ -2,7 +2,7 @@ const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/st
 const a=fs.readFileSync("arena.js","utf8");
 assert.ok(a.includes('TEST_PERMAFROST={id:"permafrost"'));
 assert.ok(a.includes('fieldRounds:5,fieldBoost:.10,frostChanceBoost:.15,frostExtraTurns:2'));
-assert.ok(a.includes('testCards:[TEST_MAMMOTH,TEST_PERMAFROST'));
+assert.ok(JSON.parse(fs.readFileSync("backend/cards.json","utf8")).some(c=>c.id==="permafrost"&&!c.testOnly));
 const begin=a.indexOf("  function spellFrostChance("),end=a.indexOf("  function applyPeriodicStatus(",begin);
 const c={state:{environment:{id:"permafrost"}},BY_ID:{permafrost:{frostChanceBoost:.15,frostExtraTurns:2}}};
 vm.runInNewContext(a.slice(begin,end),c);

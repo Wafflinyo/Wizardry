@@ -29,7 +29,7 @@ const UNLOCK_ORDER=Object.fromEntries(Object.entries({
  wind:"windblast scaldingair ronin zen winddome windfist turbulence wind acidair sticksandstones wynzor windrazor aromatherapy",
  dark:"darkblast undead jack soul decaystrength vampire manascourge soulharvest wickedwitch darksorcerer reaper darkgrounds cursedhold",
  fire:"blazingembers devil arrows rage gunpowderkiss grillmaster kamikaze dragon reikel volcaniceruption burningpheonix sunfire flamingflamingo flamewheel flashover hellhound infernotitan ringoffire backdraft furnace",
- ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann doublepick reflectiveice",
+ ice:"iceblast totallyrad penguins freezing frozentouch yeti crystalicemirrors bear blizzard frosty heizmann doublepick reflectiveice coldstorage glacierlance shatterpoint permafrost mammothiceshard frostboundcolossus wintersembrace",
 }).map(([school,ids])=>[school,ids.split(" ")]));
 function unlockOrder(cards,school){
  const order=UNLOCK_ORDER[school]||[];

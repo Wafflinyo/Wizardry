@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const arena=fs.readFileSync('arena.js','utf8');
 assert.ok(arena.includes('id:"frostboundcolossus",name:"Frostbound Colossus",school:"ice",cost:6,target:"all_enemies",kind:"frostboundcolossus",damage:480,freezeChance:.15,accuracy:.80'));
-assert.ok(arena.includes('const ICE_TEST_CARDS=[TEST_MAMMOTH,TEST_PERMAFROST,TEST_SHATTERPOINT,TEST_FROSTBOUND_COLOSSUS,TEST_WINTERS_EMBRACE]'));
+assert.ok(JSON.parse(fs.readFileSync("backend/cards.json","utf8")).some(c=>c.id==="frostboundcolossus"&&!c.testOnly));
 const ctx={window:{},setTimeout,clearTimeout,Image:class{constructor(){this.complete=false;}set src(s){this.path=s;this.complete=true;this.naturalWidth=1792;this.naturalHeight=896;this.onload?.();}}};
 vm.runInNewContext(fs.readFileSync('assets/frostbound-colossus.js','utf8'),ctx);
 (async()=>{
@@ -24,6 +24,6 @@ vm.runInNewContext(fs.readFileSync('assets/frostbound-colossus.js','utf8'),ctx);
  const entries=combat.colossusTargets(units[0]),cast={source:'s',runeResult:'success',card:{damage:480}};
  assert.equal(entries.length,2);entries.forEach(e=>{assert.ok(combat.applyColossusHit(cast,e));assert.equal(combat.applyColossusHit(cast,e),false);});
  assert.equal(hits,2);assert.equal(units[1].hp,1520);assert.equal(units[2].hp,1520);assert.equal(entries[0].frozen,true);assert.equal(entries[1].frozen,false);
- combat.state.mode='online';assert.equal(combat.applyColossusHit(cast,{id:'a',hit:false}),false);
+ combat.state.mode='online';assert.equal(combat.applyColossusHit(cast,{id:'a',hit:false}),true);assert.equal(units[1].hp,1040);
  console.log('Frostbound Colossus: 32 body and 32 independent effects, center summon, mirrored direction, one damage hit per living enemy.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

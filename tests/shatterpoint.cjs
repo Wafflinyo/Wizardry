@@ -23,7 +23,8 @@ for(const team of [0,1]){
   art.summon(g,s);art.actor(g,s);art.impact(g,s);assert.equal(draws,1);
   assert.equal(s.dir,team===0?1:-1);
  }
- assert.equal(seen.size,32);assert.equal(art.scene({team},{x:500,y:400},.64).frame,15);
+ assert.equal(seen.size,32);const start=art.scene({team},{x:500,y:400},0),hit=art.scene({team},{x:500,y:400},.64),end=art.scene({team},{x:500,y:400},1);
+ assert.equal(hit.frame,15);assert.equal(start.anchorX,500-start.dir*88);assert.equal(hit.anchorX,500-hit.dir*28);assert.equal(hit.anchorY,310);assert.equal(start.anchorY,310);assert.equal(end.anchorY,412);assert.equal(end.anchorX,500);
 }
 assert.ok(fs.existsSync("assets/shatterpoint-v30.webp"));
 console.log("Shatterpoint: all 32 illustrated cells, synchronized impact, rune conversion.");

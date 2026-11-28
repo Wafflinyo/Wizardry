@@ -6537,7 +6537,9 @@
       const source=getUnit(action.source),target=getUnit(action.target),art=window.IceMammoth;
       if(source&&target){
         const s=art.scene(source,target,clamp(action.elapsed/action.duration,0,1),action.card.hit,unitEffectFactor(target));
+        renderables.push({type:"mammoth-trail",depthY:s.y-.12,priority:0,draw:()=>art.trail(g,s,false)});
         renderables.push({type:"ice-mammoth",depthY:s.y+.08,priority:2,draw:()=>art.draw(g,s)});
+        renderables.push({type:"mammoth-foot-kickup",depthY:s.y+.09,priority:2,draw:()=>art.trail(g,s,true)});
         if(!preventsHitEffects(action,target))renderables.push({type:"mammoth-impact",depthY:target.y+.19,priority:2,draw:()=>art.impact(g,s)});
       }
     }
